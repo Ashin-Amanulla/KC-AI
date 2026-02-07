@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { config } from '../config/index.js';
 import { CsvAnalysisCache } from '../modules/csv-analysis/csvAnalysisCache.model.js';
 import { CsvAnalysisReport } from '../modules/csv-analysis/csvAnalysisReport.model.js';
+import { CsvAnalysisJob } from '../modules/csv-analysis/csvAnalysisJob.model.js';
 
 dotenv.config();
 
@@ -304,6 +305,218 @@ export const analyzeCsv = async (filePath, options = {}) => {
           resolve(output);
         } catch (error) {
           reject(error);
+        }
+      });
+  });
+};
+
+const SECONDS_PER_BATCH = 3;
+const SECONDS_PER_CACHED_BATCH = 0.1;
+
+/**
+ * Quick stream to count rows in CSV for initial time estimate
+ */
+export const countCsvRows = (filePath) => {
+  return new Promise((resolve, reject) => {
+    let count = 0;
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on('data', () => {
+        count++;
+      })
+      .on('error', reject)
+      .on('end', () => resolve(count));
+  });
+};
+
+/**
+ * Analyze CSV with progress updates for a job. Updates job document in MongoDB.
+ */
+export const analyzeWithProgress = async (filePath, jobId, options = {}) => {
+  const job = await CsvAnalysisJob.findById(jobId);
+  if (!job || job.status !== 'pending') {
+    return;
+  }
+
+  await CsvAnalysisJob.findByIdAndUpdate(jobId, {
+    status: 'processing',
+    startedAt: new Date(),
+  });
+
+  return new Promise((resolve, reject) => {
+    const rows = [];
+
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on('data', (data) => {
+        data._id = Math.random().toString(36).substr(2, 9);
+        rows.push(data);
+      })
+      .on('error', (err) => reject(err))
+      .on('end', async () => {
+        const filePathForCleanup = filePath;
+        try {
+          const modelVersion = config.openai?.model || 'gpt-4o';
+
+          for (let i = 0; i < rows.length; i++) {
+            rows[i]._rowHash = computeRowHash(rows[i]);
+          }
+
+          const hashes = rows.map((r) => r._rowHash);
+          const cacheEntries = await CsvAnalysisCache.find({
+            rowHash: { $in: hashes },
+            promptVersion: PROMPT_VERSION,
+            modelVersion,
+          })
+            .lean()
+            .exec();
+
+          const cacheByHash = new Map(
+            cacheEntries.map((e) => [e.rowHash, e.analysisResult])
+          );
+
+          const cachedRows = [];
+          const uncachedRows = [];
+          rows.forEach((row) => {
+            const cached = cacheByHash.get(row._rowHash);
+            if (cached) {
+              cachedRows.push({ row, analysis_result: cached });
+            } else {
+              uncachedRows.push(row);
+            }
+          });
+
+          const totalToProcess = rows.length;
+          const uncachedCount = uncachedRows.length;
+          const batchCount = Math.ceil(uncachedCount / BATCH_SIZE);
+
+          const results = [...cachedRows];
+          const newCacheEntries = [];
+          const batchStartTime = Date.now();
+
+          for (let i = 0; i < uncachedRows.length; i += BATCH_SIZE) {
+            const batch = uncachedRows.slice(i, i + BATCH_SIZE);
+            const batchIndex = Math.floor(i / BATCH_SIZE);
+
+            const batchData = batch.map((r) => trimRowForInput(r));
+            const prompt = USER_PROMPT_TEMPLATE(batchData);
+
+            try {
+              const completion = await openai.chat.completions.create({
+                messages: [
+                  { role: 'system', content: SYSTEM_PROMPT },
+                  { role: 'user', content: prompt },
+                ],
+                model: modelVersion,
+                response_format: { type: 'json_object' },
+              });
+
+              let analysisMap = {};
+              try {
+                analysisMap = JSON.parse(
+                  completion.choices[0].message.content
+                );
+              } catch (parseError) {
+                throw parseError;
+              }
+
+              batch.forEach((row) => {
+                const analysis = analysisMap[row._id];
+                const analysisResult = analysis || {
+                  error: 'Analysis missing for this row',
+                };
+                results.push({ row, analysis_result: analysisResult });
+
+                if (analysis && !analysis.error) {
+                  newCacheEntries.push({
+                    rowHash: row._rowHash,
+                    analysisResult,
+                    modelVersion,
+                    promptVersion: PROMPT_VERSION,
+                  });
+                }
+              });
+            } catch (error) {
+              console.error(`Error processing batch at index ${i}:`, error);
+              batch.forEach((row) => {
+                results.push({
+                  row,
+                  analysis_result: { error: 'Batch processing failed' },
+                });
+              });
+            }
+
+            const processedRows = results.length;
+            const progress = Math.round((processedRows / totalToProcess) * 100);
+            const batchesDone = batchIndex + 1;
+            const elapsedMs = Date.now() - batchStartTime;
+            const msPerBatch = elapsedMs / batchesDone;
+            const remainingBatches = batchCount - batchesDone;
+            const estimatedSecondsRemaining = Math.ceil(
+              (remainingBatches * msPerBatch) / 1000
+            );
+
+            await CsvAnalysisJob.findByIdAndUpdate(jobId, {
+              progress,
+              processedRows,
+              estimatedSeconds: Math.max(0, estimatedSecondsRemaining),
+            });
+          }
+
+          if (newCacheEntries.length > 0) {
+            await CsvAnalysisCache.insertMany(newCacheEntries);
+          }
+
+          const orderedResults = rows.map((row) => {
+            const found = results.find((r) => r.row._id === row._id);
+            return {
+              ...row,
+              analysis_result: found ? found.analysis_result : { error: 'Missing' },
+            };
+          });
+
+          const output = orderedResults.map((item) => {
+            const { _rowHash, ...rest } = item;
+            return rest;
+          });
+
+          if (options.userId !== undefined || options.fileName) {
+            await CsvAnalysisReport.create({
+              uploadedBy: options.userId || null,
+              fileName: options.fileName || null,
+              totalRows: rows.length,
+              cachedRows: cachedRows.length,
+              freshRows: uncachedRows.length,
+              tokensUsed: null,
+              results: orderedResults,
+            });
+          }
+
+          await CsvAnalysisJob.findByIdAndUpdate(jobId, {
+            status: 'completed',
+            progress: 100,
+            processedRows: totalToProcess,
+            estimatedSeconds: 0,
+            results: output,
+            completedAt: new Date(),
+          });
+
+          resolve(output);
+        } catch (error) {
+          await CsvAnalysisJob.findByIdAndUpdate(jobId, {
+            status: 'failed',
+            error: error.message,
+            completedAt: new Date(),
+          });
+          reject(error);
+        } finally {
+          if (filePathForCleanup && fs.existsSync(filePathForCleanup)) {
+            try {
+              fs.unlinkSync(filePathForCleanup);
+            } catch (deleteError) {
+              console.error('Failed to delete uploaded file:', deleteError);
+            }
+          }
         }
       });
   });
