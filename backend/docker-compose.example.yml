@@ -1,14 +1,35 @@
+# Docker Compose for local dev. On EC2, use the commands in DEPLOY-REDIS.md
 version: '3.8'
 
+networks:
+  kc-ai-network:
+    driver: bridge
+
 services:
+  redis:
+    networks:
+      - kc-ai-network
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
   backend:
     build:
       context: .
       dockerfile: Dockerfile
+    networks:
+      - kc-ai-network
     ports:
       - "3001:3001"
     env_file:
       - .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
     # Optional: Mount uploads directory for persistence/debugging
     # Since files are temporary (deleted after analysis), this is optional
     # Uncomment the volumes section below if you want to keep uploaded files for debugging
@@ -23,3 +44,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+volumes:
+  redis_data:

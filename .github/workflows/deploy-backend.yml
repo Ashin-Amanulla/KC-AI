@@ -43,8 +43,30 @@ jobs:
 
             APP_DIR="/opt/kc-ai"
             ENV_FILE="/opt/kc-ai/.env.production"
+            NETWORK_NAME="kc-ai-network"
+            REDIS_IMAGE="redis:7-alpine"
 
             mkdir -p $APP_DIR
+
+            echo "Creating Docker network if not exists..."
+            sudo docker network create $NETWORK_NAME 2>/dev/null || true
+
+            echo "Ensuring Redis is running on network..."
+            if ! sudo docker ps -a --format '{{.Names}}' | grep -q '^kc-ai_redis$'; then
+              echo "Pulling Redis image..."
+              sudo docker pull $REDIS_IMAGE
+              sudo docker run -d \
+                --name kc-ai_redis \
+                --network $NETWORK_NAME \
+                -p 6379:6379 \
+                --restart unless-stopped \
+                $REDIS_IMAGE
+            else
+              sudo docker start kc-ai_redis 2>/dev/null || true
+              if ! sudo docker network inspect $NETWORK_NAME --format '{{range .Containers}}{{.Name}}{{end}}' | grep -q kc-ai_redis; then
+                sudo docker network connect $NETWORK_NAME kc-ai_redis 2>/dev/null || true
+              fi
+            fi
 
             echo "Loading Docker image from tar..."
             gunzip -c $APP_DIR/backend.tar.gz | sudo docker load
@@ -53,15 +75,17 @@ jobs:
             sudo docker stop kc-ai_backend || true
             sudo docker rm kc-ai_backend || true
 
-            echo "Starting kc-aibackend container on port 3001..."
+            echo "Starting backend container on port 3001 (network: $NETWORK_NAME)..."
             sudo docker run -d \
               --name kc-ai_backend \
+              --network $NETWORK_NAME \
               -p 3001:3001 \
               --restart unless-stopped \
               --env-file $ENV_FILE \
+              -e REDIS_URL=redis://kc-ai_redis:6379 \
               kc-ai-backend:latest
 
             echo "Verifying deployment..."
-            sudo docker ps | grep kc-ai_backend
+            sudo docker ps | grep -E "kc-ai_backend|kc-ai_redis"
 
             echo "kc-ai backend deployed successfully"

@@ -60,7 +60,9 @@ export const useAuthStore = create((set, get) => ({
       set({
         isAuthenticated: false,
         user: null,
-        error: error.response?.data?.error || 'Failed to check auth status',
+        error: (typeof error.response?.data?.error === 'string'
+          ? error.response.data.error
+          : error.response?.data?.error?.message) || 'Failed to check auth status',
         isLoading: false,
       });
       return null;
@@ -85,7 +87,9 @@ export const useAuthStore = create((set, get) => ({
       return response.data;
     } catch (error) {
       set({
-        error: error.response?.data?.error || 'Login failed',
+        error: (typeof error.response?.data?.error === 'string'
+          ? error.response.data.error
+          : error.response?.data?.error?.message) || 'Login failed',
         isLoading: false,
       });
       throw error;

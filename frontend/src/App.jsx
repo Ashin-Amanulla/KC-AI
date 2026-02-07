@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 import { useAuthStore } from './store/auth';
 import { Layout } from './components/Layout';
 import { LoginForm } from './components/LoginForm';
@@ -11,6 +12,7 @@ import { Timesheets } from './pages/Timesheets';
 import { ShiftAnalysis } from './pages/ShiftAnalysis';
 import { UserManagement } from './pages/UserManagement';
 import { canAccessPath } from './config/nav';
+import { LoadingScreen } from './ui/LoadingSpinner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,7 +40,7 @@ const ProtectedRoute = ({ children }) => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div>Checking authentication...</div>
+        <LoadingScreen message="Checking authentication..." />
       </div>
     );
   }
@@ -60,6 +62,7 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <Toaster position="top-right" richColors closeButton />
       <BrowserRouter>
         <Routes>
           <Route

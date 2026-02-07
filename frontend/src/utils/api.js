@@ -35,7 +35,10 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const isShiftCareError = error.response?.data?.shiftcareApiError;
       const isAuthEndpoint = error.config?.url?.includes('/api/auth/');
-      const isTokenError = error.response?.data?.error?.toLowerCase().includes('token');
+      const errMsg = typeof error.response?.data?.error === 'string'
+        ? error.response.data.error
+        : error.response?.data?.error?.message || '';
+      const isTokenError = errMsg.toLowerCase().includes('token');
 
       // Only clear token if it's an auth endpoint failure or token-related error
       // Don't clear for ShiftCare API errors (which now return 502)
@@ -48,5 +51,16 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * Extract user-friendly error message from API error response.
+ * Handles both { error: "string" } and { error: { message: "string" } } formats.
+ */
+export const getErrorMessage = (err) => {
+  const e = err?.response?.data?.error;
+  if (typeof e === 'string') return e;
+  if (e?.message) return e.message;
+  return err?.message || 'An error occurred';
+};
 
 export default api;

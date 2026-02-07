@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '../ui/table';
 import { Button } from '../ui/button';
+import { LoadingScreen } from '../ui/LoadingSpinner';
 
 export const Clients = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,7 +73,7 @@ export const Clients = () => {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8">Loading clients...</div>
+            <LoadingScreen message="Loading clients..." />
           ) : error ? (
             <div className="text-center py-8 text-destructive">
               Error loading clients: {error.message}

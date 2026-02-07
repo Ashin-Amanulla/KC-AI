@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   Upload,
   FileText,
@@ -23,6 +23,10 @@ import {
   useAnalysisJob,
 } from "../api/analysisJobs";
 import { useAnalysisJobStore } from "../store/analysisJob";
+import { useDropzone } from "react-dropzone";
+import { validateCsvFile, MAX_CSV_FILE_SIZE_BYTES, CSV_ACCEPT } from "../config/upload";
+import { toast } from "sonner";
+import { getErrorMessage } from "../utils/api";
 
 const CATEGORIES = [
   { id: "all", label: "All", color: "bg-gray-100 text-gray-800" },
@@ -103,6 +107,7 @@ const formatEstimatedTime = (seconds) => {
 
 export const ShiftAnalysis = () => {
   const [file, setFile] = useState(null);
+  const [fileValidationError, setFileValidationError] = useState(null);
   const [activeFilter, setActiveFilter] = useState("all");
   const [expandedRow, setExpandedRow] = useState(null);
 
@@ -117,7 +122,7 @@ export const ShiftAnalysis = () => {
 
   const data = jobData?.results ?? null;
   const error =
-    startAnalysis.error?.response?.data?.error ||
+    (startAnalysis.error && getErrorMessage(startAnalysis.error)) ||
     (statusData?.status === "failed"
       ? jobData?.error || "Analysis failed"
       : null);
@@ -127,15 +132,59 @@ export const ShiftAnalysis = () => {
     statusData?.status !== "completed" &&
     statusData?.status !== "failed";
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      startAnalysis.reset();
+  const lastStatusRef = useRef(null);
+  useEffect(() => {
+    if (!statusData?.status || !activeJobId) return;
+    if (lastStatusRef.current === statusData.status) return;
+    lastStatusRef.current = statusData.status;
+    if (statusData.status === "completed") {
+      toast.success("Analysis complete", {
+        description: `Processed ${statusData.totalRows} rows successfully.`,
+      });
+    } else if (statusData.status === "failed") {
+      toast.error("Analysis failed", {
+        description: jobData?.error || "An error occurred during processing.",
+      });
     }
+  }, [statusData?.status, statusData?.totalRows, activeJobId, jobData?.error]);
+
+  const onDrop = (acceptedFiles, rejectedFiles) => {
+    setFileValidationError(null);
+    if (rejectedFiles?.length > 0) {
+      const err = rejectedFiles[0].errors?.[0];
+      setFileValidationError(err?.message || "Invalid file");
+      setFile(null);
+      return;
+    }
+    if (acceptedFiles?.[0]) {
+      const validation = validateCsvFile(acceptedFiles[0]);
+      if (!validation.valid) {
+        setFileValidationError(validation.error);
+        setFile(null);
+      } else {
+        setFile(acceptedFiles[0]);
+      }
+    }
+    startAnalysis.reset();
   };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: CSV_ACCEPT,
+    maxSize: MAX_CSV_FILE_SIZE_BYTES,
+    maxFiles: 1,
+    multiple: false,
+    disabled: isSubmitting || isProcessing,
+  });
 
   const handleUpload = async () => {
     if (!file) return;
+    const validation = validateCsvFile(file);
+    if (!validation.valid) {
+      setFileValidationError(validation.error);
+      return;
+    }
+    setFileValidationError(null);
     startAnalysis.reset();
     clearActiveJob();
 
@@ -146,8 +195,14 @@ export const ShiftAnalysis = () => {
         totalRows: result.totalRows,
       });
       setFile(null);
+      toast.success("Analysis started", {
+        description: `${result.totalRows} rows queued for processing.`,
+      });
     } catch (err) {
       console.error(err);
+      toast.error("Upload failed", {
+        description: getErrorMessage(err),
+      });
     }
   };
 
@@ -267,28 +322,27 @@ export const ShiftAnalysis = () => {
 
       {!data && !isProcessing && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8 max-w-xl mx-auto">
-          <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-10 hover:bg-gray-50 transition-colors">
+          <div
+            {...getRootProps()}
+            className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-10 transition-colors cursor-pointer ${
+              isDragActive
+                ? "border-blue-500 bg-blue-50"
+                : "border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            <input {...getInputProps()} />
             <Upload className="h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Upload CSV
             </h3>
             <p className="text-sm text-gray-500 mb-6 text-center">
-              Drag and drop your ShiftCare export.
+              {isDragActive
+                ? "Drop your CSV file here..."
+                : "Drag and drop your ShiftCare export, or click to select"}
             </p>
-
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              className="hidden"
-              id="file-upload"
-            />
-            <label
-              htmlFor="file-upload"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 cursor-pointer text-sm font-medium"
-            >
+            <span className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
               Select File
-            </label>
+            </span>
 
             {file && (
               <div className="mt-4 flex items-center gap-2 text-sm text-green-600 font-medium">
@@ -296,7 +350,12 @@ export const ShiftAnalysis = () => {
                 {file.name}
               </div>
             )}
-            {error && (
+            {fileValidationError && (
+              <p className="mt-4 text-sm text-red-600 flex items-center gap-1">
+                <AlertCircle className="h-4 w-4" /> {fileValidationError}
+              </p>
+            )}
+            {error && !fileValidationError && (
               <p className="mt-4 text-sm text-red-600 flex items-center gap-1">
                 <AlertCircle className="h-4 w-4" /> {error}
               </p>

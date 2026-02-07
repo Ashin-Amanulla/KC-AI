@@ -28,4 +28,10 @@ export const config = {
   openai: {
     model: process.env.OPENAI_MODEL || 'gpt-4o',
   },
+  upload: {
+    maxFileSizeBytes: parseInt(process.env.MAX_CSV_FILE_SIZE_MB || '50', 10) * 1024 * 1024,
+  },
+  redis: {
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
+  },
 };

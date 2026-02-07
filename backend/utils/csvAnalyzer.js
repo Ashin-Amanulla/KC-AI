@@ -16,6 +16,8 @@ const openai = new OpenAI({
 
 const PROMPT_VERSION = 'v1';
 const BATCH_SIZE = 10;
+/** Rows to process per memory chunk - avoids loading entire CSV into memory */
+const PROCESS_CHUNK_SIZE = 500;
 
 /**
  * Normalize row for hashing: sort keys, exclude internal _id
@@ -330,7 +332,92 @@ export const countCsvRows = (filePath) => {
 };
 
 /**
+ * Process a chunk of rows: cache lookup, OpenAI for uncached, return results.
+ * Used for streaming/chunked processing to avoid loading entire CSV into memory.
+ */
+async function processRowChunk(
+  chunk,
+  cacheByHash,
+  modelVersion,
+  jobId,
+  totalRows,
+  processedSoFar,
+  batchStartTime,
+  batchesDoneSoFar,
+  totalUncachedBatches
+) {
+  const uncachedRows = chunk.filter((r) => !cacheByHash.has(r._rowHash));
+  const cachedRows = chunk.filter((r) => cacheByHash.has(r._rowHash));
+  const results = cachedRows.map((row) => ({
+    row,
+    analysis_result: cacheByHash.get(row._rowHash),
+  }));
+  const newCacheEntries = [];
+  let batchesDone = batchesDoneSoFar;
+
+  for (let i = 0; i < uncachedRows.length; i += BATCH_SIZE) {
+    const batch = uncachedRows.slice(i, i + BATCH_SIZE);
+    const batchData = batch.map((r) => trimRowForInput(r));
+    const prompt = USER_PROMPT_TEMPLATE(batchData);
+
+    try {
+      const completion = await openai.chat.completions.create({
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt },
+        ],
+        model: modelVersion,
+        response_format: { type: 'json_object' },
+      });
+
+      let analysisMap = {};
+      try {
+        analysisMap = JSON.parse(completion.choices[0].message.content);
+      } catch (parseError) {
+        throw parseError;
+      }
+
+      batch.forEach((row) => {
+        const analysis = analysisMap[row._id];
+        const analysisResult = analysis || { error: 'Analysis missing for this row' };
+        results.push({ row, analysis_result: analysisResult });
+        if (analysis && !analysis.error) {
+          newCacheEntries.push({
+            rowHash: row._rowHash,
+            analysisResult,
+            modelVersion,
+            promptVersion: PROMPT_VERSION,
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Error processing batch:', error);
+      batch.forEach((row) => {
+        results.push({ row, analysis_result: { error: 'Batch processing failed' } });
+      });
+    }
+    batchesDone += 1;
+
+    const totalProcessed = processedSoFar + results.length;
+    const progress = Math.round((totalProcessed / totalRows) * 100);
+    const elapsedMs = Date.now() - batchStartTime;
+    const msPerBatch = batchesDone > 0 ? elapsedMs / batchesDone : 0;
+    const remainingBatches = totalUncachedBatches - batchesDone;
+    const estimatedSecondsRemaining = Math.ceil((remainingBatches * msPerBatch) / 1000);
+
+    await CsvAnalysisJob.findByIdAndUpdate(jobId, {
+      progress,
+      processedRows: totalProcessed,
+      estimatedSeconds: Math.max(0, estimatedSecondsRemaining),
+    });
+  }
+
+  return { results, newCacheEntries };
+}
+
+/**
  * Analyze CSV with progress updates for a job. Updates job document in MongoDB.
+ * Uses chunked streaming to avoid loading entire CSV into memory for large files.
  */
 export const analyzeWithProgress = async (filePath, jobId, options = {}) => {
   const job = await CsvAnalysisJob.findById(jobId);
@@ -344,158 +431,102 @@ export const analyzeWithProgress = async (filePath, jobId, options = {}) => {
   });
 
   return new Promise((resolve, reject) => {
-    const rows = [];
+    const allOutputRows = [];
+    let globalIndex = 0;
+    let totalProcessedSoFar = 0;
+    let totalBatchesDone = 0;
+    const modelVersion = config.openai?.model || 'gpt-4o';
+    const batchStartTime = { current: Date.now() };
 
-    fs.createReadStream(filePath)
-      .pipe(csv())
-      .on('data', (data) => {
-        data._id = Math.random().toString(36).substr(2, 9);
-        rows.push(data);
+    const processChunk = async (chunk) => {
+      for (const row of chunk) {
+        row._id = `r${globalIndex++}`;
+        row._rowHash = computeRowHash(row);
+      }
+      const hashes = chunk.map((r) => r._rowHash);
+      const cacheEntries = await CsvAnalysisCache.find({
+        rowHash: { $in: hashes },
+        promptVersion: PROMPT_VERSION,
+        modelVersion,
+      })
+        .lean()
+        .exec();
+      const cacheByHash = new Map(cacheEntries.map((e) => [e.rowHash, e.analysisResult]));
+
+      const uncachedCount = chunk.filter((r) => !cacheByHash.has(r._rowHash)).length;
+      const totalUncachedBatches = Math.ceil(uncachedCount / BATCH_SIZE);
+
+      const { results, newCacheEntries } = await processRowChunk(
+        chunk,
+        cacheByHash,
+        modelVersion,
+        jobId,
+        job.totalRows,
+        totalProcessedSoFar,
+        batchStartTime.current,
+        totalBatchesDone,
+        totalUncachedBatches
+      );
+
+      totalBatchesDone += totalUncachedBatches;
+      totalProcessedSoFar += results.length;
+
+      if (newCacheEntries.length > 0) {
+        await CsvAnalysisCache.insertMany(newCacheEntries);
+      }
+
+      const chunkOutput = results.map((r) => ({
+        ...r.row,
+        analysis_result: r.analysis_result,
+      }));
+      allOutputRows.push(...chunkOutput);
+    };
+
+    const stream = fs.createReadStream(filePath).pipe(csv());
+    let currentChunk = [];
+
+    stream
+      .on('data', async (data) => {
+        currentChunk.push(data);
+        if (currentChunk.length >= PROCESS_CHUNK_SIZE) {
+          stream.pause();
+          await processChunk(currentChunk);
+          currentChunk = [];
+          stream.resume();
+        }
       })
       .on('error', (err) => reject(err))
       .on('end', async () => {
         const filePathForCleanup = filePath;
         try {
-          const modelVersion = config.openai?.model || 'gpt-4o';
-
-          for (let i = 0; i < rows.length; i++) {
-            rows[i]._rowHash = computeRowHash(rows[i]);
+          if (currentChunk.length > 0) {
+            await processChunk(currentChunk);
           }
 
-          const hashes = rows.map((r) => r._rowHash);
-          const cacheEntries = await CsvAnalysisCache.find({
-            rowHash: { $in: hashes },
-            promptVersion: PROMPT_VERSION,
-            modelVersion,
-          })
-            .lean()
-            .exec();
-
-          const cacheByHash = new Map(
-            cacheEntries.map((e) => [e.rowHash, e.analysisResult])
-          );
-
-          const cachedRows = [];
-          const uncachedRows = [];
-          rows.forEach((row) => {
-            const cached = cacheByHash.get(row._rowHash);
-            if (cached) {
-              cachedRows.push({ row, analysis_result: cached });
-            } else {
-              uncachedRows.push(row);
-            }
-          });
-
-          const totalToProcess = rows.length;
-          const uncachedCount = uncachedRows.length;
-          const batchCount = Math.ceil(uncachedCount / BATCH_SIZE);
-
-          const results = [...cachedRows];
-          const newCacheEntries = [];
-          const batchStartTime = Date.now();
-
-          for (let i = 0; i < uncachedRows.length; i += BATCH_SIZE) {
-            const batch = uncachedRows.slice(i, i + BATCH_SIZE);
-            const batchIndex = Math.floor(i / BATCH_SIZE);
-
-            const batchData = batch.map((r) => trimRowForInput(r));
-            const prompt = USER_PROMPT_TEMPLATE(batchData);
-
-            try {
-              const completion = await openai.chat.completions.create({
-                messages: [
-                  { role: 'system', content: SYSTEM_PROMPT },
-                  { role: 'user', content: prompt },
-                ],
-                model: modelVersion,
-                response_format: { type: 'json_object' },
-              });
-
-              let analysisMap = {};
-              try {
-                analysisMap = JSON.parse(
-                  completion.choices[0].message.content
-                );
-              } catch (parseError) {
-                throw parseError;
-              }
-
-              batch.forEach((row) => {
-                const analysis = analysisMap[row._id];
-                const analysisResult = analysis || {
-                  error: 'Analysis missing for this row',
-                };
-                results.push({ row, analysis_result: analysisResult });
-
-                if (analysis && !analysis.error) {
-                  newCacheEntries.push({
-                    rowHash: row._rowHash,
-                    analysisResult,
-                    modelVersion,
-                    promptVersion: PROMPT_VERSION,
-                  });
-                }
-              });
-            } catch (error) {
-              console.error(`Error processing batch at index ${i}:`, error);
-              batch.forEach((row) => {
-                results.push({
-                  row,
-                  analysis_result: { error: 'Batch processing failed' },
-                });
-              });
-            }
-
-            const processedRows = results.length;
-            const progress = Math.round((processedRows / totalToProcess) * 100);
-            const batchesDone = batchIndex + 1;
-            const elapsedMs = Date.now() - batchStartTime;
-            const msPerBatch = elapsedMs / batchesDone;
-            const remainingBatches = batchCount - batchesDone;
-            const estimatedSecondsRemaining = Math.ceil(
-              (remainingBatches * msPerBatch) / 1000
-            );
-
-            await CsvAnalysisJob.findByIdAndUpdate(jobId, {
-              progress,
-              processedRows,
-              estimatedSeconds: Math.max(0, estimatedSecondsRemaining),
-            });
-          }
-
-          if (newCacheEntries.length > 0) {
-            await CsvAnalysisCache.insertMany(newCacheEntries);
-          }
-
-          const orderedResults = rows.map((row) => {
-            const found = results.find((r) => r.row._id === row._id);
-            return {
-              ...row,
-              analysis_result: found ? found.analysis_result : { error: 'Missing' },
-            };
-          });
-
-          const output = orderedResults.map((item) => {
+          const output = allOutputRows.map((item) => {
             const { _rowHash, ...rest } = item;
             return rest;
           });
+
+          const cachedCount = allOutputRows.filter((r) => r.analysis_result && !r.analysis_result.error).length;
+          const freshCount = output.length - cachedCount;
 
           if (options.userId !== undefined || options.fileName) {
             await CsvAnalysisReport.create({
               uploadedBy: options.userId || null,
               fileName: options.fileName || null,
-              totalRows: rows.length,
-              cachedRows: cachedRows.length,
-              freshRows: uncachedRows.length,
+              totalRows: output.length,
+              cachedRows: cachedCount,
+              freshRows: freshCount,
               tokensUsed: null,
-              results: orderedResults,
+              results: allOutputRows,
             });
           }
 
           await CsvAnalysisJob.findByIdAndUpdate(jobId, {
             status: 'completed',
             progress: 100,
-            processedRows: totalToProcess,
+            processedRows: output.length,
             estimatedSeconds: 0,
             results: output,
             completedAt: new Date(),

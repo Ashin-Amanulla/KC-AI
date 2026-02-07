@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '../ui/table';
 import { Button } from '../ui/button';
+import { LoadingScreen } from '../ui/LoadingSpinner';
 
 export const Dashboard = () => {
   const [fromDate, setFromDate] = useState(() => {
@@ -126,7 +127,7 @@ export const Dashboard = () => {
         </CardHeader>
         <CardContent>
           {shiftsLoading ? (
-            <div className="text-center py-8">Loading shifts...</div>
+            <LoadingScreen message="Loading shifts..." />
           ) : shifts.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No shifts found in the selected date range

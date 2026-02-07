@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '../ui/table';
 import { Button } from '../ui/button';
+import { LoadingScreen } from '../ui/LoadingSpinner';
 
 export const Timesheets = () => {
   const [fromDate, setFromDate] = useState(() => {
@@ -200,10 +201,7 @@ export const Timesheets = () => {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <p className="mt-2 text-muted-foreground">Loading timesheets...</p>
-            </div>
+            <LoadingScreen message="Loading timesheets..." />
           ) : error ? (
             <div className="text-center py-12 text-destructive">
               <p className="font-semibold">Error loading timesheets</p>
