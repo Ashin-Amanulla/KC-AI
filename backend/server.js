@@ -7,7 +7,7 @@ import authRoutes from './modules/auth/auth.route.js';
 import shiftcareRoutes from './modules/shiftcare/shiftcare.route.js';
 import userRoutes from './modules/user/user.route.js';
 import { authenticateJWT, authorizeRoles } from './middlewares/auth.middleware.js';
-import morgan from 'morgan'; // logging middleware
+import morgan from 'morgan'; // logging middlewareg
 
 const app = express();
 
