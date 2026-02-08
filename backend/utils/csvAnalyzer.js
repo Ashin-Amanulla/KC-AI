@@ -20,6 +20,29 @@ const BATCH_SIZE = 10;
 const PROCESS_CHUNK_SIZE = 500;
 
 /**
+ * Insert cache entries without failing on duplicate key (E11000).
+ * Uses bulkWrite with upsert so existing rowHashes are skipped.
+ */
+async function upsertCacheEntries(entries) {
+  if (entries.length === 0) return;
+  const ops = entries.map((e) => ({
+    updateOne: {
+      filter: { rowHash: e.rowHash },
+      update: {
+        $setOnInsert: {
+          rowHash: e.rowHash,
+          analysisResult: e.analysisResult,
+          modelVersion: e.modelVersion,
+          promptVersion: e.promptVersion,
+        },
+      },
+      upsert: true,
+    },
+  }));
+  await CsvAnalysisCache.bulkWrite(ops);
+}
+
+/**
  * Normalize row for hashing: sort keys, exclude internal _id
  */
 function normalizeRowForHash(row) {
@@ -276,7 +299,7 @@ export const analyzeCsv = async (filePath, options = {}) => {
           }
 
           if (newCacheEntries.length > 0) {
-            await CsvAnalysisCache.insertMany(newCacheEntries);
+            await upsertCacheEntries(newCacheEntries);
             console.log(`Cached ${newCacheEntries.length} new row analyses`);
           }
 
@@ -439,6 +462,13 @@ export const analyzeWithProgress = async (filePath, jobId, options = {}) => {
     const batchStartTime = { current: Date.now() };
 
     const processChunk = async (chunk) => {
+      const currentJob = await CsvAnalysisJob.findById(jobId).select('status').lean();
+      if (currentJob?.status === 'cancelled') {
+        const err = new Error('CANCELLED');
+        err.cancelled = true;
+        throw err;
+      }
+
       for (const row of chunk) {
         row._id = `r${globalIndex++}`;
         row._rowHash = computeRowHash(row);
@@ -472,7 +502,7 @@ export const analyzeWithProgress = async (filePath, jobId, options = {}) => {
       totalProcessedSoFar += results.length;
 
       if (newCacheEntries.length > 0) {
-        await CsvAnalysisCache.insertMany(newCacheEntries);
+        await upsertCacheEntries(newCacheEntries);
       }
 
       const chunkOutput = results.map((r) => ({
@@ -534,12 +564,16 @@ export const analyzeWithProgress = async (filePath, jobId, options = {}) => {
 
           resolve(output);
         } catch (error) {
-          await CsvAnalysisJob.findByIdAndUpdate(jobId, {
-            status: 'failed',
-            error: error.message,
-            completedAt: new Date(),
-          });
-          reject(error);
+          if (error.cancelled) {
+            reject(error);
+          } else {
+            await CsvAnalysisJob.findByIdAndUpdate(jobId, {
+              status: 'failed',
+              error: error.message,
+              completedAt: new Date(),
+            });
+            reject(error);
+          }
         } finally {
           if (filePathForCleanup && fs.existsSync(filePathForCleanup)) {
             try {

@@ -10,6 +10,7 @@ import {
   getJobStatus,
   getJob,
   listJobs,
+  cancelJob,
 } from './csvAnalysis.controller.js';
 
 const router = express.Router();
@@ -57,6 +58,7 @@ router.post(
 );
 
 router.get('/analysis-jobs/:id/status', ...csvAuth, validate(getJobByIdSchema), getJobStatus);
+router.post('/analysis-jobs/:id/cancel', ...csvAuth, validate(getJobByIdSchema), cancelJob);
 router.get('/analysis-jobs/:id', ...csvAuth, validate(getJobByIdSchema), getJob);
 router.get('/analysis-jobs', ...csvAuth, listJobs);
 

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { countCsvRows } from '../../utils/csvAnalyzer.js';
 import { CsvAnalysisJob } from './csvAnalysisJob.model.js';
-import { addCsvAnalysisJob } from '../../jobs/csvAnalysisQueue.js';
+import { addCsvAnalysisJob, getCsvAnalysisQueue } from '../../jobs/csvAnalysisQueue.js';
 
 const SECONDS_PER_10_ROWS = 3;
 
@@ -58,7 +58,13 @@ export const getJobStatus = async (req, res, next) => {
       .lean();
 
     if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+      return res.json({
+        status: 'cancelled',
+        progress: 0,
+        totalRows: null,
+        processedRows: null,
+        estimatedSeconds: null,
+      });
     }
 
     res.json({
@@ -88,6 +94,43 @@ export const getJob = async (req, res, next) => {
     res.json(job);
   } catch (error) {
     console.error('Failed to get job:', error);
+    next(error);
+  }
+};
+
+export const cancelJob = async (req, res, next) => {
+  try {
+    const job = await CsvAnalysisJob.findOne({
+      _id: req.params.id,
+      uploadedBy: req.user?.userId,
+    });
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
+      return res.json({ message: 'Job already finished', status: job.status });
+    }
+
+    await CsvAnalysisJob.findByIdAndUpdate(req.params.id, {
+      status: 'cancelled',
+      completedAt: new Date(),
+    });
+
+    try {
+      const queue = getCsvAnalysisQueue();
+      const bullJob = await queue.getJob(job._id.toString());
+      if (bullJob) {
+        await bullJob.remove();
+      }
+    } catch (queueErr) {
+      console.warn('Could not remove job from queue (may already be processing):', queueErr.message);
+    }
+
+    res.json({ message: 'Job cancelled', status: 'cancelled' });
+  } catch (error) {
+    console.error('Failed to cancel job:', error);
     next(error);
   }
 };

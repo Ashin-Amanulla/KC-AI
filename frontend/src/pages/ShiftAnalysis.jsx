@@ -16,11 +16,13 @@ import {
   MessageSquare,
   Pill,
   Activity,
+  Ban,
 } from "lucide-react";
 import {
   useStartAnalysis,
   useAnalysisJobStatus,
   useAnalysisJob,
+  useCancelAnalysisJob,
 } from "../api/analysisJobs";
 import { useAnalysisJobStore } from "../store/analysisJob";
 import { useDropzone } from "react-dropzone";
@@ -113,11 +115,14 @@ export const ShiftAnalysis = () => {
 
   const { activeJobId, setActiveJob, clearActiveJob } = useAnalysisJobStore();
   const startAnalysis = useStartAnalysis();
+  const cancelJob = useCancelAnalysisJob();
   const { data: statusData, isLoading: statusLoading } =
     useAnalysisJobStatus(activeJobId);
   const { data: jobData } = useAnalysisJob(activeJobId, {
     enabled:
-      statusData?.status === "completed" || statusData?.status === "failed",
+      statusData?.status === "completed" ||
+      statusData?.status === "failed" ||
+      statusData?.status === "cancelled",
   });
 
   const data = jobData?.results ?? null;
@@ -130,7 +135,8 @@ export const ShiftAnalysis = () => {
   const isProcessing =
     activeJobId &&
     statusData?.status !== "completed" &&
-    statusData?.status !== "failed";
+    statusData?.status !== "failed" &&
+    statusData?.status !== "cancelled";
 
   const lastStatusRef = useRef(null);
   useEffect(() => {
@@ -145,8 +151,10 @@ export const ShiftAnalysis = () => {
       toast.error("Analysis failed", {
         description: jobData?.error || "An error occurred during processing.",
       });
+    } else if (statusData.status === "cancelled") {
+      clearActiveJob();
     }
-  }, [statusData?.status, statusData?.totalRows, activeJobId, jobData?.error]);
+  }, [statusData?.status, statusData?.totalRows, activeJobId, jobData?.error, clearActiveJob]);
 
   const onDrop = (acceptedFiles, rejectedFiles) => {
     setFileValidationError(null);
@@ -413,6 +421,31 @@ export const ShiftAnalysis = () => {
                 {formatEstimatedTime(statusData?.estimatedSeconds)}
               </p>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                if (activeJobId) {
+                  cancelJob.mutate(activeJobId, {
+                    onSuccess: () => {
+                      clearActiveJob();
+                      toast.info("Analysis cancelled");
+                    },
+                    onError: () => {
+                      toast.error("Failed to cancel");
+                    },
+                  });
+                }
+              }}
+              disabled={cancelJob.isPending}
+              className="mt-4 px-4 py-2 rounded-md border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 font-medium text-sm flex items-center gap-2 disabled:opacity-50"
+            >
+              {cancelJob.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Ban className="h-4 w-4" />
+              )}
+              {cancelJob.isPending ? "Cancelling..." : "Cancel analysis"}
+            </button>
           </div>
         </div>
       )}
@@ -485,11 +518,12 @@ export const ShiftAnalysis = () => {
                     >
                       <td className="px-6 py-4 align-top">
                         <div className="font-medium text-gray-900">
-                          {row["Client"]}
+                          {row["Client"] || row["Customer"]}
                         </div>
                         <div className="text-gray-500 text-xs mt-0.5">
                           {row["Staff"] ||
                             row["Full Name"] ||
+                            row["Summary"] ||
                             row.analysis_result?.staff_name}
                         </div>
                       </td>
@@ -766,7 +800,7 @@ export const ShiftAnalysis = () => {
                                   Original Shift Notes
                                 </h4>
                                 <div className="bg-gray-50 p-4 rounded text-sm text-gray-800 whitespace-pre-wrap leading-relaxed border border-gray-100">
-                                  {row["Message"] || row["Notes"]}
+                                  {row["Detailed report"] || row["Message"] || row["Notes"]}
                                 </div>
                                 {row.analysis_result?.lazy_note && (
                                   <div className="mt-2 text-xs text-orange-600 flex items-center gap-1 font-medium">

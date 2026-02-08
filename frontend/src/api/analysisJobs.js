@@ -34,9 +34,24 @@ export const useAnalysisJobStatus = (jobId) => {
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data) return 3000;
-      return data.status === 'completed' || data.status === 'failed' ? false : 3000;
+      return data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled' ? false : 3000;
     },
     enabled: !!jobId,
+  });
+};
+
+export const useCancelAnalysisJob = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (jobId) => {
+      const response = await api.post(`/api/analysis-jobs/${jobId}/cancel`);
+      return response.data;
+    },
+    onSuccess: (_, jobId) => {
+      queryClient.invalidateQueries({ queryKey: [ANALYSIS_JOB_STATUS_KEY, jobId] });
+      queryClient.invalidateQueries({ queryKey: [ANALYSIS_JOBS_LIST_KEY] });
+    },
   });
 };
 

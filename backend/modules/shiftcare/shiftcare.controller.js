@@ -49,7 +49,6 @@ const proxyRequest = async (req, res, endpoint, params = {}) => {
 
     const client = createShiftCareClient(credentials);
     const fullUrl = `${config.shiftcare.baseUrl}${endpoint}`;
-    console.log('ShiftCare API Request:', fullUrl, 'Params:', params);
 
     const response = await client.get(endpoint, { params });
 

@@ -9,7 +9,7 @@ const csvAnalysisJobSchema = new mongoose.Schema(
     fileName: String,
     status: {
       type: String,
-      enum: ['pending', 'processing', 'completed', 'failed'],
+      enum: ['pending', 'processing', 'completed', 'failed', 'cancelled'],
       default: 'pending',
     },
     progress: { type: Number, default: 0 },
