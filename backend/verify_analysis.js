@@ -1,4 +1,4 @@
-
+/* eslint-disable no-unused-vars */
 import { analyzeCsv } from './utils/csvAnalyzer.js';
 import path from 'path';
 

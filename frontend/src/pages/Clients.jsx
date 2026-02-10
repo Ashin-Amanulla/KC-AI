@@ -19,7 +19,7 @@ export const Clients = () => {
   const [page, setPage] = useState(1);
   const perPage = 20;
 
-  // Debounce the search term
+  // Debounce the search terms
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
