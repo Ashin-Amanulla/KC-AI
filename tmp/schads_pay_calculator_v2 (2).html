@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCHADS Pay Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inconsolata:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f2eb;
+  --surface: #fffef9;
+  --border: #d4cfc4;
+  --border-dark: #b8b2a5;
+  --ink: #1a1814;
+  --muted: #8a8680;
+  --accent: #c1440e;
+  --accent-light: #f5e8e3;
+  --green: #1a6b3c;
+  --green-light: #e3f0e8;
+  --warn: #8a6b00;
+  --warn-light: #fdf5d4;
+  --sat-col: #5a3e8a;
+  --sat-light: #f0ecf9;
+  --sun-col: #c1440e;
+  --sun-light: #f5e8e3;
+  --ph-col: #0e5fa8;
+  --ph-light: #e3eef8;
+  --shadow: 0 2px 8px rgba(26,24,20,0.1);
+  --shadow-lg: 0 8px 32px rgba(26,24,20,0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inconsolata', monospace;
+  min-height: 100vh;
+  font-size: 14px;
+}
+
+/* Subtle paper texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(26,24,20,0.03) 28px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Layout ── */
+.page { position: relative; z-index: 1; max-width: 780px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+/* ── Header ── */
+header { margin-bottom: 2rem; animation: fadeDown 0.4s ease both; }
+.header-top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+header h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(1.6rem, 4vw, 2.4rem); letter-spacing: -0.02em; line-height: 1.1; }
+header h1 em { font-style: normal; color: var(--accent); }
+.award-badge {
+  font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
+  background: var(--ink); color: var(--bg); padding: 0.3rem 0.7rem;
+  font-family: 'Inconsolata'; white-space: nowrap; margin-top: 0.25rem;
+}
+.header-sub { margin-top: 0.5rem; font-size: 0.8rem; color: var(--muted); }
+
+/* ── Step cards ── */
+.step {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  margin-bottom: 1rem;
+  animation: fadeUp 0.4s ease both;
+}
+.step:nth-child(1) { animation-delay: 0.05s; }
+.step:nth-child(2) { animation-delay: 0.1s; }
+.step:nth-child(3) { animation-delay: 0.15s; }
+.step:nth-child(4) { animation-delay: 0.2s; }
+
+.step-header {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1.5px solid var(--border);
+  background: rgba(26,24,20,0.02);
+}
+.step-num {
+  width: 22px; height: 22px;
+  background: var(--ink); color: var(--bg);
+  font-family: 'Syne'; font-weight: 700; font-size: 0.75rem;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.step-title { font-family: 'Syne'; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.step-body { padding: 1.25rem; }
+
+/* ── Form controls ── */
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+@media (max-width: 500px) {
+  .row-2, .row-3 { grid-template-columns: 1fr; }
+}
+
+.field { display: flex; flex-direction: column; gap: 0.35rem; }
+.field label {
+  font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.field label .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+input, select {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  color: var(--ink);
+  font-family: 'Inconsolata', monospace;
+  font-size: 1rem;
+  padding: 0.6rem 0.75rem;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s, background 0.15s;
+  -webkit-appearance: none;
+}
+input:focus, select:focus { border-color: var(--ink); background: var(--surface); }
+input.error { border-color: var(--accent); background: var(--accent-light); }
+input[type="time"] { cursor: pointer; }
+select option { background: var(--surface); }
+
+.field-hint { font-size: 0.68rem; color: var(--muted); margin-top: 0.1rem; }
+.field-error { font-size: 0.68rem; color: var(--accent); margin-top: 0.1rem; display: none; }
+.field-error.visible { display: block; }
+
+/* ── Day rows ── */
+.day-row {
+  border: 1.5px solid var(--border);
+  margin-bottom: 0.75rem;
+  transition: border-color 0.2s;
+}
+.day-row.has-data { border-color: var(--border-dark); }
+
+.day-header {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: rgba(26,24,20,0.02);
+  border-bottom: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+}
+.day-row.has-data .day-header { border-bottom-color: var(--border); }
+
+.day-pill {
+  font-family: 'Syne'; font-weight: 700; font-size: 0.7rem;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  background: var(--bg); border: 1.5px solid var(--border);
+  min-width: 36px; text-align: center; flex-shrink: 0;
+}
+.day-pill.sat { border-color: var(--sat-col); color: var(--sat-col); background: var(--sat-light); }
+.day-pill.sun { border-color: var(--sun-col); color: var(--sun-col); background: var(--sun-light); }
+.day-pill.ph  { border-color: var(--ph-col);  color: var(--ph-col);  background: var(--ph-light);  }
+
+.day-name { font-family: 'Syne'; font-weight: 600; font-size: 0.85rem; flex: 1; }
+.day-name.sat { color: var(--sat-col); }
+.day-name.sun { color: var(--sun-col); }
+.day-name.ph  { color: var(--ph-col); }
+
+.day-summary { font-size: 0.8rem; color: var(--muted); margin-left: auto; }
+.day-summary .hrs { color: var(--ink); font-weight: 500; }
+
+.day-toggle {
+  background: none; border: 1.5px solid var(--border);
+  width: 26px; height: 26px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem; color: var(--muted); flex-shrink: 0;
+  transition: all 0.15s;
+}
+.day-toggle:hover { border-color: var(--ink); color: var(--ink); }
+
+.day-body { padding: 0.85rem 1rem; display: none; }
+.day-row.open .day-body { display: block; }
+
+/* ── Shift segments ── */
+.segment {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 0.5rem;
+  align-items: end;
+  margin-bottom: 0.5rem;
+}
+@media (max-width: 520px) {
+  .segment { grid-template-columns: 1fr 1fr; }
+  .segment .seg-dur, .segment .seg-del { display: none; }
+}
+
+.seg-dur {
+  font-size: 0.78rem; color: var(--muted);
+  padding-bottom: 0.65rem;
+  white-space: nowrap;
+}
+.seg-dur.valid { color: var(--green); font-weight: 500; }
+.seg-dur.invalid { color: var(--accent); }
+
+.seg-del {
+  background: none; border: 1.5px solid var(--border);
+  width: 36px; height: 36px;
+  cursor: pointer; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; transition: all 0.15s; flex-shrink: 0;
+}
+.seg-del:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+.add-seg-btn {
+  background: none; border: 1.5px dashed var(--border);
+  padding: 0.5rem 1rem; cursor: pointer;
+  font-family: 'Inconsolata'; font-size: 0.8rem; color: var(--muted);
+  width: 100%; text-align: left; transition: all 0.15s;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.add-seg-btn:hover { border-color: var(--ink); color: var(--ink); background: rgba(26,24,20,0.03); }
+
+.ph-toggle { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.75rem; cursor: pointer; }
+.ph-toggle input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--ph-col); }
+.ph-toggle span { font-size: 0.78rem; color: var(--muted); }
+
+.seg-overlap-warn {
+  font-size: 0.7rem; color: var(--accent);
+  background: var(--accent-light); border: 1px solid var(--accent);
+  padding: 0.3rem 0.6rem; margin-top: 0.4rem; display: none;
+}
+.seg-overlap-warn.visible { display: block; }
+
+/* ── Calculate button ── */
+.calc-btn {
+  width: 100%; padding: 1rem;
+  background: var(--ink); color: var(--bg);
+  border: none; cursor: pointer;
+  font-family: 'Syne'; font-weight: 700;
+  font-size: 1rem; letter-spacing: 0.08em; text-transform: uppercase;
+  transition: background 0.15s, transform 0.1s;
+  margin-top: 1rem;
+}
+.calc-btn:hover { background: #2e2b25; }
+.calc-btn:active { transform: scale(0.99); }
+.calc-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+/* ── Results ── */
+#results { display: none; animation: fadeUp 0.4s ease both; }
+
+.result-hero {
+  background: var(--ink); color: var(--bg);
+  padding: 1.5rem;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  flex-wrap: wrap; gap: 1rem;
+  margin-bottom: 1rem;
+}
+.result-hero .label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.6; margin-bottom: 0.25rem; }
+.result-hero .total { font-family: 'Syne'; font-weight: 800; font-size: clamp(2rem, 6vw, 3rem); line-height: 1; }
+.result-hero .total em { font-style: normal; color: #e8ff00; }
+
+.result-mini-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1.5px solid var(--border); margin-bottom: 1rem;
+}
+@media (max-width: 480px) { .result-mini-grid { grid-template-columns: 1fr 1fr; } }
+
+.mini-cell {
+  background: var(--surface); padding: 0.85rem 1rem;
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+.mini-cell .mc-label { font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.mini-cell .mc-val { font-family: 'Syne'; font-weight: 700; font-size: 1.2rem; }
+
+/* Breakdown table */
+.breakdown { border: 1.5px solid var(--border); overflow: hidden; }
+.breakdown-title {
+  background: rgba(26,24,20,0.04); padding: 0.6rem 1rem;
+  font-family: 'Syne'; font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  border-bottom: 1.5px solid var(--border);
+}
+table { width: 100%; border-collapse: collapse; }
+th {
+  font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted); text-align: left;
+  padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--border);
+  background: rgba(26,24,20,0.02);
+}
+td { padding: 0.55rem 0.85rem; border-bottom: 1px solid rgba(26,24,20,0.05); font-size: 0.85rem; }
+tr:last-child td { border-bottom: none; }
+.td-right { text-align: right; font-weight: 500; }
+.type-sat { color: var(--sat-col); }
+.type-sun { color: var(--sun-col); }
+.type-ph  { color: var(--ph-col); }
+.type-ot  { color: var(--accent); }
+.type-allow { color: var(--warn); }
+
+.total-row td { border-top: 1.5px solid var(--border); font-family: 'Syne'; font-weight: 700; padding-top: 0.7rem; }
+
+.disclaimer {
+  margin-top: 1rem; padding: 0.85rem 1rem;
+  background: var(--warn-light); border: 1.5px solid #d4b000;
+  font-size: 0.72rem; color: var(--warn); line-height: 1.6;
+}
+
+/* ── Prefill scenarios ── */
+.scenario-grid { display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1rem; }
+.sc-cat-label {
+  font-family: 'Syne'; font-weight: 700; font-size: 0.7rem;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted); padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+.sc-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  gap: 0.5rem;
+}
+.scenario-btn {
+  background: var(--bg); border: 1.5px solid var(--border);
+  padding: 0.65rem 0.85rem; cursor: pointer; text-align: left;
+  font-family: 'Inconsolata', monospace; transition: all 0.15s;
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+.scenario-btn:hover  { border-color: var(--green); background: var(--green-light); }
+.scenario-btn.active { border-color: var(--green); background: var(--green-light); box-shadow: 0 0 0 2px rgba(26,107,60,0.15); }
+.sc-rule { font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--green); font-weight: 600; }
+.sc-name { font-family: 'Syne'; font-weight: 700; font-size: 0.82rem; color: var(--ink); line-height: 1.2; }
+.sc-tag  { font-size: 0.65rem; color: var(--muted); }
+.scenario-desc {
+  background: var(--green-light); border: 1.5px solid var(--green);
+  padding: 0.85rem 1rem; display: none;
+  font-size: 0.8rem; line-height: 1.7; color: var(--ink);
+}
+.scenario-desc.visible { display: block; }
+.scenario-desc strong { color: var(--green); }
+
+/* ── Animations ── */
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="header-top">
+    <h1>SCHADS <em>Pay</em> Calculator</h1>
+    <span class="award-badge">MA000100 · 2024–25</span>
+  </div>
+  <p class="header-sub">Enter actual shift times — hours are calculated automatically. No invalid inputs possible.</p>
+</header>
+
+<!-- STEP 1: Settings -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">1</div>
+    <span class="step-title">Your Rate & Type</span>
+  </div>
+  <div class="step-body">
+    <div class="row-2">
+      <div class="field">
+        <label><span class="dot"></span> Base Hourly Rate ($)</label>
+        <input type="number" id="baseRate" placeholder="e.g. 37.35" step="0.01" min="10" max="200"
+               oninput="validateRate(this)" onchange="validateRate(this)">
+        <span class="field-error" id="rateErr">Enter a valid rate between $10 and $200/hr</span>
+        <span class="field-hint">Find your rate in the Fair Work pay guide (MA000100)</span>
+      </div>
+      <div class="field">
+        <label><span class="dot"></span> Employment Type</label>
+        <select id="empType">
+          <option value="pt">Part-time / Disability Services (OT after 2h)</option>
+          <option value="ft">Full-time (OT after 3h)</option>
+        </select>
+        <span class="field-hint">Determines overtime bracket threshold</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PREFILL SCENARIOS -->
+<div class="step" id="prefillStep">
+  <div class="step-header prefill-toggle" onclick="togglePrefill()" style="cursor:pointer;user-select:none">
+    <div class="step-num" style="background:var(--green);color:#fff">★</div>
+    <span class="step-title">Rule Scenarios — prefill shifts to see a specific rule in action</span>
+    <span id="prefill-chevron" style="margin-left:auto;font-size:1.1rem;color:var(--muted);transition:transform 0.2s">▸</span>
+  </div>
+  <div class="step-body" id="prefillBody" style="display:none">
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.6">
+      Click any scenario to clear the shift grid and load that example. Each one is designed to trigger exactly one SCHADS Award rule so you can see it calculated in isolation.
+    </p>
+    <div class="scenario-grid" id="scenarioGrid"></div>
+    <div class="scenario-desc" id="scenarioDesc"></div>
+  </div>
+</div>
+
+<!-- STEP 2: Shifts -->
+<div class="step">
+  <div class="step-header">
+    <div class="step-num">2</div>
+    <span class="step-title">Enter Your Shifts — click a day to add times</span>
+  </div>
+  <div class="step-body" id="daysContainer"></div>
+</div>
+
+<!-- Calculate -->
+<button class="calc-btn" id="calcBtn" onclick="calculate()">Calculate My Pay →</button>
+
+<!-- STEP 3: Results -->
+<div id="results" class="step" style="margin-top:1rem">
+  <div class="step-header">
+    <div class="step-num">3</div>
+    <span class="step-title">Pay Breakdown</span>
+  </div>
+  <div class="step-body">
+
+    <div class="result-hero">
+      <div>
+        <div class="label">Gross Weekly Pay</div>
+        <div class="total" id="rTotal">—</div>
+      </div>
+      <div style="text-align:right">
+        <div class="label">Total Hours</div>
+        <div style="font-family:'Syne';font-weight:700;font-size:1.5rem" id="rHours">—</div>
+      </div>
+    </div>
+
+    <div class="result-mini-grid">
+      <div class="mini-cell">
+        <span class="mc-label">Base Pay</span>
+        <span class="mc-val" id="rBase">—</span>
+      </div>
+      <div class="mini-cell">
+        <span class="mc-label">Penalty Loadings</span>
+        <span class="mc-val" id="rPenalty">—</span>
+      </div>
+      <div class="mini-cell">
+        <span class="mc-label">Overtime Pay</span>
+        <span class="mc-val" id="rOT">—</span>
+      </div>
+      <div class="mini-cell">
+        <span class="mc-label">Allowances</span>
+        <span class="mc-val" id="rAllow">—</span>
+      </div>
+      <div class="mini-cell">
+        <span class="mc-label">Ordinary Hours</span>
+        <span class="mc-val" id="rOrdH">—</span>
+      </div>
+      <div class="mini-cell">
+        <span class="mc-label">Overtime Hours</span>
+        <span class="mc-val" id="rOtH">—</span>
+      </div>
+    </div>
+
+    <div class="breakdown">
+      <div class="breakdown-title">Line-by-line Detail</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>Shift</th>
+            <th>Hrs</th>
+            <th>Type</th>
+            <th>Multiplier</th>
+            <th class="td-right">Pay</th>
+          </tr>
+        </thead>
+        <tbody id="breakdownBody"></tbody>
+      </table>
+    </div>
+
+    <div class="disclaimer">
+      ⚠ <strong>Estimates only.</strong> Based on SCHADS Award MA000100 (effective 01/07/2024), 
+      Social &amp; Community Services stream. Ordinary hours threshold: 7.6h/day and 38h/week (whichever is reached first). 
+      Broken shift allowance: $18.43/break, max 2 per shift day. Always verify against the 
+      <a href="https://www.fairwork.gov.au" target="_blank" style="color:var(--warn)">official Fair Work pay guide</a>.
+    </div>
+  </div>
+</div>
+
+</div><!-- /page -->
+
+<script>
+// ── Constants ──────────────────────────────────────────────
+const DAYS = [
+  { name: 'Monday',    short: 'MON', type: 'weekday' },
+  { name: 'Tuesday',   short: 'TUE', type: 'weekday' },
+  { name: 'Wednesday', short: 'WED', type: 'weekday' },
+  { name: 'Thursday',  short: 'THU', type: 'weekday' },
+  { name: 'Friday',    short: 'FRI', type: 'weekday' },
+  { name: 'Saturday',  short: 'SAT', type: 'saturday' },
+  { name: 'Sunday',    short: 'SUN', type: 'sunday'   },
+];
+
+const DAILY_ORD  = 7.6;
+const WEEKLY_ORD = 38.0;
+const RATES = { weekday: 1.00, saturday: 1.50, sunday: 2.00, ph: 2.50 };
+const OT_1  = 1.50;
+const OT_2  = 2.00;
+const BROKEN_ALLOWANCE = 18.43;
+
+const fmt = n => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const toMins = t => { const [h,m] = t.split(':').map(Number); return h*60+m; };
+const fmtMins = m => { const h=Math.floor(m/60), mn=m%60; return mn ? `${h}h ${mn}m` : `${h}h`; };
+
+// ── Build day rows ─────────────────────────────────────────
+const container = document.getElementById('daysContainer');
+
+DAYS.forEach((day, di) => {
+  const row = document.createElement('div');
+  row.className = 'day-row';
+  row.id = `day-${di}`;
+
+  const pillCls = day.type === 'saturday' ? 'sat' : day.type === 'sunday' ? 'sun' : '';
+  const nameCls = pillCls;
+
+  row.innerHTML = `
+    <div class="day-header" onclick="toggleDay(${di})">
+      <div class="day-pill ${pillCls}">${day.short}</div>
+      <div class="day-name ${nameCls}">${day.name}</div>
+      <div class="day-summary" id="day-sum-${di}"><span class="hrs">Day off</span></div>
+      <button class="day-toggle" id="day-tog-${di}" aria-label="Toggle ${day.name}">+</button>
+    </div>
+    <div class="day-body" id="day-body-${di}">
+      <div id="segs-${di}"></div>
+      <div class="seg-overlap-warn" id="overlap-${di}">⚠ Shift times overlap — please fix before calculating.</div>
+      <button class="add-seg-btn" onclick="addSegment(${di})">+ Add shift segment</button>
+      <label class="ph-toggle">
+        <input type="checkbox" id="ph-${di}" onchange="updateDaySummary(${di})">
+        <span>This day is a <strong>Public Holiday</strong> (overrides Sat/Sun rate → 2.5×)</span>
+      </label>
+    </div>
+  `;
+  container.appendChild(row);
+});
+
+function toggleDay(di) {
+  const row  = document.getElementById(`day-${di}`);
+  const body = document.getElementById(`day-body-${di}`);
+  const tog  = document.getElementById(`day-tog-${di}`);
+  const isOpen = row.classList.contains('open');
+  row.classList.toggle('open', !isOpen);
+  tog.textContent = isOpen ? '+' : '−';
+  if (!isOpen && document.getElementById(`segs-${di}`).children.length === 0) {
+    addSegment(di);
+  }
+}
+
+let segCounters = Array(7).fill(0);
+
+function addSegment(di) {
+  const container = document.getElementById(`segs-${di}`);
+  const idx = segCounters[di]++;
+  const segId = `seg-${di}-${idx}`;
+
+  const div = document.createElement('div');
+  div.className = 'segment';
+  div.id = segId;
+  div.innerHTML = `
+    <div class="field">
+      <label>Start Time</label>
+      <input type="time" id="${segId}-start" onchange="validateSegment(${di},'${segId}')">
+    </div>
+    <div class="field">
+      <label>End Time</label>
+      <input type="time" id="${segId}-end" onchange="validateSegment(${di},'${segId}')">
+    </div>
+    <div class="seg-dur" id="${segId}-dur">—</div>
+    <button class="seg-del" onclick="removeSegment(${di},'${segId}')" title="Remove segment">×</button>
+  `;
+  container.appendChild(div);
+  updateDaySummary(di);
+  // Open the day row if not already
+  const row = document.getElementById(`day-${di}`);
+  if (!row.classList.contains('open')) toggleDay(di);
+}
+
+function removeSegment(di, segId) {
+  const el = document.getElementById(segId);
+  if (el) el.remove();
+  updateDaySummary(di);
+  validateSegment(di, null);
+}
+
+function validateSegment(di, segId) {
+  if (segId) {
+    const start = document.getElementById(`${segId}-start`)?.value;
+    const end   = document.getElementById(`${segId}-end`)?.value;
+    const dur   = document.getElementById(`${segId}-dur`);
+    if (start && end) {
+      const s = toMins(start), e = toMins(end);
+      if (e > s) {
+        dur.textContent = fmtMins(e - s);
+        dur.className = 'seg-dur valid';
+      } else {
+        dur.textContent = 'End must be after start';
+        dur.className = 'seg-dur invalid';
+      }
+    } else {
+      dur.textContent = '—';
+      dur.className = 'seg-dur';
+    }
+  }
+  updateDaySummary(di);
+  checkOverlaps(di);
+}
+
+function checkOverlaps(di) {
+  const segs = getSegments(di).filter(s => s.valid);
+  const warn = document.getElementById(`overlap-${di}`);
+  let overlapping = false;
+  for (let i = 0; i < segs.length; i++) {
+    for (let j = i+1; j < segs.length; j++) {
+      if (segs[i].start < segs[j].end && segs[j].start < segs[i].end) {
+        overlapping = true; break;
+      }
+    }
+  }
+  warn.classList.toggle('visible', overlapping);
+  return !overlapping;
+}
+
+function getSegments(di) {
+  const container = document.getElementById(`segs-${di}`);
+  const segments = [];
+  container.querySelectorAll('.segment').forEach(seg => {
+    const id = seg.id;
+    const startEl = document.getElementById(`${id}-start`);
+    const endEl   = document.getElementById(`${id}-end`);
+    if (!startEl || !endEl) return;
+    const s = startEl.value, e = endEl.value;
+    if (s && e) {
+      const sm = toMins(s), em = toMins(e);
+      segments.push({ start: sm, end: em, valid: em > sm, hours: (em - sm) / 60, label: `${s}–${e}` });
+    }
+  });
+  return segments;
+}
+
+function updateDaySummary(di) {
+  const segs  = getSegments(di).filter(s => s.valid);
+  const isPH  = document.getElementById(`ph-${di}`)?.checked;
+  const total = segs.reduce((a,s) => a + s.hours, 0);
+  const sumEl = document.getElementById(`day-sum-${di}`);
+  const row   = document.getElementById(`day-${di}`);
+
+  if (total > 0) {
+    const tag = isPH ? ' · PH' : '';
+    sumEl.innerHTML = `<span class="hrs">${total.toFixed(1)}h${tag}</span>`;
+    row.classList.add('has-data');
+  } else {
+    sumEl.innerHTML = `<span class="hrs">Day off</span>`;
+    row.classList.remove('has-data');
+  }
+}
+
+// ── Validation ────────────────────────────────────────────
+function validateRate(el) {
+  const v = parseFloat(el.value);
+  const err = document.getElementById('rateErr');
+  const bad = !v || v < 10 || v > 200;
+  el.classList.toggle('error', bad);
+  err.classList.toggle('visible', bad);
+  return !bad;
+}
+
+// ── Calculate ─────────────────────────────────────────────
+function calculate() {
+  // Validate rate
+  const rateEl = document.getElementById('baseRate');
+  if (!validateRate(rateEl)) {
+    rateEl.focus();
+    return;
+  }
+  const baseRate = parseFloat(rateEl.value);
+  const empType  = document.getElementById('empType').value;
+  const otBracket = empType === 'ft' ? 3.0 : 2.0;
+
+  // Check for overlaps
+  for (let di = 0; di < 7; di++) {
+    if (!checkOverlaps(di)) {
+      alert(`Please fix overlapping shift times on ${DAYS[di].name} before calculating.`);
+      document.getElementById(`day-${di}`).scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+  }
+
+  // Collect all shifts
+  let allShifts = [];
+  for (let di = 0; di < 7; di++) {
+    const day   = DAYS[di];
+    const isPH  = document.getElementById(`ph-${di}`)?.checked;
+    const segs  = getSegments(di).filter(s => s.valid);
+    if (!segs.length) continue;
+    const isBroken = segs.length > 1;
+    segs.forEach(seg => {
+      allShifts.push({ di, dayName: day.name, dayType: isPH ? 'ph' : day.type, seg, isBroken });
+    });
+  }
+
+  if (!allShifts.length) {
+    alert('Please enter at least one shift before calculating.');
+    return;
+  }
+
+  // Sort by day then start time
+  allShifts.sort((a,b) => a.di - b.di || a.seg.start - b.seg.start);
+
+  // ── Calculate pay ──────────────────────────────────────
+  let weeklyOrdWorked = 0;
+  let basePay = 0, penaltyExtra = 0, otPay = 0;
+  let totalOtHours = 0;
+  const tableRows = [];
+
+  // Track OT per day
+  const dailyOrdWorked = {};
+  const dailyOtAccrued = {};
+
+  for (const shift of allShifts) {
+    const { di, dayName, dayType, seg } = shift;
+    const hours = seg.hours;
+
+    if (!dailyOrdWorked[di]) dailyOrdWorked[di] = 0;
+    if (!dailyOtAccrued[di]) dailyOtAccrued[di] = 0;
+
+    // How much ordinary time is left?
+    const dailyOrdLeft  = Math.max(0, DAILY_ORD  - dailyOrdWorked[di]);
+    const weeklyOrdLeft = Math.max(0, WEEKLY_ORD - weeklyOrdWorked);
+    const ordChunk = Math.min(hours, dailyOrdLeft, weeklyOrdLeft);
+    const otChunk  = hours - ordChunk;
+
+    const rate   = RATES[dayType] || 1.0;
+    const rLabel = dayType === 'ph' ? '2.50× PH' : dayType === 'saturday' ? '1.50× SAT' : dayType === 'sunday' ? '2.00× SUN' : '1.00× ORD';
+    const tdCls  = dayType === 'ph' ? 'type-ph' : dayType === 'saturday' ? 'type-sat' : dayType === 'sunday' ? 'type-sun' : '';
+
+    // Ordinary portion
+    if (ordChunk > 0) {
+      const gross = baseRate * rate * ordChunk;
+      basePay      += baseRate * ordChunk;
+      penaltyExtra += (rate - 1.0) * baseRate * ordChunk;
+      dailyOrdWorked[di]  += ordChunk;
+      weeklyOrdWorked     += ordChunk;
+      tableRows.push({ dayName, segLabel: seg.label, hours: ordChunk, type: rLabel, cls: tdCls, pay: gross });
+    }
+
+    // Overtime portion
+    if (otChunk > 0) {
+      totalOtHours += otChunk;
+      let remaining = otChunk;
+      const accrued = dailyOtAccrued[di];
+
+      if (dayType === 'ph') {
+        // PH OT stays at 2.5×
+        const pay = baseRate * 2.5 * remaining;
+        otPay += pay;
+        tableRows.push({ dayName, segLabel: seg.label + ' OT', hours: remaining, type: '2.50× PH OT', cls: 'type-ph type-ot', pay });
+      } else {
+        // Standard OT: first bracket then double time
+        const firstLeft = Math.max(0, otBracket - accrued);
+        const first     = Math.min(remaining, firstLeft);
+        if (first > 0) {
+          const pay = baseRate * OT_1 * first;
+          otPay += pay;
+          tableRows.push({ dayName, segLabel: seg.label + ' OT', hours: first, type: `1.50× OT (first ${otBracket}h)`, cls: 'type-ot', pay });
+          dailyOtAccrued[di] += first;
+          remaining          -= first;
+        }
+        if (remaining > 0) {
+          const pay = baseRate * OT_2 * remaining;
+          otPay += pay;
+          tableRows.push({ dayName, segLabel: seg.label + ' OT', hours: remaining, type: '2.00× OT (after bracket)', cls: 'type-ot', pay });
+          dailyOtAccrued[di] += remaining;
+        }
+      }
+    }
+  }
+
+  // Broken shift allowances — count days with >1 segment
+  let brokenDays = 0;
+  for (let di = 0; di < 7; di++) {
+    const segs = getSegments(di).filter(s => s.valid);
+    if (segs.length > 1) brokenDays++;
+  }
+  // Max 2 allowances per broken-shift day
+  const allowances = brokenDays * Math.min(2, 2) * BROKEN_ALLOWANCE;
+  if (allowances > 0) {
+    tableRows.push({ dayName: '—', segLabel: 'Broken shift', hours: null, type: `$${BROKEN_ALLOWANCE}/break × ${brokenDays*2}`, cls: 'type-allow', pay: allowances, isAllow: true });
+  }
+
+  const totalHours = allShifts.reduce((a,s) => a + s.seg.hours, 0);
+  const ordHours   = totalHours - totalOtHours;
+  const gross      = basePay + penaltyExtra + otPay + allowances;
+
+  // ── Populate results ───────────────────────────────────
+  document.getElementById('rTotal').innerHTML   = `<em>${fmt(gross)}</em>`;
+  document.getElementById('rHours').textContent = totalHours.toFixed(2) + 'h';
+  document.getElementById('rBase').textContent  = fmt(basePay);
+  document.getElementById('rPenalty').textContent = fmt(penaltyExtra);
+  document.getElementById('rOT').textContent    = fmt(otPay);
+  document.getElementById('rAllow').textContent = fmt(allowances);
+  document.getElementById('rOrdH').textContent  = ordHours.toFixed(2) + 'h';
+  document.getElementById('rOtH').textContent   = totalOtHours.toFixed(2) + 'h';
+
+  const tbody = document.getElementById('breakdownBody');
+  tbody.innerHTML = '';
+  tableRows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.dayName}</td>
+      <td style="color:var(--muted);font-size:0.78rem">${r.segLabel}</td>
+      <td>${r.hours != null ? r.hours.toFixed(2)+'h' : '—'}</td>
+      <td class="${r.cls}">${r.type}</td>
+      <td style="color:var(--muted);font-size:0.78rem">$${r.hours != null ? (r.pay/r.hours).toFixed(2)+'/h' : '—'}</td>
+      <td class="td-right ${r.cls}">${fmt(r.pay)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Total row
+  const totTr = document.createElement('tr');
+  totTr.className = 'total-row';
+  totTr.innerHTML = `
+    <td colspan="5">Gross Weekly Total</td>
+    <td class="td-right">${fmt(gross)}</td>
+  `;
+  tbody.appendChild(totTr);
+
+  const res = document.getElementById('results');
+  res.style.display = 'block';
+  setTimeout(() => res.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+}
+
+// ── Prefill Scenarios ──────────────────────────────────────
+// Each scenario defines: which days, segments, PH flag, and a description of the rule it triggers.
+// di: 0=Mon … 6=Sun
+const SCENARIOS = [
+
+  // ── ORDINARY TIME ────────────────────────────────────────
+  {
+    cat: 'Ordinary Time',
+    rule: 'Clause 20 — Ordinary Rate',
+    name: 'Standard Weekday Shift',
+    tag: 'Mon 9:00–16:36 · 7.6h',
+    desc: '<strong>Rule: Ordinary time (1.0×).</strong> A shift of exactly 7.6 hours on a weekday sits entirely within the daily ordinary-time threshold. No overtime, no penalty loading — just base rate × hours. This is the baseline SCHADS scenario every other rule builds on.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 0, segs: [{ start: '09:00', end: '16:36' }], ph: false }]
+  },
+  {
+    cat: 'Ordinary Time',
+    rule: 'Clause 20 — Short Shift',
+    name: 'Minimum 2-Hour Shift',
+    tag: 'Mon 10:00–12:00 · 2h',
+    desc: '<strong>Rule: Minimum engagement period.</strong> SCHADS Award requires a minimum payment of 2 hours per engagement for part-time employees. This scenario shows the floor — any shift entered shorter than 2 hours should still attract 2 hours pay in practice. Confirm your enterprise agreement or contract for exact minimums.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 0, segs: [{ start: '10:00', end: '12:00' }], ph: false }]
+  },
+  {
+    cat: 'Ordinary Time',
+    rule: 'Clause 20 — Full Standard Week',
+    name: 'Full-time 38-Hour Week',
+    tag: 'Mon–Fri 9:00–16:36 · 38h',
+    desc: '<strong>Rule: Full ordinary-time week (38h).</strong> A full-time employee working exactly 7.6h per day across 5 weekdays reaches 38h — the weekly ordinary-time ceiling. No overtime is triggered. This is the baseline gross for a full-time SACS Level 3.1 employee.',
+    rate: '37.35', empType: 'ft',
+    shifts: [
+      { di: 0, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 1, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 2, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 3, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 4, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+    ]
+  },
+
+  // ── PENALTY RATES ────────────────────────────────────────
+  {
+    cat: 'Penalty Rates',
+    rule: 'Clause 29.1(a) — Saturday',
+    name: 'Saturday Shift',
+    tag: 'Sat 8:00–14:00 · 6h @ 1.5×',
+    desc: '<strong>Rule: Saturday penalty (1.5×).</strong> All hours worked on Saturday attract a 50% loading. A 6-hour Saturday shift at $37.35/hr earns $335.15 — equivalent to 9 ordinary weekday hours. The loading applies from the first minute, not just after a threshold.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 5, segs: [{ start: '08:00', end: '14:00' }], ph: false }]
+  },
+  {
+    cat: 'Penalty Rates',
+    rule: 'Clause 29.1(b) — Sunday',
+    name: 'Sunday Shift',
+    tag: 'Sun 10:00–15:00 · 5h @ 2.0×',
+    desc: '<strong>Rule: Sunday penalty (2.0×).</strong> All Sunday hours are paid at double time — 200% of the base rate. A 5-hour Sunday at $37.35/hr earns $373.50. Note the multiplier applies to every hour, not just those beyond a threshold.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 6, segs: [{ start: '10:00', end: '15:00' }], ph: false }]
+  },
+  {
+    cat: 'Penalty Rates',
+    rule: 'Clause 29.1(c) — Public Holiday',
+    name: 'Public Holiday Shift',
+    tag: 'Mon (PH) 8:00–15:36 · 7.6h @ 2.5×',
+    desc: '<strong>Rule: Public holiday rate (2.5×).</strong> Working a public holiday attracts 250% of the base rate — the highest ordinary-time multiplier in the award. Tick the Public Holiday checkbox on any day to apply this. A 7.6h PH shift at $37.35 earns $709.65 — the same as 18 ordinary hours.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 0, segs: [{ start: '08:00', end: '15:36' }], ph: true }]
+  },
+  {
+    cat: 'Penalty Rates',
+    rule: 'Clause 29 — Weekend Comparison',
+    name: 'Sat + Sun Same Week',
+    tag: 'Sat 6h + Sun 5h (1.5× vs 2.0×)',
+    desc: '<strong>Rule: Saturday vs Sunday penalty comparison.</strong> This scenario runs both weekend penalty rates in one week so you can see the difference side by side. Saturday pays 1.5× and Sunday pays 2.0× — the Sunday rate is 33% higher than Saturday for the same hours worked.',
+    rate: '37.35', empType: 'pt',
+    shifts: [
+      { di: 5, segs: [{ start: '08:00', end: '14:00' }], ph: false },
+      { di: 6, segs: [{ start: '10:00', end: '15:00' }], ph: false },
+    ]
+  },
+  {
+    cat: 'Penalty Rates',
+    rule: 'Clause 29.1(c) — PH on Sunday',
+    name: 'Public Holiday Falls on Sunday',
+    tag: 'Sun flagged as PH · 6h @ 2.5×',
+    desc: '<strong>Rule: PH overrides the Sunday rate.</strong> When a public holiday falls on a Sunday, the public holiday rate of 2.5× applies — not the Sunday rate of 2.0×. The higher rate always takes precedence. This scenario shows Sunday ticked as PH to demonstrate the override.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 6, segs: [{ start: '09:00', end: '15:00' }], ph: true }]
+  },
+
+  // ── OVERTIME ─────────────────────────────────────────────
+  {
+    cat: 'Overtime',
+    rule: 'Clause 25.2 — Daily OT First Bracket (PT)',
+    name: 'PT Daily OT — First 2h (1.5×)',
+    tag: 'Mon 9:00–18:36 · 7.6h ord + 2h OT',
+    desc: '<strong>Rule: Part-time daily overtime first bracket (1.5×).</strong> For part-time and disability services employees, hours beyond 7.6 in a single day trigger overtime. The first 2 hours of overtime are paid at time-and-a-half (1.5×). This shift is exactly at the boundary: 7.6h ordinary + 2h at 1.5×.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 0, segs: [{ start: '09:00', end: '18:36' }], ph: false }]
+  },
+  {
+    cat: 'Overtime',
+    rule: 'Clause 25.2 — Daily OT Second Bracket (PT)',
+    name: 'PT Daily OT — After 2h (2.0×)',
+    tag: 'Mon 8:00–19:00 · 7.6h + 2h + 1.4h',
+    desc: '<strong>Rule: Part-time daily overtime second bracket (2.0×).</strong> Once 2 OT hours are reached, all remaining overtime on that day is double time (2.0×). This 11-hour shift splits into: 7.6h ordinary × 1.0, then 2h × 1.5, then 1.4h × 2.0.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 0, segs: [{ start: '08:00', end: '19:00' }], ph: false }]
+  },
+  {
+    cat: 'Overtime',
+    rule: 'Clause 25.2 — Daily OT First Bracket (FT)',
+    name: 'FT Daily OT — First 3h (1.5×)',
+    tag: 'Mon 8:00–19:36 · 7.6h + 3h OT',
+    desc: '<strong>Rule: Full-time daily overtime first bracket (1.5×, wider 3h threshold).</strong> Full-time employees have a larger first overtime bracket — 3 hours at 1.5× before double time kicks in (vs 2h for PT). This shift has 7.6h ordinary + 3h at 1.5× + 1h at 2.0×. Select Full-time in Step 1 to see the difference.',
+    rate: '37.35', empType: 'ft',
+    shifts: [{ di: 0, segs: [{ start: '08:00', end: '19:36' }], ph: false }]
+  },
+  {
+    cat: 'Overtime',
+    rule: 'Clause 25.3 — Weekly OT Threshold',
+    name: 'Weekly OT (38h exceeded)',
+    tag: 'Mon–Fri 7.6h + Sat 4h',
+    desc: '<strong>Rule: Weekly 38h ordinary-time ceiling.</strong> Even if no single day exceeds 7.6h, hours beyond 38 in a week become overtime. Mon–Fri fills 38h. The Saturday shift then triggers OT from the first minute — at Saturday penalty rate applied to the OT multiplier.',
+    rate: '37.35', empType: 'pt',
+    shifts: [
+      { di: 0, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 1, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 2, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 3, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 4, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 5, segs: [{ start: '09:00', end: '13:00' }], ph: false },
+    ]
+  },
+  {
+    cat: 'Overtime',
+    rule: 'Clause 25.3 — Weekly OT Mid-Week',
+    name: 'Weekly OT Triggered on Friday',
+    tag: 'Mon–Thu 8h/day, Fri 8h (OT on Fri)',
+    desc: '<strong>Rule: Weekly OT ceiling hit before the week ends.</strong> 4 days × 8h = 32h. Add Friday 8h = 40h total — the last 2h of Friday become weekly overtime even though Friday itself is under the 7.6h daily threshold. This shows OT can be triggered mid-weekday by the weekly ceiling.',
+    rate: '37.35', empType: 'pt',
+    shifts: [
+      { di: 0, segs: [{ start: '08:00', end: '16:00' }], ph: false },
+      { di: 1, segs: [{ start: '08:00', end: '16:00' }], ph: false },
+      { di: 2, segs: [{ start: '08:00', end: '16:00' }], ph: false },
+      { di: 3, segs: [{ start: '08:00', end: '16:00' }], ph: false },
+      { di: 4, segs: [{ start: '08:00', end: '16:00' }], ph: false },
+    ]
+  },
+  {
+    cat: 'Overtime',
+    rule: 'Clause 25.2 — Saturday OT',
+    name: 'Saturday with Overtime',
+    tag: 'Sat 7:00–17:00 · 7.6h @ 1.5× + OT',
+    desc: '<strong>Rule: Overtime on a Saturday.</strong> Ordinary Saturday hours attract 1.5×. Hours beyond 7.6h on a Saturday trigger OT — the first 2h OT also at 1.5× (same rate coincidentally), then beyond that at 2.0×. This 10-hour Saturday shows all three bands.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 5, segs: [{ start: '07:00', end: '17:00' }], ph: false }]
+  },
+  {
+    cat: 'Overtime',
+    rule: 'Clause 25.2 — Sunday OT',
+    name: 'Sunday with Overtime',
+    tag: 'Sun 7:00–17:00 · 7.6h @ 2.0× + OT',
+    desc: '<strong>Rule: Overtime on a Sunday (always 2.0×).</strong> Sunday overtime is paid at double time for all OT hours — the standard OT brackets do not reduce the Sunday rate. This 10-hour Sunday has 7.6h ordinary at 2.0× and 2.4h OT also at 2.0× (Sunday OT never drops below the Sunday penalty).',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 6, segs: [{ start: '07:00', end: '17:00' }], ph: false }]
+  },
+  {
+    cat: 'Overtime',
+    rule: 'Clause 25.2 — Public Holiday OT',
+    name: 'Public Holiday with Overtime',
+    tag: 'Mon (PH) 7:00–17:00 · 7.6h + OT @ 2.5×',
+    desc: '<strong>Rule: Public holiday overtime (2.5× throughout).</strong> All hours on a public holiday — ordinary and overtime alike — are paid at 2.5×. Unlike weekday overtime, there is no higher bracket: the rate stays flat at 250% regardless of total hours worked.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 0, segs: [{ start: '07:00', end: '17:00' }], ph: true }]
+  },
+
+  // ── BROKEN SHIFTS ────────────────────────────────────────
+  {
+    cat: 'Broken Shifts',
+    rule: 'Clause 28.4 — One Break',
+    name: 'Broken Shift (1 break = $18.43)',
+    tag: 'Mon 8:00–12:00 + 15:00–19:00',
+    desc: '<strong>Rule: Broken shift allowance — 1 break ($18.43).</strong> Working two separate periods in a day with an unpaid break between them triggers the broken shift allowance. One break = $18.43 added to the shift pay automatically when 2 segments are entered on the same day.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 0, segs: [{ start: '08:00', end: '12:00' }, { start: '15:00', end: '19:00' }], ph: false }]
+  },
+  {
+    cat: 'Broken Shifts',
+    rule: 'Clause 28.4 — Two Breaks (Cap)',
+    name: 'Broken Shift (2 breaks = $36.86 cap)',
+    tag: 'Mon 7:00–10:00 + 12:00–15:00 + 17:00–20:00',
+    desc: '<strong>Rule: Broken shift allowance cap — 2 breaks maximum ($36.86).</strong> The SCHADS Award caps the broken shift allowance at 2 breaks per day. Working 3 segments (2 breaks) triggers the maximum: $18.43 × 2 = $36.86. A third break does not add a third allowance.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 0, segs: [{ start: '07:00', end: '10:00' }, { start: '12:00', end: '15:00' }, { start: '17:00', end: '20:00' }], ph: false }]
+  },
+  {
+    cat: 'Broken Shifts',
+    rule: 'Clause 28.4 — Multiple Days',
+    name: 'Broken Shifts Across 3 Days',
+    tag: 'Mon, Wed, Fri each broken',
+    desc: '<strong>Rule: Broken shift allowance applies per day.</strong> Each day that has a broken shift attracts its own allowance(s). Three days with one break each = $18.43 × 3 = $55.29 in total allowances for the week, stacking independently from pay.',
+    rate: '37.35', empType: 'pt',
+    shifts: [
+      { di: 0, segs: [{ start: '08:00', end: '12:00' }, { start: '15:00', end: '19:00' }], ph: false },
+      { di: 2, segs: [{ start: '08:00', end: '12:00' }, { start: '15:00', end: '19:00' }], ph: false },
+      { di: 4, segs: [{ start: '08:00', end: '12:00' }, { start: '15:00', end: '19:00' }], ph: false },
+    ]
+  },
+  {
+    cat: 'Broken Shifts',
+    rule: 'Clause 28.4 — Saturday Broken Shift',
+    name: 'Broken Shift on Saturday',
+    tag: 'Sat 8:00–12:00 + 14:00–18:00',
+    desc: '<strong>Rule: Broken shift allowance + Saturday penalty stacked.</strong> The broken shift allowance is paid on top of any penalty rate. A broken Saturday shift attracts both: all hours at 1.5× AND the $18.43 allowance for the unpaid break. Penalties and allowances are additive.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 5, segs: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }], ph: false }]
+  },
+  {
+    cat: 'Broken Shifts',
+    rule: 'Clause 28.4 — PH Broken Shift',
+    name: 'Broken Shift on Public Holiday',
+    tag: 'Mon (PH) 8:00–12:00 + 15:00–19:00',
+    desc: '<strong>Rule: Broken shift allowance + public holiday rate stacked.</strong> The allowance applies regardless of day type. A broken PH shift pays: all hours at 2.5× (public holiday rate) plus $18.43 allowance. This is the highest combined scenario.',
+    rate: '37.35', empType: 'pt',
+    shifts: [{ di: 0, segs: [{ start: '08:00', end: '12:00' }, { start: '15:00', end: '19:00' }], ph: true }]
+  },
+
+  // ── COMBINATIONS ─────────────────────────────────────────
+  {
+    cat: 'Combinations',
+    rule: 'Clause 25 + 29 — Weekday OT + Saturday',
+    name: 'Long Weekday + Weekend',
+    tag: 'Mon 10h + Sat 5h',
+    desc: '<strong>Rule: Multiple rules in one week.</strong> Monday runs into overtime (7.6h ord + 2h OT at 1.5× + 0.4h at 2.0×). Saturday adds the 1.5× penalty. This is a common real-world roster — two separate rules calculated independently and summed.',
+    rate: '37.35', empType: 'pt',
+    shifts: [
+      { di: 0, segs: [{ start: '07:30', end: '17:30' }], ph: false },
+      { di: 5, segs: [{ start: '09:00', end: '14:00' }], ph: false },
+    ]
+  },
+  {
+    cat: 'Combinations',
+    rule: 'Clause 25 + 29 + 28.4 — Full Penalty Week',
+    name: 'Maximum Rules Week',
+    tag: 'OT + broken + Sat + Sun + PH',
+    desc: '<strong>Rule: Every major rule triggered in one week.</strong> Tuesday has daily OT. Wednesday is a broken shift. Saturday has the 1.5× penalty. Sunday has 2.0×. Monday is flagged as a public holiday at 2.5×. This is the most complex payroll scenario — used to stress-test payroll systems.',
+    rate: '37.35', empType: 'pt',
+    shifts: [
+      { di: 0, segs: [{ start: '08:00', end: '15:36' }], ph: true },
+      { di: 1, segs: [{ start: '08:00', end: '19:00' }], ph: false },
+      { di: 2, segs: [{ start: '08:00', end: '12:00' }, { start: '15:00', end: '19:00' }], ph: false },
+      { di: 5, segs: [{ start: '09:00', end: '14:00' }], ph: false },
+      { di: 6, segs: [{ start: '10:00', end: '15:00' }], ph: false },
+    ]
+  },
+  {
+    cat: 'Combinations',
+    rule: 'Clause 25.3 — Weekly OT on a Sunday',
+    name: 'Weekly OT Reached, Then Sunday',
+    tag: 'Mon–Fri 38h + Sun 4h',
+    desc: '<strong>Rule: Weekly ceiling + Sunday penalty stacked.</strong> After a full 38-hour weekday week, a Sunday shift has already exhausted ordinary-time allocation. The Sunday hours are both OT (because the weekly ceiling is passed) and attract the Sunday 2.0× penalty — a compound effect.',
+    rate: '37.35', empType: 'pt',
+    shifts: [
+      { di: 0, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 1, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 2, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 3, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 4, segs: [{ start: '09:00', end: '16:36' }], ph: false },
+      { di: 6, segs: [{ start: '10:00', end: '14:00' }], ph: false },
+    ]
+  },
+  {
+    cat: 'Combinations',
+    rule: 'Clause 20 + 29 — Part-time Mixed Week',
+    name: 'Typical PT Roster',
+    tag: 'Mon, Wed, Fri + Sat morning',
+    desc: '<strong>Rule: Typical part-time SCHADS roster.</strong> Three ordinary weekday shifts plus a Saturday morning. All weekday hours are within ordinary limits. Saturday attracts 1.5×. No overtime is triggered. This reflects a common disability support or home care roster.',
+    rate: '37.35', empType: 'pt',
+    shifts: [
+      { di: 0, segs: [{ start: '09:00', end: '15:00' }], ph: false },
+      { di: 2, segs: [{ start: '09:00', end: '15:00' }], ph: false },
+      { di: 4, segs: [{ start: '09:00', end: '15:00' }], ph: false },
+      { di: 5, segs: [{ start: '08:00', end: '12:00' }], ph: false },
+    ]
+  },
+];
+
+
+function togglePrefill() {
+  const body = document.getElementById('prefillBody');
+  const chev = document.getElementById('prefill-chevron');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  chev.textContent = open ? '▸' : '▾';
+}
+
+function buildScenarios() {
+  const grid = document.getElementById('scenarioGrid');
+  grid.innerHTML = '';
+
+  // Group by category
+  const cats = {};
+  SCENARIOS.forEach((sc, i) => {
+    if (!cats[sc.cat]) cats[sc.cat] = [];
+    cats[sc.cat].push({ sc, i });
+  });
+
+  Object.entries(cats).forEach(([cat, items]) => {
+    // Category label
+    const label = document.createElement('div');
+    label.className = 'sc-cat-label';
+    label.textContent = cat;
+    grid.appendChild(label);
+
+    // Buttons row
+    const row = document.createElement('div');
+    row.className = 'sc-row';
+    items.forEach(({ sc, i }) => {
+      const btn = document.createElement('button');
+      btn.className = 'scenario-btn';
+      btn.id = `sc-btn-${i}`;
+      btn.innerHTML = `<span class="sc-rule">${sc.rule}</span><span class="sc-name">${sc.name}</span><span class="sc-tag">${sc.tag}</span>`;
+      btn.onclick = () => applyScenario(i);
+      row.appendChild(btn);
+    });
+    grid.appendChild(row);
+  });
+}
+
+function clearAllShifts() {
+  // Remove all segments from all days, uncheck PH, close day rows
+  for (let di = 0; di < 7; di++) {
+    const segs = document.getElementById(`segs-${di}`);
+    if (segs) segs.innerHTML = '';
+    segCounters[di] = 0;
+    const ph = document.getElementById(`ph-${di}`);
+    if (ph) ph.checked = false;
+    const row = document.getElementById(`day-${di}`);
+    if (row) { row.classList.remove('open', 'has-data'); }
+    const tog = document.getElementById(`day-tog-${di}`);
+    if (tog) tog.textContent = '+';
+    updateDaySummary(di);
+  }
+  // Hide results
+  document.getElementById('results').style.display = 'none';
+}
+
+function applyScenario(idx) {
+  const sc = SCENARIOS[idx];
+
+  // Highlight active button
+  document.querySelectorAll('.scenario-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+
+  // Show description
+  const desc = document.getElementById('scenarioDesc');
+  desc.innerHTML = sc.desc;
+  desc.classList.add('visible');
+
+  // Set rate and employment type
+  const rateEl = document.getElementById('baseRate');
+  rateEl.value = sc.rate;
+  validateRate(rateEl);
+  document.getElementById('empType').value = sc.empType;
+
+  // Clear existing shifts
+  clearAllShifts();
+
+  // Apply scenario shifts
+  sc.shifts.forEach(dayDef => {
+    const { di, segs, ph } = dayDef;
+
+    // Open the day
+    const row = document.getElementById(`day-${di}`);
+    row.classList.add('open');
+    const tog = document.getElementById(`day-tog-${di}`);
+    if (tog) tog.textContent = '−';
+
+    // Add segments
+    segs.forEach(seg => {
+      const container = document.getElementById(`segs-${di}`);
+      const idx2 = segCounters[di]++;
+      const segId = `seg-${di}-${idx2}`;
+      const div = document.createElement('div');
+      div.className = 'segment';
+      div.id = segId;
+      div.innerHTML = `
+        <div class="field">
+          <label>Start Time</label>
+          <input type="time" id="${segId}-start" value="${seg.start}" onchange="validateSegment(${di},'${segId}')">
+        </div>
+        <div class="field">
+          <label>End Time</label>
+          <input type="time" id="${segId}-end" value="${seg.end}" onchange="validateSegment(${di},'${segId}')">
+        </div>
+        <div class="seg-dur" id="${segId}-dur">—</div>
+        <button class="seg-del" onclick="removeSegment(${di},'${segId}')" title="Remove segment">×</button>
+      `;
+      container.appendChild(div);
+      // Compute duration display
+      const sm = toMins(seg.start), em = toMins(seg.end);
+      const dur = document.getElementById(`${segId}-dur`);
+      if (em > sm) { dur.textContent = fmtMins(em - sm); dur.className = 'seg-dur valid'; }
+    });
+
+    // Set PH checkbox
+    const phEl = document.getElementById(`ph-${di}`);
+    if (phEl) phEl.checked = ph;
+
+    updateDaySummary(di);
+  });
+
+  // Scroll to step 2
+  document.getElementById('daysContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+buildScenarios();
+</script>
+</body>
+</html>

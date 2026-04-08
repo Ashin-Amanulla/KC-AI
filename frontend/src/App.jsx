@@ -11,6 +11,8 @@ import { Clients } from './pages/Clients';
 import { Timesheets } from './pages/Timesheets';
 import { ShiftAnalysis } from './pages/ShiftAnalysis';
 import { UserManagement } from './pages/UserManagement';
+import { Shifts } from './pages/Shifts';
+import { PayHours } from './pages/PayHours';
 import { canAccessPath } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
@@ -110,6 +112,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <UserManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shifts"
+            element={
+              <ProtectedRoute>
+                <Shifts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pay-hours"
+            element={
+              <ProtectedRoute>
+                <PayHours />
               </ProtectedRoute>
             }
           />

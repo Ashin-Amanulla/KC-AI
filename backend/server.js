@@ -8,6 +8,10 @@ import shiftcareRoutes from './modules/shiftcare/shiftcare.route.js';
 import userRoutes from './modules/user/user.route.js';
 import csvAnalysisRoutes from './modules/csv-analysis/csvAnalysis.route.js';
 import { startCsvAnalysisWorker } from './jobs/csvAnalysisWorker.js';
+import { startPayHoursWorker } from './jobs/payHoursWorker.js';
+import shiftsRoutes from './modules/shifts/shift.route.js';
+import holidaysRoutes from './modules/holidays/holiday.route.js';
+import payHoursRoutes from './modules/pay-hours/payHours.route.js';
 import { formatErrorResponse } from './helpers/errors.js';
 import morgan from 'morgan';
 
@@ -58,8 +62,11 @@ app.get('/config-check', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api', shiftcareRoutes);
+app.use('/api', shiftsRoutes);
+app.use('/api', holidaysRoutes);
+app.use('/api', payHoursRoutes);
 app.use('/api', csvAnalysisRoutes);
+app.use('/api', shiftcareRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -92,6 +99,7 @@ const startServer = async () => {
   try {
     await connectDB();
     startCsvAnalysisWorker();
+    startPayHoursWorker();
     app.listen(config.port, () => {
       console.log(`Server running on port ${config.port}`);
       console.log(`Environment: ${config.nodeEnv}`);

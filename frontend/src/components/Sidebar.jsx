@@ -11,6 +11,8 @@ import {
   ChevronRight,
   Menu,
   LogOut,
+  Calculator,
+  CalendarDays,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { getNavItemsForRole } from '../config/nav';
@@ -26,6 +28,8 @@ const iconMap = {
   Clock,
   FileBarChart,
   Shield,
+  Calculator,
+  CalendarDays,
 };
 
 export function Sidebar() {
