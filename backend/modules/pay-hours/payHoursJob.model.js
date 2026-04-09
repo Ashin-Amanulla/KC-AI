@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 
 const payHoursJobSchema = new mongoose.Schema(
   {
+    location: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Location',
+      default: null,
+    },
     triggeredBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

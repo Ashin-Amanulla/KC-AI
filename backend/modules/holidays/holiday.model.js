@@ -2,10 +2,15 @@ import mongoose from 'mongoose';
 
 const holidaySchema = new mongoose.Schema(
   {
+    location: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Location',
+      required: true,
+      index: true,
+    },
     date: {
       type: Date,
       required: true,
-      unique: true,
       index: true,
     },
     name: {
@@ -23,5 +28,8 @@ const holidaySchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// One holiday per location per date
+holidaySchema.index({ location: 1, date: 1 }, { unique: true });
 
 export const Holiday = mongoose.model('Holiday', holidaySchema);

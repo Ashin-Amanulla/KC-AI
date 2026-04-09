@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
-import { Upload, Download, ChevronRight, AlertCircle } from 'lucide-react';
+import { Upload, Download, ChevronRight, AlertCircle, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -9,6 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../ui/table';
 import { useShifts, useUploadShifts } from '../api/shifts';
+import { useLocations } from '../api/locations';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import { SchadsCalculator } from './SchadsCalculator';
 
@@ -32,6 +33,10 @@ export const Shifts = () => {
   const [expandedRows, setExpandedRows] = useState({});
   const [uploadResult, setUploadResult] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [locationId, setLocationId] = useState('');
+
+  const { data: locationsData } = useLocations();
+  const locations = locationsData?.locations || [];
 
   const params = {
     search: search || undefined,
@@ -65,7 +70,7 @@ export const Shifts = () => {
   const handleUpload = async () => {
     if (!selectedFile) return;
     try {
-      const result = await uploadMutation.mutateAsync(selectedFile);
+      const result = await uploadMutation.mutateAsync({ file: selectedFile, locationId: locationId || null });
       setUploadResult(result);
       setSelectedFile(null);
       setPage(1);
@@ -146,6 +151,22 @@ export const Shifts = () => {
           <CardTitle className="text-lg">Upload Shifts CSV</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Location selector */}
+          <div className="flex items-center gap-3">
+            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm font-medium">Location</span>
+            <select
+              value={locationId}
+              onChange={e => setLocationId(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-[200px]"
+            >
+              <option value="">No location</option>
+              {locations.map(loc => (
+                <option key={loc._id} value={loc._id}>{loc.name} ({loc.code})</option>
+              ))}
+            </select>
+          </div>
+
           <div
             {...getRootProps()}
             className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${

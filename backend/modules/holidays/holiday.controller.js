@@ -1,10 +1,14 @@
 import { Holiday } from './holiday.model.js';
+import { Location } from '../locations/location.model.js';
 
 export const listHolidays = async (req, res, next) => {
   try {
-    const { year } = req.query;
+    const { locationId, year } = req.query;
 
     const filter = {};
+    if (locationId) {
+      filter.location = locationId;
+    }
     if (year) {
       const y = parseInt(year, 10);
       filter.date = {
@@ -13,7 +17,11 @@ export const listHolidays = async (req, res, next) => {
       };
     }
 
-    const holidays = await Holiday.find(filter).sort({ date: 1 }).lean();
+    const holidays = await Holiday.find(filter)
+      .populate('location', 'name code timezone')
+      .sort({ date: 1 })
+      .lean();
+
     res.json({ holidays });
   } catch (error) {
     next(error);
@@ -22,22 +30,28 @@ export const listHolidays = async (req, res, next) => {
 
 export const createHoliday = async (req, res, next) => {
   try {
-    const { date, name } = req.body;
+    const { date, name, locationId } = req.body;
 
-    if (!date || !name) {
-      return res.status(400).json({ error: 'Both date and name are required' });
+    if (!date || !name || !locationId) {
+      return res.status(400).json({ error: 'date, name, and locationId are required' });
+    }
+
+    const location = await Location.findById(locationId).lean();
+    if (!location) {
+      return res.status(404).json({ error: 'Location not found' });
     }
 
     // Normalise to midnight UTC of that date
     const normalizedDate = new Date(date);
     normalizedDate.setUTCHours(0, 0, 0, 0);
 
-    const existing = await Holiday.findOne({ date: normalizedDate });
+    const existing = await Holiday.findOne({ location: locationId, date: normalizedDate });
     if (existing) {
-      return res.status(409).json({ error: `A holiday already exists on ${date}` });
+      return res.status(409).json({ error: `A holiday already exists on ${date} for this location` });
     }
 
     const holiday = await Holiday.create({
+      location: locationId,
       date: normalizedDate,
       name: name.trim(),
       createdBy: req.user?.userId ?? null,

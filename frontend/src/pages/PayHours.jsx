@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
-import { Upload, Download, ChevronRight, Plus, Trash2, AlertCircle, Calculator } from 'lucide-react';
+import { Upload, Download, ChevronRight, Plus, Trash2, AlertCircle, Calculator, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -10,6 +10,7 @@ import {
 } from '../ui/table';
 import { useUploadShifts } from '../api/shifts';
 import { useHolidays, useCreateHoliday, useDeleteHoliday } from '../api/holidays';
+import { useLocations, useLoadHolidayFixture } from '../api/locations';
 import { usePayHours, useShiftPayHours, useComputePayHours, usePayHoursJobStatus } from '../api/payHours';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 
@@ -90,21 +91,24 @@ const ShiftDetail = ({ payHoursId }) => {
 
 // ─── Holiday Manager ──────────────────────────────────────────────────────────
 
-const HolidayManager = () => {
+const HolidayManager = ({ locationId, locations }) => {
   const [newDate, setNewDate] = useState('');
   const [newName, setNewName] = useState('');
   const [collapsed, setCollapsed] = useState(true);
+  const [fixtureYear, setFixtureYear] = useState(new Date().getFullYear());
 
-  const { data } = useHolidays();
+  const { data } = useHolidays(locationId ? { locationId } : { locationId: 'none' });
   const createMutation = useCreateHoliday();
   const deleteMutation = useDeleteHoliday();
+  const loadFixtureMutation = useLoadHolidayFixture();
 
   const holidays = data?.holidays || [];
+  const location = locations.find(l => l._id === locationId);
 
   const handleAdd = async () => {
-    if (!newDate || !newName.trim()) return;
+    if (!newDate || !newName.trim() || !locationId) return;
     try {
-      await createMutation.mutateAsync({ date: newDate, name: newName.trim() });
+      await createMutation.mutateAsync({ date: newDate, name: newName.trim(), locationId });
       setNewDate('');
       setNewName('');
       toast.success('Holiday added');
@@ -122,16 +126,63 @@ const HolidayManager = () => {
     }
   };
 
+  const handleLoadFixture = async () => {
+    if (!locationId) return;
+    try {
+      const result = await loadFixtureMutation.mutateAsync({ locationId, year: fixtureYear });
+      toast.success(`Loaded ${result.created} holidays for ${fixtureYear} (${result.skipped} already existed)`);
+      if (result.errors?.length) toast.warning(`${result.errors.length} errors during load`);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to load holiday fixture');
+    }
+  };
+
+  if (!locationId) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Holiday Manager</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Select a location above to manage its public holidays.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="pb-2 cursor-pointer select-none" onClick={() => setCollapsed(!collapsed)}>
         <CardTitle className="text-base flex items-center justify-between">
-          <span>Holiday Manager ({holidays.length} holidays)</span>
+          <span>Holiday Manager — {location?.name} ({holidays.length} holidays)</span>
           <ChevronRight className={`h-4 w-4 transition-transform ${collapsed ? '' : 'rotate-90'}`} />
         </CardTitle>
       </CardHeader>
       {!collapsed && (
         <CardContent className="space-y-4">
+          {/* Load fixture row */}
+          <div className="flex gap-3 items-center flex-wrap p-3 rounded-md bg-muted/40 border">
+            <span className="text-sm font-medium">Load public holidays from fixture:</span>
+            <select
+              value={fixtureYear}
+              onChange={e => setFixtureYear(parseInt(e.target.value, 10))}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {[2024, 2025, 2026, 2027].map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleLoadFixture}
+              disabled={loadFixtureMutation.isPending}
+            >
+              {loadFixtureMutation.isPending ? 'Loading…' : `Load ${location?.code ?? ''} Holidays`}
+            </Button>
+          </div>
+
+          {/* Manual add row */}
           <div className="flex gap-3 flex-wrap">
             <Input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-44" />
             <Input placeholder="Holiday name" value={newName} onChange={(e) => setNewName(e.target.value)} className="w-56" />
@@ -166,7 +217,7 @@ const HolidayManager = () => {
               </Table>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No holidays configured. Add public holidays to ensure correct pay rate calculations.</p>
+            <p className="text-sm text-muted-foreground">No holidays configured. Use "Load Holidays" above or add manually.</p>
           )}
         </CardContent>
       )}
@@ -177,19 +228,25 @@ const HolidayManager = () => {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export const PayHours = () => {
+  const [locationId, setLocationId] = useState('');
   const [staffFilter, setStaffFilter] = useState('');
   const [expandedRows, setExpandedRows] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadResult, setUploadResult] = useState(null);
   const [activeJobId, setActiveJobId] = useState(null);
 
+  const { data: locationsData } = useLocations();
+  const locations = locationsData?.locations || [];
+
   const uploadMutation = useUploadShifts();
   const computeMutation = useComputePayHours();
   const { data: jobStatus } = usePayHoursJobStatus(activeJobId);
 
-  const { data: payHoursData, isLoading, refetch } = usePayHours(
-    staffFilter ? { staffName: staffFilter } : {}
-  );
+  const payHoursParams = {};
+  if (locationId) payHoursParams.locationId = locationId;
+  if (staffFilter) payHoursParams.staffName = staffFilter;
+
+  const { data: payHoursData, isLoading, refetch } = usePayHours(payHoursParams);
 
   const payHours = payHoursData?.payHours || [];
   const periodStart = payHoursData?.periodStart;
@@ -217,7 +274,7 @@ export const PayHours = () => {
   const handleUpload = async () => {
     if (!selectedFile) return;
     try {
-      const result = await uploadMutation.mutateAsync(selectedFile);
+      const result = await uploadMutation.mutateAsync({ file: selectedFile, locationId: locationId || null });
       setUploadResult(result);
       setSelectedFile(null);
       if (result.errors?.length > 0) {
@@ -232,7 +289,7 @@ export const PayHours = () => {
 
   const handleCompute = async () => {
     try {
-      const result = await computeMutation.mutateAsync();
+      const result = await computeMutation.mutateAsync({ locationId: locationId || null });
       setActiveJobId(result.jobId);
       toast.info('Pay hours computation started');
     } catch (err) {
@@ -253,13 +310,15 @@ export const PayHours = () => {
 
   const isJobActive = activeJobId && jobStatus && !['completed', 'failed'].includes(jobStatus.status);
 
+  const exportUrl = `/api/pay-hours/export${locationId ? `?locationId=${locationId}` : ''}`;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Pay Hours</h2>
         {payHours.length > 0 && (
           <a
-            href="/api/pay-hours/export"
+            href={exportUrl}
             className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent"
           >
             <Download className="h-4 w-4" />
@@ -267,6 +326,29 @@ export const PayHours = () => {
           </a>
         )}
       </div>
+
+      {/* Location Selector */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex items-center gap-3">
+            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm font-medium">Location</span>
+            <select
+              value={locationId}
+              onChange={e => setLocationId(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-[200px]"
+            >
+              <option value="">All Locations</option>
+              {locations.map(loc => (
+                <option key={loc._id} value={loc._id}>{loc.name} ({loc.code})</option>
+              ))}
+            </select>
+            {locations.length === 0 && (
+              <span className="text-sm text-muted-foreground">No locations set up yet — go to Settings to add one.</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Upload + Compute Section */}
       <Card>
@@ -350,7 +432,7 @@ export const PayHours = () => {
       )}
 
       {/* Holiday Manager */}
-      <HolidayManager />
+      <HolidayManager locationId={locationId} locations={locations} />
 
       {/* Pay Hours Table */}
       <Card>
@@ -403,9 +485,9 @@ export const PayHours = () => {
                     <TableHead className="text-right bg-red-50/50">Hol OT≤2</TableHead>
                     <TableHead className="text-right bg-red-50/50">Hol OT&gt;2</TableHead>
                     <TableHead className="text-right bg-blue-50/50 text-blue-800">Nursing</TableHead>
-                    <TableHead className="text-right">OT&gt;76h</TableHead>
-                    <TableHead className="text-right">Broken</TableHead>
-                    <TableHead className="text-right">Sleep</TableHead>
+                    <TableHead className="text-right">Broken#</TableHead>
+                    <TableHead className="text-right">Sleep#</TableHead>
+                    <TableHead className="text-right">OT&gt;76</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -435,9 +517,9 @@ export const PayHours = () => {
                         <TableCell className="text-right text-xs">{h(ph.holidayOtUpto2)}</TableCell>
                         <TableCell className="text-right text-xs">{h(ph.holidayOtAfter2)}</TableCell>
                         <TableCell className="text-right text-xs">{h(ph.nursingCareHours)}</TableCell>
-                        <TableCell className="text-right text-xs font-semibold">{h(ph.otAfter76Hours)}</TableCell>
                         <TableCell className="text-right text-xs">{ph.brokenShiftCount ?? 0}</TableCell>
                         <TableCell className="text-right text-xs">{ph.sleepoversCount ?? 0}</TableCell>
+                        <TableCell className="text-right text-xs font-semibold">{h(ph.otAfter76Hours)}</TableCell>
                       </TableRow>
 
                       {expandedRows[ph._id] && (

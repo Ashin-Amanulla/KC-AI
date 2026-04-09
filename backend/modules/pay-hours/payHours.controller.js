@@ -5,12 +5,15 @@ import { addPayHoursJob } from '../../jobs/payHoursQueue.js';
 
 export const computePayHours = async (req, res, next) => {
   try {
+    const locationId = req.body.locationId ?? null;
+
     const job = await PayHoursJob.create({
+      location: locationId,
       triggeredBy: req.user?.userId ?? null,
       status: 'pending',
     });
 
-    await addPayHoursJob({ jobId: job._id.toString() });
+    await addPayHoursJob({ jobId: job._id.toString(), locationId });
 
     res.json({ jobId: job._id.toString() });
   } catch (error) {
@@ -36,9 +39,10 @@ export const getJobStatus = async (req, res, next) => {
 
 export const listPayHours = async (req, res, next) => {
   try {
-    const { staffName } = req.query;
+    const { staffName, locationId } = req.query;
 
     const filter = {};
+    if (locationId) filter.location = locationId;
     if (staffName) {
       filter.staffName = { $regex: staffName, $options: 'i' };
     }
@@ -82,9 +86,10 @@ export const getShiftPayHours = async (req, res, next) => {
 
 export const exportPayHoursCsv = async (req, res, next) => {
   try {
-    const { staffName } = req.query;
+    const { staffName, locationId } = req.query;
 
     const filter = {};
+    if (locationId) filter.location = locationId;
     if (staffName) filter.staffName = { $regex: staffName, $options: 'i' };
 
     const payHours = await PayHours.find(filter).sort({ staffName: 1 }).lean();
@@ -110,9 +115,9 @@ export const exportPayHoursCsv = async (req, res, next) => {
       'Holiday OT (<=2h)',
       'Holiday OT (>2h)',
       'Nursing Care Hours',
-      'OT After 76 Hours',
       'Broken Shifts',
       'Sleepovers',
+      'OT After 76 Hours',
     ];
     res.write(headers.join(',') + '\n');
 
@@ -134,9 +139,9 @@ export const exportPayHoursCsv = async (req, res, next) => {
         ph.holidayOtUpto2 ?? 0,
         ph.holidayOtAfter2 ?? 0,
         ph.nursingCareHours ?? 0,
-        ph.otAfter76Hours ?? 0,
         ph.brokenShiftCount ?? 0,
         ph.sleepoversCount ?? 0,
+        ph.otAfter76Hours ?? 0,
       ];
       res.write(row.join(',') + '\n');
     }

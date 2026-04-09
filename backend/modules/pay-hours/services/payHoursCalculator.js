@@ -395,6 +395,8 @@ export function newPayHoursData() {
     holidayHours: 0, holidayOtUpto2: 0, holidayOtAfter2: 0,
     nursingCareHours: 0,
     otAfter76Hours: 0,
+    otAfter76Weekday: 0, otAfter76Saturday: 0,
+    otAfter76Sunday: 0, otAfter76Holiday: 0,
     brokenShiftCount: 0,
     sleepoversCount: 0,
   };
@@ -533,6 +535,9 @@ function apply76HourCap(data, hourLedger) {
   const excess = r2(totalRegular - TOTAL_HOURS_CAP);
   data.otAfter76Hours = r2(data.otAfter76Hours + excess);
 
+  // Track OT>76 by day type for correct pay rates
+  let ot76Weekday = 0, ot76Saturday = 0, ot76Sunday = 0, ot76Holiday = 0;
+
   // Sort ledger by date descending (latest first)
   const sorted = [...hourLedger].sort((a, b) => b.entryDate - a.entryDate);
 
@@ -545,7 +550,18 @@ function apply76HourCap(data, hourLedger) {
     // Deduct from data field
     data[entry.fieldName] = r2((data[entry.fieldName] || 0) - deduct);
     remaining = r2(remaining - deduct);
+
+    // Accumulate by day type
+    if (entry.dayType === 'holiday') ot76Holiday = r2(ot76Holiday + deduct);
+    else if (entry.dayType === 'sunday') ot76Sunday = r2(ot76Sunday + deduct);
+    else if (entry.dayType === 'saturday') ot76Saturday = r2(ot76Saturday + deduct);
+    else ot76Weekday = r2(ot76Weekday + deduct);
   }
+
+  data.otAfter76Weekday = r2(data.otAfter76Weekday + ot76Weekday);
+  data.otAfter76Saturday = r2(data.otAfter76Saturday + ot76Saturday);
+  data.otAfter76Sunday = r2(data.otAfter76Sunday + ot76Sunday);
+  data.otAfter76Holiday = r2(data.otAfter76Holiday + ot76Holiday);
 }
 
 // ─── CHAIN PROCESSING ────────────────────────────────────────────────────────

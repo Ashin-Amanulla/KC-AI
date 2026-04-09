@@ -6,201 +6,131 @@ import { Input } from '../ui/input';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../ui/table';
-import { useShifts } from '../api/shifts';
-import { useHolidays } from '../api/holidays';
+import { usePayHours } from '../api/payHours';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 
 // ── SCHADS Award Constants (MA000100, effective 01/07/2024) ──────────
-const DAILY_ORD        = 7.6;
-const WEEKLY_ORD       = 38.0;
-const RATES            = { weekday: 1.00, saturday: 1.50, sunday: 2.00, ph: 2.50 };
-const OT_1             = 1.50;
-const OT_2             = 2.00;
-const BROKEN_ALLOWANCE = 18.43;
-const OT_BRACKET       = { pt: 2.0, ft: 3.0 };
+const DAILY_ORD          = 7.6;
+const WEEKLY_ORD         = 38.0;
+const OT_BRACKET         = { pt: 2.0, ft: 3.0 };
+const BROKEN_ALLOWANCE_1 = 20.82;   // 1 break per broken shift
+const BROKEN_ALLOWANCE_2 = 27.56;   // 2 breaks per broken shift
+const MEAL_ALLOWANCE     = 16.62;   // per qualifying OT meal break
 
 // ── Formatting ───────────────────────────────────────────────────────
 const fmt  = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const r2   = (n) => Math.round(n * 100) / 100;
 const fmtH = (n) => n.toFixed(2) + 'h';
 
-// ── Timezone helpers ─────────────────────────────────────────────────
-function offsetMins(offsetStr) {
-  if (!offsetStr) return 600; // default +10:00
-  const sign = offsetStr[0] === '+' ? 1 : -1;
-  const [h, m] = offsetStr.slice(1).split(':').map(Number);
-  return sign * (h * 60 + m);
-}
+// ── Casual pay: (base × mult) + loading, where base = rate/1.25, loading = rate×0.2
+// Effective per-hour rate at multiplier M = rate × (M/1.25 + 0.2)
+const casualEff = (rate, mult) => rate * (mult / 1.25 + 0.2);
 
-// Convert UTC Date → "local" Date (UTC fields represent local time)
-function toLocalDate(utcMs, offMins) {
-  return new Date(utcMs + offMins * 60000);
-}
+// ── Gross pay (permanent or casual) ─────────────────────────────────
+function calcGross(ph, baseRate, empType = 'permanent') {
+  const rate = parseFloat(baseRate);
+  if (!rate || rate <= 0) return null;
 
-// ── Split a DB shift into local-day segments ─────────────────────────
-// Returns [{ localDayMs, localStartMs, weekMondayMs, dayOfWeek (0=Mon…6=Sun), hours, isBroken }]
-function getShiftSegments(shift) {
-  const off = offsetMins(shift.timezoneOffset);
-  const MS_DAY = 86400000;
+  const sunAll = (ph.sundayHours||0) + (ph.sundayOtUpto2||0) + (ph.sundayOtAfter2||0);
+  const holAll = (ph.holidayHours||0) + (ph.holidayOtUpto2||0) + (ph.holidayOtAfter2||0);
 
-  const startLocalMs = new Date(shift.startDatetime).getTime() + off * 60000;
-  const endLocalMs   = new Date(shift.endDatetime).getTime()   + off * 60000;
+  // OT>76 split by day type — correct rates per SCHADS rules
+  const ot76Wd  = ph.otAfter76Weekday  || 0;  // weekday: 1.5× first 2h, 2× after
+  const ot76Sat = ph.otAfter76Saturday || 0;  // Sat: 1.5× first 2h, 2× after
+  const ot76Sun = ph.otAfter76Sunday   || 0;  // Sun: 2.0× flat
+  const ot76Hol = ph.otAfter76Holiday  || 0;  // PH:  2.5× flat
 
-  if (endLocalMs <= startLocalMs) return [];
+  // Weekday OT>76: apply first 2h at 1.5×, rest at 2×
+  const ot76WdT1 = r2(Math.min(ot76Wd, 2));
+  const ot76WdT2 = r2(Math.max(0, ot76Wd - 2));
+  // Saturday OT>76: same bracket structure
+  const ot76SatT1 = r2(Math.min(ot76Sat, 2));
+  const ot76SatT2 = r2(Math.max(0, ot76Sat - 2));
 
-  const segments = [];
-  let dayStartMs = Math.floor(startLocalMs / MS_DAY) * MS_DAY;
-  let dayEndMs   = dayStartMs + MS_DAY;
-  let cur        = startLocalMs;
-
-  while (cur < endLocalMs) {
-    const segEndMs = Math.min(dayEndMs, endLocalMs);
-    const hours    = r2((segEndMs - cur) / 3600000);
-    if (hours <= 0) { cur = dayEndMs; dayStartMs = dayEndMs; dayEndMs += MS_DAY; continue; }
-
-    // dayOfWeek from shifted UTC day: getUTCDay() gives 0=Sun…6=Sat
-    const utcDow = new Date(dayStartMs).getUTCDay();
-    const dow    = (utcDow + 6) % 7; // 0=Mon…6=Sun
-
-    // ISO week key: Monday of this week
-    const weekMondayMs = dayStartMs - dow * MS_DAY;
-
-    segments.push({
-      localDayMs:   dayStartMs,
-      localStartMs: cur,
-      weekMondayMs,
-      dayOfWeek:    dow,
-      hours,
-      isBroken:     shift.isBrokenShift || false,
-    });
-
-    cur        = dayEndMs;
-    dayStartMs = dayEndMs;
-    dayEndMs  += MS_DAY;
-  }
-  return segments;
-}
-
-// ── Public holiday check ─────────────────────────────────────────────
-function buildHolidaySet(holidays) {
-  const s = new Set();
-  for (const h of holidays) {
-    // DB stores holiday dates as UTC midnight; we match on YYYY-MM-DD
-    const d = new Date(h.date);
-    s.add(`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`);
-  }
-  return s;
-}
-
-function isHoliday(localDayMs, holidaySet) {
-  const d = new Date(localDayMs);
-  const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
-  return holidaySet.has(key);
-}
-
-// ── Core SCHADS bucketing ────────────────────────────────────────────
-// Returns { x1, x1_5, x2, x2_5, allowances, totalHours }
-function computeStaffBuckets(shifts, holidaySet, empType) {
-  const otBracket = OT_BRACKET[empType] || 2.0;
-  if (!shifts.length) return { x1: 0, x1_5: 0, x2: 0, x2_5: 0, allowances: 0, totalHours: 0 };
-
-  // Expand all shifts into local-day segments
-  const allSegs = [];
-  for (const shift of shifts) {
-    for (const seg of getShiftSegments(shift)) {
-      allSegs.push(seg);
-    }
+  let pay = 0;
+  if (empType === 'casual') {
+    const ce = (m) => casualEff(rate, m);
+    pay =
+      (ph.morningHours     || 0) * ce(1.0)   +
+      (ph.afternoonHours   || 0) * ce(1.125)  +
+      (ph.nightHours       || 0) * ce(1.15)   +
+      (ph.weekdayOtUpto2   || 0) * ce(1.5)    +
+      (ph.weekdayOtAfter2  || 0) * ce(2.0)    +
+      (ph.saturdayHours    || 0) * ce(1.5)    +
+      (ph.saturdayOtUpto2  || 0) * ce(1.5)    +
+      (ph.saturdayOtAfter2 || 0) * ce(2.0)    +
+      sunAll                     * ce(2.0)    +
+      holAll                     * ce(2.5)    +
+      (ph.nursingCareHours || 0) * ce(1.0)    +
+      // OT>76 by day type — correct rates
+      ot76WdT1                   * ce(1.5)    +
+      ot76WdT2                   * ce(2.0)    +
+      ot76SatT1                  * ce(1.5)    +
+      ot76SatT2                  * ce(2.0)    +
+      ot76Sun                    * ce(2.0)    +
+      ot76Hol                    * ce(2.5);
+  } else {
+    pay = rate * (
+      (ph.morningHours     || 0) * 1.0  +
+      (ph.afternoonHours   || 0) * 1.0  +
+      (ph.nightHours       || 0) * 1.0  +
+      (ph.weekdayOtUpto2   || 0) * 1.5  +
+      (ph.weekdayOtAfter2  || 0) * 2.0  +
+      (ph.saturdayHours    || 0) * 1.5  +
+      (ph.saturdayOtUpto2  || 0) * 1.5  +
+      (ph.saturdayOtAfter2 || 0) * 2.0  +
+      sunAll                     * 2.0  +
+      holAll                     * 2.5  +
+      (ph.nursingCareHours || 0) * 1.0  +
+      // OT>76 by day type — correct rates
+      ot76WdT1                   * 1.5  +
+      ot76WdT2                   * 2.0  +
+      ot76SatT1                  * 1.5  +
+      ot76SatT2                  * 2.0  +
+      ot76Sun                    * 2.0  +
+      ot76Hol                    * 2.5
+    );
   }
 
-  // Group by week → day
-  const byWeek = {};
-  for (const seg of allSegs) {
-    const wk = seg.weekMondayMs;
-    const dk = seg.localDayMs;
-    if (!byWeek[wk]) byWeek[wk] = {};
-    if (!byWeek[wk][dk]) byWeek[wk][dk] = { dow: seg.dayOfWeek, segs: [] };
-    byWeek[wk][dk].segs.push(seg);
-  }
-
-  let x1 = 0, x1_5 = 0, x2 = 0, x2_5 = 0;
-
-  // Track broken-shift breaks per local day: { dayKey → breakCount }
-  const brokenBreaksPerDay = {};
-
-  // Process week by week in chronological order
-  for (const wk of Object.keys(byWeek).sort((a, b) => Number(a) - Number(b))) {
-    let weeklyOrdWorked = 0;
-    const dailyOrdWorked = {};
-    const dailyOtAccrued = {};
-
-    const sortedDays = Object.entries(byWeek[wk])
-      .sort(([a], [b]) => Number(a) - Number(b));
-
-    for (const [dk, { dow, segs }] of sortedDays) {
-      dailyOrdWorked[dk] = dailyOrdWorked[dk] || 0;
-      dailyOtAccrued[dk] = dailyOtAccrued[dk] || 0;
-
-      const ph      = isHoliday(Number(dk), holidaySet);
-      const dayType = ph ? 'ph' : dow === 5 ? 'saturday' : dow === 6 ? 'sunday' : 'weekday';
-
-      // Count broken breaks: each segment with isBroken=true is one break
-      const brokenCount = segs.filter(s => s.isBroken).length;
-      if (brokenCount > 0) {
-        brokenBreaksPerDay[dk] = Math.min(2, (brokenBreaksPerDay[dk] || 0) + brokenCount);
-      }
-
-      // Sort segments chronologically within the day
-      const sorted = [...segs].sort((a, b) => a.localStartMs - b.localStartMs);
-
-      for (const seg of sorted) {
-        const hours = seg.hours;
-        const dailyOrdLeft  = Math.max(0, DAILY_ORD  - dailyOrdWorked[dk]);
-        const weeklyOrdLeft = Math.max(0, WEEKLY_ORD - weeklyOrdWorked);
-        const ordChunk = r2(Math.min(hours, dailyOrdLeft, weeklyOrdLeft));
-        const otChunk  = r2(hours - ordChunk);
-
-        // Bucket ordinary portion by day type
-        if (ordChunk > 0) {
-          if      (dayType === 'weekday')  x1   += ordChunk;
-          else if (dayType === 'saturday') x1_5 += ordChunk;
-          else if (dayType === 'sunday')   x2   += ordChunk;
-          else if (dayType === 'ph')       x2_5 += ordChunk;
-          dailyOrdWorked[dk] += ordChunk;
-          weeklyOrdWorked    += ordChunk;
-        }
-
-        // Bucket OT portion
-        if (otChunk > 0) {
-          if (dayType === 'ph') {
-            // PH OT stays at 2.5×
-            x2_5 += otChunk;
-          } else if (dayType === 'sunday') {
-            // Sunday OT stays at 2.0×
-            x2 += otChunk;
-          } else {
-            // Standard brackets (weekday + saturday OT)
-            const firstLeft = Math.max(0, otBracket - dailyOtAccrued[dk]);
-            const first     = r2(Math.min(otChunk, firstLeft));
-            x1_5 += first;
-            x2   += r2(otChunk - first);
-            dailyOtAccrued[dk] += otChunk;
-          }
-        }
-      }
-    }
-  }
-
-  const allowances  = Object.values(brokenBreaksPerDay).reduce((s, n) => s + n * BROKEN_ALLOWANCE, 0);
-  const totalHours  = r2(x1 + x1_5 + x2 + x2_5);
-
-  return { x1: r2(x1), x1_5: r2(x1_5), x2: r2(x2), x2_5: r2(x2_5), allowances: r2(allowances), totalHours };
+  return r2(pay + calcAllowances(ph).total);
 }
 
-// ── Gross pay calc ───────────────────────────────────────────────────
-function calcGross(buckets, baseRate) {
-  const r = parseFloat(baseRate);
-  if (!r || r <= 0) return null;
-  return r2(r * (1.0 * buckets.x1 + 1.5 * buckets.x1_5 + 2.0 * buckets.x2 + 2.5 * buckets.x2_5) + buckets.allowances);
+// ── Allowances ────────────────────────────────────────────────────────
+function calcAllowances(ph) {
+  const broken = ph.brokenShiftCount || 0;
+  // Treat each broken shift as 1 break ($20.82); 2-break shifts ($27.56) not tracked per-shift
+  const brokenAllow = r2(broken * BROKEN_ALLOWANCE_1);
+
+  // Meal allowance approximated from total OT (per-shift detail not available at summary level)
+  const totOT = r2(
+    (ph.weekdayOtUpto2||0) + (ph.weekdayOtAfter2||0) +
+    (ph.saturdayOtUpto2||0) + (ph.saturdayOtAfter2||0) +
+    (ph.sundayOtUpto2||0) + (ph.sundayOtAfter2||0) +
+    (ph.holidayOtUpto2||0) + (ph.holidayOtAfter2||0)
+  );
+  const mealAllow = totOT > 4 ? r2(MEAL_ALLOWANCE * 2) : totOT > 1 ? MEAL_ALLOWANCE : 0;
+
+  return { brokenAllow, mealAllow, total: r2(brokenAllow + mealAllow) };
+}
+
+function staffTotalHours(ph) {
+  return r2(
+    (ph.morningHours||0)+(ph.afternoonHours||0)+(ph.nightHours||0)+
+    (ph.weekdayOtUpto2||0)+(ph.weekdayOtAfter2||0)+
+    (ph.saturdayHours||0)+(ph.saturdayOtUpto2||0)+(ph.saturdayOtAfter2||0)+
+    (ph.sundayHours||0)+(ph.sundayOtUpto2||0)+(ph.sundayOtAfter2||0)+
+    (ph.holidayHours||0)+(ph.holidayOtUpto2||0)+(ph.holidayOtAfter2||0)+
+    (ph.nursingCareHours||0)
+  );
+}
+
+function totalOtHrs(ph) {
+  return r2(
+    (ph.weekdayOtUpto2||0)+(ph.weekdayOtAfter2||0)+
+    (ph.saturdayOtUpto2||0)+(ph.saturdayOtAfter2||0)+
+    (ph.sundayOtUpto2||0)+(ph.sundayOtAfter2||0)+
+    (ph.holidayOtUpto2||0)+(ph.holidayOtAfter2||0)
+  );
 }
 
 // ── Manual calculator helpers ─────────────────────────────────────────
@@ -285,8 +215,8 @@ function computeManual(baseRate, empType, days) {
 
   let brokenDays = 0;
   for (let di = 0; di < 7; di++) if (days[di].segments.filter(s => segH(s) !== null).length > 1) brokenDays++;
-  const allowances = brokenDays * 2 * BROKEN_ALLOWANCE;
-  if (allowances > 0) tableRows.push({ dayName: '—', segLabel: 'Broken shift allowance', hours: null, type: `$${BROKEN_ALLOWANCE}/break × ${brokenDays*2}`, cls: 'allow', pay: allowances, isAllow: true });
+  const allowances = brokenDays * BROKEN_ALLOWANCE_1;
+  if (allowances > 0) tableRows.push({ dayName: '—', segLabel: 'Broken shift allowance', hours: null, type: `$${BROKEN_ALLOWANCE_1}/shift × ${brokenDays}`, cls: 'allow', pay: allowances, isAllow: true });
 
   const totalHours = allShifts.reduce((a, s) => a + s.seg.hours, 0);
   const ordHours   = totalHours - totalOtHours;
@@ -310,65 +240,59 @@ export const SchadsCalculator = () => {
   const [view, setView] = useState('summary'); // 'summary' | 'manual'
 
   // ── Staff Summary state ──────────────────────────────────────────
-  const [empType, setEmpType]     = useState('pt');
-  const [baseRates, setBaseRates] = useState({}); // { staffName: string }
+  const [baseRates, setBaseRates] = useState({});       // { staffName: string }
   const [defaultRate, setDefaultRate] = useState('');
+  const [empTypes, setEmpTypes] = useState({});          // { staffName: 'permanent' | 'casual' }
+  const [defaultEmpType, setDefaultEmpType] = useState('permanent');
 
-  // ── Fetch data ───────────────────────────────────────────────────
-  const { data: shiftsData, isLoading: shiftsLoading, error: shiftsError } = useShifts({ perPage: 5000 });
-  const { data: holidaysData, isLoading: holidaysLoading } = useHolidays();
+  // ── Fetch computed pay hours from backend ────────────────────────
+  const { data: payHoursData, isLoading: phLoading, error: phError } = usePayHours({});
+  const staffRows = (payHoursData?.payHours || []).slice().sort((a, b) => a.staffName.localeCompare(b.staffName));
 
-  const allShifts  = shiftsData?.shifts || [];
-  const allHolidays = holidaysData?.holidays || holidaysData || [];
-
-  // ── Computed data ────────────────────────────────────────────────
-  const holidaySet = useMemo(() => buildHolidaySet(allHolidays), [allHolidays]);
-
-  const staffBuckets = useMemo(() => {
-    if (!allShifts.length) return [];
-    // Group by staffName
-    const byStaff = {};
-    for (const s of allShifts) {
-      if (!byStaff[s.staffName]) byStaff[s.staffName] = [];
-      byStaff[s.staffName].push(s);
-    }
-    return Object.entries(byStaff)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([staffName, shifts]) => ({
-        staffName,
-        ...computeStaffBuckets(shifts, holidaySet, empType),
-      }));
-  }, [allShifts, holidaySet, empType]);
+  const getEmpType = useCallback((staffName) => empTypes[staffName] ?? defaultEmpType, [empTypes, defaultEmpType]);
 
   // Totals row
   const totals = useMemo(() => {
-    const t = { x1: 0, x1_5: 0, x2: 0, x2_5: 0, allowances: 0, totalHours: 0, gross: 0 };
-    let grossReady = true;
-    for (const row of staffBuckets) {
-      t.x1       += row.x1;
-      t.x1_5     += row.x1_5;
-      t.x2       += row.x2;
-      t.x2_5     += row.x2_5;
-      t.allowances += row.allowances;
-      t.totalHours += row.totalHours;
+    const COLS = ['morningHours','afternoonHours','nightHours','weekdayOtUpto2','weekdayOtAfter2',
+      'saturdayHours','saturdayOtUpto2','saturdayOtAfter2','sundayHours','sundayOtUpto2','sundayOtAfter2',
+      'holidayHours','holidayOtUpto2','holidayOtAfter2','nursingCareHours','brokenShiftCount','sleepoversCount',
+      'otAfter76Hours'];
+    const t = Object.fromEntries(COLS.map(c => [c, 0]));
+    t.totalHours = 0; t.gross = 0; t.brokenAllow = 0; t.mealAllow = 0; t.totalOT = 0;
+    let grossCount = 0;
+    for (const row of staffRows) {
+      for (const col of COLS) t[col] = r2((t[col] || 0) + (row[col] || 0));
+      t.totalHours = r2(t.totalHours + staffTotalHours(row));
+      t.totalOT    = r2(t.totalOT    + totalOtHrs(row));
+      const allow = calcAllowances(row);
+      t.brokenAllow = r2(t.brokenAllow + allow.brokenAllow);
+      t.mealAllow   = r2(t.mealAllow   + allow.mealAllow);
       const rate = baseRates[row.staffName] ?? defaultRate;
-      const g = calcGross(row, rate);
-      if (g !== null) t.gross += g;
-      else grossReady = false;
+      const empT = empTypes[row.staffName] ?? defaultEmpType;
+      const g = calcGross(row, rate, empT);
+      if (g !== null) { t.gross = r2(t.gross + g); grossCount++; }
     }
-    return { ...t, grossReady };
-  }, [staffBuckets, baseRates, defaultRate]);
+    return { ...t, grossReady: staffRows.length > 0 && grossCount === staffRows.length };
+  }, [staffRows, baseRates, defaultRate, empTypes, defaultEmpType]);
 
   const setRate = useCallback((staffName, val) => {
     setBaseRates(prev => ({ ...prev, [staffName]: val }));
   }, []);
 
+  const setEmpType = useCallback((staffName, val) => {
+    setEmpTypes(prev => ({ ...prev, [staffName]: val }));
+  }, []);
+
   const applyDefault = useCallback(() => {
-    if (!defaultRate) return;
-    const patch = {};
-    for (const row of staffBuckets) patch[row.staffName] = defaultRate;
-    setBaseRates(patch);
-  }, [defaultRate, staffBuckets]);
+    const ratePatch = {};
+    const typePatch = {};
+    for (const row of staffRows) {
+      if (defaultRate) ratePatch[row.staffName] = defaultRate;
+      typePatch[row.staffName] = defaultEmpType;
+    }
+    if (defaultRate) setBaseRates(prev => ({ ...prev, ...ratePatch }));
+    setEmpTypes(prev => ({ ...prev, ...typePatch }));
+  }, [defaultRate, defaultEmpType, staffRows]);
 
   // ── Manual calculator state ──────────────────────────────────────
   const [manualRate, setManualRate]     = useState('');
@@ -405,7 +329,7 @@ export const SchadsCalculator = () => {
     setManualResults(r);
   }, [manualRate, manualEmpType, manualDays]);
 
-  const isLoading = shiftsLoading || holidaysLoading;
+  const isLoading = phLoading;
 
   // ════════════════════════════════════════════════════════════════
   // Render
@@ -426,14 +350,14 @@ export const SchadsCalculator = () => {
             <CardContent className="pt-4">
               <div className="flex flex-wrap gap-4 items-end">
                 <div className="space-y-1">
-                  <label className="text-xs uppercase tracking-wider text-muted-foreground">Employment Type</label>
+                  <label className="text-xs uppercase tracking-wider text-muted-foreground">Default Employment Type</label>
                   <select
-                    value={empType}
-                    onChange={e => setEmpType(e.target.value)}
+                    value={defaultEmpType}
+                    onChange={e => setDefaultEmpType(e.target.value)}
                     className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
-                    <option value="pt">Part-time / Disability (OT after 2h)</option>
-                    <option value="ft">Full-time (OT after 3h)</option>
+                    <option value="permanent">Permanent / Part-time</option>
+                    <option value="casual">Casual (+25% loading)</option>
                   </select>
                 </div>
                 <div className="space-y-1">
@@ -441,23 +365,51 @@ export const SchadsCalculator = () => {
                   <div className="flex gap-2">
                     <Input
                       type="number"
-                      placeholder="e.g. 37.35"
+                      placeholder="e.g. 36.23"
                       step="0.01"
                       value={defaultRate}
                       onChange={e => setDefaultRate(e.target.value)}
                       className="w-32 h-9"
                     />
-                    <Button size="sm" variant="outline" onClick={applyDefault} disabled={!defaultRate}>
+                    <Button size="sm" variant="outline" onClick={applyDefault}>
                       Apply to all
                     </Button>
                   </div>
                 </div>
-                {allShifts.length > 0 && (
+                {staffRows.length > 0 && (
                   <p className="text-xs text-muted-foreground ml-auto self-end pb-1">
-                    {allShifts.length} shifts · {staffBuckets.length} staff members
+                    {staffRows.length} staff members
                   </p>
                 )}
               </div>
+              {/* Casual rate info */}
+              {defaultEmpType === 'casual' && defaultRate && parseFloat(defaultRate) > 0 && (() => {
+                const rate = parseFloat(defaultRate);
+                const base = r2(rate / 1.25);
+                const load = r2(rate - base);
+                return (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 space-y-1">
+                    <p className="font-semibold">Casual Loading Breakdown — ${rate.toFixed(2)} casual rate</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+                      {[
+                        ['Base (÷1.25)', `$${base.toFixed(2)}`],
+                        ['Loading (+25%)', `$${load.toFixed(2)}`],
+                        ['Afternoon (1.125×)', `$${r2(base*1.125+load).toFixed(2)}/h`],
+                        ['Night (1.15×)', `$${r2(base*1.15+load).toFixed(2)}/h`],
+                        ['Saturday (1.5×)', `$${r2(base*1.5+load).toFixed(2)}/h`],
+                        ['Sunday (2.0×)', `$${r2(base*2.0+load).toFixed(2)}/h`],
+                        ['Public Hol. (2.5×)', `$${r2(base*2.5+load).toFixed(2)}/h`],
+                        ['OT 1.5×', `$${r2(base*1.5+load).toFixed(2)}/h`],
+                      ].map(([label, value]) => (
+                        <div key={label} className="bg-white/60 rounded px-2 py-1">
+                          <div className="text-[10px] text-blue-600">{label}</div>
+                          <div className="font-semibold">{value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
@@ -465,80 +417,174 @@ export const SchadsCalculator = () => {
           <Card>
             <CardContent className="p-0">
               {isLoading ? (
-                <div className="py-12"><LoadingScreen message="Computing pay hours…" /></div>
-              ) : shiftsError ? (
+                <div className="py-12"><LoadingScreen message="Loading pay hours…" /></div>
+              ) : phError ? (
                 <div className="py-8 text-center text-destructive text-sm px-4">
                   <AlertCircle className="h-5 w-5 mx-auto mb-2" />
-                  Error loading shifts: {shiftsError.message}
+                  Error loading pay hours: {phError.message}
                 </div>
-              ) : staffBuckets.length === 0 ? (
+              ) : staffRows.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground text-sm">
-                  No shifts found. Upload a ShiftCare CSV on the Shifts tab first.
+                  No pay hours data. Go to the <strong>Pay Hours</strong> page, upload a CSV and click "Compute Pay Hours" first.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted/40">
-                        <TableHead className="text-xs uppercase tracking-wider min-w-[180px]">Staff Member</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider min-w-[130px]">Base Rate ($)</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-right whitespace-nowrap">1.0× Hrs<br/><span className="text-muted-foreground font-normal normal-case tracking-normal">Weekday ord.</span></TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-right whitespace-nowrap">1.5× Hrs<br/><span className="text-purple-600 font-normal normal-case tracking-normal">Sat / OT-1</span></TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-right whitespace-nowrap">2.0× Hrs<br/><span className="text-red-500 font-normal normal-case tracking-normal">Sun / OT-2</span></TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-right whitespace-nowrap">2.5× Hrs<br/><span className="text-blue-600 font-normal normal-case tracking-normal">Public Hol.</span></TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-right">Total Hrs</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-right">Allowances</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-right min-w-[110px]">Gross Pay</TableHead>
+                      {/* Group header row */}
+                      <TableRow className="bg-muted/60 border-b-0 text-[10px] uppercase tracking-wider">
+                        <TableHead colSpan={3} className="sticky left-0 bg-muted/60 z-10 border-r border-border/50" />
+                        <TableHead colSpan={3} className="text-center text-yellow-800 border-r border-border/50 py-1">Weekday Hrs</TableHead>
+                        <TableHead colSpan={2} className="text-center text-orange-800 border-r border-border/50 py-1">WD Overtime</TableHead>
+                        <TableHead colSpan={3} className="text-center text-cyan-800 border-r border-border/50 py-1">Saturday</TableHead>
+                        <TableHead colSpan={2} className="text-center text-red-800 border-r border-border/50 py-1">Sunday ★</TableHead>
+                        <TableHead colSpan={2} className="text-center text-blue-800 border-r border-border/50 py-1">Holiday ★</TableHead>
+                        <TableHead colSpan={1} className="text-center text-teal-800 border-r border-border/50 py-1">Nursing</TableHead>
+                        <TableHead colSpan={2} className="text-center text-amber-800 border-r border-border/50 py-1">⚠ Exceptions</TableHead>
+                        <TableHead colSpan={4} className="text-center text-rose-800 border-r border-border/50 py-1">OT &gt; 76h by Day</TableHead>
+                        <TableHead colSpan={2} className="text-center text-green-800 border-r border-border/50 py-1">Allowances</TableHead>
+                        <TableHead colSpan={1} className="text-center" />
+                      </TableRow>
+                      {/* Column header row */}
+                      <TableRow className="bg-muted/30 text-[11px]">
+                        <TableHead className="min-w-[160px] sticky left-0 bg-muted/30 z-10 border-r border-border/50">Staff</TableHead>
+                        <TableHead className="min-w-[90px]">Rate ($)</TableHead>
+                        <TableHead className="min-w-[100px] border-r border-border/50">Type</TableHead>
+                        <TableHead className="text-right text-yellow-700 whitespace-nowrap">Morn</TableHead>
+                        <TableHead className="text-right text-orange-700 whitespace-nowrap">Aft<br/><span className="text-[9px] font-normal opacity-70">1.125×</span></TableHead>
+                        <TableHead className="text-right text-indigo-700 border-r border-border/50 whitespace-nowrap">Night<br/><span className="text-[9px] font-normal opacity-70">1.15×</span></TableHead>
+                        <TableHead className="text-right text-orange-600 whitespace-nowrap">OT≤2h<br/><span className="text-[9px] font-normal opacity-70">1.5×</span></TableHead>
+                        <TableHead className="text-right text-orange-700 border-r border-border/50 whitespace-nowrap">OT&gt;2h<br/><span className="text-[9px] font-normal opacity-70">2×</span></TableHead>
+                        <TableHead className="text-right text-cyan-700 whitespace-nowrap">Ord<br/><span className="text-[9px] font-normal opacity-70">1.5×</span></TableHead>
+                        <TableHead className="text-right text-cyan-600 whitespace-nowrap">OT≤2h</TableHead>
+                        <TableHead className="text-right text-cyan-600 border-r border-border/50 whitespace-nowrap">OT&gt;2h</TableHead>
+                        <TableHead className="text-right text-red-700 whitespace-nowrap">All Hrs<br/><span className="text-[9px] font-normal opacity-70">2×</span></TableHead>
+                        <TableHead className="text-right text-red-600 border-r border-border/50 whitespace-nowrap">OT hrs</TableHead>
+                        <TableHead className="text-right text-blue-700 whitespace-nowrap">All Hrs<br/><span className="text-[9px] font-normal opacity-70">2.5×</span></TableHead>
+                        <TableHead className="text-right text-blue-600 border-r border-border/50 whitespace-nowrap">OT hrs</TableHead>
+                        <TableHead className="text-right text-teal-700 border-r border-border/50 whitespace-nowrap">Hrs</TableHead>
+                        <TableHead className="text-right text-orange-700 whitespace-nowrap" title="Total OT hours from all shifts">OT Total</TableHead>
+                        <TableHead className="text-right border-r border-border/50 whitespace-nowrap" title="Broken shift count">Broken#</TableHead>
+                        {/* OT>76 by day type */}
+                        <TableHead className="text-right text-rose-700 whitespace-nowrap" title="OT>76 from weekday shifts (1.5×/2×)">WD<br/><span className="text-[9px] font-normal opacity-70">1.5×/2×</span></TableHead>
+                        <TableHead className="text-right text-rose-600 whitespace-nowrap" title="OT>76 from Saturday shifts (1.5×/2×)">Sat<br/><span className="text-[9px] font-normal opacity-70">1.5×/2×</span></TableHead>
+                        <TableHead className="text-right text-rose-500 whitespace-nowrap" title="OT>76 from Sunday shifts (2.0×)">Sun<br/><span className="text-[9px] font-normal opacity-70">2×</span></TableHead>
+                        <TableHead className="text-right border-r border-border/50 text-rose-800 whitespace-nowrap" title="OT>76 from Holiday shifts (2.5×)">Hol<br/><span className="text-[9px] font-normal opacity-70">2.5×</span></TableHead>
+                        <TableHead className="text-right text-amber-700 whitespace-nowrap">Broken<br/><span className="text-[9px] font-normal opacity-70">allow.</span></TableHead>
+                        <TableHead className="text-right text-amber-600 border-r border-border/50 whitespace-nowrap">Meal<br/><span className="text-[9px] font-normal opacity-70">allow.~</span></TableHead>
+                        <TableHead className="text-right font-semibold whitespace-nowrap min-w-[100px]">Gross Pay</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {staffBuckets.map((row) => {
-                        const rateVal = baseRates[row.staffName] ?? defaultRate;
-                        const gross   = calcGross(row, rateVal);
+                      {staffRows.map((row) => {
+                        const rateVal   = baseRates[row.staffName] ?? defaultRate;
+                        const empT      = getEmpType(row.staffName);
+                        const gross     = calcGross(row, rateVal, empT);
+                        const allow     = calcAllowances(row);
+                        const otTotal   = totalOtHrs(row);
+                        const sunAll    = r2((row.sundayHours||0)+(row.sundayOtUpto2||0)+(row.sundayOtAfter2||0));
+                        const sunOT     = r2((row.sundayOtUpto2||0)+(row.sundayOtAfter2||0));
+                        const holAll    = r2((row.holidayHours||0)+(row.holidayOtUpto2||0)+(row.holidayOtAfter2||0));
+                        const holOT     = r2((row.holidayOtUpto2||0)+(row.holidayOtAfter2||0));
+                        const isCasual  = empT === 'casual';
+                        const h = (v) => v ? fmtH(v) : <span className="text-muted-foreground/30">—</span>;
+                        const n = (v) => v ? String(v) : <span className="text-muted-foreground/30">—</span>;
+                        // Exception flags
+                        const hasOT     = otTotal > 0;
+                        const hasBroken = (row.brokenShiftCount || 0) > 0;
                         return (
-                          <TableRow key={row.staffName} className="hover:bg-muted/30">
-                            <TableCell className="font-medium text-sm">{row.staffName}</TableCell>
+                          <TableRow key={row.staffName} className={`hover:bg-muted/30 text-xs ${isCasual ? 'bg-blue-50/30' : ''}`}>
+                            <TableCell className={`font-medium sticky left-0 z-10 text-sm border-r border-border/50 ${isCasual ? 'bg-blue-50/60' : 'bg-background'}`}>
+                              {row.staffName}
+                            </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
-                                <span className="text-muted-foreground text-sm">$</span>
+                                <span className="text-muted-foreground text-xs">$</span>
                                 <Input
                                   type="number"
                                   placeholder="0.00"
                                   step="0.01"
                                   value={baseRates[row.staffName] ?? defaultRate}
                                   onChange={e => setRate(row.staffName, e.target.value)}
-                                  className="h-7 w-24 text-sm px-2"
+                                  className="h-7 w-20 text-xs px-2"
                                 />
                               </div>
                             </TableCell>
-                            <TableCell className="text-right text-sm tabular-nums">{fmtH(row.x1)}</TableCell>
-                            <TableCell className="text-right text-sm tabular-nums text-purple-700">{fmtH(row.x1_5)}</TableCell>
-                            <TableCell className="text-right text-sm tabular-nums text-red-600">{fmtH(row.x2)}</TableCell>
-                            <TableCell className="text-right text-sm tabular-nums text-blue-700">{fmtH(row.x2_5)}</TableCell>
-                            <TableCell className="text-right text-sm tabular-nums font-medium">{fmtH(row.totalHours)}</TableCell>
-                            <TableCell className="text-right text-sm tabular-nums text-amber-700">
-                              {row.allowances > 0 ? fmt(row.allowances) : '—'}
+                            <TableCell className="border-r border-border/50">
+                              <select
+                                value={empT}
+                                onChange={e => setEmpType(row.staffName, e.target.value)}
+                                className={`text-[11px] h-7 rounded border px-1 focus:outline-none focus:ring-1 focus:ring-ring w-full ${isCasual ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-background border-input'}`}
+                              >
+                                <option value="permanent">Permanent</option>
+                                <option value="casual">Casual</option>
+                              </select>
                             </TableCell>
-                            <TableCell className="text-right text-sm tabular-nums font-bold">
-                              {gross !== null ? fmt(gross) : <span className="text-muted-foreground font-normal">—</span>}
+                            {/* Weekday ordinary */}
+                            <TableCell className="text-right tabular-nums text-yellow-700">{h(row.morningHours)}</TableCell>
+                            <TableCell className="text-right tabular-nums text-orange-700">{h(row.afternoonHours)}</TableCell>
+                            <TableCell className="text-right tabular-nums text-indigo-700 border-r border-border/50">{h(row.nightHours)}</TableCell>
+                            {/* WD overtime */}
+                            <TableCell className="text-right tabular-nums text-orange-600">{h(row.weekdayOtUpto2)}</TableCell>
+                            <TableCell className="text-right tabular-nums text-orange-700 border-r border-border/50">{h(row.weekdayOtAfter2)}</TableCell>
+                            {/* Saturday */}
+                            <TableCell className="text-right tabular-nums text-cyan-700">{h(row.saturdayHours)}</TableCell>
+                            <TableCell className="text-right tabular-nums text-cyan-600">{h(row.saturdayOtUpto2)}</TableCell>
+                            <TableCell className="text-right tabular-nums text-cyan-600 border-r border-border/50">{h(row.saturdayOtAfter2)}</TableCell>
+                            {/* Sunday consolidated */}
+                            <TableCell className="text-right tabular-nums text-red-700 font-medium">{sunAll ? fmtH(sunAll) : <span className="text-muted-foreground/30">—</span>}</TableCell>
+                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${sunOT > 0 ? 'text-orange-600 font-medium' : 'text-muted-foreground/30'}`}>{sunOT ? fmtH(sunOT) : '—'}</TableCell>
+                            {/* Holiday consolidated */}
+                            <TableCell className="text-right tabular-nums text-blue-700 font-medium">{holAll ? fmtH(holAll) : <span className="text-muted-foreground/30">—</span>}</TableCell>
+                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${holOT > 0 ? 'text-orange-600 font-medium' : 'text-muted-foreground/30'}`}>{holOT ? fmtH(holOT) : '—'}</TableCell>
+                            {/* Nursing */}
+                            <TableCell className="text-right tabular-nums text-teal-700 border-r border-border/50">{h(row.nursingCareHours)}</TableCell>
+                            {/* Exceptions */}
+                            <TableCell className={`text-right tabular-nums ${hasOT ? 'text-orange-600 font-semibold' : 'text-muted-foreground/30'}`}>{hasOT ? fmtH(otTotal) : '—'}</TableCell>
+                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${hasBroken ? 'text-orange-700 font-semibold' : 'text-muted-foreground/30'}`}>{n(row.brokenShiftCount)}</TableCell>
+                            {/* OT>76 by day type */}
+                            <TableCell className={`text-right tabular-nums ${(row.otAfter76Weekday||0) > 0 ? 'text-rose-700 font-medium' : 'text-muted-foreground/30'}`}>{(row.otAfter76Weekday||0) > 0 ? fmtH(row.otAfter76Weekday) : '—'}</TableCell>
+                            <TableCell className={`text-right tabular-nums ${(row.otAfter76Saturday||0) > 0 ? 'text-rose-600 font-medium' : 'text-muted-foreground/30'}`}>{(row.otAfter76Saturday||0) > 0 ? fmtH(row.otAfter76Saturday) : '—'}</TableCell>
+                            <TableCell className={`text-right tabular-nums ${(row.otAfter76Sunday||0) > 0 ? 'text-rose-500 font-medium' : 'text-muted-foreground/30'}`}>{(row.otAfter76Sunday||0) > 0 ? fmtH(row.otAfter76Sunday) : '—'}</TableCell>
+                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${(row.otAfter76Holiday||0) > 0 ? 'text-rose-800 font-medium' : 'text-muted-foreground/30'}`}>{(row.otAfter76Holiday||0) > 0 ? fmtH(row.otAfter76Holiday) : '—'}</TableCell>
+                            {/* Allowances */}
+                            <TableCell className={`text-right tabular-nums ${allow.brokenAllow > 0 ? 'text-amber-700' : 'text-muted-foreground/30'}`}>{allow.brokenAllow > 0 ? fmt(allow.brokenAllow) : '—'}</TableCell>
+                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${allow.mealAllow > 0 ? 'text-amber-600' : 'text-muted-foreground/30'}`}>{allow.mealAllow > 0 ? fmt(allow.mealAllow) : '—'}</TableCell>
+                            {/* Gross pay */}
+                            <TableCell className="text-right tabular-nums font-bold text-sm">
+                              {gross !== null ? <span className={isCasual ? 'text-blue-700' : ''}>{fmt(gross)}</span> : <span className="text-muted-foreground font-normal text-xs">enter rate</span>}
                             </TableCell>
                           </TableRow>
                         );
                       })}
 
                       {/* Totals */}
-                      <TableRow className="border-t-2 border-border bg-muted/20 font-bold">
-                        <TableCell className="text-sm">Totals</TableCell>
-                        <TableCell />
-                        <TableCell className="text-right text-sm tabular-nums">{fmtH(r2(totals.x1))}</TableCell>
-                        <TableCell className="text-right text-sm tabular-nums text-purple-700">{fmtH(r2(totals.x1_5))}</TableCell>
-                        <TableCell className="text-right text-sm tabular-nums text-red-600">{fmtH(r2(totals.x2))}</TableCell>
-                        <TableCell className="text-right text-sm tabular-nums text-blue-700">{fmtH(r2(totals.x2_5))}</TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">{fmtH(r2(totals.totalHours))}</TableCell>
-                        <TableCell className="text-right text-sm tabular-nums text-amber-700">
-                          {totals.allowances > 0 ? fmt(r2(totals.allowances)) : '—'}
-                        </TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">
+                      <TableRow className="border-t-2 border-border bg-muted/20 font-bold text-xs">
+                        <TableCell className="sticky left-0 bg-muted/20 z-10 border-r border-border/50">Totals</TableCell>
+                        <TableCell /><TableCell className="border-r border-border/50" />
+                        <TableCell className="text-right text-yellow-700">{fmtH(r2(totals.morningHours))}</TableCell>
+                        <TableCell className="text-right text-orange-700">{fmtH(r2(totals.afternoonHours))}</TableCell>
+                        <TableCell className="text-right text-indigo-700 border-r border-border/50">{fmtH(r2(totals.nightHours))}</TableCell>
+                        <TableCell className="text-right text-orange-600">{fmtH(r2(totals.weekdayOtUpto2))}</TableCell>
+                        <TableCell className="text-right text-orange-700 border-r border-border/50">{fmtH(r2(totals.weekdayOtAfter2))}</TableCell>
+                        <TableCell className="text-right text-cyan-700">{fmtH(r2(totals.saturdayHours))}</TableCell>
+                        <TableCell className="text-right text-cyan-600">{fmtH(r2(totals.saturdayOtUpto2))}</TableCell>
+                        <TableCell className="text-right text-cyan-600 border-r border-border/50">{fmtH(r2(totals.saturdayOtAfter2))}</TableCell>
+                        <TableCell className="text-right text-red-700">{fmtH(r2((totals.sundayHours||0)+(totals.sundayOtUpto2||0)+(totals.sundayOtAfter2||0)))}</TableCell>
+                        <TableCell className="text-right text-orange-600 border-r border-border/50">{fmtH(r2((totals.sundayOtUpto2||0)+(totals.sundayOtAfter2||0)))}</TableCell>
+                        <TableCell className="text-right text-blue-700">{fmtH(r2((totals.holidayHours||0)+(totals.holidayOtUpto2||0)+(totals.holidayOtAfter2||0)))}</TableCell>
+                        <TableCell className="text-right text-orange-600 border-r border-border/50">{fmtH(r2((totals.holidayOtUpto2||0)+(totals.holidayOtAfter2||0)))}</TableCell>
+                        <TableCell className="text-right text-teal-700 border-r border-border/50">{fmtH(r2(totals.nursingCareHours))}</TableCell>
+                        <TableCell className="text-right text-orange-600">{fmtH(r2(totals.totalOT))}</TableCell>
+                        <TableCell className="text-right border-r border-border/50">{totals.brokenShiftCount || '—'}</TableCell>
+                        {/* OT>76 by day type totals */}
+                        <TableCell className="text-right text-rose-700">{totals.otAfter76Weekday > 0 ? fmtH(r2(totals.otAfter76Weekday)) : '—'}</TableCell>
+                        <TableCell className="text-right text-rose-600">{totals.otAfter76Saturday > 0 ? fmtH(r2(totals.otAfter76Saturday)) : '—'}</TableCell>
+                        <TableCell className="text-right text-rose-500">{totals.otAfter76Sunday > 0 ? fmtH(r2(totals.otAfter76Sunday)) : '—'}</TableCell>
+                        <TableCell className="text-right border-r border-border/50 text-rose-800">{totals.otAfter76Holiday > 0 ? fmtH(r2(totals.otAfter76Holiday)) : '—'}</TableCell>
+                        <TableCell className="text-right text-amber-700">{totals.brokenAllow > 0 ? fmt(r2(totals.brokenAllow)) : '—'}</TableCell>
+                        <TableCell className="text-right text-amber-600 border-r border-border/50">{totals.mealAllow > 0 ? fmt(r2(totals.mealAllow)) : '—'}</TableCell>
+                        <TableCell className="text-right">
                           {totals.grossReady ? fmt(r2(totals.gross)) : <span className="text-muted-foreground font-normal text-xs">enter rates</span>}
                         </TableCell>
                       </TableRow>
@@ -549,10 +595,43 @@ export const SchadsCalculator = () => {
             </CardContent>
           </Card>
 
-          {/* Disclaimer */}
-          <div className="bg-amber-50 border border-amber-400 p-3 text-xs text-amber-800 leading-relaxed rounded-sm">
-            ⚠ <strong>Estimates only.</strong> Based on SCHADS Award MA000100 (effective 01/07/2024). Ordinary time: 7.6h/day and 38h/week thresholds. Broken shift allowance: $18.43/break (max 2/day). Public holidays must be configured in the Holiday Manager on the Pay Hours page. Always verify against the{' '}
-            <a href="https://www.fairwork.gov.au" target="_blank" rel="noopener noreferrer" className="underline text-amber-700">official Fair Work pay guide</a>.
+          {/* Legend & Disclaimer */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="bg-muted/20 border border-border rounded p-3 text-xs space-y-1.5">
+              <p className="font-semibold text-[11px] uppercase tracking-wider">Pay Rate Multipliers</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground text-[11px]">
+                <span>Weekday ordinary:</span><span className="font-medium text-foreground">1.0×</span>
+                <span>Afternoon (after 8pm):</span><span className="font-medium text-foreground">1.125×</span>
+                <span>Night (before 6am):</span><span className="font-medium text-foreground">1.15×</span>
+                <span>Saturday ordinary:</span><span className="font-medium text-foreground">1.5×</span>
+                <span>Sunday:</span><span className="font-medium text-foreground">2.0×</span>
+                <span>Public Holiday:</span><span className="font-medium text-foreground">2.5×</span>
+                <span>WD/Sat OT — first 2h:</span><span className="font-medium text-foreground">1.5×</span>
+                <span>WD/Sat OT — after 2h:</span><span className="font-medium text-foreground">2.0×</span>
+                <span>Sun / PH OT:</span><span className="font-medium text-foreground">same as Sun/PH rate</span>
+                <span>OT &gt; 76h — WD/Sat:</span><span className="font-medium text-foreground">1.5× / 2× (tiered)</span>
+                <span>OT &gt; 76h — Sunday:</span><span className="font-medium text-foreground">2.0× flat</span>
+                <span>OT &gt; 76h — PH:</span><span className="font-medium text-foreground">2.5× flat</span>
+              </div>
+              <div className="border-t border-border mt-2 pt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground text-[11px]">
+                <span>Broken shift (1 break):</span><span className="font-medium text-foreground">${BROKEN_ALLOWANCE_1.toFixed(2)}</span>
+                <span>Broken shift (2 breaks):</span><span className="font-medium text-foreground">${BROKEN_ALLOWANCE_2.toFixed(2)}</span>
+                <span>Meal allowance (OT &gt;1h):</span><span className="font-medium text-foreground">${MEAL_ALLOWANCE.toFixed(2)}</span>
+                <span>Meal allowance (OT &gt;4h):</span><span className="font-medium text-foreground">${(MEAL_ALLOWANCE*2).toFixed(2)}</span>
+              </div>
+              <p className="text-muted-foreground/70 text-[10px] pt-1">★ Sunday &amp; Holiday OT = same rate as ordinary (2.0× / 2.5×). ~ Meal allowance approximate (per-shift detail unavailable). Casual: effective rate = (Base÷1.25 × Multiplier) + Loading.</p>
+            </div>
+            <div className="bg-amber-50 border border-amber-300 rounded p-3 text-xs text-amber-800 space-y-1">
+              <p className="font-semibold">⚠ SCHADS Award Rules Applied</p>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] leading-relaxed">
+                <li><strong>OT triggers:</strong> &gt;76h/fortnight OR &gt;10h/day — same hour paid once, not double-counted</li>
+                <li><strong>OT &gt; 76h rates:</strong> Weekday/Sat shifts use 1.5× (first 2h) then 2×; Sun shifts 2.0×; PH shifts 2.5×</li>
+                <li><strong>Sunday/PH OT:</strong> Same rate as ordinary day (2.0× / 2.5×) — no separate OT brackets</li>
+                <li><strong>Broken shifts:</strong> $20.82 per shift (1 break), $27.56 for 2 breaks (cap not tracked per-shift)</li>
+                <li><strong>Meal allowance:</strong> $16.62 when OT &gt;1h on a shift; +$16.62 when OT &gt;4h (approximated from total OT)</li>
+              </ul>
+              <p className="text-amber-700 pt-1">Always verify against the <a href="https://www.fairwork.gov.au" target="_blank" rel="noopener noreferrer" className="underline">Fair Work pay guide</a>.</p>
+            </div>
           </div>
         </>
       )}

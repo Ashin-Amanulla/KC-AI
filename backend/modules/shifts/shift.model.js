@@ -86,6 +86,12 @@ const shiftSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    location: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Location',
+      default: null,
+      index: true,
+    },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

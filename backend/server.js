@@ -11,6 +11,7 @@ import { startCsvAnalysisWorker } from './jobs/csvAnalysisWorker.js';
 import { startPayHoursWorker } from './jobs/payHoursWorker.js';
 import shiftsRoutes from './modules/shifts/shift.route.js';
 import holidaysRoutes from './modules/holidays/holiday.route.js';
+import locationsRoutes from './modules/locations/location.route.js';
 import payHoursRoutes from './modules/pay-hours/payHours.route.js';
 import { formatErrorResponse } from './helpers/errors.js';
 import morgan from 'morgan';
@@ -62,6 +63,7 @@ app.get('/config-check', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api', locationsRoutes);
 app.use('/api', shiftsRoutes);
 app.use('/api', holidaysRoutes);
 app.use('/api', payHoursRoutes);

@@ -17,8 +17,8 @@ export const useHolidays = (params = {}) => {
 export const useCreateHoliday = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ date, name }) => {
-      const response = await api.post('/api/holidays', { date, name });
+    mutationFn: async ({ date, name, locationId }) => {
+      const response = await api.post('/api/holidays', { date, name, locationId });
       return response.data;
     },
     onSuccess: () => {

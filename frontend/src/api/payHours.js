@@ -30,8 +30,8 @@ export const useShiftPayHours = (payHoursId, enabled = false) => {
 export const useComputePayHours = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      const response = await api.post('/api/pay-hours/compute');
+    mutationFn: async ({ locationId } = {}) => {
+      const response = await api.post('/api/pay-hours/compute', { locationId: locationId ?? null });
       return response.data;
     },
     onSuccess: () => {

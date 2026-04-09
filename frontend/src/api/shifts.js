@@ -28,9 +28,10 @@ export const useShiftDateRange = () => {
 export const useUploadShifts = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (file) => {
+    mutationFn: async ({ file, locationId }) => {
       const formData = new FormData();
       formData.append('file', file);
+      if (locationId) formData.append('locationId', locationId);
       const response = await api.post('/api/shifts/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });

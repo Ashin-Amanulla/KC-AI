@@ -13,9 +13,9 @@ export const startPayHoursWorker = () => {
   worker = new Worker(
     PAY_HOURS_QUEUE_NAME,
     async (job) => {
-      const { jobId } = job.data;
+      const { jobId, locationId } = job.data;
       if (!jobId) throw new Error('Missing jobId in job data');
-      await computeAllPayHours(jobId);
+      await computeAllPayHours(jobId, locationId ?? null);
     },
     {
       connection,

@@ -1,4 +1,5 @@
 import fs from 'fs';
+import mongoose from 'mongoose';
 import { Shift } from './shift.model.js';
 import { PayHours } from '../pay-hours/payHours.model.js';
 import { ShiftPayHours } from '../pay-hours/shiftPayHours.model.js';
@@ -10,6 +11,8 @@ export const uploadShifts = async (req, res, next) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
+
+    const locationId = req.body.locationId || null;
     filePath = req.file.path;
 
     const buffer = fs.readFileSync(filePath);
@@ -33,6 +36,11 @@ export const uploadShifts = async (req, res, next) => {
     await ShiftPayHours.deleteMany({});
     await PayHours.deleteMany({});
     await Shift.deleteMany({});
+
+    // Attach locationId to every shift if provided
+    if (locationId && parseResult.shifts.length > 0) {
+      for (const s of parseResult.shifts) s.location = locationId;
+    }
 
     let shiftsCreated = 0;
     if (parseResult.shifts.length > 0) {
@@ -68,11 +76,13 @@ export const listShifts = async (req, res, next) => {
       shiftType,
       broken,
       search,
+      locationId,
       page = 1,
       perPage = 50,
     } = req.query;
 
     const filter = {};
+    if (locationId) filter.location = locationId;
 
     if (staffName) {
       filter.staffName = { $regex: staffName, $options: 'i' };
@@ -147,15 +157,13 @@ export const listShifts = async (req, res, next) => {
 
 export const getDateRange = async (req, res, next) => {
   try {
-    const [result] = await Shift.aggregate([
-      {
-        $group: {
-          _id: null,
-          minStart: { $min: '$startDatetime' },
-          maxEnd: { $max: '$endDatetime' },
-        },
-      },
-    ]);
+    const { locationId } = req.query;
+    const match = locationId ? { $match: { location: new mongoose.Types.ObjectId(locationId) } } : null;
+    const pipeline = [
+      ...(match ? [match] : []),
+      { $group: { _id: null, minStart: { $min: '$startDatetime' }, maxEnd: { $max: '$endDatetime' } } },
+    ];
+    const [result] = await Shift.aggregate(pipeline);
 
     res.json({
       minStart: result?.minStart ?? null,

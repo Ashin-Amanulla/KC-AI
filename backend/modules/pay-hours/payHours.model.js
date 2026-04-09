@@ -2,6 +2,12 @@ import mongoose from 'mongoose';
 
 const payHoursSchema = new mongoose.Schema(
   {
+    location: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Location',
+      default: null,
+      index: true,
+    },
     staffName: {
       type: String,
       required: true,
@@ -37,8 +43,12 @@ const payHoursSchema = new mongoose.Schema(
     holidayOtAfter2: { type: Number, default: 0 },
     // Nursing Care (flat rate)
     nursingCareHours: { type: Number, default: 0 },
-    // 76-hour universal cap overflow
-    otAfter76Hours: { type: Number, default: 0 },
+    // 76-hour universal cap overflow — tracked by day type for correct rates
+    otAfter76Hours: { type: Number, default: 0 },       // total (legacy compat)
+    otAfter76Weekday: { type: Number, default: 0 },      // weekday OT rates (1.5×/2×)
+    otAfter76Saturday: { type: Number, default: 0 },     // Sat OT rates (1.5×/2×)
+    otAfter76Sunday: { type: Number, default: 0 },       // Sun rate (2.0× flat)
+    otAfter76Holiday: { type: Number, default: 0 },      // PH rate (2.5× flat)
     // Shift counts
     brokenShiftCount: { type: Number, default: 0 },
     sleepoversCount: { type: Number, default: 0 },
