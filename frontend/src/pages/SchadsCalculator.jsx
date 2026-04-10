@@ -253,23 +253,23 @@ function calcBreakdown(ph, baseRate, empType = 'permanent') {
   // Raw line definitions: [label, hours, mult, category]
   // category: 'ord' | 'penalty' | 'ot' | 'allow' | 'ot76'
   const defs = [
-    ['Morning (Mon–Fri)',       ph.morningHours     || 0, 1.0,   'ord'],
-    ['Afternoon (Mon–Fri)',     ph.afternoonHours   || 0, 1.125, 'penalty'],
-    ['Night (Mon–Fri)',         ph.nightHours       || 0, 1.15,  'penalty'],
-    ['WD Overtime ≤2h',         ph.weekdayOtUpto2   || 0, 1.5,   'ot'],
-    ['WD Overtime >2h',         ph.weekdayOtAfter2  || 0, 2.0,   'ot'],
-    ['Saturday ordinary',       ph.saturdayHours    || 0, 1.5,   'penalty'],
-    ['Saturday OT ≤2h',         ph.saturdayOtUpto2  || 0, 1.5,   'ot'],
-    ['Saturday OT >2h',         ph.saturdayOtAfter2 || 0, 2.0,   'ot'],
-    ['Sunday (all hours)',       sunAll,                   2.0,   'penalty'],
-    ['Public Holiday (all hrs)', holAll,                   2.5,   'penalty'],
-    ['Nursing Care',             ph.nursingCareHours || 0, 1.0,   'ord'],
-    ['OT >76h — Weekday ≤2h',   ot76WdT1,                 1.5,   'ot76'],
-    ['OT >76h — Weekday >2h',   ot76WdT2,                 2.0,   'ot76'],
-    ['OT >76h — Saturday ≤2h',  ot76SatT1,                1.5,   'ot76'],
-    ['OT >76h — Saturday >2h',  ot76SatT2,                2.0,   'ot76'],
-    ['OT >76h — Sunday',        ot76sun,                  2.0,   'ot76'],
-    ['OT >76h — Public Holiday', ot76hol,                 2.5,   'ot76'],
+    ['Morning',          ph.morningHours     || 0, 1.0,   'ord'],
+    ['Afternoon',        ph.afternoonHours   || 0, 1.125, 'penalty'],
+    ['Night',            ph.nightHours       || 0, 1.15,  'penalty'],
+    ['WD OT ≤2h',        ph.weekdayOtUpto2   || 0, 1.5,   'ot'],
+    ['WD OT >2h',        ph.weekdayOtAfter2  || 0, 2.0,   'ot'],
+    ['Saturday',         ph.saturdayHours    || 0, 1.5,   'penalty'],
+    ['Sat OT ≤2h',       ph.saturdayOtUpto2  || 0, 1.5,   'ot'],
+    ['Sat OT >2h',       ph.saturdayOtAfter2 || 0, 2.0,   'ot'],
+    ['Sunday',           sunAll,                   2.0,   'penalty'],
+    ['Public Holiday',   holAll,                   2.5,   'penalty'],
+    ['Nursing Care',     ph.nursingCareHours || 0, 1.0,   'ord'],
+    ['OT >76h WD ≤2h',   ot76WdT1,                 1.5,   'ot76'],
+    ['OT >76h WD >2h',   ot76WdT2,                 2.0,   'ot76'],
+    ['OT >76h Sat ≤2h',  ot76SatT1,                1.5,   'ot76'],
+    ['OT >76h Sat >2h',  ot76SatT2,                2.0,   'ot76'],
+    ['OT >76h Sun',      ot76sun,                  2.0,   'ot76'],
+    ['OT >76h PH',       ot76hol,                  2.5,   'ot76'],
   ];
 
   const lines = [];
@@ -394,7 +394,6 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual }) => 
             <tr className="bg-muted/20 text-[10px] uppercase tracking-wider text-muted-foreground">
               <th className="text-left px-3 py-2 font-medium">Category</th>
               <th className="text-right px-3 py-2 font-medium">Hours</th>
-              <th className="text-right px-3 py-2 font-medium">Rate/h</th>
               <th className="text-right px-3 py-2 font-medium">Mult</th>
               <th className="text-right px-3 py-2 font-medium">Pay</th>
             </tr>
@@ -406,11 +405,10 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual }) => 
                 <tr key={i} className={`border-t border-border/30 ${style.bg}`}>
                   <td className={`px-3 py-2 ${style.cls}`}>
                     {l.label}
-                    <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/70 uppercase">{style.label}</span>
+                    <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">{style.label}</span>
                   </td>
                   <td className="text-right px-3 py-2 font-mono">{fmtH(l.hours)}</td>
-                  <td className="text-right px-3 py-2 font-mono text-muted-foreground">${l.effRate.toFixed(4)}</td>
-                  <td className="text-right px-3 py-2 font-mono">{l.mult.toFixed(3)}×</td>
+                  <td className="text-right px-3 py-2 font-mono text-muted-foreground">{l.mult.toFixed(2)}×</td>
                   <td className={`text-right px-3 py-2 font-mono font-semibold ${style.cls}`}>{fmt(l.pay)}</td>
                 </tr>
               );
@@ -419,11 +417,10 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual }) => 
             {bd.allow.brokenAllow > 0 && (
               <tr className="border-t border-border/30 bg-amber-50/30">
                 <td className="px-3 py-2 text-amber-700">
-                  Broken shift allowance ({mrow.brokenShiftCount} shift{mrow.brokenShiftCount > 1 ? 's' : ''} × ${BROKEN_ALLOWANCE_1})
-                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/70 uppercase">Allowance</span>
+                  Broken shift allowance ({mrow.brokenShiftCount} × ${BROKEN_ALLOWANCE_1})
+                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.brokenShiftCount}</td>
-                <td className="text-right px-3 py-2 font-mono text-muted-foreground">${BROKEN_ALLOWANCE_1}</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
                 <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.brokenAllow)}</td>
               </tr>
@@ -432,10 +429,9 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual }) => 
               <tr className="border-t border-border/30 bg-amber-50/30">
                 <td className="px-3 py-2 text-amber-600">
                   Meal allowance (OT &gt;{totalOtHrs(mrow) > 4 ? '4h → 2×' : '1h → 1×'} ${MEAL_ALLOWANCE})
-                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/70 uppercase">Allowance</span>
+                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
-                <td className="text-right px-3 py-2 font-mono text-muted-foreground">${MEAL_ALLOWANCE}</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
                 <td className="text-right px-3 py-2 font-mono font-semibold text-amber-600">{fmt(bd.allow.mealAllow)}</td>
               </tr>
@@ -444,7 +440,6 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual }) => 
             <tr className="border-t-2 border-border bg-muted/20 font-bold">
               <td className="px-3 py-2.5 text-sm">Total</td>
               <td className="text-right px-3 py-2.5 font-mono">{fmtH(bd.totalHours)}</td>
-              <td className="text-right px-3 py-2.5 text-muted-foreground">—</td>
               <td className="text-right px-3 py-2.5 text-muted-foreground">—</td>
               <td className="text-right px-3 py-2.5 font-mono text-base">{fmt(bd.gross)}</td>
             </tr>
@@ -604,7 +599,7 @@ export const SchadsCalculator = () => {
   const [baseRates, setBaseRates] = useState({});       // { staffName: string }
   const [defaultRate, setDefaultRate] = useState('');
   const [empTypes, setEmpTypes] = useState({});          // { staffName: 'permanent' | 'casual' }
-  const [defaultEmpType, setDefaultEmpType] = useState('permanent');
+  const [defaultEmpType, setDefaultEmpType] = useState('casual');
 
   // ── Breakdown expand state ───────────────────────────────────────
   const [expandedBreakdown, setExpandedBreakdown] = useState({});
@@ -737,6 +732,17 @@ export const SchadsCalculator = () => {
 
   const isLoading = phLoading;
 
+  // Track scroll container width to constrain breakdown panel
+  const tableContainerRef = useRef(null);
+  const [tableContainerWidth, setTableContainerWidth] = useState(0);
+  useEffect(() => {
+    const el = tableContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setTableContainerWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // ════════════════════════════════════════════════════════════════
   // Render
   // ════════════════════════════════════════════════════════════════
@@ -771,17 +777,6 @@ export const SchadsCalculator = () => {
             <CardContent className="pt-4">
               <div className="flex flex-wrap gap-4 items-end">
                 <div className="space-y-1">
-                  <label className="text-xs uppercase tracking-wider text-muted-foreground">Default Employment Type</label>
-                  <select
-                    value={defaultEmpType}
-                    onChange={e => setDefaultEmpType(e.target.value)}
-                    className="flex h-9 rounded-md border border-input bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="permanent">Permanent / Part-time</option>
-                    <option value="casual">Casual (+25% loading)</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
                   <label className="text-xs uppercase tracking-wider text-muted-foreground">Default Base Rate ($)</label>
                   <div className="flex gap-2">
                     <Input
@@ -804,7 +799,7 @@ export const SchadsCalculator = () => {
                 )}
               </div>
               {/* Casual rate info */}
-              {defaultEmpType === 'casual' && defaultRate && parseFloat(defaultRate) > 0 && (() => {
+              {defaultRate && parseFloat(defaultRate) > 0 && (() => {
                 const rate = parseFloat(defaultRate);
                 const base = r2(rate / 1.25);
                 const load = r2(rate - base);
@@ -849,7 +844,7 @@ export const SchadsCalculator = () => {
                   No pay hours data. Go to the <strong>Pay Hours</strong> page, upload a CSV and click "Compute Pay Hours" first.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto" ref={tableContainerRef}>
                   <Table>
                     <TableHeader>
                       {/* Group header row */}
@@ -1010,14 +1005,14 @@ export const SchadsCalculator = () => {
 
                           {/* Breakdown panel — always rendered, animated via grid-template-rows */}
                           <TableRow className="hover:bg-transparent border-0">
-                            <TableCell colSpan={27} className="p-0 border-0 max-w-0">
+                            <TableCell colSpan={27} className="p-0 border-0" style={{ width: tableContainerWidth || '100%' }}>
                               <div
                                 style={{
                                   display: 'grid',
                                   gridTemplateRows: expandedBreakdown[row.staffName] ? '1fr' : '0fr',
                                   transition: 'grid-template-rows 0.3s ease',
                                   overflow: 'hidden',
-                                  width: '100%',
+                                  width: tableContainerWidth ? `${tableContainerWidth}px` : '100%',
                                 }}
                               >
                                 <div style={{ overflow: 'hidden', minWidth: 0 }}>
