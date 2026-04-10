@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Plus, X, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Plus, X, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -12,7 +12,6 @@ import { LoadingScreen } from '../ui/LoadingSpinner';
 // ── SCHADS Award Constants (MA000100, effective 01/07/2024) ──────────
 const DAILY_ORD          = 7.6;
 const WEEKLY_ORD         = 38.0;
-const OT_BRACKET         = { pt: 2.0, ft: 3.0 };
 const BROKEN_ALLOWANCE_1 = 20.82;   // 1 break per broken shift
 const BROKEN_ALLOWANCE_2 = 27.56;   // 2 breaks per broken shift
 const MEAL_ALLOWANCE     = 16.62;   // per qualifying OT meal break
@@ -226,6 +225,368 @@ function computeManual(baseRate, empType, days) {
 
 const ROW_CLS = { sat: 'text-purple-700', sun: 'text-red-600', ph: 'text-blue-700', ot: 'text-orange-600', allow: 'text-amber-700' };
 function rowClass(cls) { if (!cls) return ''; for (const c of cls.split(' ')) if (ROW_CLS[c]) return ROW_CLS[c]; return ''; }
+
+// ── Per-staff pay breakdown calculator ───────────────────────────────
+// Returns { lines, basePay, penaltyExtra, otPay, allowTotal, totalHours, ordHours, otHours, gross }
+function calcBreakdown(ph, baseRate, empType = 'permanent') {
+  const rate = parseFloat(baseRate);
+  if (!rate || rate <= 0) return null;
+
+  const isCasual = empType === 'casual';
+  const base   = isCasual ? r2(rate / 1.25) : rate;
+  const load   = isCasual ? r2(rate * 0.2) : 0;
+  // Effective rate at multiplier M: casual = base*M + load; permanent = rate*M
+  const eff = (mult) => isCasual ? r2(base * mult + load) : r2(rate * mult);
+
+  const ot76wd  = ph.otAfter76Weekday  || 0;
+  const ot76sat = ph.otAfter76Saturday || 0;
+  const ot76sun = ph.otAfter76Sunday   || 0;
+  const ot76hol = ph.otAfter76Holiday  || 0;
+  const ot76WdT1  = r2(Math.min(ot76wd,  2));
+  const ot76WdT2  = r2(Math.max(0, ot76wd  - 2));
+  const ot76SatT1 = r2(Math.min(ot76sat, 2));
+  const ot76SatT2 = r2(Math.max(0, ot76sat - 2));
+
+  const sunAll = r2((ph.sundayHours||0) + (ph.sundayOtUpto2||0) + (ph.sundayOtAfter2||0));
+  const holAll = r2((ph.holidayHours||0) + (ph.holidayOtUpto2||0) + (ph.holidayOtAfter2||0));
+
+  // Raw line definitions: [label, hours, mult, category]
+  // category: 'ord' | 'penalty' | 'ot' | 'allow' | 'ot76'
+  const defs = [
+    ['Morning (Mon–Fri)',       ph.morningHours     || 0, 1.0,   'ord'],
+    ['Afternoon (Mon–Fri)',     ph.afternoonHours   || 0, 1.125, 'penalty'],
+    ['Night (Mon–Fri)',         ph.nightHours       || 0, 1.15,  'penalty'],
+    ['WD Overtime ≤2h',         ph.weekdayOtUpto2   || 0, 1.5,   'ot'],
+    ['WD Overtime >2h',         ph.weekdayOtAfter2  || 0, 2.0,   'ot'],
+    ['Saturday ordinary',       ph.saturdayHours    || 0, 1.5,   'penalty'],
+    ['Saturday OT ≤2h',         ph.saturdayOtUpto2  || 0, 1.5,   'ot'],
+    ['Saturday OT >2h',         ph.saturdayOtAfter2 || 0, 2.0,   'ot'],
+    ['Sunday (all hours)',       sunAll,                   2.0,   'penalty'],
+    ['Public Holiday (all hrs)', holAll,                   2.5,   'penalty'],
+    ['Nursing Care',             ph.nursingCareHours || 0, 1.0,   'ord'],
+    ['OT >76h — Weekday ≤2h',   ot76WdT1,                 1.5,   'ot76'],
+    ['OT >76h — Weekday >2h',   ot76WdT2,                 2.0,   'ot76'],
+    ['OT >76h — Saturday ≤2h',  ot76SatT1,                1.5,   'ot76'],
+    ['OT >76h — Saturday >2h',  ot76SatT2,                2.0,   'ot76'],
+    ['OT >76h — Sunday',        ot76sun,                  2.0,   'ot76'],
+    ['OT >76h — Public Holiday', ot76hol,                 2.5,   'ot76'],
+  ];
+
+  const lines = [];
+  let basePay = 0, penaltyExtra = 0, otPay = 0, ordHours = 0, otHours = 0;
+
+  for (const [label, hours, mult, cat] of defs) {
+    if (hours <= 0) continue;
+    const effRate = eff(mult);
+    const pay     = r2(hours * effRate);
+    lines.push({ label, hours, mult, effRate, pay, cat });
+
+    if (cat === 'ord') {
+      basePay  += r2(hours * rate);
+      ordHours += hours;
+    } else if (cat === 'penalty') {
+      // Penalty = full pay at this rate, but for breakdown: base portion + extra
+      basePay      += r2(hours * (isCasual ? base : rate));
+      penaltyExtra += r2(hours * (isCasual ? (mult - 1) * base : (mult - 1.0) * rate));
+      ordHours     += hours;
+    } else if (cat === 'ot' || cat === 'ot76') {
+      otPay    += pay;
+      otHours  += hours;
+    }
+    if (isCasual && cat !== 'ot' && cat !== 'ot76') {
+      // For casual: basePay covers base*mult, penaltyExtra covers loading
+      // Re-assign: all non-OT pay = base portion + loading
+    }
+  }
+
+  const allow    = calcAllowances(ph);
+  const totalH   = r2(ordHours + otHours);
+
+  // For casual, rebuild basePay/penaltyExtra from loading perspective
+  let displayBase = 0, displayPenalty = 0, displayOT = 0;
+  for (const l of lines) {
+    const rawPay = r2(l.hours * (isCasual ? base * l.mult : rate * l.mult));
+    if (l.cat === 'ord') { displayBase += rawPay; }
+    else if (l.cat === 'penalty') {
+      displayBase    += r2(l.hours * (isCasual ? base : rate));
+      displayPenalty += r2(l.hours * (isCasual ? (l.mult - 1) * base : (l.mult - 1.0) * rate));
+    } else {
+      displayOT += l.pay;
+    }
+  }
+  if (isCasual) {
+    const totalLoading = r2(lines.reduce((s, l) => s + (l.cat !== 'ot' && l.cat !== 'ot76' ? l.hours * load : 0), 0));
+    displayPenalty = r2(displayPenalty + totalLoading);
+  }
+
+  const gross = r2(lines.reduce((s, l) => s + l.pay, 0) + allow.total);
+
+  return {
+    lines, allow,
+    basePay:      r2(displayBase),
+    penaltyExtra: r2(displayPenalty),
+    otPay:        r2(displayOT),
+    totalHours:   totalH,
+    ordHours:     r2(ordHours),
+    otHours:      r2(otHours),
+    gross,
+    isCasual,
+    base,
+    load,
+  };
+}
+
+// ── Pay Breakdown panel (rendered inside the table as an expanded row) ──
+const CAT_STYLE = {
+  ord:     { cls: 'text-foreground',     label: 'Ordinary',           bg: '' },
+  penalty: { cls: 'text-orange-600',     label: 'Penalty loading',    bg: 'bg-orange-50/40' },
+  ot:      { cls: 'text-rose-600 font-semibold', label: 'Overtime',   bg: 'bg-rose-50/40' },
+  ot76:    { cls: 'text-rose-700 font-semibold', label: 'OT >76h',    bg: 'bg-rose-100/50' },
+};
+
+const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual }) => {
+  const bd = calcBreakdown(mrow, baseRate, empType);
+  if (!bd) return (
+    <div className="p-4 text-sm text-muted-foreground">Enter a base rate above to see the pay breakdown.</div>
+  );
+
+  const pct = (n, total) => total > 0 ? ` (${((n / total) * 100).toFixed(0)}%)` : '';
+
+  return (
+    <div className="p-4 space-y-4 bg-muted/5 border-t border-border/40 w-full overflow-x-hidden">
+      {/* Hero */}
+      <div className="flex items-end justify-between flex-wrap gap-3 bg-foreground text-background rounded p-4">
+        <div>
+          <p className="text-[10px] uppercase tracking-widest opacity-60 mb-1">Gross Pay — {staffName}</p>
+          <p className="font-bold text-2xl font-mono">{fmt(bd.gross)}</p>
+          {isCasual && <p className="text-[11px] opacity-70 mt-0.5">Casual rate · base ${bd.base.toFixed(2)}/h + ${bd.load.toFixed(2)} loading</p>}
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] uppercase tracking-widest opacity-60 mb-1">Total Hours</p>
+          <p className="font-bold text-xl font-mono">{fmtH(bd.totalHours)}</p>
+        </div>
+      </div>
+
+      {/* Mini summary grid */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-px bg-border rounded overflow-hidden text-xs">
+        {[
+          { label: 'Base Pay',         val: fmt(bd.basePay),      cls: '' },
+          { label: 'Penalty Loadings', val: fmt(bd.penaltyExtra), cls: 'text-orange-600' },
+          { label: 'Overtime Pay',     val: fmt(bd.otPay),        cls: 'text-rose-600' },
+          { label: 'Allowances',       val: fmt(bd.allow.total),  cls: 'text-amber-600' },
+          { label: 'Ordinary Hrs',     val: fmtH(bd.ordHours),    cls: '' },
+          { label: 'OT Hours',         val: fmtH(bd.otHours),     cls: 'text-rose-600' },
+        ].map(({ label, val, cls }) => (
+          <div key={label} className="bg-background p-3">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+            <p className={`font-bold text-sm mt-0.5 font-mono ${cls}`}>{val}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Line-by-line table */}
+      <div className="rounded border border-border overflow-x-auto">
+        <div className="bg-muted/40 px-3 py-2 text-[10px] uppercase tracking-wider font-semibold border-b border-border">
+          Line-by-line Calculation
+        </div>
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="bg-muted/20 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <th className="text-left px-3 py-2 font-medium">Category</th>
+              <th className="text-right px-3 py-2 font-medium">Hours</th>
+              <th className="text-right px-3 py-2 font-medium">Rate/h</th>
+              <th className="text-right px-3 py-2 font-medium">Mult</th>
+              <th className="text-right px-3 py-2 font-medium">Pay</th>
+            </tr>
+          </thead>
+          <tbody>
+            {bd.lines.map((l, i) => {
+              const style = CAT_STYLE[l.cat] || CAT_STYLE.ord;
+              return (
+                <tr key={i} className={`border-t border-border/30 ${style.bg}`}>
+                  <td className={`px-3 py-2 ${style.cls}`}>
+                    {l.label}
+                    <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/70 uppercase">{style.label}</span>
+                  </td>
+                  <td className="text-right px-3 py-2 font-mono">{fmtH(l.hours)}</td>
+                  <td className="text-right px-3 py-2 font-mono text-muted-foreground">${l.effRate.toFixed(4)}</td>
+                  <td className="text-right px-3 py-2 font-mono">{l.mult.toFixed(3)}×</td>
+                  <td className={`text-right px-3 py-2 font-mono font-semibold ${style.cls}`}>{fmt(l.pay)}</td>
+                </tr>
+              );
+            })}
+            {/* Allowances */}
+            {bd.allow.brokenAllow > 0 && (
+              <tr className="border-t border-border/30 bg-amber-50/30">
+                <td className="px-3 py-2 text-amber-700">
+                  Broken shift allowance ({mrow.brokenShiftCount} shift{mrow.brokenShiftCount > 1 ? 's' : ''} × ${BROKEN_ALLOWANCE_1})
+                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/70 uppercase">Allowance</span>
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.brokenShiftCount}</td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">${BROKEN_ALLOWANCE_1}</td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.brokenAllow)}</td>
+              </tr>
+            )}
+            {bd.allow.mealAllow > 0 && (
+              <tr className="border-t border-border/30 bg-amber-50/30">
+                <td className="px-3 py-2 text-amber-600">
+                  Meal allowance (OT &gt;{totalOtHrs(mrow) > 4 ? '4h → 2×' : '1h → 1×'} ${MEAL_ALLOWANCE})
+                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/70 uppercase">Allowance</span>
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">${MEAL_ALLOWANCE}</td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-600">{fmt(bd.allow.mealAllow)}</td>
+              </tr>
+            )}
+            {/* Total row */}
+            <tr className="border-t-2 border-border bg-muted/20 font-bold">
+              <td className="px-3 py-2.5 text-sm">Total</td>
+              <td className="text-right px-3 py-2.5 font-mono">{fmtH(bd.totalHours)}</td>
+              <td className="text-right px-3 py-2.5 text-muted-foreground">—</td>
+              <td className="text-right px-3 py-2.5 text-muted-foreground">—</td>
+              <td className="text-right px-3 py-2.5 font-mono text-base">{fmt(bd.gross)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pct breakdown bar */}
+      <div className="space-y-1">
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Pay composition</p>
+        <div className="flex rounded overflow-hidden h-3 text-[0px]">
+          {bd.basePay > 0 && <div title={`Base ${fmt(bd.basePay)}`} style={{ width: `${(bd.basePay / bd.gross) * 100}%` }} className="bg-slate-400" />}
+          {bd.penaltyExtra > 0 && <div title={`Penalty ${fmt(bd.penaltyExtra)}`} style={{ width: `${(bd.penaltyExtra / bd.gross) * 100}%` }} className="bg-orange-400" />}
+          {bd.otPay > 0 && <div title={`OT ${fmt(bd.otPay)}`} style={{ width: `${(bd.otPay / bd.gross) * 100}%` }} className="bg-rose-500" />}
+          {bd.allow.total > 0 && <div title={`Allow. ${fmt(bd.allow.total)}`} style={{ width: `${(bd.allow.total / bd.gross) * 100}%` }} className="bg-amber-400" />}
+        </div>
+        <div className="flex gap-4 flex-wrap text-[10px] text-muted-foreground">
+          <span><span className="inline-block w-2 h-2 rounded-sm bg-slate-400 mr-1" />Base {pct(bd.basePay, bd.gross)}</span>
+          <span><span className="inline-block w-2 h-2 rounded-sm bg-orange-400 mr-1" />Penalty {pct(bd.penaltyExtra, bd.gross)}</span>
+          <span><span className="inline-block w-2 h-2 rounded-sm bg-rose-500 mr-1" />OT {pct(bd.otPay, bd.gross)}</span>
+          {bd.allow.total > 0 && <span><span className="inline-block w-2 h-2 rounded-sm bg-amber-400 mr-1" />Allow. {pct(bd.allow.total, bd.gross)}</span>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Right-click editable field registry ──────────────────────────────
+const EDITABLE_FIELDS = {
+  morningHours:      'Morning Hours',
+  afternoonHours:    'Afternoon Hours',
+  nightHours:        'Night Hours',
+  weekdayOtUpto2:    'WD OT ≤2h',
+  weekdayOtAfter2:   'WD OT >2h',
+  saturdayHours:     'Saturday Hours',
+  saturdayOtUpto2:   'Sat OT ≤2h',
+  saturdayOtAfter2:  'Sat OT >2h',
+  sundayHours:       'Sunday Hours',
+  sundayOtUpto2:     'Sun OT ≤2h',
+  sundayOtAfter2:    'Sun OT >2h',
+  holidayHours:      'Holiday Hours',
+  holidayOtUpto2:    'Hol OT ≤2h',
+  holidayOtAfter2:   'Hol OT >2h',
+  nursingCareHours:  'Nursing Hours',
+  brokenShiftCount:  'Broken Shifts #',
+  sleepoversCount:   'Sleepovers #',
+  otAfter76Weekday:  'OT >76h (Weekday)',
+  otAfter76Saturday: 'OT >76h (Saturday)',
+  otAfter76Sunday:   'OT >76h (Sunday)',
+  otAfter76Holiday:  'OT >76h (Holiday)',
+};
+
+// ── Floating context-menu editor ─────────────────────────────────────
+const CellContextMenu = ({ menu, overrides, onSave, onClear, onClose }) => {
+  const ref      = useRef(null);
+  const inputRef = useRef(null);
+  const overrideKey = menu ? `${menu.staffName}:${menu.field}` : null;
+  const isOverridden = overrideKey && (overrideKey in overrides);
+  const [draft, setDraft] = useState('');
+
+  // Seed draft with current override or original value when menu opens
+  useEffect(() => {
+    if (!menu) return;
+    setDraft(isOverridden ? String(overrides[overrideKey]) : String(menu.original ?? 0));
+    setTimeout(() => inputRef.current?.select(), 0);
+  }, [menu]);
+
+  // Close on Escape or outside click
+  useEffect(() => {
+    if (!menu) return;
+    const onKey  = (e) => { if (e.key === 'Escape') onClose(); };
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown); };
+  }, [menu, onClose]);
+
+  if (!menu) return null;
+
+  const handleSave = () => {
+    const n = parseFloat(draft);
+    if (!isNaN(n) && n >= 0) onSave(menu.staffName, menu.field, n);
+    onClose();
+  };
+
+  // Keep menu inside viewport
+  const vpW = window.innerWidth, vpH = window.innerHeight;
+  const W = 260, H = 160;
+  const left = Math.min(menu.x + 4, vpW - W - 12);
+  const top  = Math.min(menu.y + 4, vpH - H - 12);
+
+  return (
+    <div
+      ref={ref}
+      style={{ position: 'fixed', left, top, zIndex: 9999, width: W }}
+      className="bg-popover border border-border rounded-lg shadow-xl p-3 space-y-2"
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-foreground">{EDITABLE_FIELDS[menu.field]}</p>
+        {isOverridden && (
+          <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">overridden</span>
+        )}
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Staff: <span className="font-medium text-foreground">{menu.staffName}</span>
+        &nbsp;·&nbsp;Original: <span className="font-mono">{menu.original ?? 0}</span>
+      </p>
+      <input
+        ref={inputRef}
+        type="number"
+        step="0.01"
+        min="0"
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
+        className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+      />
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          className="flex-1 h-7 rounded bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90"
+        >
+          Save
+        </button>
+        {isOverridden && (
+          <button
+            onClick={() => { onClear(menu.staffName, menu.field); onClose(); }}
+            className="flex-1 h-7 rounded border border-input text-xs text-muted-foreground hover:bg-muted"
+          >
+            Clear override
+          </button>
+        )}
+        <button
+          onClick={onClose}
+          className="h-7 px-2 rounded border border-input text-xs text-muted-foreground hover:bg-muted"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+};
 function pillCls(type, isPH) {
   if (isPH) return 'border-blue-400 text-blue-700 bg-blue-50';
   if (type === 'saturday') return 'border-purple-400 text-purple-700 bg-purple-50';
@@ -245,6 +606,40 @@ export const SchadsCalculator = () => {
   const [empTypes, setEmpTypes] = useState({});          // { staffName: 'permanent' | 'casual' }
   const [defaultEmpType, setDefaultEmpType] = useState('permanent');
 
+  // ── Breakdown expand state ───────────────────────────────────────
+  const [expandedBreakdown, setExpandedBreakdown] = useState({});
+  const toggleBreakdown = useCallback((staffName) =>
+    setExpandedBreakdown(prev => ({ ...prev, [staffName]: !prev[staffName] })), []);
+
+  // ── Cell override state ──────────────────────────────────────────
+  // key: `${staffName}:${field}`, value: number
+  const [overrides, setOverrides] = useState({});
+  const [ctxMenu, setCtxMenu]     = useState(null); // { x, y, staffName, field, original }
+
+  const saveOverride  = useCallback((staffName, field, value) => {
+    setOverrides(prev => ({ ...prev, [`${staffName}:${field}`]: value }));
+  }, []);
+  const clearOverride = useCallback((staffName, field) => {
+    setOverrides(prev => { const n = { ...prev }; delete n[`${staffName}:${field}`]; return n; });
+  }, []);
+  const closeCtx = useCallback(() => setCtxMenu(null), []);
+
+  // Merge backend row with any manual overrides before passing to calculators
+  const getMergedRow = useCallback((row) => {
+    const merged = { ...row };
+    for (const field of Object.keys(EDITABLE_FIELDS)) {
+      const key = `${row.staffName}:${field}`;
+      if (key in overrides) merged[field] = overrides[key];
+    }
+    return merged;
+  }, [overrides]);
+
+  // Right-click handler for numeric data cells
+  const handleCtx = useCallback((e, staffName, field, original) => {
+    e.preventDefault();
+    setCtxMenu({ x: e.clientX, y: e.clientY, staffName, field, original });
+  }, []);
+
   // ── Fetch computed pay hours from backend ────────────────────────
   const { data: payHoursData, isLoading: phLoading, error: phError } = usePayHours({});
   const staffRows = (payHoursData?.payHours || []).slice().sort((a, b) => a.staffName.localeCompare(b.staffName));
@@ -261,19 +656,30 @@ export const SchadsCalculator = () => {
     t.totalHours = 0; t.gross = 0; t.brokenAllow = 0; t.mealAllow = 0; t.totalOT = 0;
     let grossCount = 0;
     for (const row of staffRows) {
-      for (const col of COLS) t[col] = r2((t[col] || 0) + (row[col] || 0));
-      t.totalHours = r2(t.totalHours + staffTotalHours(row));
-      t.totalOT    = r2(t.totalOT    + totalOtHrs(row));
-      const allow = calcAllowances(row);
+      const mrow = getMergedRow(row);
+      for (const col of COLS) t[col] = r2((t[col] || 0) + (mrow[col] || 0));
+      t.totalHours = r2(t.totalHours + staffTotalHours(mrow));
+      t.totalOT    = r2(t.totalOT    + totalOtHrs(mrow));
+      const allow = calcAllowances(mrow);
       t.brokenAllow = r2(t.brokenAllow + allow.brokenAllow);
       t.mealAllow   = r2(t.mealAllow   + allow.mealAllow);
       const rate = baseRates[row.staffName] ?? defaultRate;
       const empT = empTypes[row.staffName] ?? defaultEmpType;
-      const g = calcGross(row, rate, empT);
+      const g = calcGross(mrow, rate, empT);
       if (g !== null) { t.gross = r2(t.gross + g); grossCount++; }
     }
     return { ...t, grossReady: staffRows.length > 0 && grossCount === staffRows.length };
-  }, [staffRows, baseRates, defaultRate, empTypes, defaultEmpType]);
+  }, [staffRows, baseRates, defaultRate, empTypes, defaultEmpType, getMergedRow]);
+
+  // Count staff with any exception (OT, OT>76, or broken shifts)
+  const exceptionCount = useMemo(() =>
+    staffRows.filter(row => {
+      const m = getMergedRow(row);
+      return totalOtHrs(m) > 0 || (m.brokenShiftCount || 0) > 0 ||
+        (m.otAfter76Weekday||0) > 0 || (m.otAfter76Saturday||0) > 0 ||
+        (m.otAfter76Sunday||0) > 0  || (m.otAfter76Holiday||0) > 0;
+    }).length,
+  [staffRows, getMergedRow]);
 
   const setRate = useCallback((staffName, val) => {
     setBaseRates(prev => ({ ...prev, [staffName]: val }));
@@ -336,10 +742,25 @@ export const SchadsCalculator = () => {
   // ════════════════════════════════════════════════════════════════
   return (
     <div className="space-y-4">
+      {/* Floating cell editor (context menu) */}
+      <CellContextMenu
+        menu={ctxMenu}
+        overrides={overrides}
+        onSave={saveOverride}
+        onClear={clearOverride}
+        onClose={closeCtx}
+      />
+
       {/* View toggle */}
       <div className="flex gap-2">
-        <Button size="sm" variant={view === 'summary' ? 'default' : 'outline'} onClick={() => setView('summary')}>Staff Pay Summary</Button>
-        <Button size="sm" variant={view === 'manual'  ? 'default' : 'outline'} onClick={() => setView('manual')}>Manual Scenario</Button>
+        <Button size="sm" variant={view === 'summary'    ? 'default' : 'outline'} onClick={() => setView('summary')}>Staff Pay Summary</Button>
+        <Button size="sm" variant={view === 'exceptions' ? 'default' : 'outline'} onClick={() => setView('exceptions')}>
+          Exceptions
+          {view !== 'exceptions' && exceptionCount > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-orange-500 text-white text-[10px] font-bold w-4 h-4">{exceptionCount}</span>
+          )}
+        </Button>
+        <Button size="sm" variant={view === 'manual'     ? 'default' : 'outline'} onClick={() => setView('manual')}>Manual Scenario</Button>
       </div>
 
       {/* ── STAFF SUMMARY ──────────────────────────────────────── */}
@@ -477,25 +898,56 @@ export const SchadsCalculator = () => {
                     </TableHeader>
                     <TableBody>
                       {staffRows.map((row) => {
+                        const mrow      = getMergedRow(row);
                         const rateVal   = baseRates[row.staffName] ?? defaultRate;
                         const empT      = getEmpType(row.staffName);
-                        const gross     = calcGross(row, rateVal, empT);
-                        const allow     = calcAllowances(row);
-                        const otTotal   = totalOtHrs(row);
-                        const sunAll    = r2((row.sundayHours||0)+(row.sundayOtUpto2||0)+(row.sundayOtAfter2||0));
-                        const sunOT     = r2((row.sundayOtUpto2||0)+(row.sundayOtAfter2||0));
-                        const holAll    = r2((row.holidayHours||0)+(row.holidayOtUpto2||0)+(row.holidayOtAfter2||0));
-                        const holOT     = r2((row.holidayOtUpto2||0)+(row.holidayOtAfter2||0));
+                        const gross     = calcGross(mrow, rateVal, empT);
+                        const allow     = calcAllowances(mrow);
+                        const otTotal   = totalOtHrs(mrow);
+                        const sunAll    = r2((mrow.sundayHours||0)+(mrow.sundayOtUpto2||0)+(mrow.sundayOtAfter2||0));
+                        const sunOT     = r2((mrow.sundayOtUpto2||0)+(mrow.sundayOtAfter2||0));
+                        const holAll    = r2((mrow.holidayHours||0)+(mrow.holidayOtUpto2||0)+(mrow.holidayOtAfter2||0));
+                        const holOT     = r2((mrow.holidayOtUpto2||0)+(mrow.holidayOtAfter2||0));
+                        // Helper: render an editable cell value with override indicator
+                        const ov = (field, val, cls = '') => {
+                          const key = `${row.staffName}:${field}`;
+                          const isOv = key in overrides;
+                          return (
+                            <TableCell
+                              key={field}
+                              className={`text-right tabular-nums cursor-context-menu select-none ${cls} ${isOv ? 'ring-1 ring-inset ring-blue-400 bg-blue-50/40' : ''}`}
+                              onContextMenu={e => handleCtx(e, row.staffName, field, row[field] ?? 0)}
+                              title="Right-click to edit"
+                            >
+                              {val}
+                              {isOv && <span className="ml-0.5 inline-block w-1.5 h-1.5 rounded-full bg-blue-500 align-middle" />}
+                            </TableCell>
+                          );
+                        };
                         const isCasual  = empT === 'casual';
                         const h = (v) => v ? fmtH(v) : <span className="text-muted-foreground/30">—</span>;
                         const n = (v) => v ? String(v) : <span className="text-muted-foreground/30">—</span>;
-                        // Exception flags
                         const hasOT     = otTotal > 0;
-                        const hasBroken = (row.brokenShiftCount || 0) > 0;
+                        const hasBroken = (mrow.brokenShiftCount || 0) > 0;
                         return (
-                          <TableRow key={row.staffName} className={`hover:bg-muted/30 text-xs ${isCasual ? 'bg-blue-50/30' : ''}`}>
+                          <React.Fragment key={row.staffName}>
+                          <TableRow className={`hover:bg-muted/30 text-xs ${isCasual ? 'bg-blue-50/30' : ''}`}>
                             <TableCell className={`font-medium sticky left-0 z-10 text-sm border-r border-border/50 ${isCasual ? 'bg-blue-50/60' : 'bg-background'}`}>
-                              {row.staffName}
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => toggleBreakdown(row.staffName)}
+                                  title="Show pay breakdown"
+                                  className={`shrink-0 w-5 h-5 flex items-center justify-center rounded border text-[11px] transition-all duration-200 ${
+                                    expandedBreakdown[row.staffName]
+                                      ? 'bg-foreground text-background border-foreground rotate-90'
+                                      : 'text-muted-foreground border-border hover:border-foreground hover:text-foreground'
+                                  }`}
+                                  style={{ transform: expandedBreakdown[row.staffName] ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+                                >
+                                  ▸
+                                </button>
+                                {row.staffName}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
@@ -521,33 +973,33 @@ export const SchadsCalculator = () => {
                               </select>
                             </TableCell>
                             {/* Weekday ordinary */}
-                            <TableCell className="text-right tabular-nums text-yellow-700">{h(row.morningHours)}</TableCell>
-                            <TableCell className="text-right tabular-nums text-orange-700">{h(row.afternoonHours)}</TableCell>
-                            <TableCell className="text-right tabular-nums text-indigo-700 border-r border-border/50">{h(row.nightHours)}</TableCell>
+                            {ov('morningHours',   h(mrow.morningHours),   'text-yellow-700')}
+                            {ov('afternoonHours', h(mrow.afternoonHours), 'text-orange-700')}
+                            {ov('nightHours',     h(mrow.nightHours),     'text-indigo-700 border-r border-border/50')}
                             {/* WD overtime */}
-                            <TableCell className="text-right tabular-nums text-orange-600">{h(row.weekdayOtUpto2)}</TableCell>
-                            <TableCell className="text-right tabular-nums text-orange-700 border-r border-border/50">{h(row.weekdayOtAfter2)}</TableCell>
+                            {ov('weekdayOtUpto2',  h(mrow.weekdayOtUpto2),  'text-orange-600')}
+                            {ov('weekdayOtAfter2', h(mrow.weekdayOtAfter2), 'text-orange-700 border-r border-border/50')}
                             {/* Saturday */}
-                            <TableCell className="text-right tabular-nums text-cyan-700">{h(row.saturdayHours)}</TableCell>
-                            <TableCell className="text-right tabular-nums text-cyan-600">{h(row.saturdayOtUpto2)}</TableCell>
-                            <TableCell className="text-right tabular-nums text-cyan-600 border-r border-border/50">{h(row.saturdayOtAfter2)}</TableCell>
-                            {/* Sunday consolidated */}
-                            <TableCell className="text-right tabular-nums text-red-700 font-medium">{sunAll ? fmtH(sunAll) : <span className="text-muted-foreground/30">—</span>}</TableCell>
-                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${sunOT > 0 ? 'text-orange-600 font-medium' : 'text-muted-foreground/30'}`}>{sunOT ? fmtH(sunOT) : '—'}</TableCell>
-                            {/* Holiday consolidated */}
-                            <TableCell className="text-right tabular-nums text-blue-700 font-medium">{holAll ? fmtH(holAll) : <span className="text-muted-foreground/30">—</span>}</TableCell>
-                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${holOT > 0 ? 'text-orange-600 font-medium' : 'text-muted-foreground/30'}`}>{holOT ? fmtH(holOT) : '—'}</TableCell>
+                            {ov('saturdayHours',    h(mrow.saturdayHours),    'text-cyan-700')}
+                            {ov('saturdayOtUpto2',  h(mrow.saturdayOtUpto2),  'text-cyan-600')}
+                            {ov('saturdayOtAfter2', h(mrow.saturdayOtAfter2), 'text-cyan-600 border-r border-border/50')}
+                            {/* Sunday — editable individually, display consolidated */}
+                            {ov('sundayHours',   sunAll ? <span className="font-medium">{fmtH(sunAll)}</span> : <span className="text-muted-foreground/30">—</span>, 'text-red-700')}
+                            {ov('sundayOtUpto2', sunOT > 0 ? <span className="font-medium">{fmtH(sunOT)}</span> : <span className="text-muted-foreground/30">—</span>, `border-r border-border/50 ${sunOT > 0 ? 'text-orange-600' : 'text-muted-foreground/30'}`)}
+                            {/* Holiday */}
+                            {ov('holidayHours',   holAll ? <span className="font-medium">{fmtH(holAll)}</span> : <span className="text-muted-foreground/30">—</span>, 'text-blue-700')}
+                            {ov('holidayOtUpto2', holOT > 0 ? <span className="font-medium">{fmtH(holOT)}</span> : <span className="text-muted-foreground/30">—</span>, `border-r border-border/50 ${holOT > 0 ? 'text-orange-600' : 'text-muted-foreground/30'}`)}
                             {/* Nursing */}
-                            <TableCell className="text-right tabular-nums text-teal-700 border-r border-border/50">{h(row.nursingCareHours)}</TableCell>
+                            {ov('nursingCareHours', h(mrow.nursingCareHours), 'text-teal-700 border-r border-border/50')}
                             {/* Exceptions */}
                             <TableCell className={`text-right tabular-nums ${hasOT ? 'text-orange-600 font-semibold' : 'text-muted-foreground/30'}`}>{hasOT ? fmtH(otTotal) : '—'}</TableCell>
-                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${hasBroken ? 'text-orange-700 font-semibold' : 'text-muted-foreground/30'}`}>{n(row.brokenShiftCount)}</TableCell>
+                            {ov('brokenShiftCount', n(mrow.brokenShiftCount), `border-r border-border/50 ${hasBroken ? 'text-orange-700 font-semibold' : 'text-muted-foreground/30'}`)}
                             {/* OT>76 by day type */}
-                            <TableCell className={`text-right tabular-nums ${(row.otAfter76Weekday||0) > 0 ? 'text-rose-700 font-medium' : 'text-muted-foreground/30'}`}>{(row.otAfter76Weekday||0) > 0 ? fmtH(row.otAfter76Weekday) : '—'}</TableCell>
-                            <TableCell className={`text-right tabular-nums ${(row.otAfter76Saturday||0) > 0 ? 'text-rose-600 font-medium' : 'text-muted-foreground/30'}`}>{(row.otAfter76Saturday||0) > 0 ? fmtH(row.otAfter76Saturday) : '—'}</TableCell>
-                            <TableCell className={`text-right tabular-nums ${(row.otAfter76Sunday||0) > 0 ? 'text-rose-500 font-medium' : 'text-muted-foreground/30'}`}>{(row.otAfter76Sunday||0) > 0 ? fmtH(row.otAfter76Sunday) : '—'}</TableCell>
-                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${(row.otAfter76Holiday||0) > 0 ? 'text-rose-800 font-medium' : 'text-muted-foreground/30'}`}>{(row.otAfter76Holiday||0) > 0 ? fmtH(row.otAfter76Holiday) : '—'}</TableCell>
-                            {/* Allowances */}
+                            {ov('otAfter76Weekday',  (mrow.otAfter76Weekday||0)  > 0 ? fmtH(mrow.otAfter76Weekday)  : '—', `${(mrow.otAfter76Weekday||0)  > 0 ? 'text-rose-700 font-medium' : 'text-muted-foreground/30'}`)}
+                            {ov('otAfter76Saturday', (mrow.otAfter76Saturday||0) > 0 ? fmtH(mrow.otAfter76Saturday) : '—', `${(mrow.otAfter76Saturday||0) > 0 ? 'text-rose-600 font-medium' : 'text-muted-foreground/30'}`)}
+                            {ov('otAfter76Sunday',   (mrow.otAfter76Sunday||0)   > 0 ? fmtH(mrow.otAfter76Sunday)   : '—', `${(mrow.otAfter76Sunday||0)   > 0 ? 'text-rose-500 font-medium' : 'text-muted-foreground/30'}`)}
+                            {ov('otAfter76Holiday',  (mrow.otAfter76Holiday||0)  > 0 ? fmtH(mrow.otAfter76Holiday)  : '—', `border-r border-border/50 ${(mrow.otAfter76Holiday||0) > 0 ? 'text-rose-800 font-medium' : 'text-muted-foreground/30'}`)}
+                            {/* Allowances — derived, not directly editable */}
                             <TableCell className={`text-right tabular-nums ${allow.brokenAllow > 0 ? 'text-amber-700' : 'text-muted-foreground/30'}`}>{allow.brokenAllow > 0 ? fmt(allow.brokenAllow) : '—'}</TableCell>
                             <TableCell className={`text-right tabular-nums border-r border-border/50 ${allow.mealAllow > 0 ? 'text-amber-600' : 'text-muted-foreground/30'}`}>{allow.mealAllow > 0 ? fmt(allow.mealAllow) : '—'}</TableCell>
                             {/* Gross pay */}
@@ -555,6 +1007,32 @@ export const SchadsCalculator = () => {
                               {gross !== null ? <span className={isCasual ? 'text-blue-700' : ''}>{fmt(gross)}</span> : <span className="text-muted-foreground font-normal text-xs">enter rate</span>}
                             </TableCell>
                           </TableRow>
+
+                          {/* Breakdown panel — always rendered, animated via grid-template-rows */}
+                          <TableRow className="hover:bg-transparent border-0">
+                            <TableCell colSpan={27} className="p-0 border-0 max-w-0">
+                              <div
+                                style={{
+                                  display: 'grid',
+                                  gridTemplateRows: expandedBreakdown[row.staffName] ? '1fr' : '0fr',
+                                  transition: 'grid-template-rows 0.3s ease',
+                                  overflow: 'hidden',
+                                  width: '100%',
+                                }}
+                              >
+                                <div style={{ overflow: 'hidden', minWidth: 0 }}>
+                                  <PayBreakdownPanel
+                                    mrow={mrow}
+                                    staffName={row.staffName}
+                                    baseRate={rateVal}
+                                    empType={empT}
+                                    isCasual={isCasual}
+                                  />
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          </React.Fragment>
                         );
                       })}
 
@@ -594,6 +1072,21 @@ export const SchadsCalculator = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Override hint */}
+          {staffRows.length > 0 && (
+            <p className="text-[11px] text-muted-foreground/70 text-center -mt-2">
+              Right-click any hour cell to override its value. Overridden cells are highlighted in blue and recalculate gross pay instantly.
+              {Object.keys(overrides).length > 0 && (
+                <button
+                  onClick={() => setOverrides({})}
+                  className="ml-2 underline text-blue-600 hover:text-blue-800"
+                >
+                  Clear all {Object.keys(overrides).length} overrides
+                </button>
+              )}
+            </p>
+          )}
 
           {/* Legend & Disclaimer */}
           <div className="grid gap-3 sm:grid-cols-2">
@@ -635,6 +1128,334 @@ export const SchadsCalculator = () => {
           </div>
         </>
       )}
+
+      {/* ── EXCEPTIONS ─────────────────────────────────────────── */}
+      {view === 'exceptions' && (() => {
+        if (isLoading) return <div className="py-12"><LoadingScreen message="Loading pay hours…" /></div>;
+        if (staffRows.length === 0) return (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground text-sm">
+              No pay hours data. Go to <strong>Pay Hours</strong>, upload a CSV and click "Compute Pay Hours" first.
+            </CardContent>
+          </Card>
+        );
+
+        // Build per-staff exception rows
+        const exRows = staffRows.map(row => {
+          const m   = getMergedRow(row);
+          const ot  = totalOtHrs(m);
+          const broken = m.brokenShiftCount || 0;
+          const sleep  = m.sleepoversCount  || 0;
+          const ot76wd  = m.otAfter76Weekday  || 0;
+          const ot76sat = m.otAfter76Saturday || 0;
+          const ot76sun = m.otAfter76Sunday   || 0;
+          const ot76hol = m.otAfter76Holiday  || 0;
+          const ot76tot = r2(ot76wd + ot76sat + ot76sun + ot76hol);
+          const allow   = calcAllowances(m);
+          const rate    = baseRates[row.staffName] ?? defaultRate;
+          const empT    = getEmpType(row.staffName);
+          const gross   = calcGross(m, rate, empT);
+          const hasAny  = ot > 0 || broken > 0 || ot76tot > 0;
+          return { row, m, ot, broken, sleep, ot76wd, ot76sat, ot76sun, ot76hol, ot76tot, allow, gross, hasAny };
+        });
+
+        const allHaveExceptions = exRows.every(r => r.hasAny);
+        const visible = exRows.filter(r => r.hasAny);
+
+        // Totals
+        const totBroken    = r2(visible.reduce((s, r) => s + r.broken, 0));
+        const totSleep     = r2(visible.reduce((s, r) => s + r.sleep, 0));
+        const totOT        = r2(visible.reduce((s, r) => s + r.ot, 0));
+        const totOt76wd    = r2(visible.reduce((s, r) => s + r.ot76wd, 0));
+        const totOt76sat   = r2(visible.reduce((s, r) => s + r.ot76sat, 0));
+        const totOt76sun   = r2(visible.reduce((s, r) => s + r.ot76sun, 0));
+        const totOt76hol   = r2(visible.reduce((s, r) => s + r.ot76hol, 0));
+        const totOt76      = r2(visible.reduce((s, r) => s + r.ot76tot, 0));
+        const totBrokAllow = r2(visible.reduce((s, r) => s + r.allow.brokenAllow, 0));
+        const totMealAllow = r2(visible.reduce((s, r) => s + r.allow.mealAllow, 0));
+        const totAllow     = r2(totBrokAllow + totMealAllow);
+        const totGross     = visible.every(r => r.gross !== null) ? r2(visible.reduce((s, r) => s + (r.gross || 0), 0)) : null;
+
+        return (
+          <>
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Card className="border-orange-200">
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-orange-600">{visible.length}</div>
+                  <p className="text-xs text-muted-foreground">Staff with exceptions</p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">of {staffRows.length} total</p>
+                </CardContent>
+              </Card>
+              <Card className="border-orange-200">
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-orange-600">{fmtH(totOT)}</div>
+                  <p className="text-xs text-muted-foreground">Total overtime hours</p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">WD + Sat + Sun + PH</p>
+                </CardContent>
+              </Card>
+              <Card className="border-rose-200">
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-rose-600">{fmtH(totOt76)}</div>
+                  <p className="text-xs text-muted-foreground">Total OT&nbsp;&gt;&nbsp;76h</p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">Fortnight cap overflow</p>
+                </CardContent>
+              </Card>
+              <Card className="border-amber-200">
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-amber-700">{totBroken} shifts</div>
+                  <p className="text-xs text-muted-foreground">Broken shifts</p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">{totSleep} sleepovers</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {visible.length === 0 ? (
+              <Card>
+                <CardContent className="py-10 text-center">
+                  <p className="text-lg font-medium text-green-600">✓ No exceptions</p>
+                  <p className="text-sm text-muted-foreground mt-1">No staff have overtime, OT&nbsp;&gt;&nbsp;76h, or broken shifts this period.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* ── OT & Broken exceptions ── */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <span className="text-orange-500">⚠</span> Overtime &amp; Broken Shifts
+                      <span className="text-xs font-normal text-muted-foreground">({visible.filter(r => r.ot > 0 || r.broken > 0).length} staff)</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/40 text-[11px]">
+                            <TableHead className="min-w-[160px]">Staff</TableHead>
+                            <TableHead className="text-right text-orange-600 whitespace-nowrap">Total OT<br/><span className="font-normal opacity-70">all days</span></TableHead>
+                            <TableHead className="text-right text-orange-600 whitespace-nowrap">WD OT ≤2h<br/><span className="font-normal opacity-70">1.5×</span></TableHead>
+                            <TableHead className="text-right text-orange-700 whitespace-nowrap">WD OT &gt;2h<br/><span className="font-normal opacity-70">2×</span></TableHead>
+                            <TableHead className="text-right text-cyan-600 whitespace-nowrap">Sat OT ≤2h</TableHead>
+                            <TableHead className="text-right text-cyan-700 whitespace-nowrap">Sat OT &gt;2h</TableHead>
+                            <TableHead className="text-right text-red-600 whitespace-nowrap">Sun OT hrs<br/><span className="font-normal opacity-70">2×</span></TableHead>
+                            <TableHead className="text-right text-blue-600 whitespace-nowrap">Hol OT hrs<br/><span className="font-normal opacity-70">2.5×</span></TableHead>
+                            <TableHead className="text-right text-orange-700 whitespace-nowrap">Broken#</TableHead>
+                            <TableHead className="text-right text-purple-600 whitespace-nowrap">Sleepovers#</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {visible.filter(r => r.ot > 0 || r.broken > 0 || r.sleep > 0).map(({ row, m, ot, broken, sleep }) => {
+                            const d = (v, cls = '') => v > 0
+                              ? <span className={`font-medium ${cls}`}>{fmtH(v)}</span>
+                              : <span className="text-muted-foreground/30">—</span>;
+                            const n = (v, cls = '') => v > 0
+                              ? <span className={`font-medium ${cls}`}>{v}</span>
+                              : <span className="text-muted-foreground/30">—</span>;
+                            return (
+                              <TableRow key={row.staffName} className="text-xs hover:bg-muted/30">
+                                <TableCell className="font-medium">{row.staffName}</TableCell>
+                                <TableCell className="text-right">{d(ot, 'text-orange-600')}</TableCell>
+                                <TableCell className="text-right">{d(m.weekdayOtUpto2 || 0, 'text-orange-500')}</TableCell>
+                                <TableCell className="text-right">{d(m.weekdayOtAfter2 || 0, 'text-orange-700')}</TableCell>
+                                <TableCell className="text-right">{d(m.saturdayOtUpto2 || 0, 'text-cyan-600')}</TableCell>
+                                <TableCell className="text-right">{d(m.saturdayOtAfter2 || 0, 'text-cyan-700')}</TableCell>
+                                <TableCell className="text-right">{d(r2((m.sundayOtUpto2||0)+(m.sundayOtAfter2||0)), 'text-red-600')}</TableCell>
+                                <TableCell className="text-right">{d(r2((m.holidayOtUpto2||0)+(m.holidayOtAfter2||0)), 'text-blue-600')}</TableCell>
+                                <TableCell className="text-right">
+                                  {broken > 0 ? (
+                                    <span className="inline-flex items-center gap-1 font-medium text-orange-700">
+                                      {broken}
+                                      <span className="text-[10px] bg-orange-100 text-orange-700 px-1 rounded">broken</span>
+                                    </span>
+                                  ) : <span className="text-muted-foreground/30">—</span>}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {sleep > 0 ? (
+                                    <span className="inline-flex items-center gap-1 font-medium text-purple-600">
+                                      {sleep}
+                                      <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">sleep</span>
+                                    </span>
+                                  ) : <span className="text-muted-foreground/30">—</span>}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          {/* Totals */}
+                          <TableRow className="border-t-2 font-bold text-xs bg-muted/20">
+                            <TableCell>Totals</TableCell>
+                            <TableCell className="text-right text-orange-600">{fmtH(totOT)}</TableCell>
+                            <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+(r.m.weekdayOtUpto2||0),0)))}</TableCell>
+                            <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+(r.m.weekdayOtAfter2||0),0)))}</TableCell>
+                            <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+(r.m.saturdayOtUpto2||0),0)))}</TableCell>
+                            <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+(r.m.saturdayOtAfter2||0),0)))}</TableCell>
+                            <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+r2((r.m.sundayOtUpto2||0)+(r.m.sundayOtAfter2||0)),0)))}</TableCell>
+                            <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+r2((r.m.holidayOtUpto2||0)+(r.m.holidayOtAfter2||0)),0)))}</TableCell>
+                            <TableCell className="text-right text-orange-700">{totBroken || '—'}</TableCell>
+                            <TableCell className="text-right text-purple-600">{totSleep || '—'}</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* ── OT > 76h detail ── */}
+                {totOt76 > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <span className="text-rose-600">⏱</span> OT &gt; 76h — Fortnight Cap Overflow
+                        <span className="text-xs font-normal text-muted-foreground">({visible.filter(r => r.ot76tot > 0).length} staff)</span>
+                      </CardTitle>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Hours that exceed the 76h fortnightly cap. Weekday &amp; Saturday: tiered (1.5× first 2h, 2× after). Sunday: 2.0×. Public Holiday: 2.5×. Same hour is not double-counted with daily OT.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-rose-50/60 text-[11px]">
+                              <TableHead className="min-w-[160px]">Staff</TableHead>
+                              <TableHead className="text-right text-rose-700 whitespace-nowrap">Total OT&gt;76<br/><span className="font-normal opacity-70">all days</span></TableHead>
+                              <TableHead className="text-right text-rose-700 whitespace-nowrap">Weekday<br/><span className="font-normal opacity-70">1.5×/2×</span></TableHead>
+                              <TableHead className="text-right text-rose-600 whitespace-nowrap">Saturday<br/><span className="font-normal opacity-70">1.5×/2×</span></TableHead>
+                              <TableHead className="text-right text-rose-500 whitespace-nowrap">Sunday<br/><span className="font-normal opacity-70">2.0× flat</span></TableHead>
+                              <TableHead className="text-right text-rose-800 whitespace-nowrap">Holiday<br/><span className="font-normal opacity-70">2.5× flat</span></TableHead>
+                              <TableHead className="text-right whitespace-nowrap">WD tier 1<br/><span className="font-normal opacity-70 text-muted-foreground">≤2h @ 1.5×</span></TableHead>
+                              <TableHead className="text-right whitespace-nowrap">WD tier 2<br/><span className="font-normal opacity-70 text-muted-foreground">&gt;2h @ 2×</span></TableHead>
+                              <TableHead className="text-right whitespace-nowrap">Sat tier 1<br/><span className="font-normal opacity-70 text-muted-foreground">≤2h @ 1.5×</span></TableHead>
+                              <TableHead className="text-right whitespace-nowrap">Sat tier 2<br/><span className="font-normal opacity-70 text-muted-foreground">&gt;2h @ 2×</span></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {visible.filter(r => r.ot76tot > 0).map(({ row, ot76wd, ot76sat, ot76sun, ot76hol, ot76tot }) => {
+                              const wdT1 = r2(Math.min(ot76wd, 2));
+                              const wdT2 = r2(Math.max(0, ot76wd - 2));
+                              const sT1  = r2(Math.min(ot76sat, 2));
+                              const sT2  = r2(Math.max(0, ot76sat - 2));
+                              const cell = (v, cls = 'text-rose-700') => v > 0
+                                ? <span className={`font-medium ${cls}`}>{fmtH(v)}</span>
+                                : <span className="text-muted-foreground/30">—</span>;
+                              return (
+                                <TableRow key={row.staffName} className="text-xs hover:bg-rose-50/30">
+                                  <TableCell className="font-medium">{row.staffName}</TableCell>
+                                  <TableCell className="text-right">{cell(ot76tot)}</TableCell>
+                                  <TableCell className="text-right">{cell(ot76wd)}</TableCell>
+                                  <TableCell className="text-right">{cell(ot76sat, 'text-rose-600')}</TableCell>
+                                  <TableCell className="text-right">{cell(ot76sun, 'text-rose-500')}</TableCell>
+                                  <TableCell className="text-right">{cell(ot76hol, 'text-rose-800')}</TableCell>
+                                  <TableCell className="text-right text-muted-foreground">{cell(wdT1, 'text-orange-500')}</TableCell>
+                                  <TableCell className="text-right text-muted-foreground">{cell(wdT2, 'text-orange-700')}</TableCell>
+                                  <TableCell className="text-right text-muted-foreground">{cell(sT1,  'text-cyan-500')}</TableCell>
+                                  <TableCell className="text-right text-muted-foreground">{cell(sT2,  'text-cyan-700')}</TableCell>
+                                </TableRow>
+                              );
+                            })}
+                            {/* Totals */}
+                            <TableRow className="border-t-2 font-bold text-xs bg-rose-50/20">
+                              <TableCell>Totals</TableCell>
+                              <TableCell className="text-right text-rose-700">{fmtH(totOt76)}</TableCell>
+                              <TableCell className="text-right">{totOt76wd  > 0 ? fmtH(totOt76wd)  : '—'}</TableCell>
+                              <TableCell className="text-right">{totOt76sat > 0 ? fmtH(totOt76sat) : '—'}</TableCell>
+                              <TableCell className="text-right">{totOt76sun > 0 ? fmtH(totOt76sun) : '—'}</TableCell>
+                              <TableCell className="text-right">{totOt76hol > 0 ? fmtH(totOt76hol) : '—'}</TableCell>
+                              <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+Math.min(r.ot76wd,2),0)))}</TableCell>
+                              <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+Math.max(0,r.ot76wd-2),0)))}</TableCell>
+                              <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+Math.min(r.ot76sat,2),0)))}</TableCell>
+                              <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+Math.max(0,r.ot76sat-2),0)))}</TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* ── Allowances detail ── */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <span className="text-amber-600">$</span> Allowances
+                      <span className="text-xs font-normal text-muted-foreground">({visible.filter(r => r.allow.total > 0).length} staff with allowances)</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-amber-50/60 text-[11px]">
+                            <TableHead className="min-w-[160px]">Staff</TableHead>
+                            <TableHead className="text-right text-orange-700 whitespace-nowrap">Broken#</TableHead>
+                            <TableHead className="text-right text-amber-700 whitespace-nowrap">Broken allow.<br/><span className="font-normal opacity-70">${BROKEN_ALLOWANCE_1}/shift</span></TableHead>
+                            <TableHead className="text-right text-amber-600 whitespace-nowrap">Meal allow.~<br/><span className="font-normal opacity-70">${MEAL_ALLOWANCE}/OT event</span></TableHead>
+                            <TableHead className="text-right font-semibold whitespace-nowrap">Total allow.</TableHead>
+                            <TableHead className="text-right whitespace-nowrap">Gross pay<br/><span className="font-normal opacity-70">incl. allowances</span></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {visible.map(({ row, broken, allow, gross }) => (
+                            <TableRow key={row.staffName} className="text-xs hover:bg-amber-50/20">
+                              <TableCell className="font-medium">{row.staffName}</TableCell>
+                              <TableCell className="text-right">
+                                {broken > 0
+                                  ? <span className="font-medium text-orange-700">{broken}</span>
+                                  : <span className="text-muted-foreground/30">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {allow.brokenAllow > 0
+                                  ? <span className="font-medium text-amber-700">{fmt(allow.brokenAllow)}</span>
+                                  : <span className="text-muted-foreground/30">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {allow.mealAllow > 0
+                                  ? <span className="font-medium text-amber-600">{fmt(allow.mealAllow)}</span>
+                                  : <span className="text-muted-foreground/30">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {allow.total > 0 ? fmt(allow.total) : <span className="text-muted-foreground/30">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right font-bold">
+                                {gross !== null
+                                  ? <span className={getEmpType(row.staffName) === 'casual' ? 'text-blue-700' : ''}>{fmt(gross)}</span>
+                                  : <span className="text-muted-foreground text-xs font-normal">enter rate</span>}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {/* Totals */}
+                          <TableRow className="border-t-2 font-bold text-xs bg-amber-50/20">
+                            <TableCell>Totals</TableCell>
+                            <TableCell className="text-right text-orange-700">{totBroken || '—'}</TableCell>
+                            <TableCell className="text-right text-amber-700">{totBrokAllow > 0 ? fmt(totBrokAllow) : '—'}</TableCell>
+                            <TableCell className="text-right text-amber-600">{totMealAllow > 0 ? fmt(totMealAllow) : '—'}</TableCell>
+                            <TableCell className="text-right">{totAllow > 0 ? fmt(totAllow) : '—'}</TableCell>
+                            <TableCell className="text-right">{totGross !== null ? fmt(totGross) : <span className="text-muted-foreground font-normal text-xs">enter rates</span>}</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Rules reminder */}
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-[11px] text-orange-800 space-y-1">
+                  <p className="font-semibold text-xs">SCHADS Award — Exception Rules (MA000100)</p>
+                  <ul className="list-disc list-inside space-y-0.5 leading-relaxed">
+                    <li><strong>Daily OT trigger:</strong> &gt;10h active hours in a single day — same hour not double-counted with 76h cap OT</li>
+                    <li><strong>Fortnightly OT trigger:</strong> &gt;76h total hours across the fortnight</li>
+                    <li><strong>WD/Sat OT rate:</strong> 1.5× for the first 2h of OT, 2× for hours beyond 2h</li>
+                    <li><strong>Sunday OT:</strong> 2.0× (same as ordinary Sunday — no separate OT bracket)</li>
+                    <li><strong>Public Holiday OT:</strong> 2.5× (same as ordinary PH rate)</li>
+                    <li><strong>Broken shift allowance:</strong> ${BROKEN_ALLOWANCE_1.toFixed(2)} per shift with 1 break · ${BROKEN_ALLOWANCE_2.toFixed(2)} for 2 breaks (cap not tracked per-shift)</li>
+                    <li><strong>Meal allowance:</strong> ${MEAL_ALLOWANCE.toFixed(2)} when OT &gt;1h on any shift · +${MEAL_ALLOWANCE.toFixed(2)} when OT &gt;4h (approximated from total OT)</li>
+                  </ul>
+                </div>
+              </>
+            )}
+          </>
+        );
+      })()}
 
       {/* ── MANUAL SCENARIO ────────────────────────────────────── */}
       {view === 'manual' && (
