@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Plus, X, AlertCircle } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { Plus, X, AlertCircle, Upload, FileSpreadsheet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -695,6 +696,39 @@ export const SchadsCalculator = () => {
     setEmpTypes(prev => ({ ...prev, ...typePatch }));
   }, [defaultRate, defaultEmpType, staffRows]);
 
+  // ── Payroll comparison state ─────────────────────────────────────
+  const payrollFileRef = useRef(null);
+  const [payrollData, setPayrollData] = useState(null); // Map: normalizedName → earnings
+
+  const normName = (s) => s?.toString().toLowerCase().replace(/\s+/g, ' ').trim() ?? '';
+
+  const parsePayrollFile = useCallback((file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      // Find header row: look for a row containing 'Employee' and 'Earnings'
+      let headerIdx = -1;
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i].map(c => c?.toString().toLowerCase());
+        if (r.includes('employee') && r.includes('earnings')) { headerIdx = i; break; }
+      }
+      if (headerIdx === -1) { alert('Could not find Employee/Earnings columns in this file.'); return; }
+      const headers = rows[headerIdx].map(c => c?.toString().toLowerCase());
+      const empIdx  = headers.indexOf('employee');
+      const earnIdx = headers.indexOf('earnings');
+      const map = new Map();
+      for (let i = headerIdx + 1; i < rows.length; i++) {
+        const name = rows[i][empIdx]?.toString().trim();
+        const earn = parseFloat(rows[i][earnIdx]);
+        if (name && !isNaN(earn)) map.set(normName(name), { name, earnings: earn });
+      }
+      setPayrollData(map);
+    };
+    reader.readAsArrayBuffer(file);
+  }, []);
+
   // ── Manual calculator state ──────────────────────────────────────
   const [manualRate, setManualRate]     = useState('');
   const [manualRateErr, setManualRateErr] = useState(false);
@@ -792,11 +826,30 @@ export const SchadsCalculator = () => {
                     </Button>
                   </div>
                 </div>
-                {staffRows.length > 0 && (
-                  <p className="text-xs text-muted-foreground ml-auto self-end pb-1">
-                    {staffRows.length} staff members
-                  </p>
-                )}
+                <div className="space-y-1 ml-auto self-end">
+                  <input
+                    ref={payrollFileRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    onChange={e => { if (e.target.files[0]) parsePayrollFile(e.target.files[0]); e.target.value = ''; }}
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => payrollFileRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-input bg-background text-sm hover:bg-accent transition-colors"
+                    >
+                      <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                      {payrollData ? 'Replace payroll file' : 'Upload payroll file'}
+                    </button>
+                    {payrollData && (
+                      <span className="text-xs text-muted-foreground">{payrollData.size} employees loaded</span>
+                    )}
+                    {payrollData && (
+                      <button onClick={() => setPayrollData(null)} className="text-xs text-muted-foreground hover:text-destructive">✕ clear</button>
+                    )}
+                  </div>
+                </div>
               </div>
               {/* Casual rate info */}
               {defaultRate && parseFloat(defaultRate) > 0 && (() => {
@@ -860,6 +913,7 @@ export const SchadsCalculator = () => {
                         <TableHead colSpan={4} className="text-center text-rose-800 border-r border-border/50 py-1">OT &gt; 76h by Day</TableHead>
                         <TableHead colSpan={2} className="text-center text-green-800 border-r border-border/50 py-1">Allowances</TableHead>
                         <TableHead colSpan={1} className="text-center" />
+                        {payrollData && <TableHead colSpan={3} className="text-center text-emerald-800 border-l border-border/50 py-1">Payroll Comparison</TableHead>}
                       </TableRow>
                       {/* Column header row */}
                       <TableRow className="bg-muted/30 text-[11px]">
@@ -889,6 +943,11 @@ export const SchadsCalculator = () => {
                         <TableHead className="text-right text-amber-700 whitespace-nowrap">Broken<br/><span className="text-[9px] font-normal opacity-70">allow.</span></TableHead>
                         <TableHead className="text-right text-amber-600 border-r border-border/50 whitespace-nowrap">Meal<br/><span className="text-[9px] font-normal opacity-70">allow.~</span></TableHead>
                         <TableHead className="text-right font-semibold whitespace-nowrap min-w-[100px]">Gross Pay</TableHead>
+                        {payrollData && <>
+                          <TableHead className="text-right text-emerald-700 whitespace-nowrap border-l border-border/50 min-w-[100px]">Payroll</TableHead>
+                          <TableHead className="text-right text-slate-600 whitespace-nowrap min-w-[100px]">Diff</TableHead>
+                          <TableHead className="text-right text-slate-500 whitespace-nowrap min-w-[60px]">Δ%</TableHead>
+                        </>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1001,6 +1060,26 @@ export const SchadsCalculator = () => {
                             <TableCell className="text-right tabular-nums font-bold text-sm">
                               {gross !== null ? <span className={isCasual ? 'text-blue-700' : ''}>{fmt(gross)}</span> : <span className="text-muted-foreground font-normal text-xs">enter rate</span>}
                             </TableCell>
+                            {/* Payroll comparison */}
+                            {payrollData && (() => {
+                              const match = payrollData.get(normName(row.staffName));
+                              if (!match) return (
+                                <TableCell colSpan={3} className="text-center text-xs text-muted-foreground/40 border-l border-border/50">no match</TableCell>
+                              );
+                              const payrollEarn = match.earnings;
+                              const diff = gross !== null ? r2(gross - payrollEarn) : null;
+                              const pct  = gross !== null && payrollEarn > 0 ? ((diff / payrollEarn) * 100).toFixed(1) : null;
+                              const diffCls = diff === null ? '' : diff > 0.5 ? 'text-rose-600 font-semibold' : diff < -0.5 ? 'text-amber-600 font-semibold' : 'text-emerald-600';
+                              return (<>
+                                <TableCell className="text-right tabular-nums font-medium text-emerald-700 border-l border-border/50">{fmt(payrollEarn)}</TableCell>
+                                <TableCell className={`text-right tabular-nums ${diffCls}`}>
+                                  {diff !== null ? (diff >= 0 ? '+' : '') + fmt(diff) : '—'}
+                                </TableCell>
+                                <TableCell className={`text-right tabular-nums text-xs ${diffCls}`}>
+                                  {pct !== null ? (parseFloat(pct) >= 0 ? '+' : '') + pct + '%' : '—'}
+                                </TableCell>
+                              </>);
+                            })()}
                           </TableRow>
 
                           {/* Breakdown panel — always rendered, animated via grid-template-rows */}
@@ -1060,6 +1139,27 @@ export const SchadsCalculator = () => {
                         <TableCell className="text-right">
                           {totals.grossReady ? fmt(r2(totals.gross)) : <span className="text-muted-foreground font-normal text-xs">enter rates</span>}
                         </TableCell>
+                        {payrollData && (() => {
+                          let totalPayroll = 0, matched = 0;
+                          for (const row of staffRows) {
+                            const m = payrollData.get(normName(row.staffName));
+                            if (m) { totalPayroll = r2(totalPayroll + m.earnings); matched++; }
+                          }
+                          const totalDiff = totals.grossReady ? r2(totals.gross - totalPayroll) : null;
+                          const diffCls = totalDiff === null ? '' : totalDiff > 0.5 ? 'text-rose-600' : totalDiff < -0.5 ? 'text-amber-600' : 'text-emerald-600';
+                          return (<>
+                            <TableCell className="text-right text-emerald-700 border-l border-border/50">
+                              {fmt(totalPayroll)}
+                              <div className="text-[10px] font-normal text-muted-foreground">{matched}/{staffRows.length} matched</div>
+                            </TableCell>
+                            <TableCell className={`text-right ${diffCls}`}>
+                              {totalDiff !== null ? (totalDiff >= 0 ? '+' : '') + fmt(totalDiff) : '—'}
+                            </TableCell>
+                            <TableCell className={`text-right text-xs ${diffCls}`}>
+                              {totalDiff !== null && totalPayroll > 0 ? (totalDiff >= 0 ? '+' : '') + ((totalDiff / totalPayroll) * 100).toFixed(1) + '%' : '—'}
+                            </TableCell>
+                          </>);
+                        })()}
                       </TableRow>
                     </TableBody>
                   </Table>
