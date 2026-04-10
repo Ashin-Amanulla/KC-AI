@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['super_admin', 'finance', 'viewer'],
+      enum: ['super_admin', 'finance', 'viewer', 'shifts_viewer'],
       default: 'viewer',
       required: true,
     },

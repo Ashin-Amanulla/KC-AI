@@ -5,6 +5,7 @@ const seedUsers = [
   { email: 'admin@kc-ai.com', password: 'admin123', name: 'Super Admin', role: 'super_admin' },
   { email: 'finance@kc-ai.com', password: 'finance123', name: 'Finance User', role: 'finance' },
   { email: 'viewer@kc-ai.com', password: 'viewer123', name: 'Viewer User', role: 'viewer' },
+  { email: 'shiftsviewer@kc-ai.com', password: 'shifts123', name: 'Shifts Viewer', role: 'shifts_viewer' },
 ];
 
 const seed = async () => {

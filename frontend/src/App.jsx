@@ -29,6 +29,7 @@ const defaultLandingByRole = {
   super_admin: '/',
   finance: '/timesheets',
   viewer: '/',
+  shifts_viewer: '/shifts',
 };
 
 const ProtectedRoute = ({ children }) => {

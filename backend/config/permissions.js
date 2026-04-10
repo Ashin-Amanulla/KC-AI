@@ -7,6 +7,7 @@ export const ROLES = {
   SUPER_ADMIN: 'super_admin',
   FINANCE: 'finance',
   VIEWER: 'viewer',
+  SHIFTS_VIEWER: 'shifts_viewer',
 };
 
 /**
@@ -14,12 +15,14 @@ export const ROLES = {
  */
 export const ROUTE_PERMISSIONS = {
   // ShiftCare proxy - read-only shifts, staff, clients
-  shifts: [ROLES.SUPER_ADMIN, ROLES.VIEWER],
+  shifts: [ROLES.SUPER_ADMIN, ROLES.VIEWER, ROLES.SHIFTS_VIEWER],
   staff: [ROLES.SUPER_ADMIN, ROLES.VIEWER],
   clients: [ROLES.SUPER_ADMIN, ROLES.VIEWER],
   // Timesheets and CSV analysis
   timesheets: [ROLES.SUPER_ADMIN, ROLES.FINANCE],
   'analyze-shift-report': [ROLES.SUPER_ADMIN, ROLES.FINANCE],
+  // Pay hours
+  'pay-hours': [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER],
   // User management - super admin only
   users: [ROLES.SUPER_ADMIN],
 };

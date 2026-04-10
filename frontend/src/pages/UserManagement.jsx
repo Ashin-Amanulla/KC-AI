@@ -16,6 +16,7 @@ const ROLE_LABELS = {
   super_admin: 'Super Admin',
   finance: 'Finance',
   viewer: 'Viewer',
+  shifts_viewer: 'Shifts Viewer',
 };
 
 export const UserManagement = () => {
