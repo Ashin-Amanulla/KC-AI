@@ -66,8 +66,9 @@ function calcGrossFromRates(ph, rates) {
     ot76SatT2                  * rates.satOtAfter2 +
     (ph.otAfter76Sunday  || 0) * rates.sunday     +
     (ph.otAfter76Holiday || 0) * rates.ph         +
-    (ph.brokenShiftCount || 0) * rates.brokenShift +
-    (ph.sleepoversCount  || 0) * rates.sleepover  +
+    (ph.brokenShiftCount       || 0) * rates.brokenShift +
+    (ph.brokenShift2BreakCount || 0) * BROKEN_ALLOWANCE_2 +
+    (ph.sleepoversCount        || 0) * rates.sleepover  +
     mealAllow
   );
   return pay;
@@ -124,10 +125,12 @@ function calcBreakdownFromRates(ph, rates) {
     (ph.sundayOtUpto2||0)+(ph.sundayOtAfter2||0)+
     (ph.holidayOtUpto2||0)+(ph.holidayOtAfter2||0)
   );
-  const mealAllow  = totOT > 4 ? r2(rates.mealAllow * 2) : totOT > 1 ? rates.mealAllow : 0;
-  const brokenAllow = r2((ph.brokenShiftCount || 0) * rates.brokenShift);
-  const sleepAllow  = r2((ph.sleepoversCount  || 0) * rates.sleepover);
-  const allow = { brokenAllow, mealAllow, sleepAllow, total: r2(brokenAllow + mealAllow + sleepAllow) };
+  const mealAllow        = totOT > 4 ? r2(rates.mealAllow * 2) : totOT > 1 ? rates.mealAllow : 0;
+  const broken1Allow     = r2((ph.brokenShiftCount       || 0) * rates.brokenShift);
+  const broken2Allow     = r2((ph.brokenShift2BreakCount || 0) * BROKEN_ALLOWANCE_2);
+  const brokenAllow      = r2(broken1Allow + broken2Allow);
+  const sleepAllow       = r2((ph.sleepoversCount        || 0) * rates.sleepover);
+  const allow = { brokenAllow, broken1Allow, broken2Allow, mealAllow, sleepAllow, total: r2(brokenAllow + mealAllow + sleepAllow) };
 
   const gross      = r2(lines.reduce((s, l) => s + l.pay, 0) + allow.total);
   const totalHours = r2(ordHours + otHours);
@@ -219,9 +222,9 @@ function calcGross(ph, baseRate, empType = 'permanent') {
 
 // ── Allowances ────────────────────────────────────────────────────────
 function calcAllowances(ph) {
-  const broken = ph.brokenShiftCount || 0;
-  // Treat each broken shift as 1 break ($20.82); 2-break shifts ($27.56) not tracked per-shift
-  const brokenAllow = r2(broken * BROKEN_ALLOWANCE_1);
+  const broken1 = ph.brokenShiftCount       || 0;
+  const broken2 = ph.brokenShift2BreakCount || 0;
+  const brokenAllow = r2(broken1 * BROKEN_ALLOWANCE_1 + broken2 * BROKEN_ALLOWANCE_2);
 
   // Meal allowance approximated from total OT (per-shift detail not available at summary level)
   const totOT = r2(
@@ -542,15 +545,26 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
               );
             })}
             {/* Allowances */}
-            {bd.allow.brokenAllow > 0 && (
+            {(mrow.brokenShiftCount || 0) > 0 && (
               <tr className="border-t border-border/30 bg-amber-50/30">
                 <td className="px-3 py-2 text-amber-700">
-                  Broken shift allowance ({mrow.brokenShiftCount} × ${staffRates ? staffRates.brokenShift.toFixed(2) : BROKEN_ALLOWANCE_1})
+                  Broken shift — 1 break ({mrow.brokenShiftCount} × ${staffRates ? staffRates.brokenShift.toFixed(2) : BROKEN_ALLOWANCE_1})
                   <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.brokenShiftCount}</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
-                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.brokenAllow)}</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.broken1Allow ?? bd.allow.brokenAllow)}</td>
+              </tr>
+            )}
+            {(mrow.brokenShift2BreakCount || 0) > 0 && (
+              <tr className="border-t border-border/30 bg-amber-50/30">
+                <td className="px-3 py-2 text-amber-700">
+                  Broken shift — 2 breaks ({mrow.brokenShift2BreakCount} × ${BROKEN_ALLOWANCE_2})
+                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.brokenShift2BreakCount}</td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.broken2Allow ?? 0)}</td>
               </tr>
             )}
             {bd.allow.sleepAllow > 0 && (

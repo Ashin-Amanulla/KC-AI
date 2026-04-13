@@ -398,6 +398,7 @@ export function newPayHoursData() {
     otAfter76Weekday: 0, otAfter76Saturday: 0,
     otAfter76Sunday: 0, otAfter76Holiday: 0,
     brokenShiftCount: 0,
+    brokenShift2BreakCount: 0,
     sleepoversCount: 0,
   };
 }
@@ -468,7 +469,14 @@ function addBrokenShiftOtToCategory(data, dayType, hours, isTier1) {
 }
 
 function processBrokenShiftOvertime(currentShift, previousShifts, data) {
-  data.brokenShiftCount += 1;
+  if (previousShifts.length >= 2) {
+    // 2nd break in same day — upgrade from 1-break to 2-break (don't double-count)
+    data.brokenShiftCount       = Math.max(0, data.brokenShiftCount - 1);
+    data.brokenShift2BreakCount += 1;
+  } else {
+    // First break in this day
+    data.brokenShiftCount += 1;
+  }
 
   if (!previousShifts.length || !currentShift.segments.length) return;
 
@@ -483,14 +491,18 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data) {
   const dayType = currentShift.segments[0].dayType;
 
   if (spanHours < BROKEN_SHIFT_SHORT_SPAN) {
+    // Span < 12h: OT at 1.5× for active hours beyond 10h
     if (totalActive > MAX_REGULAR_HOURS) {
       const extraHours = r2(totalActive - MAX_REGULAR_HOURS);
       addBrokenShiftOtToCategory(data, dayType, extraHours, true);
     }
   } else {
-    const otHours = r2(Math.max(0, totalActive - 12));
-    if (otHours > 0) {
-      addBrokenShiftOtToCategory(data, dayType, otHours, false);
+    // Span ≥ 12h: the ENTIRE last shift is reclassified to double time (2×).
+    // Rule: "Overrides all previous classifications for that shift."
+    // Span breach = full-shift penalty, regardless of when within the shift the mark falls.
+    const doubleTimeHours = currentShift.activeHours;
+    if (doubleTimeHours > 0) {
+      addBrokenShiftOtToCategory(data, dayType, doubleTimeHours, false); // false = tier 2 = 2×
     }
   }
 }

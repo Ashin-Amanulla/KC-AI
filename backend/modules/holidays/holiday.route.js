@@ -5,7 +5,7 @@ import { listHolidays, createHoliday, deleteHoliday } from './holiday.controller
 const router = express.Router();
 
 const authAll = [authenticateJWT];
-const authFinance = [authenticateJWT, authorizeRoles('super_admin', 'finance')];
+const authFinance = [authenticateJWT, authorizeRoles('super_admin', 'finance', 'viewer')];
 
 router.get('/holidays', ...authAll, listHolidays);
 router.post('/holidays', ...authFinance, createHoliday);

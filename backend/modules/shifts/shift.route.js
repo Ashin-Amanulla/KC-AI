@@ -39,7 +39,7 @@ const upload = multer({
   limits: { fileSize: config.upload.maxFileSizeBytes },
 });
 
-const authFinance = [authenticateJWT, authorizeRoles('super_admin', 'finance')];
+const authFinance = [authenticateJWT, authorizeRoles('super_admin', 'finance', 'viewer')];
 const authAll = [authenticateJWT];
 
 router.post('/shifts/upload', ...authFinance, upload.single('file'), uploadShifts);

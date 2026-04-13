@@ -10,7 +10,7 @@ import {
 } from '../ui/table';
 import { useUploadShifts } from '../api/shifts';
 import { useHolidays, useCreateHoliday, useDeleteHoliday } from '../api/holidays';
-import { useLocations, useLoadHolidayFixture } from '../api/locations';
+import { useLocations, useCreateLocation, useDeleteLocation, useLoadHolidayFixture } from '../api/locations';
 import { usePayHours, useShiftPayHours, useComputePayHours, usePayHoursJobStatus } from '../api/payHours';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 
@@ -237,6 +237,34 @@ export const PayHours = () => {
 
   const { data: locationsData } = useLocations();
   const locations = locationsData?.locations || [];
+  const createLocationMutation = useCreateLocation();
+  const deleteLocationMutation = useDeleteLocation();
+  const [showNewLocation, setShowNewLocation] = useState(false);
+  const [newLocName, setNewLocName]   = useState('');
+  const [newLocCode, setNewLocCode]   = useState('');
+  const [newLocTz, setNewLocTz]       = useState('Australia/Brisbane');
+
+  const handleCreateLocation = async () => {
+    if (!newLocName.trim() || !newLocCode.trim()) return;
+    try {
+      await createLocationMutation.mutateAsync({ name: newLocName.trim(), code: newLocCode.trim().toUpperCase(), timezone: newLocTz });
+      toast.success(`Location "${newLocName.trim()}" created`);
+      setNewLocName(''); setNewLocCode(''); setShowNewLocation(false);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to create location');
+    }
+  };
+
+  const handleDeleteLocation = async (id, name) => {
+    if (!window.confirm(`Delete location "${name}"? This cannot be undone.`)) return;
+    try {
+      await deleteLocationMutation.mutateAsync(id);
+      if (locationId === id) setLocationId('');
+      toast.success('Location deleted');
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to delete location');
+    }
+  };
 
   const uploadMutation = useUploadShifts();
   const computeMutation = useComputePayHours();
@@ -329,8 +357,8 @@ export const PayHours = () => {
 
       {/* Location Selector */}
       <Card>
-        <CardContent className="pt-4">
-          <div className="flex items-center gap-3">
+        <CardContent className="pt-4 space-y-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="text-sm font-medium">Location</span>
             <select
@@ -343,10 +371,58 @@ export const PayHours = () => {
                 <option key={loc._id} value={loc._id}>{loc.name} ({loc.code})</option>
               ))}
             </select>
-            {locations.length === 0 && (
-              <span className="text-sm text-muted-foreground">No locations set up yet — go to Settings to add one.</span>
+            <Button size="sm" variant="outline" onClick={() => setShowNewLocation(v => !v)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Location
+            </Button>
+            {locationId && (
+              <button
+                onClick={() => handleDeleteLocation(locationId, locations.find(l => l._id === locationId)?.name)}
+                className="text-xs text-destructive hover:underline ml-auto"
+              >
+                <Trash2 className="h-3.5 w-3.5 inline mr-1" />Delete selected
+              </button>
             )}
           </div>
+
+          {/* Inline create form */}
+          {showNewLocation && (
+            <div className="flex flex-wrap items-end gap-2 pt-1 border-t border-border">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Name</label>
+                <Input placeholder="e.g. Brisbane Office" value={newLocName} onChange={e => setNewLocName(e.target.value)} className="h-8 w-44 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Code</label>
+                <Input placeholder="e.g. BRISBANE" value={newLocCode} onChange={e => setNewLocCode(e.target.value)} className="h-8 w-32 text-sm uppercase" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Timezone</label>
+                <select value={newLocTz} onChange={e => setNewLocTz(e.target.value)} className="h-8 rounded-md border border-input bg-background px-2 text-sm">
+                  <option value="Australia/Brisbane">Brisbane (AEST, no DST)</option>
+                  <option value="Australia/Sydney">Sydney (AEDT)</option>
+                  <option value="Australia/Melbourne">Melbourne (AEDT)</option>
+                  <option value="Australia/Perth">Perth (AWST)</option>
+                  <option value="Australia/Adelaide">Adelaide (ACDT)</option>
+                  <option value="Australia/Darwin">Darwin (ACST)</option>
+                  <option value="Australia/Hobart">Hobart (AEDT)</option>
+                </select>
+              </div>
+              <Button size="sm" onClick={handleCreateLocation} disabled={createLocationMutation.isPending || !newLocName.trim() || !newLocCode.trim()}>
+                {createLocationMutation.isPending ? 'Creating…' : 'Create'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowNewLocation(false)}>Cancel</Button>
+            </div>
+          )}
+
+          {locations.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {locations.map(loc => (
+                <span key={loc._id} className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border ${locationId === loc._id ? 'bg-foreground text-background border-foreground' : 'border-border text-muted-foreground'}`}>
+                  <MapPin className="h-2.5 w-2.5" />{loc.name} <span className="opacity-60">({loc.code})</span>
+                </span>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
