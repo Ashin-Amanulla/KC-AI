@@ -1544,7 +1544,7 @@ export const SchadsCalculator = () => {
                 <CardContent className="pt-4">
                   <div className="text-2xl font-bold text-amber-700">{totBroken} shifts</div>
                   <p className="text-xs text-muted-foreground">Broken shifts</p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">{totSleep} sleepovers</p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">{r2(visible.reduce((s,r)=>s+(r.m.totalKm||0),0))} km total</p>
                 </CardContent>
               </Card>
             </div>
@@ -1580,11 +1580,12 @@ export const SchadsCalculator = () => {
                             <TableHead className="text-right text-red-600 whitespace-nowrap">Sun OT hrs<br/><span className="font-normal opacity-70">2×</span></TableHead>
                             <TableHead className="text-right text-blue-600 whitespace-nowrap">Hol OT hrs<br/><span className="font-normal opacity-70">2.5×</span></TableHead>
                             <TableHead className="text-right text-orange-700 whitespace-nowrap">Broken#</TableHead>
-                            <TableHead className="text-right text-purple-600 whitespace-nowrap">Sleepovers#</TableHead>
+                            <TableHead className="text-right text-emerald-600 whitespace-nowrap">KMs</TableHead>
+                            <TableHead className="text-right text-emerald-700 whitespace-nowrap">Mileage Allow</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {visible.filter(r => r.ot > 0 || r.broken > 0 || r.sleep > 0).map(({ row, m, ot, broken, sleep }) => {
+                          {visible.filter(r => r.ot > 0 || r.broken > 0).map(({ row, m, ot, broken, allow }) => {
                             const d = (v, cls = '') => v > 0
                               ? <span className={`font-medium ${cls}`}>{fmtH(v)}</span>
                               : <span className="text-muted-foreground/30">—</span>;
@@ -1610,12 +1611,14 @@ export const SchadsCalculator = () => {
                                   ) : <span className="text-muted-foreground/30">—</span>}
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  {sleep > 0 ? (
-                                    <span className="inline-flex items-center gap-1 font-medium text-purple-600">
-                                      {sleep}
-                                      <span className="text-[10px] bg-purple-100 text-purple-600 px-1 rounded">sleep</span>
-                                    </span>
-                                  ) : <span className="text-muted-foreground/30">—</span>}
+                                  {(m.totalKm || 0) > 0
+                                    ? <span className="font-medium text-emerald-700">{m.totalKm} km</span>
+                                    : <span className="text-muted-foreground/30">—</span>}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {(allow.mileageAllow || 0) > 0
+                                    ? <span className="font-medium text-emerald-600">{fmt(allow.mileageAllow)}</span>
+                                    : <span className="text-muted-foreground/30">—</span>}
                                 </TableCell>
                               </TableRow>
                             );
@@ -1631,7 +1634,8 @@ export const SchadsCalculator = () => {
                             <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+r2((r.m.sundayOtUpto2||0)+(r.m.sundayOtAfter2||0)),0)))}</TableCell>
                             <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+r2((r.m.holidayOtUpto2||0)+(r.m.holidayOtAfter2||0)),0)))}</TableCell>
                             <TableCell className="text-right text-orange-700">{totBroken || '—'}</TableCell>
-                            <TableCell className="text-right text-purple-600">{totSleep || '—'}</TableCell>
+                            <TableCell className="text-right text-emerald-700">{r2(visible.reduce((s,r)=>s+(r.m.totalKm||0),0)) || '—'} km</TableCell>
+                            <TableCell className="text-right text-emerald-600">{r2(visible.reduce((s,r)=>s+(r.allow.mileageAllow||0),0)) > 0 ? fmt(r2(visible.reduce((s,r)=>s+(r.allow.mileageAllow||0),0))) : '—'}</TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
