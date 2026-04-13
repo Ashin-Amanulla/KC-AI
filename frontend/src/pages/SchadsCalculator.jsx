@@ -16,6 +16,7 @@ const WEEKLY_ORD         = 38.0;
 const BROKEN_ALLOWANCE_1 = 20.82;   // 1 break per broken shift
 const BROKEN_ALLOWANCE_2 = 27.56;   // 2 breaks per broken shift
 const MEAL_ALLOWANCE     = 16.62;   // per qualifying OT meal break
+const VEHICLE_RATE       = 0.99;    // $/km default (SCHADS Award / ATO rate)
 
 // ── Formatting ───────────────────────────────────────────────────────
 const fmt  = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -40,13 +41,8 @@ function calcGrossFromRates(ph, rates) {
   const ot76SatT1 = r2(Math.min(ot76Sat, 2));
   const ot76SatT2 = r2(Math.max(0, ot76Sat - 2));
 
-  const totOT = r2(
-    (ph.weekdayOtUpto2||0)+(ph.weekdayOtAfter2||0)+
-    (ph.saturdayOtUpto2||0)+(ph.saturdayOtAfter2||0)+
-    (ph.sundayOtUpto2||0)+(ph.sundayOtAfter2||0)+
-    (ph.holidayOtUpto2||0)+(ph.holidayOtAfter2||0)
-  );
-  const mealAllow = totOT > 4 ? r2(rates.mealAllow * 2) : totOT > 1 ? rates.mealAllow : 0;
+  const mealAllow    = r2((ph.mealAllowanceCount || 0) * rates.mealAllow);
+  const mileageAllow = r2((ph.totalKm || 0) * (rates.kmRate || VEHICLE_RATE));
 
   const pay = r2(
     (ph.morningHours     || 0) * rates.daytime   +
@@ -69,7 +65,8 @@ function calcGrossFromRates(ph, rates) {
     (ph.brokenShiftCount       || 0) * rates.brokenShift +
     (ph.brokenShift2BreakCount || 0) * BROKEN_ALLOWANCE_2 +
     (ph.sleepoversCount        || 0) * rates.sleepover  +
-    mealAllow
+    mealAllow +
+    mileageAllow
   );
   return pay;
 }
@@ -119,18 +116,13 @@ function calcBreakdownFromRates(ph, rates) {
     else if (cat === 'ot' || cat === 'ot76') { otPay += pay; otHours += hours; }
   }
 
-  const totOT = r2(
-    (ph.weekdayOtUpto2||0)+(ph.weekdayOtAfter2||0)+
-    (ph.saturdayOtUpto2||0)+(ph.saturdayOtAfter2||0)+
-    (ph.sundayOtUpto2||0)+(ph.sundayOtAfter2||0)+
-    (ph.holidayOtUpto2||0)+(ph.holidayOtAfter2||0)
-  );
-  const mealAllow        = totOT > 4 ? r2(rates.mealAllow * 2) : totOT > 1 ? rates.mealAllow : 0;
+  const mealAllow        = r2((ph.mealAllowanceCount || 0) * rates.mealAllow);
   const broken1Allow     = r2((ph.brokenShiftCount       || 0) * rates.brokenShift);
   const broken2Allow     = r2((ph.brokenShift2BreakCount || 0) * BROKEN_ALLOWANCE_2);
   const brokenAllow      = r2(broken1Allow + broken2Allow);
   const sleepAllow       = r2((ph.sleepoversCount        || 0) * rates.sleepover);
-  const allow = { brokenAllow, broken1Allow, broken2Allow, mealAllow, sleepAllow, total: r2(brokenAllow + mealAllow + sleepAllow) };
+  const mileageAllow     = r2((ph.totalKm || 0) * (rates.kmRate || VEHICLE_RATE));
+  const allow = { brokenAllow, broken1Allow, broken2Allow, mealAllow, sleepAllow, mileageAllow, total: r2(brokenAllow + mealAllow + sleepAllow + mileageAllow) };
 
   const gross      = r2(lines.reduce((s, l) => s + l.pay, 0) + allow.total);
   const totalHours = r2(ordHours + otHours);
@@ -226,16 +218,10 @@ function calcAllowances(ph) {
   const broken2 = ph.brokenShift2BreakCount || 0;
   const brokenAllow = r2(broken1 * BROKEN_ALLOWANCE_1 + broken2 * BROKEN_ALLOWANCE_2);
 
-  // Meal allowance approximated from total OT (per-shift detail not available at summary level)
-  const totOT = r2(
-    (ph.weekdayOtUpto2||0) + (ph.weekdayOtAfter2||0) +
-    (ph.saturdayOtUpto2||0) + (ph.saturdayOtAfter2||0) +
-    (ph.sundayOtUpto2||0) + (ph.sundayOtAfter2||0) +
-    (ph.holidayOtUpto2||0) + (ph.holidayOtAfter2||0)
-  );
-  const mealAllow = totOT > 4 ? r2(MEAL_ALLOWANCE * 2) : totOT > 1 ? MEAL_ALLOWANCE : 0;
+  const mealAllow    = r2((ph.mealAllowanceCount || 0) * MEAL_ALLOWANCE);
+  const mileageAllow = r2((ph.totalKm || 0) * VEHICLE_RATE);
 
-  return { brokenAllow, mealAllow, total: r2(brokenAllow + mealAllow) };
+  return { brokenAllow, mealAllow, mileageAllow, total: r2(brokenAllow + mealAllow + mileageAllow) };
 }
 
 function staffTotalHours(ph) {
@@ -581,12 +567,23 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
             {bd.allow.mealAllow > 0 && (
               <tr className="border-t border-border/30 bg-amber-50/30">
                 <td className="px-3 py-2 text-amber-600">
-                  Meal allowance (OT &gt;{totalOtHrs(mrow) > 4 ? '4h → 2×' : '1h → 1×'} ${MEAL_ALLOWANCE})
+                  Meal allowance ({mrow.mealAllowanceCount || 0} × ${MEAL_ALLOWANCE})
                   <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
                 <td className="text-right px-3 py-2 font-mono font-semibold text-amber-600">{fmt(bd.allow.mealAllow)}</td>
+              </tr>
+            )}
+            {(bd.allow.mileageAllow || 0) > 0 && (
+              <tr className="border-t border-border/30 bg-emerald-50/30">
+                <td className="px-3 py-2 text-emerald-700">
+                  Mileage allowance ({mrow.totalKm || 0} km × ${(staffRates?.kmRate || VEHICLE_RATE).toFixed(2)}/km)
+                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.totalKm || 0} km</td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">${(staffRates?.kmRate || VEHICLE_RATE).toFixed(2)}/km</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-emerald-700">{fmt(bd.allow.mileageAllow)}</td>
               </tr>
             )}
             {/* Total row */}
@@ -801,16 +798,18 @@ export const SchadsCalculator = () => {
       'holidayHours','holidayOtUpto2','holidayOtAfter2','nursingCareHours','brokenShiftCount','sleepoversCount',
       'otAfter76Hours'];
     const t = Object.fromEntries(COLS.map(c => [c, 0]));
-    t.totalHours = 0; t.gross = 0; t.brokenAllow = 0; t.mealAllow = 0; t.totalOT = 0;
+    t.totalHours = 0; t.gross = 0; t.brokenAllow = 0; t.mealAllow = 0; t.mileageAllow = 0; t.totalOT = 0; t.totalKm = 0;
     let grossCount = 0;
     for (const row of staffRows) {
       const mrow = getMergedRow(row);
       for (const col of COLS) t[col] = r2((t[col] || 0) + (mrow[col] || 0));
       t.totalHours = r2(t.totalHours + staffTotalHours(mrow));
       t.totalOT    = r2(t.totalOT    + totalOtHrs(mrow));
+      t.totalKm    = r2(t.totalKm    + (mrow.totalKm || 0));
       const allow = calcAllowances(mrow);
-      t.brokenAllow = r2(t.brokenAllow + allow.brokenAllow);
-      t.mealAllow   = r2(t.mealAllow   + allow.mealAllow);
+      t.brokenAllow   = r2(t.brokenAllow   + allow.brokenAllow);
+      t.mealAllow     = r2(t.mealAllow     + allow.mealAllow);
+      t.mileageAllow  = r2(t.mileageAllow  + allow.mileageAllow);
       const rate = baseRates[row.staffName] ?? defaultRate;
       const empT = empTypes[row.staffName] ?? defaultEmpType;
       const g = calcGross(mrow, rate, empT);
@@ -885,6 +884,7 @@ export const SchadsCalculator = () => {
         mealAllow:  ci('overtime meal'),
         brokenShift:h.findIndex(x => x === 'broken shift'),
         sleepover:  ci('sleepover'),
+        kmRate:     ci('mileage'),
       };
       const map = new Map();
       for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -905,6 +905,7 @@ export const SchadsCalculator = () => {
           mealAllow:  g('mealAllow'),
           brokenShift:g('brokenShift'),
           sleepover:  g('sleepover'),
+          kmRate:     g('kmRate') || VEHICLE_RATE,
         });
       }
       setStaffRatesMap(map);
@@ -1164,6 +1165,8 @@ export const SchadsCalculator = () => {
                         <TableHead className="text-right border-r border-border/50 text-rose-800 whitespace-nowrap" title="OT>76 from Holiday shifts (2.5×)">Hol<br/><span className="text-[9px] font-normal opacity-70">2.5×</span></TableHead>
                         <TableHead className="text-right text-amber-700 whitespace-nowrap">Broken<br/><span className="text-[9px] font-normal opacity-70">allow.</span></TableHead>
                         <TableHead className="text-right text-amber-600 border-r border-border/50 whitespace-nowrap">Meal<br/><span className="text-[9px] font-normal opacity-70">allow.~</span></TableHead>
+                        <TableHead className="text-right text-emerald-700 whitespace-nowrap">KM</TableHead>
+                        <TableHead className="text-right text-emerald-600 border-r border-border/50 whitespace-nowrap">Km Allow<br/><span className="text-[9px] font-normal opacity-70">${VEHICLE_RATE}/km</span></TableHead>
                         <TableHead className="text-right font-semibold whitespace-nowrap min-w-[100px]">Gross Pay</TableHead>
                         {payrollData && <>
                           <TableHead className="text-right text-emerald-700 whitespace-nowrap border-l border-border/50 min-w-[100px]">Payroll</TableHead>
@@ -1286,6 +1289,13 @@ export const SchadsCalculator = () => {
                             {/* Allowances — derived, not directly editable */}
                             <TableCell className={`text-right tabular-nums ${allow.brokenAllow > 0 ? 'text-amber-700' : 'text-muted-foreground/30'}`}>{allow.brokenAllow > 0 ? fmt(allow.brokenAllow) : '—'}</TableCell>
                             <TableCell className={`text-right tabular-nums border-r border-border/50 ${allow.mealAllow > 0 ? 'text-amber-600' : 'text-muted-foreground/30'}`}>{allow.mealAllow > 0 ? fmt(allow.mealAllow) : '—'}</TableCell>
+                            {/* KM */}
+                            <TableCell className={`text-right tabular-nums ${(mrow.totalKm || 0) > 0 ? 'text-emerald-700' : 'text-muted-foreground/30'}`}>
+                              {(mrow.totalKm || 0) > 0 ? `${mrow.totalKm} km` : '—'}
+                            </TableCell>
+                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${allow.mileageAllow > 0 ? 'text-emerald-600' : 'text-muted-foreground/30'}`}>
+                              {allow.mileageAllow > 0 ? fmt(allow.mileageAllow) : '—'}
+                            </TableCell>
                             {/* Gross pay */}
                             <TableCell className="text-right tabular-nums font-bold text-sm">
                               {gross !== null ? <span className={isCasual ? 'text-blue-700' : ''}>{fmt(gross)}</span> : <span className="text-muted-foreground font-normal text-xs">enter rate</span>}
@@ -1367,6 +1377,8 @@ export const SchadsCalculator = () => {
                         <TableCell className="text-right border-r border-border/50 text-rose-800">{totals.otAfter76Holiday > 0 ? fmtH(r2(totals.otAfter76Holiday)) : '—'}</TableCell>
                         <TableCell className="text-right text-amber-700">{totals.brokenAllow > 0 ? fmt(r2(totals.brokenAllow)) : '—'}</TableCell>
                         <TableCell className="text-right text-amber-600 border-r border-border/50">{totals.mealAllow > 0 ? fmt(r2(totals.mealAllow)) : '—'}</TableCell>
+                        <TableCell className="text-right text-emerald-700">{totals.totalKm > 0 ? `${totals.totalKm} km` : '—'}</TableCell>
+                        <TableCell className="text-right text-emerald-600 border-r border-border/50">{totals.mileageAllow > 0 ? fmt(r2(totals.mileageAllow)) : '—'}</TableCell>
                         <TableCell className="text-right">
                           {totals.grossReady ? fmt(r2(totals.gross)) : <span className="text-muted-foreground font-normal text-xs">enter rates</span>}
                         </TableCell>
@@ -1435,10 +1447,11 @@ export const SchadsCalculator = () => {
               <div className="border-t border-border mt-2 pt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground text-[11px]">
                 <span>Broken shift (1 break):</span><span className="font-medium text-foreground">${BROKEN_ALLOWANCE_1.toFixed(2)}</span>
                 <span>Broken shift (2 breaks):</span><span className="font-medium text-foreground">${BROKEN_ALLOWANCE_2.toFixed(2)}</span>
-                <span>Meal allowance (OT &gt;1h):</span><span className="font-medium text-foreground">${MEAL_ALLOWANCE.toFixed(2)}</span>
-                <span>Meal allowance (OT &gt;4h):</span><span className="font-medium text-foreground">${(MEAL_ALLOWANCE*2).toFixed(2)}</span>
+                <span>Meal allowance (OT &gt;1h/shift):</span><span className="font-medium text-foreground">${MEAL_ALLOWANCE.toFixed(2)} × 1</span>
+                <span>Meal allowance (OT &gt;4h/shift):</span><span className="font-medium text-foreground">${MEAL_ALLOWANCE.toFixed(2)} × 2</span>
+                <span>Vehicle allowance:</span><span className="font-medium text-foreground">${VEHICLE_RATE}/km (from rates file)</span>
               </div>
-              <p className="text-muted-foreground/70 text-[10px] pt-1">★ Sunday &amp; Holiday OT = same rate as ordinary (2.0× / 2.5×). ~ Meal allowance approximate (per-shift detail unavailable). Casual: effective rate = (Base÷1.25 × Multiplier) + Loading.</p>
+              <p className="text-muted-foreground/70 text-[10px] pt-1">★ Sunday &amp; Holiday OT = same rate as ordinary (2.0× / 2.5×). Meal allowance counted per-shift by backend. Casual: effective rate = (Base÷1.25 × Multiplier) + Loading.</p>
             </div>
             <div className="bg-amber-50 border border-amber-300 rounded p-3 text-xs text-amber-800 space-y-1">
               <p className="font-semibold">⚠ SCHADS Award Rules Applied</p>
@@ -1447,7 +1460,7 @@ export const SchadsCalculator = () => {
                 <li><strong>OT &gt; 76h rates:</strong> Weekday/Sat shifts use 1.5× (first 2h) then 2×; Sun shifts 2.0×; PH shifts 2.5×</li>
                 <li><strong>Sunday/PH OT:</strong> Same rate as ordinary day (2.0× / 2.5×) — no separate OT brackets</li>
                 <li><strong>Broken shifts:</strong> $20.82 per shift (1 break), $27.56 for 2 breaks (cap not tracked per-shift)</li>
-                <li><strong>Meal allowance:</strong> $16.62 when OT &gt;1h on a shift; +$16.62 when OT &gt;4h (approximated from total OT)</li>
+                <li><strong>Meal allowance:</strong> $16.62 per shift where OT &gt;1h; +$16.62 on same shift where OT &gt;4h (counted per-shift by backend)</li>
               </ul>
               <p className="text-amber-700 pt-1">Always verify against the <a href="https://www.fairwork.gov.au" target="_blank" rel="noopener noreferrer" className="underline">Fair Work pay guide</a>.</p>
             </div>
@@ -1774,7 +1787,7 @@ export const SchadsCalculator = () => {
                     <li><strong>Sunday OT:</strong> 2.0× (same as ordinary Sunday — no separate OT bracket)</li>
                     <li><strong>Public Holiday OT:</strong> 2.5× (same as ordinary PH rate)</li>
                     <li><strong>Broken shift allowance:</strong> ${BROKEN_ALLOWANCE_1.toFixed(2)} per shift with 1 break · ${BROKEN_ALLOWANCE_2.toFixed(2)} for 2 breaks (cap not tracked per-shift)</li>
-                    <li><strong>Meal allowance:</strong> ${MEAL_ALLOWANCE.toFixed(2)} when OT &gt;1h on any shift · +${MEAL_ALLOWANCE.toFixed(2)} when OT &gt;4h (approximated from total OT)</li>
+                    <li><strong>Meal allowance:</strong> ${MEAL_ALLOWANCE.toFixed(2)} per shift where OT &gt;1h · +${MEAL_ALLOWANCE.toFixed(2)} on same shift where OT &gt;4h (counted per-shift by backend)</li>
                   </ul>
                 </div>
               </>

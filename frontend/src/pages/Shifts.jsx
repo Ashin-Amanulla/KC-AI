@@ -142,9 +142,9 @@ export const Shifts = () => {
         </div>
       </div>
 
-      {activeTab === 'calculator' && <SchadsCalculator />}
+      <div className={activeTab === 'calculator' ? '' : 'hidden'}><SchadsCalculator /></div>
 
-      {activeTab === 'shifts' && <>
+      <div className={activeTab === 'shifts' ? '' : 'hidden'}><>
       {/* Upload Section */}
       <Card>
         <CardHeader className="pb-3">
@@ -423,7 +423,7 @@ export const Shifts = () => {
           )}
         </CardContent>
       </Card>
-      </>}
+      </></div>
     </div>
   );
 };

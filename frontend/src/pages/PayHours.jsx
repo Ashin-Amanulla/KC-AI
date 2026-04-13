@@ -54,6 +54,8 @@ const ShiftDetail = ({ payHoursId }) => {
             <TableHead className="text-right">Sun</TableHead>
             <TableHead className="text-right">Holiday</TableHead>
             <TableHead className="text-right">Nursing</TableHead>
+            <TableHead className="text-right">KM</TableHead>
+            <TableHead className="text-right">Km Allow</TableHead>
             <TableHead>Flags</TableHead>
           </TableRow>
         </TableHeader>
@@ -75,6 +77,14 @@ const ShiftDetail = ({ payHoursId }) => {
               <TableCell className="text-right text-xs text-teal-700">{h(shift.sundayHours)}</TableCell>
               <TableCell className="text-right text-xs text-red-700">{h(shift.holidayHours)}</TableCell>
               <TableCell className="text-right text-xs text-blue-700">{h(shift.nursingCareHours)}</TableCell>
+              <TableCell className="text-right text-xs text-emerald-700">
+                {shift.mileage != null ? `${shift.mileage} km` : '-'}
+              </TableCell>
+              <TableCell className="text-right text-xs text-emerald-600">
+                {shift.mileage != null && shift.mileage > 0
+                  ? `$${(shift.mileage * 0.99).toFixed(2)}`
+                  : '-'}
+              </TableCell>
               <TableCell>
                 <div className="flex gap-1">
                   {shift.isBrokenShift && <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-orange-100 text-orange-800">Broken</span>}

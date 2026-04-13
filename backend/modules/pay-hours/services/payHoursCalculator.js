@@ -399,6 +399,7 @@ export function newPayHoursData() {
     otAfter76Sunday: 0, otAfter76Holiday: 0,
     brokenShiftCount: 0,
     brokenShift2BreakCount: 0,
+    mealAllowanceCount: 0,
     sleepoversCount: 0,
   };
 }
@@ -495,6 +496,9 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data) {
     if (totalActive > MAX_REGULAR_HOURS) {
       const extraHours = r2(totalActive - MAX_REGULAR_HOURS);
       addBrokenShiftOtToCategory(data, dayType, extraHours, true);
+      // Meal allowance per broken-shift OT event
+      if (extraHours > 1) data.mealAllowanceCount += 1;
+      if (extraHours > 4) data.mealAllowanceCount += 1;
     }
   } else {
     // Span ≥ 12h: the ENTIRE last shift is reclassified to double time (2×).
@@ -503,6 +507,9 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data) {
     const doubleTimeHours = currentShift.activeHours;
     if (doubleTimeHours > 0) {
       addBrokenShiftOtToCategory(data, dayType, doubleTimeHours, false); // false = tier 2 = 2×
+      // Meal allowance per broken-shift OT event
+      if (doubleTimeHours > 1) data.mealAllowanceCount += 1;
+      if (doubleTimeHours > 4) data.mealAllowanceCount += 1;
     }
   }
 }
@@ -694,6 +701,9 @@ function processSingleChain(chain, data, ctx) {
       const otTotal = r2(combinedActive - MAX_REGULAR_HOURS);
       const { otByDayType } = deductOtFromEnd(entries, otTotal);
       applyOtByDayType(otByDayType, data);
+      // Meal allowance: 1 per shift where OT > 1h; additional 1 where OT > 4h
+      if (otTotal > 1) data.mealAllowanceCount += 1;
+      if (otTotal > 4) data.mealAllowanceCount += 1;
     }
   }
 
@@ -750,6 +760,7 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: shift?.shiftType === 'sleepover' || false,
         clientName: shift?.clientName || null,
+        mileage: shift?.mileage ?? null,
         totalHours: shift?.hours || 0,
         shiftDate: shift?.startDatetime || null,
         shiftStart: shift?.startDatetime || null,
@@ -786,6 +797,7 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: false,
         clientName: shift.clientName || null,
+        mileage: shift.mileage ?? null,
         totalHours: shift.hours,
         shiftDate: shift.startDatetime,
         shiftStart: shift.startDatetime,
@@ -808,6 +820,7 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: true,
         clientName: shift.clientName || null,
+        mileage: shift.mileage ?? null,
         totalHours: shift.hours,
         shiftDate: shift.startDatetime,
         shiftStart: shift.startDatetime,

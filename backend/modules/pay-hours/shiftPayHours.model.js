@@ -42,6 +42,7 @@ const shiftPayHoursSchema = new mongoose.Schema(
     holidayOtAfter2: { type: Number, default: 0 },
     isBrokenShift: { type: Boolean, default: false },
     isSleepover: { type: Boolean, default: false },
+    mileage: { type: Number, default: null },
   },
   {
     timestamps: true,

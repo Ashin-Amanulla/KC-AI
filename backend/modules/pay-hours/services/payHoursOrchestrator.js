@@ -107,6 +107,7 @@ export async function computeAllPayHours(jobId, locationId = null) {
         const staffEnd   = staffShifts.reduce((max, s) => s.endDatetime   > max ? s.endDatetime   : max, staffShifts[0].endDatetime);
 
         const payHoursId = new mongoose.Types.ObjectId();
+        const totalKm = staffShifts.reduce((sum, s) => sum + (s.mileage || 0), 0);
         payHoursDocs.push({
           _id: payHoursId,
           location: locKey ? new mongoose.Types.ObjectId(locKey) : null,
@@ -114,6 +115,7 @@ export async function computeAllPayHours(jobId, locationId = null) {
           periodStart: staffStart,
           periodEnd:   staffEnd,
           ...data,
+          totalKm,
           computedAt: new Date(),
         });
 
@@ -145,6 +147,7 @@ export async function computeAllPayHours(jobId, locationId = null) {
             holidayOtAfter2:  0,
             isBrokenShift:    bd.isBrokenShift,
             isSleepover:      bd.isSleepover,
+            mileage:          bd.mileage ?? null,
           });
         }
       } catch (err) {
