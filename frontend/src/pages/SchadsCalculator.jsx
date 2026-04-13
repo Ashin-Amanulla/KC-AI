@@ -26,7 +26,129 @@ const fmtH = (n) => n.toFixed(2) + 'h';
 // Effective per-hour rate at multiplier M = rate × (M/1.25 + 0.2)
 const casualEff = (rate, mult) => rate * (mult / 1.25 + 0.2);
 
-// ── Gross pay (permanent or casual) ─────────────────────────────────
+// ── Gross pay using per-employee rates from rates file ────────────────
+// rates = { daytime, afternoon, night, otUpto2, otAfter2, saturday, satOtAfter2,
+//           sunday, ph, brokenShift, mealAllow, sleepover }
+function calcGrossFromRates(ph, rates) {
+  if (!rates) return null;
+  const ot76Wd  = ph.otAfter76Weekday  || 0;
+  const ot76Sat = ph.otAfter76Saturday || 0;
+  const sunAll  = (ph.sundayHours||0)  + (ph.sundayOtUpto2||0)  + (ph.sundayOtAfter2||0);
+  const holAll  = (ph.holidayHours||0) + (ph.holidayOtUpto2||0) + (ph.holidayOtAfter2||0);
+  const ot76WdT1  = r2(Math.min(ot76Wd,  2));
+  const ot76WdT2  = r2(Math.max(0, ot76Wd  - 2));
+  const ot76SatT1 = r2(Math.min(ot76Sat, 2));
+  const ot76SatT2 = r2(Math.max(0, ot76Sat - 2));
+
+  const totOT = r2(
+    (ph.weekdayOtUpto2||0)+(ph.weekdayOtAfter2||0)+
+    (ph.saturdayOtUpto2||0)+(ph.saturdayOtAfter2||0)+
+    (ph.sundayOtUpto2||0)+(ph.sundayOtAfter2||0)+
+    (ph.holidayOtUpto2||0)+(ph.holidayOtAfter2||0)
+  );
+  const mealAllow = totOT > 4 ? r2(rates.mealAllow * 2) : totOT > 1 ? rates.mealAllow : 0;
+
+  const pay = r2(
+    (ph.morningHours     || 0) * rates.daytime   +
+    (ph.afternoonHours   || 0) * rates.afternoon  +
+    (ph.nightHours       || 0) * rates.night      +
+    (ph.weekdayOtUpto2   || 0) * rates.otUpto2    +
+    (ph.weekdayOtAfter2  || 0) * rates.otAfter2   +
+    (ph.saturdayHours    || 0) * rates.saturday   +
+    (ph.saturdayOtUpto2  || 0) * rates.otUpto2    +
+    (ph.saturdayOtAfter2 || 0) * rates.satOtAfter2 +
+    sunAll                     * rates.sunday     +
+    holAll                     * rates.ph         +
+    (ph.nursingCareHours || 0) * rates.daytime    +
+    ot76WdT1                   * rates.otUpto2    +
+    ot76WdT2                   * rates.otAfter2   +
+    ot76SatT1                  * rates.otUpto2    +
+    ot76SatT2                  * rates.satOtAfter2 +
+    (ph.otAfter76Sunday  || 0) * rates.sunday     +
+    (ph.otAfter76Holiday || 0) * rates.ph         +
+    (ph.brokenShiftCount || 0) * rates.brokenShift +
+    (ph.sleepoversCount  || 0) * rates.sleepover  +
+    mealAllow
+  );
+  return pay;
+}
+
+// ── Per-employee breakdown using rates file ───────────────────────────
+function calcBreakdownFromRates(ph, rates) {
+  if (!rates) return null;
+  const ot76Wd  = ph.otAfter76Weekday  || 0;
+  const ot76Sat = ph.otAfter76Saturday || 0;
+  const sunAll  = r2((ph.sundayHours||0)+(ph.sundayOtUpto2||0)+(ph.sundayOtAfter2||0));
+  const holAll  = r2((ph.holidayHours||0)+(ph.holidayOtUpto2||0)+(ph.holidayOtAfter2||0));
+  const ot76WdT1  = r2(Math.min(ot76Wd,  2));
+  const ot76WdT2  = r2(Math.max(0, ot76Wd  - 2));
+  const ot76SatT1 = r2(Math.min(ot76Sat, 2));
+  const ot76SatT2 = r2(Math.max(0, ot76Sat - 2));
+
+  // [label, hours, effRate, category]
+  const defs = [
+    ['Morning',          ph.morningHours     || 0, rates.daytime,    'ord'],
+    ['Afternoon',        ph.afternoonHours   || 0, rates.afternoon,  'penalty'],
+    ['Night',            ph.nightHours       || 0, rates.night,      'penalty'],
+    ['WD OT ≤2h',        ph.weekdayOtUpto2   || 0, rates.otUpto2,    'ot'],
+    ['WD OT >2h',        ph.weekdayOtAfter2  || 0, rates.otAfter2,   'ot'],
+    ['Saturday',         ph.saturdayHours    || 0, rates.saturday,   'penalty'],
+    ['Sat OT ≤2h',       ph.saturdayOtUpto2  || 0, rates.otUpto2,    'ot'],
+    ['Sat OT >2h',       ph.saturdayOtAfter2 || 0, rates.satOtAfter2,'ot'],
+    ['Sunday',           sunAll,                   rates.sunday,     'penalty'],
+    ['Public Holiday',   holAll,                   rates.ph,         'penalty'],
+    ['Nursing Care',     ph.nursingCareHours || 0, rates.daytime,    'ord'],
+    ['OT >76h WD ≤2h',   ot76WdT1,                 rates.otUpto2,    'ot76'],
+    ['OT >76h WD >2h',   ot76WdT2,                 rates.otAfter2,   'ot76'],
+    ['OT >76h Sat ≤2h',  ot76SatT1,                rates.otUpto2,    'ot76'],
+    ['OT >76h Sat >2h',  ot76SatT2,                rates.satOtAfter2,'ot76'],
+    ['OT >76h Sun',      ph.otAfter76Sunday  || 0, rates.sunday,     'ot76'],
+    ['OT >76h PH',       ph.otAfter76Holiday || 0, rates.ph,         'ot76'],
+  ];
+
+  const lines = [];
+  let basePay = 0, penaltyExtra = 0, otPay = 0, ordHours = 0, otHours = 0;
+
+  for (const [label, hours, effRate, cat] of defs) {
+    if (hours <= 0) continue;
+    const pay = r2(hours * effRate);
+    lines.push({ label, hours, effRate, pay, cat });
+    if (cat === 'ord')     { basePay += pay; ordHours += hours; }
+    else if (cat === 'penalty') { basePay += r2(hours * rates.daytime); penaltyExtra += r2(pay - hours * rates.daytime); ordHours += hours; }
+    else if (cat === 'ot' || cat === 'ot76') { otPay += pay; otHours += hours; }
+  }
+
+  const totOT = r2(
+    (ph.weekdayOtUpto2||0)+(ph.weekdayOtAfter2||0)+
+    (ph.saturdayOtUpto2||0)+(ph.saturdayOtAfter2||0)+
+    (ph.sundayOtUpto2||0)+(ph.sundayOtAfter2||0)+
+    (ph.holidayOtUpto2||0)+(ph.holidayOtAfter2||0)
+  );
+  const mealAllow  = totOT > 4 ? r2(rates.mealAllow * 2) : totOT > 1 ? rates.mealAllow : 0;
+  const brokenAllow = r2((ph.brokenShiftCount || 0) * rates.brokenShift);
+  const sleepAllow  = r2((ph.sleepoversCount  || 0) * rates.sleepover);
+  const allow = { brokenAllow, mealAllow, sleepAllow, total: r2(brokenAllow + mealAllow + sleepAllow) };
+
+  const gross      = r2(lines.reduce((s, l) => s + l.pay, 0) + allow.total);
+  const totalHours = r2(ordHours + otHours);
+
+  return {
+    lines, allow,
+    basePay:      r2(basePay),
+    penaltyExtra: r2(penaltyExtra),
+    otPay:        r2(otPay),
+    totalHours,
+    ordHours:     r2(ordHours),
+    otHours:      r2(otHours),
+    gross,
+    isCasual: true,
+    base:  rates.daytime,
+    load:  null,
+    fromRates: true,
+  };
+}
+
+// ── Gross pay (permanent or casual) — fallback when no rates file ─────
 function calcGross(ph, baseRate, empType = 'permanent') {
   const rate = parseFloat(baseRate);
   if (!rate || rate <= 0) return null;
@@ -345,8 +467,8 @@ const CAT_STYLE = {
   ot76:    { cls: 'text-rose-700 font-semibold', label: 'OT >76h',    bg: 'bg-rose-100/50' },
 };
 
-const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual }) => {
-  const bd = calcBreakdown(mrow, baseRate, empType);
+const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staffRates }) => {
+  const bd = staffRates ? calcBreakdownFromRates(mrow, staffRates) : calcBreakdown(mrow, baseRate, empType);
   if (!bd) return (
     <div className="p-4 text-sm text-muted-foreground">Enter a base rate above to see the pay breakdown.</div>
   );
@@ -360,7 +482,10 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual }) => 
         <div>
           <p className="text-[10px] uppercase tracking-widest opacity-60 mb-1">Gross Pay — {staffName}</p>
           <p className="font-bold text-2xl font-mono">{fmt(bd.gross)}</p>
-          {isCasual && <p className="text-[11px] opacity-70 mt-0.5">Casual rate · base ${bd.base.toFixed(2)}/h + ${bd.load.toFixed(2)} loading</p>}
+          {bd.fromRates
+            ? <p className="text-[11px] opacity-70 mt-0.5">Rates from file · daytime ${bd.base.toFixed(2)}/h</p>
+            : isCasual && <p className="text-[11px] opacity-70 mt-0.5">Casual rate · base ${(bd.base||0).toFixed(2)}/h + ${(bd.load||0).toFixed(2)} loading</p>
+          }
         </div>
         <div className="text-right">
           <p className="text-[10px] uppercase tracking-widest opacity-60 mb-1">Total Hours</p>
@@ -395,7 +520,7 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual }) => 
             <tr className="bg-muted/20 text-[10px] uppercase tracking-wider text-muted-foreground">
               <th className="text-left px-3 py-2 font-medium">Category</th>
               <th className="text-right px-3 py-2 font-medium">Hours</th>
-              <th className="text-right px-3 py-2 font-medium">Mult</th>
+              <th className="text-right px-3 py-2 font-medium">Mult / Rate</th>
               <th className="text-right px-3 py-2 font-medium">Pay</th>
             </tr>
           </thead>
@@ -409,7 +534,9 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual }) => 
                     <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">{style.label}</span>
                   </td>
                   <td className="text-right px-3 py-2 font-mono">{fmtH(l.hours)}</td>
-                  <td className="text-right px-3 py-2 font-mono text-muted-foreground">{l.mult.toFixed(2)}×</td>
+                  <td className="text-right px-3 py-2 font-mono text-muted-foreground">
+                    {l.mult != null ? `${l.mult.toFixed(2)}×` : `$${l.effRate.toFixed(2)}/h`}
+                  </td>
                   <td className={`text-right px-3 py-2 font-mono font-semibold ${style.cls}`}>{fmt(l.pay)}</td>
                 </tr>
               );
@@ -418,12 +545,23 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual }) => 
             {bd.allow.brokenAllow > 0 && (
               <tr className="border-t border-border/30 bg-amber-50/30">
                 <td className="px-3 py-2 text-amber-700">
-                  Broken shift allowance ({mrow.brokenShiftCount} × ${BROKEN_ALLOWANCE_1})
+                  Broken shift allowance ({mrow.brokenShiftCount} × ${staffRates ? staffRates.brokenShift.toFixed(2) : BROKEN_ALLOWANCE_1})
                   <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.brokenShiftCount}</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
                 <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.brokenAllow)}</td>
+              </tr>
+            )}
+            {bd.allow.sleepAllow > 0 && (
+              <tr className="border-t border-border/30 bg-amber-50/30">
+                <td className="px-3 py-2 text-amber-700">
+                  Sleepover allowance ({mrow.sleepoversCount} × ${staffRates?.sleepover.toFixed(2)})
+                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.sleepoversCount}</td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.sleepAllow)}</td>
               </tr>
             )}
             {bd.allow.mealAllow > 0 && (
@@ -698,9 +836,68 @@ export const SchadsCalculator = () => {
 
   // ── Payroll comparison state ─────────────────────────────────────
   const payrollFileRef = useRef(null);
-  const [payrollData, setPayrollData] = useState(null); // Map: normalizedName → earnings
+  const ratesFileRef   = useRef(null);
+  const [payrollData,   setPayrollData]   = useState(null); // Map: normName → { name, earnings }
+  const [staffRatesMap, setStaffRatesMap] = useState(null); // Map: normName → rates object
+  const [ratesFileName, setRatesFileName] = useState(null);
 
   const normName = (s) => s?.toString().toLowerCase().replace(/\s+/g, ' ').trim() ?? '';
+
+  const parseRatesFile = useCallback((file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      let headerIdx = -1;
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i].map(c => c?.toString().toLowerCase().trim());
+        if (r.some(h => h === 'employee name') && r.some(h => h.includes('daytime'))) { headerIdx = i; break; }
+      }
+      if (headerIdx === -1) { alert('Could not find Employee Name / Daytime Shift columns.'); return; }
+      const h = rows[headerIdx].map(c => c?.toString().toLowerCase().trim());
+      const ci = (keyword) => h.findIndex(x => x.includes(keyword));
+      const idx = {
+        emp:        h.findIndex(x => x === 'employee name'),
+        daytime:    ci('daytime'),
+        afternoon:  ci('afternoon'),
+        night:      ci('night'),
+        otUpto2:    h.findIndex(x => x === 'ot upto 2 hours'),
+        otAfter2:   h.findIndex(x => x === 'ot after 2 hours'),
+        saturday:   h.findIndex(x => x === 'saturday'),
+        satOtAfter2:ci('saturday ot after'),
+        sunday:     h.findIndex(x => x === 'sunday'),
+        ph:         h.findIndex(x => x === 'public holiday'),
+        mealAllow:  ci('overtime meal'),
+        brokenShift:h.findIndex(x => x === 'broken shift'),
+        sleepover:  ci('sleepover'),
+      };
+      const map = new Map();
+      for (let i = headerIdx + 1; i < rows.length; i++) {
+        const name = rows[i][idx.emp]?.toString().trim();
+        if (!name) continue;
+        const g = (k) => { const v = parseFloat(rows[i][idx[k]]); return isNaN(v) ? 0 : r2(v); };
+        map.set(normName(name), {
+          name,
+          daytime:    g('daytime'),
+          afternoon:  g('afternoon'),
+          night:      g('night'),
+          otUpto2:    g('otUpto2'),
+          otAfter2:   g('otAfter2'),
+          saturday:   g('saturday'),
+          satOtAfter2:g('satOtAfter2'),
+          sunday:     g('sunday'),
+          ph:         g('ph'),
+          mealAllow:  g('mealAllow'),
+          brokenShift:g('brokenShift'),
+          sleepover:  g('sleepover'),
+        });
+      }
+      setStaffRatesMap(map);
+      setRatesFileName(file.name);
+    };
+    reader.readAsArrayBuffer(file);
+  }, []);
 
   const parsePayrollFile = useCallback((file) => {
     const reader = new FileReader();
@@ -827,14 +1024,25 @@ export const SchadsCalculator = () => {
                   </div>
                 </div>
                 <div className="space-y-1 ml-auto self-end">
-                  <input
-                    ref={payrollFileRef}
-                    type="file"
-                    accept=".xlsx,.xls"
-                    className="hidden"
-                    onChange={e => { if (e.target.files[0]) parsePayrollFile(e.target.files[0]); e.target.value = ''; }}
-                  />
-                  <div className="flex items-center gap-2">
+                  <input ref={payrollFileRef} type="file" accept=".xlsx,.xls" className="hidden"
+                    onChange={e => { if (e.target.files[0]) parsePayrollFile(e.target.files[0]); e.target.value = ''; }} />
+                  <input ref={ratesFileRef} type="file" accept=".xlsx,.xls" className="hidden"
+                    onChange={e => { if (e.target.files[0]) parseRatesFile(e.target.files[0]); e.target.value = ''; }} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => ratesFileRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-input bg-background text-sm hover:bg-accent transition-colors"
+                    >
+                      <FileSpreadsheet className="h-4 w-4 text-blue-600" />
+                      {ratesFileName ? 'Replace rates file' : 'Upload rates file'}
+                    </button>
+                    {ratesFileName && (
+                      <span className="text-xs text-muted-foreground max-w-[160px] truncate" title={ratesFileName}>{ratesFileName}</span>
+                    )}
+                    {ratesFileName && (
+                      <button onClick={() => { setRatesFileName(null); setStaffRatesMap(null); }} className="text-xs text-muted-foreground hover:text-destructive">✕</button>
+                    )}
+                    <div className="w-px h-5 bg-border" />
                     <button
                       onClick={() => payrollFileRef.current?.click()}
                       className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-input bg-background text-sm hover:bg-accent transition-colors"
@@ -843,10 +1051,10 @@ export const SchadsCalculator = () => {
                       {payrollData ? 'Replace payroll file' : 'Upload payroll file'}
                     </button>
                     {payrollData && (
-                      <span className="text-xs text-muted-foreground">{payrollData.size} employees loaded</span>
+                      <span className="text-xs text-muted-foreground">{payrollData.size} matched</span>
                     )}
                     {payrollData && (
-                      <button onClick={() => setPayrollData(null)} className="text-xs text-muted-foreground hover:text-destructive">✕ clear</button>
+                      <button onClick={() => setPayrollData(null)} className="text-xs text-muted-foreground hover:text-destructive">✕</button>
                     )}
                   </div>
                 </div>
@@ -955,7 +1163,8 @@ export const SchadsCalculator = () => {
                         const mrow      = getMergedRow(row);
                         const rateVal   = baseRates[row.staffName] ?? defaultRate;
                         const empT      = getEmpType(row.staffName);
-                        const gross     = calcGross(mrow, rateVal, empT);
+                        const staffRates = staffRatesMap?.get(normName(row.staffName)) ?? null;
+                        const gross     = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
                         const allow     = calcAllowances(mrow);
                         const otTotal   = totalOtHrs(mrow);
                         const sunAll    = r2((mrow.sundayHours||0)+(mrow.sundayOtUpto2||0)+(mrow.sundayOtAfter2||0));
@@ -1004,17 +1213,24 @@ export const SchadsCalculator = () => {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1">
-                                <span className="text-muted-foreground text-xs">$</span>
-                                <Input
-                                  type="number"
-                                  placeholder="0.00"
-                                  step="0.01"
-                                  value={baseRates[row.staffName] ?? defaultRate}
-                                  onChange={e => setRate(row.staffName, e.target.value)}
-                                  className="h-7 w-20 text-xs px-2"
-                                />
-                              </div>
+                              {staffRates ? (
+                                <div className="text-xs font-mono text-foreground">
+                                  ${staffRates.daytime.toFixed(2)}
+                                  <div className="text-[9px] text-emerald-600 font-medium">from file</div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-muted-foreground text-xs">$</span>
+                                  <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    step="0.01"
+                                    value={baseRates[row.staffName] ?? defaultRate}
+                                    onChange={e => setRate(row.staffName, e.target.value)}
+                                    className="h-7 w-20 text-xs px-2"
+                                  />
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell className="border-r border-border/50">
                               <select
@@ -1101,6 +1317,7 @@ export const SchadsCalculator = () => {
                                     baseRate={rateVal}
                                     empType={empT}
                                     isCasual={isCasual}
+                                    staffRates={staffRates}
                                   />
                                 </div>
                               </div>
