@@ -107,7 +107,7 @@ const HolidayManager = ({ locationId, locations }) => {
   const [collapsed, setCollapsed] = useState(true);
   const [fixtureYear, setFixtureYear] = useState(new Date().getFullYear());
 
-  const { data } = useHolidays(locationId ? { locationId } : { locationId: 'none' });
+  const { data } = useHolidays(locationId ? { locationId } : {});
   const createMutation = useCreateHoliday();
   const deleteMutation = useDeleteHoliday();
   const loadFixtureMutation = useLoadHolidayFixture();

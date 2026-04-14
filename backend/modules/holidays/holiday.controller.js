@@ -7,6 +7,9 @@ export const listHolidays = async (req, res, next) => {
 
     const filter = {};
     if (locationId) {
+      if (!/^[a-f\d]{24}$/i.test(locationId)) {
+        return res.status(400).json({ error: 'Invalid locationId' });
+      }
       filter.location = locationId;
     }
     if (year) {
