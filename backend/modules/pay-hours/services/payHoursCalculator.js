@@ -786,10 +786,15 @@ function buildPerShiftBreakdowns(ctx, shifts) {
     bd[fieldName] = r2((bd[fieldName] || 0) + seg.hours);
   }
 
-  // Handle nursing shifts (no segments generated)
+  // Handle nursing shifts — set nursingCareHours to the weekday portion only.
+  // Non-weekday segments were already processed above via pendingSegments, so
+  // saturdayHours/sundayHours/holidayHours are already in the breakdown.
   for (const shift of shifts) {
     const sid = String(shift._id);
-    if (shift.shiftType === 'nursing_support' && !breakdowns.has(sid)) {
+    if (shift.shiftType !== 'nursing_support') continue;
+
+    if (!breakdowns.has(sid)) {
+      // Pure weekday nursing: no segments were added to pendingSegments, create entry now.
       breakdowns.set(sid, {
         morningHours: 0, afternoonHours: 0, nightHours: 0,
         saturdayHours: 0, sundayHours: 0, holidayHours: 0,
@@ -804,8 +809,12 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         shiftEnd: shift.endDatetime,
         shiftType: shift.shiftType,
       });
-    } else if (shift.shiftType === 'nursing_support' && breakdowns.has(sid)) {
-      breakdowns.get(sid).nursingCareHours = shift.hours;
+    } else {
+      // Mixed nursing (some non-weekday segments already in breakdown).
+      // nursingCareHours = weekday portion = total hours minus penalty-day hours.
+      const bd = breakdowns.get(sid);
+      const penaltyHours = r2((bd.saturdayHours || 0) + (bd.sundayHours || 0) + (bd.holidayHours || 0));
+      bd.nursingCareHours = r2(shift.hours - penaltyHours);
     }
   }
 
@@ -854,20 +863,33 @@ function processShiftForPayHours(shift, ctx) {
 
   const isSleepoverNoExcess = shift.shiftType === 'sleepover' && activeHours <= 0;
   if (shift.shiftType === 'sleepover') ctx.data.sleepoversCount += 1;
-  if (shift.shiftType === 'nursing_support') {
-    ctx.data.nursingCareHours = r2(ctx.data.nursingCareHours + shift.hours);
-  }
 
   // Create segments
   let segments = [];
-  if (!isSleepoverNoExcess && shift.shiftType !== 'nursing_support') {
+  if (shift.shiftType === 'nursing_support') {
+    // Split by day type so Saturday/Sunday/Holiday nursing attracts the correct penalty
+    // rates. Weekday nursing still accumulates in nursingCareHours (paid at daytime rate).
+    // All segments are kept on processedShift so broken-shift OT detection works.
+    const nsSegments = splitShiftAtMidnight(startUtc, endUtc, shift.hours, shift.shiftType, offsetStr, ctx.holidaySet);
+    for (let i = 0; i < nsSegments.length; i++) {
+      const seg = nsSegments[i];
+      if (seg.dayType === 'weekday') {
+        // Weekday nursing: track separately at daytime rate
+        ctx.data.nursingCareHours = r2(ctx.data.nursingCareHours + seg.hours);
+      } else {
+        // Saturday / Sunday / Holiday nursing: chain processing applies penalty rates
+        const segContinuous = i === 0 ? isContinuous : true;
+        ctx.pendingSegments.push({ segment: seg, shiftId: sid, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
+      }
+    }
+    segments = nsSegments; // processedShift needs non-empty segments for broken-shift OT
+  } else if (!isSleepoverNoExcess) {
     segments = splitShiftAtMidnight(startUtc, endUtc, shift.hours, shift.shiftType, offsetStr, ctx.holidaySet);
-  }
-
-  // Add segments to pending list
-  for (let i = 0; i < segments.length; i++) {
-    const segContinuous = i === 0 ? isContinuous : true;
-    ctx.pendingSegments.push({ segment: segments[i], shiftId: sid, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
+    // Add segments to pending list
+    for (let i = 0; i < segments.length; i++) {
+      const segContinuous = i === 0 ? isContinuous : true;
+      ctx.pendingSegments.push({ segment: segments[i], shiftId: sid, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
+    }
   }
 
   // Sleepover with no excess: add placeholder for chain influence

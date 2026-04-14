@@ -13,6 +13,7 @@ import { ShiftAnalysis } from './pages/ShiftAnalysis';
 import { UserManagement } from './pages/UserManagement';
 import { Shifts } from './pages/Shifts';
 import { PayHours } from './pages/PayHours';
+import { CostAnalysis } from './pages/CostAnalysis';
 import { canAccessPath } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
@@ -129,6 +130,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <PayHours />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cost-analysis"
+            element={
+              <ProtectedRoute>
+                <CostAnalysis />
               </ProtectedRoute>
             }
           />

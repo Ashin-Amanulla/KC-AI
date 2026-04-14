@@ -17,6 +17,7 @@ export const NAV_ITEMS = [
   { path: '/shifts', label: 'Shifts', icon: 'CalendarDays', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER] },
   { path: '/pay-hours', label: 'Pay Hours', icon: 'Calculator', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER] },
   { path: '/shift-analysis', label: 'Shift Analysis', icon: 'FileBarChart', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
+  { path: '/cost-analysis', label: 'Cost Analysis', icon: 'TrendingDown', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
   { path: '/users', label: 'User Management', icon: 'Shield', roles: [ROLES.SUPER_ADMIN] },
 ];
 

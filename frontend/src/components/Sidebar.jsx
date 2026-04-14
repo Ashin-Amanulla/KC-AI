@@ -13,6 +13,7 @@ import {
   LogOut,
   Calculator,
   CalendarDays,
+  TrendingDown,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { getNavItemsForRole } from '../config/nav';
@@ -30,6 +31,7 @@ const iconMap = {
   Shield,
   Calculator,
   CalendarDays,
+  TrendingDown,
 };
 
 export function Sidebar() {
