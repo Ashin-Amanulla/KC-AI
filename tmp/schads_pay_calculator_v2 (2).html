@@ -220,6 +220,31 @@ select option { background: var(--surface); }
 .ph-toggle input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--ph-col); }
 .ph-toggle span { font-size: 0.78rem; color: var(--muted); }
 
+/* ── Custom allowances ── */
+.allowance-wrap {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+.allowance-list { display: grid; gap: 0.6rem; }
+.allowance-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+@media (max-width: 520px) {
+  .allowance-row { grid-template-columns: 1fr; }
+}
+.allow-del {
+  background: none; border: 1.5px solid var(--border);
+  width: 36px; height: 36px;
+  cursor: pointer; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; transition: all 0.15s;
+}
+.allow-del:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
 .seg-overlap-warn {
   font-size: 0.7rem; color: var(--accent);
   background: var(--accent-light); border: 1px solid var(--accent);
@@ -378,6 +403,14 @@ tr:last-child td { border-bottom: none; }
         </select>
         <span class="field-hint">Determines overtime bracket threshold</span>
       </div>
+    </div>
+    <div class="allowance-wrap">
+      <div class="field" style="margin-bottom:0.5rem">
+        <label><span class="dot"></span> Custom Allowances</label>
+        <span class="field-hint">Add any extra allowance amount to include in weekly gross.</span>
+      </div>
+      <div id="customAllowances" class="allowance-list"></div>
+      <button type="button" class="add-seg-btn" onclick="addAllowanceRow()">+ Add custom allowance</button>
     </div>
   </div>
 </div>
@@ -551,6 +584,7 @@ function toggleDay(di) {
 }
 
 let segCounters = Array(7).fill(0);
+let allowanceCounter = 0;
 
 function addSegment(di) {
   const container = document.getElementById(`segs-${di}`);
@@ -656,6 +690,43 @@ function updateDaySummary(di) {
     sumEl.innerHTML = `<span class="hrs">Day off</span>`;
     row.classList.remove('has-data');
   }
+}
+
+function addAllowanceRow(name = '', amount = '') {
+  const wrap = document.getElementById('customAllowances');
+  const idx = allowanceCounter++;
+  const row = document.createElement('div');
+  row.className = 'allowance-row';
+  row.id = `allow-row-${idx}`;
+  row.innerHTML = `
+    <div class="field">
+      <label><span class="dot"></span> Allowance name</label>
+      <input type="text" id="allow-name-${idx}" placeholder="e.g. Laundry allowance" value="${name}">
+    </div>
+    <div class="field">
+      <label><span class="dot"></span> Amount ($)</label>
+      <input type="number" id="allow-amount-${idx}" placeholder="0.00" min="0" step="0.01" value="${amount}">
+    </div>
+    <button type="button" class="allow-del" onclick="removeAllowanceRow(${idx})" aria-label="Remove allowance">×</button>
+  `;
+  wrap.appendChild(row);
+}
+
+function removeAllowanceRow(idx) {
+  const row = document.getElementById(`allow-row-${idx}`);
+  if (row) row.remove();
+}
+
+function getCustomAllowances() {
+  const rows = Array.from(document.querySelectorAll('.allowance-row'));
+  return rows
+    .map(row => {
+      const idx = row.id.replace('allow-row-', '');
+      const name = document.getElementById(`allow-name-${idx}`)?.value?.trim() || 'Custom allowance';
+      const amount = parseFloat(document.getElementById(`allow-amount-${idx}`)?.value || '0');
+      return { name, amount: Number.isFinite(amount) ? amount : 0 };
+    })
+    .filter(a => a.amount > 0);
 }
 
 // ── Validation ────────────────────────────────────────────
@@ -786,10 +857,18 @@ function calculate() {
     if (segs.length > 1) brokenDays++;
   }
   // Max 2 allowances per broken-shift day
-  const allowances = brokenDays * Math.min(2, 2) * BROKEN_ALLOWANCE;
-  if (allowances > 0) {
-    tableRows.push({ dayName: '—', segLabel: 'Broken shift', hours: null, type: `$${BROKEN_ALLOWANCE}/break × ${brokenDays*2}`, cls: 'type-allow', pay: allowances, isAllow: true });
+  const brokenAllowancePay = brokenDays * Math.min(2, 2) * BROKEN_ALLOWANCE;
+  if (brokenAllowancePay > 0) {
+    tableRows.push({ dayName: '—', segLabel: 'Broken shift', hours: null, type: `$${BROKEN_ALLOWANCE}/break × ${brokenDays*2}`, cls: 'type-allow', pay: brokenAllowancePay, isAllow: true });
   }
+
+  const customAllowances = getCustomAllowances();
+  const customAllowancePay = customAllowances.reduce((a, c) => a + c.amount, 0);
+  customAllowances.forEach(a => {
+    tableRows.push({ dayName: '—', segLabel: a.name, hours: null, type: 'Custom allowance', cls: 'type-allow', pay: a.amount, isAllow: true });
+  });
+
+  const allowances = brokenAllowancePay + customAllowancePay;
 
   const totalHours = allShifts.reduce((a,s) => a + s.seg.hours, 0);
   const ordHours   = totalHours - totalOtHours;
@@ -1250,6 +1329,7 @@ function applyScenario(idx) {
   document.getElementById('daysContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+addAllowanceRow();
 buildScenarios();
 </script>
 </body>

@@ -272,7 +272,7 @@ function hasOverlap(segments) {
   return false;
 }
 
-function computeManual(baseRate, empType, days) {
+function computeManual(baseRate, empType, days, customAllowances = []) {
   const otBracket = empType === 'ft' ? 3.0 : 2.0;
   let allShifts = [];
   for (let di = 0; di < 7; di++) {
@@ -326,8 +326,18 @@ function computeManual(baseRate, empType, days) {
 
   let brokenDays = 0;
   for (let di = 0; di < 7; di++) if (days[di].segments.filter(s => segH(s) !== null).length > 1) brokenDays++;
-  const allowances = brokenDays * BROKEN_ALLOWANCE_1;
-  if (allowances > 0) tableRows.push({ dayName: '—', segLabel: 'Broken shift allowance', hours: null, type: `$${BROKEN_ALLOWANCE_1}/shift × ${brokenDays}`, cls: 'allow', pay: allowances, isAllow: true });
+  const brokenAllowancePay = brokenDays * BROKEN_ALLOWANCE_1;
+  if (brokenAllowancePay > 0) tableRows.push({ dayName: '—', segLabel: 'Broken shift allowance', hours: null, type: `$${BROKEN_ALLOWANCE_1}/shift × ${brokenDays}`, cls: 'allow', pay: brokenAllowancePay, isAllow: true });
+
+  const customAllowancePay = customAllowances
+    .map(a => ({ label: (a?.label || '').trim() || 'Custom allowance', amount: Number(a?.amount || 0) }))
+    .filter(a => a.amount > 0)
+    .reduce((sum, a) => {
+      tableRows.push({ dayName: '—', segLabel: a.label, hours: null, type: 'Custom allowance', cls: 'allow', pay: a.amount, isAllow: true });
+      return sum + a.amount;
+    }, 0);
+
+  const allowances = brokenAllowancePay + customAllowancePay;
 
   const totalHours = allShifts.reduce((a, s) => a + s.seg.hours, 0);
   const ordHours   = totalHours - totalOtHours;
@@ -948,6 +958,7 @@ export const SchadsCalculator = () => {
   const [manualDays, setManualDays]     = useState(() =>
     Array(7).fill(null).map(() => ({ open: false, isPH: false, segments: [] }))
   );
+  const [manualCustomAllowances, setManualCustomAllowances] = useState([{ id: `ma-${Date.now()}`, label: '', amount: '' }]);
   const [manualResults, setManualResults] = useState(null);
 
   const updateManualDay = useCallback((di, patch) =>
@@ -965,16 +976,28 @@ export const SchadsCalculator = () => {
       return { ...d, open, segments: open && d.segments.length === 0 ? [newSeg()] : d.segments };
     })), []);
 
+  const addManualCustomAllowance = useCallback(() => {
+    setManualCustomAllowances(prev => [...prev, { id: `ma-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, label: '', amount: '' }]);
+  }, []);
+
+  const removeManualCustomAllowance = useCallback((id) => {
+    setManualCustomAllowances(prev => (prev.length > 1 ? prev.filter(a => a.id !== id) : prev));
+  }, []);
+
+  const updateManualCustomAllowance = useCallback((id, field, value) => {
+    setManualCustomAllowances(prev => prev.map(a => (a.id === id ? { ...a, [field]: value } : a)));
+  }, []);
+
   const runManual = useCallback(() => {
     const n = parseFloat(manualRate);
     const bad = !n || n < 10 || n > 200;
     setManualRateErr(bad);
     if (bad) return;
     if (manualDays.some(d => hasOverlap(d.segments))) { alert('Overlapping shift times. Please fix before calculating.'); return; }
-    const r = computeManual(n, manualEmpType, manualDays);
+    const r = computeManual(n, manualEmpType, manualDays, manualCustomAllowances);
     if (!r) { alert('Please enter at least one shift.'); return; }
     setManualResults(r);
-  }, [manualRate, manualEmpType, manualDays]);
+  }, [manualRate, manualEmpType, manualDays, manualCustomAllowances]);
 
   const isLoading = phLoading;
 
@@ -1881,6 +1904,56 @@ export const SchadsCalculator = () => {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm uppercase tracking-widest flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 bg-foreground text-background text-xs font-bold">3</span>
+                Custom Allowances
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {manualCustomAllowances.map((allow) => (
+                <div key={allow.id} className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_auto] gap-2 items-end">
+                  <div className="space-y-1">
+                    <label className="text-xs uppercase tracking-wider text-muted-foreground">Allowance Name</label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. Laundry allowance"
+                      value={allow.label}
+                      onChange={e => updateManualCustomAllowance(allow.id, 'label', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs uppercase tracking-wider text-muted-foreground">Amount ($)</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={allow.amount}
+                      onChange={e => updateManualCustomAllowance(allow.id, 'amount', e.target.value)}
+                    />
+                  </div>
+                  <button
+                    onClick={() => removeManualCustomAllowance(allow.id)}
+                    className="h-10 w-10 border border-border flex items-center justify-center text-muted-foreground hover:border-destructive hover:text-destructive rounded-sm"
+                    aria-label="Remove custom allowance"
+                    type="button"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={addManualCustomAllowance}
+                className="w-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-foreground hover:text-foreground flex items-center justify-center gap-2 rounded-sm"
+                type="button"
+              >
+                <Plus className="h-4 w-4" /> Add custom allowance
+              </button>
+            </CardContent>
+          </Card>
+
           <Button onClick={runManual} disabled={!manualRate} className="w-full h-12 text-base font-bold uppercase tracking-widest">
             Calculate My Pay →
           </Button>
@@ -1889,7 +1962,7 @@ export const SchadsCalculator = () => {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm uppercase tracking-widest flex items-center gap-2">
-                  <span className="inline-flex items-center justify-center w-5 h-5 bg-foreground text-background text-xs font-bold">3</span>
+                  <span className="inline-flex items-center justify-center w-5 h-5 bg-foreground text-background text-xs font-bold">4</span>
                   Pay Breakdown
                 </CardTitle>
               </CardHeader>
