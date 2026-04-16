@@ -72,6 +72,29 @@ function analyzeStaffProfitability(rows, payrollMap) {
   // Only sum matched staff for the overall margin (apples-to-apples)
   let matchedRevenue = 0, matchedWages = 0, matchedSuper = 0;
   const totalRevenue = r2(Object.values(byStaff).reduce((s, d) => s + d.revenue, 0));
+  const byClient = {};
+
+  for (const r of rows) {
+    if (!r.client) continue;
+    if (!byClient[r.client]) byClient[r.client] = {
+      name: r.client,
+      revenue: 0,
+      hours: 0,
+      shifts: new Set(),
+      staff: new Set(),
+      billingRows: [],
+      staffAlloc: {},
+      matchedRevenue: 0,
+      allocWages: 0,
+      allocSuper: 0,
+      allocEmployerCost: 0,
+    };
+    byClient[r.client].revenue = r2(byClient[r.client].revenue + r.totalCost);
+    byClient[r.client].hours   = r2(byClient[r.client].hours + r.duration);
+    byClient[r.client].shifts.add(r.shiftId);
+    if (r.staff) byClient[r.client].staff.add(r.staff);
+    byClient[r.client].billingRows.push(r);
+  }
 
   for (const [key, d] of Object.entries(byStaff)) {
     const payroll  = payrollMap.get(key);
@@ -88,6 +111,39 @@ function analyzeStaffProfitability(rows, payrollMap) {
       matchedRevenue += d.revenue;
       matchedWages   += wages;
       matchedSuper   += superAmt || 0;
+
+      // Allocate this staff member's payroll cost to clients by hours worked for each client.
+      const totalStaffHours = d.hours || 0;
+      if (totalStaffHours > 0) {
+        for (const br of d.billingRows) {
+          if (!br.client || !byClient[br.client]) continue;
+          const share = (br.duration || 0) / totalStaffHours;
+          const wageShare = r2(wages * share);
+          const superShare = r2((superAmt || 0) * share);
+          const employerShare = r2((wages + (superAmt || 0)) * share);
+
+          byClient[br.client].matchedRevenue = r2(byClient[br.client].matchedRevenue + br.totalCost);
+          byClient[br.client].allocWages = r2(byClient[br.client].allocWages + wageShare);
+          byClient[br.client].allocSuper = r2(byClient[br.client].allocSuper + superShare);
+          byClient[br.client].allocEmployerCost = r2(byClient[br.client].allocEmployerCost + employerShare);
+          const staffKey = key;
+          if (!byClient[br.client].staffAlloc[staffKey]) {
+            byClient[br.client].staffAlloc[staffKey] = {
+              staffName: d.name,
+              hours: 0,
+              revenue: 0,
+              wages: 0,
+              superAmt: 0,
+              employerCost: 0,
+            };
+          }
+          byClient[br.client].staffAlloc[staffKey].hours = r2(byClient[br.client].staffAlloc[staffKey].hours + (br.duration || 0));
+          byClient[br.client].staffAlloc[staffKey].revenue = r2(byClient[br.client].staffAlloc[staffKey].revenue + br.totalCost);
+          byClient[br.client].staffAlloc[staffKey].wages = r2(byClient[br.client].staffAlloc[staffKey].wages + wageShare);
+          byClient[br.client].staffAlloc[staffKey].superAmt = r2(byClient[br.client].staffAlloc[staffKey].superAmt + superShare);
+          byClient[br.client].staffAlloc[staffKey].employerCost = r2(byClient[br.client].staffAlloc[staffKey].employerCost + employerShare);
+        }
+      }
     }
 
     // Sort billing rows by date then start time
@@ -120,9 +176,35 @@ function analyzeStaffProfitability(rows, payrollMap) {
   const matchedEmployerCost = r2(matchedWages + matchedSuper);
   const matchedMargin       = r2(matchedRevenue - matchedEmployerCost);
   const matchedMarginPct    = matchedRevenue > 0 ? r2((matchedMargin / matchedRevenue) * 100) : 0;
+  const clientRows = Object.values(byClient)
+    .map((c) => {
+      const margin = r2(c.revenue - c.allocEmployerCost);
+      const marginPct = c.revenue > 0 ? r2((margin / c.revenue) * 100) : 0;
+      const payrollCoveragePct = c.revenue > 0 ? r2((c.matchedRevenue / c.revenue) * 100) : 0;
+      return {
+        name: c.name,
+        revenue: c.revenue,
+        hours: c.hours,
+        shifts: c.shifts.size,
+        staffCount: c.staff.size,
+        billingRows: c.billingRows,
+        staffAllocRows: Object.values(c.staffAlloc).sort((a, b) => b.employerCost - a.employerCost),
+        matchedRevenue: c.matchedRevenue,
+        allocWages: c.allocWages,
+        allocSuper: c.allocSuper,
+        allocEmployerCost: c.allocEmployerCost,
+        margin,
+        marginPct,
+        payrollCoveragePct,
+        revPerHour: c.hours > 0 ? r2(c.revenue / c.hours) : 0,
+        costPerHour: c.hours > 0 ? r2(c.allocEmployerCost / c.hours) : 0,
+      };
+    })
+    .sort((a, b) => b.revenue - a.revenue);
 
   return {
     staffRows,
+    clientRows,
     paidNotBilled,
     matchedCount,
     totalRevenue,
@@ -569,9 +651,99 @@ function StaffDetailRows({ s }) {
   );
 }
 
+function ClientDetailRows({ c }) {
+  const byDate = {};
+  for (const r of c.billingRows || []) {
+    const key = r.date || '?';
+    if (!byDate[key]) byDate[key] = [];
+    byDate[key].push(r);
+  }
+  const sortedDates = Object.keys(byDate).sort((a, b) => new Date(a) - new Date(b));
+
+  return (
+    <tr>
+      <td colSpan={10} className="p-0 bg-slate-50 border-b border-slate-200">
+        <div className="px-4 py-4 space-y-4">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Allocated Staff Cost</p>
+            <div className="rounded-lg border border-gray-200 overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Staff</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Hrs</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Revenue</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Wages</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Super</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Employer Cost</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Margin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(c.staffAllocRows || []).map((s) => {
+                    const margin = r2(s.revenue - s.employerCost);
+                    return (
+                      <tr key={s.staffName} className="border-t border-gray-100">
+                        <td className="px-3 py-1.5 text-gray-700">{s.staffName}</td>
+                        <td className="px-3 py-1.5 text-right">{s.hours}h</td>
+                        <td className="px-3 py-1.5 text-right">{fmt(s.revenue)}</td>
+                        <td className="px-3 py-1.5 text-right text-gray-600">{fmt(s.wages)}</td>
+                        <td className="px-3 py-1.5 text-right text-gray-500">{fmt(s.superAmt)}</td>
+                        <td className="px-3 py-1.5 text-right">{fmt(s.employerCost)}</td>
+                        <td className={`px-3 py-1.5 text-right font-medium ${margin >= 0 ? 'text-green-700' : 'text-red-600'}`}>{margin >= 0 ? '+' : ''}{fmt(margin)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Billing Lines ({(c.billingRows || []).length})</p>
+            <div className="rounded-lg border border-gray-200 overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Date</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Staff</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Hrs</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedDates.map((date) => (
+                    <React.Fragment key={date}>
+                      {byDate[date].map((r, idx) => (
+                        <tr key={`${r.shiftId}-${idx}`} className="border-t border-gray-100">
+                          {idx === 0 && <td rowSpan={byDate[date].length} className="px-3 py-1.5 align-top border-r border-gray-100 text-gray-700">{date}</td>}
+                          <td className="px-3 py-1.5 text-gray-700">{r.staff || '—'}</td>
+                          <td className="px-3 py-1.5 text-right">{r.duration}h</td>
+                          <td className="px-3 py-1.5 text-right font-medium">{fmt(r.totalCost)}</td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function StaffProfitabilitySection({ sa, payrollMap, payrollName, payrollLoading, payrollError, payrollDz, onRemovePayroll }) {
   const [expanded, setExpanded] = useState(new Set());
+  const [expandedClients, setExpandedClients] = useState(new Set());
+  const [staffTableOpen, setStaffTableOpen] = useState(true);
+  const [clientTableOpen, setClientTableOpen] = useState(true);
   const toggleExpand = (name) => setExpanded(prev => {
+    const next = new Set(prev);
+    next.has(name) ? next.delete(name) : next.add(name);
+    return next;
+  });
+  const toggleClientExpand = (name) => setExpandedClients(prev => {
     const next = new Set(prev);
     next.has(name) ? next.delete(name) : next.add(name);
     return next;
@@ -665,90 +837,199 @@ function StaffProfitabilitySection({ sa, payrollMap, payrollName, payrollLoading
             </div>
 
             {/* Staff table */}
-            <div className="overflow-x-auto rounded-lg border border-gray-100">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead>Staff Member</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead className="text-right">Wages</TableHead>
-                    <TableHead className="text-right">Super</TableHead>
-                    <TableHead className="text-right">Employer Cost</TableHead>
-                    <TableHead className="text-right">Margin</TableHead>
-                    <TableHead className="text-right">Margin %</TableHead>
-                    <TableHead className="text-right">Rev/hr</TableHead>
-                    <TableHead className="text-right">Cost/hr</TableHead>
-                    <TableHead className="text-right">Hrs</TableHead>
-                    <TableHead className="text-right">Clients</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sa.staffRows.map(s => {
-                    const hasPayroll = s.wages !== null;
-                    const isLoss = s.margin !== null && s.margin < 0;
-                    const isLowMargin = s.marginPct !== null && s.marginPct < 20 && s.marginPct >= 0;
-                    const isOpen = expanded.has(s.name);
-                    return (
-                      <React.Fragment key={s.name}>
-                        <TableRow
-                          className={`cursor-pointer hover:bg-slate-50 transition-colors ${isLoss ? 'bg-red-50 hover:bg-red-100' : ''}`}
-                          onClick={() => toggleExpand(s.name)}
-                        >
-                          <TableCell className="font-medium text-sm">
-                            <span className="flex items-center gap-1.5">
-                              {isOpen
-                                ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                                : <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
-                              {s.name}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">{fmt(s.revenue)}</TableCell>
-                          <TableCell className="text-right text-gray-600">{hasPayroll ? fmt(s.wages) : <span className="text-gray-300">—</span>}</TableCell>
-                          <TableCell className="text-right text-gray-500 text-xs">{hasPayroll ? fmt(s.superAmt) : <span className="text-gray-300">—</span>}</TableCell>
-                          <TableCell className="text-right text-gray-600">{hasPayroll ? fmt(s.employerCost) : <span className="text-gray-300">—</span>}</TableCell>
-                          <TableCell className="text-right">
-                            {s.margin !== null ? (
-                              <span className={`font-semibold ${isLoss ? 'text-red-600' : isLowMargin ? 'text-amber-600' : 'text-green-700'}`}>
-                                {s.margin >= 0 ? '+' : ''}{fmt(s.margin)}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setStaffTableOpen(v => !v)}
+                className="w-full flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50"
+              >
+                <p className="text-sm font-semibold text-gray-800">Staff Revenue vs Wages Table</p>
+                {staffTableOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+              </button>
+              {staffTableOpen && (
+                <div className="overflow-x-auto rounded-lg border border-gray-100">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead>Staff Member</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                        <TableHead className="text-right">Wages</TableHead>
+                        <TableHead className="text-right">Super</TableHead>
+                        <TableHead className="text-right">Employer Cost</TableHead>
+                        <TableHead className="text-right">Margin</TableHead>
+                        <TableHead className="text-right">Margin %</TableHead>
+                        <TableHead className="text-right">Rev/hr</TableHead>
+                        <TableHead className="text-right">Cost/hr</TableHead>
+                        <TableHead className="text-right">Hrs</TableHead>
+                        <TableHead className="text-right">Clients</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sa.staffRows.map(s => {
+                        const hasPayroll = s.wages !== null;
+                        const isLoss = s.margin !== null && s.margin < 0;
+                        const isLowMargin = s.marginPct !== null && s.marginPct < 20 && s.marginPct >= 0;
+                        const isOpen = expanded.has(s.name);
+                        return (
+                          <React.Fragment key={s.name}>
+                            <TableRow
+                              className={`cursor-pointer hover:bg-slate-50 transition-colors ${isLoss ? 'bg-red-50 hover:bg-red-100' : ''}`}
+                              onClick={() => toggleExpand(s.name)}
+                            >
+                              <TableCell className="font-medium text-sm">
+                                <span className="flex items-center gap-1.5">
+                                  {isOpen
+                                    ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                    : <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
+                                  {s.name}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right font-medium">{fmt(s.revenue)}</TableCell>
+                              <TableCell className="text-right text-gray-600">{hasPayroll ? fmt(s.wages) : <span className="text-gray-300">—</span>}</TableCell>
+                              <TableCell className="text-right text-gray-500 text-xs">{hasPayroll ? fmt(s.superAmt) : <span className="text-gray-300">—</span>}</TableCell>
+                              <TableCell className="text-right text-gray-600">{hasPayroll ? fmt(s.employerCost) : <span className="text-gray-300">—</span>}</TableCell>
+                              <TableCell className="text-right">
+                                {s.margin !== null ? (
+                                  <span className={`font-semibold ${isLoss ? 'text-red-600' : isLowMargin ? 'text-amber-600' : 'text-green-700'}`}>
+                                    {s.margin >= 0 ? '+' : ''}{fmt(s.margin)}
+                                  </span>
+                                ) : <span className="text-gray-300">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {s.marginPct !== null ? (
+                                  <span className={`text-sm font-medium ${isLoss ? 'text-red-500' : isLowMargin ? 'text-amber-500' : 'text-green-600'}`}>
+                                    {s.marginPct}%
+                                  </span>
+                                ) : <span className="text-gray-300">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right text-gray-600 text-sm">{fmt(s.revenuePerHour)}</TableCell>
+                              <TableCell className="text-right text-gray-500 text-sm">{s.costPerHour !== null ? fmt(s.costPerHour) : <span className="text-gray-300">—</span>}</TableCell>
+                              <TableCell className="text-right text-gray-500 text-sm">{s.hours}h</TableCell>
+                              <TableCell className="text-right text-gray-500 text-sm">{s.clients}</TableCell>
+                            </TableRow>
+                            {isOpen && <StaffDetailRows s={s} />}
+                          </React.Fragment>
+                        );
+                      })}
+                      <TableRow className="bg-gray-50 font-semibold border-t-2">
+                        <TableCell className="text-xs text-gray-500">MATCHED TOTAL ({sa.matchedCount})</TableCell>
+                        <TableCell className="text-right">{fmt(sa.matchedRevenue)}</TableCell>
+                        <TableCell className="text-right">{fmt(sa.matchedWages)}</TableCell>
+                        <TableCell className="text-right text-sm">{fmt(sa.matchedSuper)}</TableCell>
+                        <TableCell className="text-right">{fmt(sa.matchedEmployerCost)}</TableCell>
+                        <TableCell className="text-right">
+                          <span className={sa.matchedMargin >= 0 ? 'text-green-700' : 'text-red-600'}>
+                            {sa.matchedMargin >= 0 ? '+' : ''}{fmt(sa.matchedMargin)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={sa.matchedMarginPct >= 0 ? 'text-green-700' : 'text-red-600'}>
+                            {sa.matchedMarginPct}%
+                          </span>
+                        </TableCell>
+                        <TableCell colSpan={4} />
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+
+            {/* Client revenue vs wages */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setClientTableOpen(v => !v)}
+                className="w-full flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50"
+              >
+                <p className="text-sm font-semibold text-gray-800">Client Revenue vs Staff Wages Table</p>
+                {clientTableOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+              </button>
+              {clientTableOpen && (
+                <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">Client Revenue vs Staff Wages</p>
+                  <p className="text-xs text-gray-500">Staff cost allocated by worked hours per client</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedClients(new Set(sa.clientRows.map(c => c.name)))}
+                    className="text-xs px-2.5 py-1 rounded border border-gray-200 text-gray-600 hover:text-gray-800 hover:border-gray-300"
+                  >
+                    Expand all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedClients(new Set())}
+                    className="text-xs px-2.5 py-1 rounded border border-gray-200 text-gray-600 hover:text-gray-800 hover:border-gray-300"
+                  >
+                    Collapse all
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-gray-100">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead>Client</TableHead>
+                      <TableHead className="text-right">Client Paid</TableHead>
+                      <TableHead className="text-right">Staff Wages</TableHead>
+                      <TableHead className="text-right">Super</TableHead>
+                      <TableHead className="text-right">Staff Cost</TableHead>
+                      <TableHead className="text-right">Margin</TableHead>
+                      <TableHead className="text-right">Margin %</TableHead>
+                      <TableHead className="text-right">Coverage</TableHead>
+                      <TableHead className="text-right">Hrs</TableHead>
+                      <TableHead className="text-right">Workers</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sa.clientRows.map((c) => {
+                      const isOpen = expandedClients.has(c.name);
+                      return (
+                        <React.Fragment key={c.name}>
+                          <TableRow className="cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => toggleClientExpand(c.name)}>
+                            <TableCell className="font-medium text-sm">
+                              <span className="flex items-center gap-1.5">
+                                {isOpen
+                                  ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                  : <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
+                                {c.name}
                               </span>
-                            ) : <span className="text-gray-300">—</span>}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {s.marginPct !== null ? (
-                              <span className={`text-sm font-medium ${isLoss ? 'text-red-500' : isLowMargin ? 'text-amber-500' : 'text-green-600'}`}>
-                                {s.marginPct}%
+                            </TableCell>
+                            <TableCell className="text-right font-medium">{fmt(c.revenue)}</TableCell>
+                            <TableCell className="text-right text-gray-600">{fmt(c.allocWages)}</TableCell>
+                            <TableCell className="text-right text-gray-500 text-xs">{fmt(c.allocSuper)}</TableCell>
+                            <TableCell className="text-right text-gray-600">{fmt(c.allocEmployerCost)}</TableCell>
+                            <TableCell className="text-right">
+                              <span className={`font-semibold ${c.margin >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                                {c.margin >= 0 ? '+' : ''}{fmt(c.margin)}
                               </span>
-                            ) : <span className="text-gray-300">—</span>}
-                          </TableCell>
-                          <TableCell className="text-right text-gray-600 text-sm">{fmt(s.revenuePerHour)}</TableCell>
-                          <TableCell className="text-right text-gray-500 text-sm">{s.costPerHour !== null ? fmt(s.costPerHour) : <span className="text-gray-300">—</span>}</TableCell>
-                          <TableCell className="text-right text-gray-500 text-sm">{s.hours}h</TableCell>
-                          <TableCell className="text-right text-gray-500 text-sm">{s.clients}</TableCell>
-                        </TableRow>
-                        {isOpen && <StaffDetailRows s={s} />}
-                      </React.Fragment>
-                    );
-                  })}
-                  <TableRow className="bg-gray-50 font-semibold border-t-2">
-                    <TableCell className="text-xs text-gray-500">MATCHED TOTAL ({sa.matchedCount})</TableCell>
-                    <TableCell className="text-right">{fmt(sa.matchedRevenue)}</TableCell>
-                    <TableCell className="text-right">{fmt(sa.matchedWages)}</TableCell>
-                    <TableCell className="text-right text-sm">{fmt(sa.matchedSuper)}</TableCell>
-                    <TableCell className="text-right">{fmt(sa.matchedEmployerCost)}</TableCell>
-                    <TableCell className="text-right">
-                      <span className={sa.matchedMargin >= 0 ? 'text-green-700' : 'text-red-600'}>
-                        {sa.matchedMargin >= 0 ? '+' : ''}{fmt(sa.matchedMargin)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className={sa.matchedMarginPct >= 0 ? 'text-green-700' : 'text-red-600'}>
-                        {sa.matchedMarginPct}%
-                      </span>
-                    </TableCell>
-                    <TableCell colSpan={4} />
-                  </TableRow>
-                </TableBody>
-              </Table>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={c.marginPct >= 0 ? 'text-green-700' : 'text-red-600'}>
+                                {c.marginPct}%
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={c.payrollCoveragePct >= 90 ? 'text-green-700' : c.payrollCoveragePct >= 60 ? 'text-amber-600' : 'text-red-600'}>
+                                {c.payrollCoveragePct}%
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right text-gray-500 text-sm">{c.hours}h</TableCell>
+                            <TableCell className="text-right text-gray-500 text-sm">{c.staffCount}</TableCell>
+                          </TableRow>
+                          {isOpen && <ClientDetailRows c={c} />}
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+                </>
+              )}
             </div>
 
             {/* Legend */}
