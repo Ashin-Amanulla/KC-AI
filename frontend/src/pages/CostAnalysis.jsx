@@ -1373,7 +1373,7 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
   const [awardRatesName, setAwardRatesName] = useState('');
   const [awardRatesError, setAwardRatesError] = useState('');
   const [awardRatesLoading, setAwardRatesLoading] = useState(false);
-  const [superPct, setSuperPct] = useState(11.5);
+  const [superPct, setSuperPct] = useState(0);
   const [awardDefaultRate, setAwardDefaultRate] = useState('');
   const [awardEmpType, setAwardEmpType] = useState('casual');
 
