@@ -339,6 +339,10 @@ function parseCsv(text) {
   return rows.filter(r => r.client && r.duration > 0);
 }
 
+function sharedShiftKey(row) {
+  return `${normName(row.staff)}|${row.shiftId || ''}|${row.startDt || ''}|${row.endDt || ''}`;
+}
+
 function analyzeRows(rows) {
   const totalCost  = r2(rows.reduce((s, r) => s + r.totalCost, 0));
   const totalHours = r2(rows.reduce((s, r) => s + r.duration, 0));
@@ -563,6 +567,10 @@ function StaffDetailRows({ s }) {
     byClient[r.client].cost  = r2(byClient[r.client].cost + r.totalCost);
     byClient[r.client].hours = r2(byClient[r.client].hours + r.duration);
   }
+  const allocStaffPaid = (row) => {
+    if (s.employerCost === null || !s.hours || s.hours <= 0) return null;
+    return r2((s.employerCost * (row.duration || 0)) / s.hours);
+  };
 
   return (
     <tr>
@@ -586,6 +594,7 @@ function StaffDetailRows({ s }) {
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Base Cost</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Km</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Total</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Staff Paid</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">$/hr</th>
                   </tr>
                 </thead>
@@ -594,6 +603,7 @@ function StaffDetailRows({ s }) {
                     <React.Fragment key={date}>
                       {byDate[date].map((r, i) => {
                         const effectiveRate = r.duration > 0 ? r2(r.totalCost / r.duration) : 0;
+                        const staffPaid = allocStaffPaid(r);
                         const startTime = r.startDt?.split(' ').slice(1).join(' ') || '';
                         const endTime   = r.endDt?.split(' ').slice(1).join(' ') || '';
                         return (
@@ -612,6 +622,7 @@ function StaffDetailRows({ s }) {
                             <td className="px-3 py-1.5 text-right text-gray-600">{fmt(r.cost)}</td>
                             <td className="px-3 py-1.5 text-right text-gray-400">{r.kms > 0 ? r.kms + 'km' : '—'}</td>
                             <td className="px-3 py-1.5 text-right font-semibold text-gray-800">{fmt(r.totalCost)}</td>
+                            <td className="px-3 py-1.5 text-right text-gray-600">{staffPaid !== null ? fmt(staffPaid) : '—'}</td>
                             <td className="px-3 py-1.5 text-right text-gray-500">{fmt(effectiveRate)}</td>
                           </tr>
                         );
@@ -624,6 +635,11 @@ function StaffDetailRows({ s }) {
                           <td className="px-3 py-1" />
                           <td className="px-3 py-1" />
                           <td className="px-3 py-1 text-right font-semibold text-blue-800">{fmt(r2(byDate[date].reduce((s, r) => s + r.totalCost, 0)))}</td>
+                          <td className="px-3 py-1 text-right font-semibold text-blue-800">
+                            {s.employerCost !== null
+                              ? fmt(r2(byDate[date].reduce((sum, r) => sum + (allocStaffPaid(r) || 0), 0)))
+                              : '—'}
+                          </td>
                           <td className="px-3 py-1" />
                         </tr>
                       )}
@@ -636,6 +652,7 @@ function StaffDetailRows({ s }) {
                     <td className="px-3 py-2" />
                     <td className="px-3 py-2" />
                     <td className="px-3 py-2 text-right text-gray-900">{fmt(s.revenue)}</td>
+                    <td className="px-3 py-2 text-right text-gray-900">{s.employerCost !== null ? fmt(s.employerCost) : '—'}</td>
                     <td className="px-3 py-2 text-right text-gray-600">{fmt(s.revenuePerHour)}</td>
                   </tr>
                 </tbody>
@@ -713,7 +730,7 @@ function StaffDetailRows({ s }) {
   );
 }
 
-function ClientDetailRows({ c }) {
+function ClientDetailRows({ c, lineStaffPaidMap }) {
   const byDate = {};
   for (const r of c.billingRows || []) {
     const key = r.date || '?';
@@ -721,6 +738,13 @@ function ClientDetailRows({ c }) {
     byDate[key].push(r);
   }
   const sortedDates = Object.keys(byDate).sort((a, b) => new Date(a) - new Date(b));
+  const allocStaffPaid = (row) => {
+    const mapped = lineStaffPaidMap?.get(row);
+    if (mapped !== undefined) return mapped;
+    const staffRow = (c.staffAllocRows || []).find((s) => s.staffName === row.staff);
+    if (!staffRow || !staffRow.hours || staffRow.hours <= 0) return null;
+    return r2((staffRow.employerCost * (row.duration || 0)) / staffRow.hours);
+  };
 
   return (
     <tr>
@@ -770,19 +794,24 @@ function ClientDetailRows({ c }) {
                     <th className="text-left px-3 py-1.5 font-medium text-gray-600">Staff</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Hrs</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Total</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Staff Paid</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedDates.map((date) => (
                     <React.Fragment key={date}>
-                      {byDate[date].map((r, idx) => (
-                        <tr key={`${r.shiftId}-${idx}`} className="border-t border-gray-100">
-                          {idx === 0 && <td rowSpan={byDate[date].length} className="px-3 py-1.5 align-top border-r border-gray-100 text-gray-700">{date}</td>}
-                          <td className="px-3 py-1.5 text-gray-700">{r.staff || '—'}</td>
-                          <td className="px-3 py-1.5 text-right">{r.duration}h</td>
-                          <td className="px-3 py-1.5 text-right font-medium">{fmt(r.totalCost)}</td>
-                        </tr>
-                      ))}
+                      {byDate[date].map((r, idx) => {
+                        const staffPaid = allocStaffPaid(r);
+                        return (
+                          <tr key={`${r.shiftId}-${idx}`} className="border-t border-gray-100">
+                            {idx === 0 && <td rowSpan={byDate[date].length} className="px-3 py-1.5 align-top border-r border-gray-100 text-gray-700">{date}</td>}
+                            <td className="px-3 py-1.5 text-gray-700">{r.staff || '—'}</td>
+                            <td className="px-3 py-1.5 text-right">{r.duration}h</td>
+                            <td className="px-3 py-1.5 text-right font-medium">{fmt(r.totalCost)}</td>
+                            <td className="px-3 py-1.5 text-right text-gray-600">{staffPaid !== null ? fmt(staffPaid) : '—'}</td>
+                          </tr>
+                        );
+                      })}
                     </React.Fragment>
                   ))}
                 </tbody>
@@ -834,6 +863,40 @@ function StaffProfitabilitySection({
     next.has(name) ? next.delete(name) : next.add(name);
     return next;
   });
+  const lineStaffPaidMap = useMemo(() => {
+    if (!sa?.staffRows?.length) return null;
+    const map = new WeakMap();
+    for (const staffRow of sa.staffRows) {
+      if (staffRow.employerCost === null) continue;
+      const rows = staffRow.billingRows || [];
+      if (!rows.length) continue;
+      const groups = new Map();
+      for (const row of rows) {
+        const key = sharedShiftKey(row);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(row);
+      }
+
+      let dedupHours = 0;
+      for (const groupRows of groups.values()) {
+        const shiftHrs = Math.max(...groupRows.map((r) => r.duration || 0), 0);
+        dedupHours += shiftHrs;
+      }
+      if (dedupHours <= 0) continue;
+      const staffHourlyCost = staffRow.employerCost / dedupHours;
+
+      for (const groupRows of groups.values()) {
+        const shiftHrs = Math.max(...groupRows.map((r) => r.duration || 0), 0);
+        const shiftPaid = staffHourlyCost * shiftHrs;
+        const shareCount = groupRows.length || 1;
+        for (const row of groupRows) {
+          const share = 1 / shareCount;
+          map.set(row, r2(shiftPaid * share));
+        }
+      }
+    }
+    return map;
+  }, [sa]);
   const costBasisReady = payrollMap && payrollMap.size > 0;
   return (
     <Card>
@@ -1235,7 +1298,7 @@ function StaffProfitabilitySection({
                             <TableCell className="text-right text-gray-500 text-sm">{c.hours}h</TableCell>
                             <TableCell className="text-right text-gray-500 text-sm">{c.staffCount}</TableCell>
                           </TableRow>
-                          {isOpen && <ClientDetailRows c={c} />}
+                          {isOpen && <ClientDetailRows c={c} lineStaffPaidMap={lineStaffPaidMap} />}
                         </React.Fragment>
                       );
                     })}
