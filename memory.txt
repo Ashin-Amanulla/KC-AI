@@ -1,0 +1,9 @@
+# Agent session memory (kcai)
+
+Prime directives:
+- Read existing files before editing; match project style; minimal focused diffs.
+- Execute commands in this environment (verify with build/tests); do not only suggest commands.
+- User workflow: PLAN until they approve; ACT to implement. Label responses # Mode: PLAN or # Mode: ACT when that rule applies.
+- Prefer extending existing data/models over new schema when possible.
+- Workforce hub: /workforce (steps 1–5); legacy /shifts, /pay-hours, /cost-analysis redirect into hub.
+- Award cost in cost analysis: local rates upload overrides hub calculator rates; clearing rates in SchadsCalculator notifies hub via onStaffRatesMapChange(null).

@@ -25,7 +25,7 @@ export const createUser = async (req, res, next) => {
       });
     }
 
-    const allowedRoles = ['super_admin', 'finance', 'viewer'];
+    const allowedRoles = ['super_admin', 'finance', 'viewer', 'shifts_viewer'];
     const userRole = role && allowedRoles.includes(role) ? role : 'viewer';
 
     const existing = await User.findOne({ email: email.toLowerCase() });
@@ -59,7 +59,7 @@ export const updateUser = async (req, res, next) => {
 
     if (name !== undefined) user.name = name.trim();
     if (role !== undefined) {
-      const allowedRoles = ['super_admin', 'finance', 'viewer'];
+      const allowedRoles = ['super_admin', 'finance', 'viewer', 'shifts_viewer'];
       if (allowedRoles.includes(role)) user.role = role;
     }
     if (isActive !== undefined) user.isActive = Boolean(isActive);

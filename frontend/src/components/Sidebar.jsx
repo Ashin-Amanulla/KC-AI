@@ -14,6 +14,7 @@ import {
   Calculator,
   CalendarDays,
   TrendingDown,
+  Layers,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { getNavItemsForRole } from '../config/nav';
@@ -32,6 +33,7 @@ const iconMap = {
   Calculator,
   CalendarDays,
   TrendingDown,
+  Layers,
 };
 
 export function Sidebar() {

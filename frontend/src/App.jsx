@@ -11,9 +11,7 @@ import { Clients } from './pages/Clients';
 import { Timesheets } from './pages/Timesheets';
 import { ShiftAnalysis } from './pages/ShiftAnalysis';
 import { UserManagement } from './pages/UserManagement';
-import { Shifts } from './pages/Shifts';
-import { PayHours } from './pages/PayHours';
-import { CostAnalysis } from './pages/CostAnalysis';
+import { WorkforceHub } from './pages/WorkforceHub';
 import { canAccessPath } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
@@ -30,7 +28,7 @@ const defaultLandingByRole = {
   super_admin: '/',
   finance: '/timesheets',
   viewer: '/',
-  shifts_viewer: '/shifts',
+  shifts_viewer: '/workforce',
 };
 
 const ProtectedRoute = ({ children }) => {
@@ -118,29 +116,16 @@ function App() {
             }
           />
           <Route
-            path="/shifts"
+            path="/workforce"
             element={
               <ProtectedRoute>
-                <Shifts />
+                <WorkforceHub />
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/pay-hours"
-            element={
-              <ProtectedRoute>
-                <PayHours />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/cost-analysis"
-            element={
-              <ProtectedRoute>
-                <CostAnalysis />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/shifts" element={<ProtectedRoute><Navigate to="/workforce?step=2" replace /></ProtectedRoute>} />
+          <Route path="/pay-hours" element={<ProtectedRoute><Navigate to="/workforce?step=3" replace /></ProtectedRoute>} />
+          <Route path="/cost-analysis" element={<ProtectedRoute><Navigate to="/workforce?step=5" replace /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

@@ -14,10 +14,8 @@ export const NAV_ITEMS = [
   { path: '/staff', label: 'Staff', icon: 'Users', roles: [ROLES.SUPER_ADMIN, ROLES.VIEWER] },
   { path: '/clients', label: 'Clients', icon: 'UserCheck', roles: [ROLES.SUPER_ADMIN, ROLES.VIEWER] },
   { path: '/timesheets', label: 'Timesheets', icon: 'Clock', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
-  { path: '/shifts', label: 'Shifts', icon: 'CalendarDays', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER] },
-  { path: '/pay-hours', label: 'Pay Hours', icon: 'Calculator', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER] },
+  { path: '/workforce', label: 'Workforce', icon: 'Layers', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER] },
   { path: '/shift-analysis', label: 'Shift Analysis', icon: 'FileBarChart', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
-  { path: '/cost-analysis', label: 'Cost Analysis', icon: 'TrendingDown', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER] },
   { path: '/users', label: 'User Management', icon: 'Shield', roles: [ROLES.SUPER_ADMIN] },
 ];
 
@@ -26,7 +24,13 @@ export const getNavItemsForRole = (role) => {
   return NAV_ITEMS.filter((item) => item.roles.includes(role));
 };
 
+const WORKFORCE_LEGACY_PATHS = ['/shifts', '/pay-hours', '/cost-analysis'];
+
 export const canAccessPath = (role, path) => {
+  if (path === '/workforce' || WORKFORCE_LEGACY_PATHS.includes(path)) {
+    const wf = NAV_ITEMS.find((i) => i.path === '/workforce');
+    return wf ? wf.roles.includes(role) : false;
+  }
   const item = NAV_ITEMS.find((i) => i.path === path);
   return item ? item.roles.includes(role) : false;
 };

@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
+import { usePayHours } from '../api/payHours';
+import { buildAwardCostMapFromPayHours, r2 as r2Schads, VEHICLE_RATE } from '../lib/schadsWageCalc';
 import { useDropzone } from 'react-dropzone';
 import {
   Upload, TrendingDown, DollarSign, Clock, Users, AlertTriangle,
@@ -8,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -47,6 +50,65 @@ function parsePayrollXlsx(arrayBuffer) {
     const tax      = taxIdx   >= 0 ? (parseFloat(rows[i][taxIdx])   || 0) : 0;
     const net      = netIdx   >= 0 ? (parseFloat(rows[i][netIdx])   || 0) : 0;
     map.set(normName(name), { name, earnings, superAmt, tax, net, totalCost: r2(earnings + superAmt) });
+  }
+  return map;
+}
+
+function parseAwardRatesXlsx(arrayBuffer) {
+  const wb = XLSX.read(arrayBuffer, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  let headerIdx = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i].map(c => c?.toString().toLowerCase().trim());
+    if (r.some(h => h === 'employee name') && r.some(h => h.includes('daytime'))) {
+      headerIdx = i;
+      break;
+    }
+  }
+  if (headerIdx === -1) throw new Error('Could not find Employee Name / Daytime Shift columns in rates file');
+  const h = rows[headerIdx].map(c => c?.toString().toLowerCase().trim());
+  const ci = (keyword) => h.findIndex(x => x.includes(keyword));
+  const idx = {
+    emp: h.findIndex(x => x === 'employee name'),
+    daytime: ci('daytime'),
+    afternoon: ci('afternoon'),
+    night: ci('night'),
+    otUpto2: h.findIndex(x => x === 'ot upto 2 hours'),
+    otAfter2: h.findIndex(x => x === 'ot after 2 hours'),
+    saturday: h.findIndex(x => x === 'saturday'),
+    satOtAfter2: ci('saturday ot after'),
+    sunday: h.findIndex(x => x === 'sunday'),
+    ph: h.findIndex(x => x === 'public holiday'),
+    mealAllow: ci('overtime meal'),
+    brokenShift: h.findIndex(x => x === 'broken shift'),
+    sleepover: ci('sleepover'),
+    kmRate: ci('mileage'),
+  };
+  const map = new Map();
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const name = rows[i][idx.emp]?.toString().trim();
+    if (!name) continue;
+    const g = (k) => {
+      const v = parseFloat(rows[i][idx[k]]);
+      return isNaN(v) ? 0 : r2Schads(v);
+    };
+    map.set(normName(name), {
+      name,
+      daytime: g('daytime'),
+      afternoon: g('afternoon'),
+      night: g('night'),
+      otUpto2: g('otUpto2'),
+      otAfter2: g('otAfter2'),
+      saturday: g('saturday'),
+      satOtAfter2: g('satOtAfter2'),
+      sunday: g('sunday'),
+      ph: g('ph'),
+      mealAllow: g('mealAllow'),
+      brokenShift: g('brokenShift'),
+      sleepover: g('sleepover'),
+      kmRate: g('kmRate') || VEHICLE_RATE,
+    });
   }
   return map;
 }
@@ -733,7 +795,31 @@ function ClientDetailRows({ c }) {
   );
 }
 
-function StaffProfitabilitySection({ sa, payrollMap, payrollName, payrollLoading, payrollError, payrollDz, onRemovePayroll }) {
+function StaffProfitabilitySection({
+  sa,
+  payrollMap,
+  payrollName,
+  payrollLoading,
+  payrollError,
+  payrollDz,
+  onRemovePayroll,
+  wageSource,
+  onWageSourceChange,
+  awardRatesDz,
+  awardRatesLoading,
+  awardRatesError,
+  awardRatesName,
+  onRemoveAwardRates,
+  superPct,
+  onSuperPctChange,
+  awardDefaultRate,
+  onAwardDefaultRateChange,
+  awardEmpType,
+  onAwardEmpTypeChange,
+  payHoursCount,
+  payHoursPeriodText,
+  usingHubRates,
+}) {
   const [expanded, setExpanded] = useState(new Set());
   const [expandedClients, setExpandedClients] = useState(new Set());
   const [staffTableOpen, setStaffTableOpen] = useState(true);
@@ -748,6 +834,7 @@ function StaffProfitabilitySection({ sa, payrollMap, payrollName, payrollLoading
     next.has(name) ? next.delete(name) : next.add(name);
     return next;
   });
+  const costBasisReady = payrollMap && payrollMap.size > 0;
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -758,43 +845,168 @@ function StaffProfitabilitySection({ sa, payrollMap, payrollName, payrollLoading
       </CardHeader>
       <CardContent className="space-y-4">
 
-        {/* Payroll file status / upload */}
-        {!payrollMap ? (
-          <div>
-            <div
-              {...payrollDz.getRootProps()}
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                payrollDz.isDragActive ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
-              }`}
-            >
-              <input {...payrollDz.getInputProps()} />
-              <FileSpreadsheet className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              {payrollLoading ? (
-                <p className="text-sm text-gray-500">Parsing payroll file...</p>
-              ) : (
-                <>
-                  <p className="font-medium text-gray-700 text-sm">
-                    {payrollDz.isDragActive ? 'Drop payroll summary here' : 'Upload Payroll Employee Summary'}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Drop the XLSX file here to see revenue vs wages per staff member
-                  </p>
-                </>
-              )}
-            </div>
-            {payrollError && (
-              <div className="mt-2 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-2 text-sm">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                {payrollError}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={wageSource === 'award' ? 'default' : 'outline'}
+            onClick={() => onWageSourceChange('award')}
+          >
+            Award calculation
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={wageSource === 'payroll' ? 'default' : 'outline'}
+            onClick={() => onWageSourceChange('payroll')}
+          >
+            Payroll file
+          </Button>
+        </div>
+
+        {wageSource === 'payroll' && (
+          <>
+            {!payrollMap ? (
+              <div>
+                <div
+                  {...payrollDz.getRootProps()}
+                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+                    payrollDz.isDragActive ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
+                  }`}
+                >
+                  <input {...payrollDz.getInputProps()} />
+                  <FileSpreadsheet className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  {payrollLoading ? (
+                    <p className="text-sm text-gray-500">Parsing payroll file...</p>
+                  ) : (
+                    <>
+                      <p className="font-medium text-gray-700 text-sm">
+                        {payrollDz.isDragActive ? 'Drop payroll summary here' : 'Upload Payroll Employee Summary'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        ShiftCare payroll export (Employee / Earnings columns)
+                      </p>
+                    </>
+                  )}
+                </div>
+                {payrollError && (
+                  <div className="mt-2 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-2 text-sm">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    {payrollError}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                <FileSpreadsheet className="w-4 h-4 text-green-600 shrink-0" />
+                <span className="text-sm text-green-800 font-medium truncate">{payrollName}</span>
+                <span className="text-xs text-green-600 shrink-0">· {payrollMap.size} staff</span>
+                <button type="button" onClick={onRemovePayroll} className="ml-auto text-xs text-gray-400 hover:text-gray-600 shrink-0">Remove</button>
               </div>
             )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-            <FileSpreadsheet className="w-4 h-4 text-green-600 shrink-0" />
-            <span className="text-sm text-green-800 font-medium truncate">{payrollName}</span>
-            <span className="text-xs text-green-600 shrink-0">· {payrollMap.size} staff</span>
-            <button onClick={onRemovePayroll} className="ml-auto text-xs text-gray-400 hover:text-gray-600 shrink-0">Remove</button>
+          </>
+        )}
+
+        {wageSource === 'award' && (
+          <div className="space-y-3 rounded-lg border border-gray-200 p-4 bg-gray-50/50">
+            <p className="text-xs text-gray-600">
+              Uses pay hours from the app (same SCHADS logic as the award calculator). Gross pay × super % = employer cost, allocated across clients by billing hours.
+              {payHoursPeriodText ? (
+                <span className="block mt-1 font-medium text-gray-800">Pay period in app: {payHoursPeriodText}</span>
+              ) : null}
+            </p>
+            {payHoursCount === 0 && (
+              <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                No pay hours in the database for this location. Upload shifts and run <strong>Compute pay hours</strong> first.
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Super % of gross (estimate)</label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={superPct}
+                  onChange={(e) => onSuperPctChange(parseFloat(e.target.value) || 0)}
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Default base rate ($/h)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="If no per-staff rates row"
+                  value={awardDefaultRate}
+                  onChange={(e) => onAwardDefaultRateChange(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1">Default employment</label>
+                <select
+                  value={awardEmpType}
+                  onChange={(e) => onAwardEmpTypeChange(e.target.value)}
+                  className="h-9 w-full rounded-md border border-gray-200 bg-white px-2 text-sm"
+                >
+                  <option value="casual">Casual</option>
+                  <option value="permanent">Permanent</option>
+                </select>
+              </div>
+              <div className="flex items-end text-xs text-gray-500">
+                Pay hours rows: <strong className="ml-1 text-gray-800">{payHoursCount}</strong>
+              </div>
+            </div>
+            {usingHubRates && (
+              <div className="text-xs text-green-800 bg-green-50 border border-green-200 rounded-md px-3 py-2">
+                Using rates workbook from the Award calculator step. Upload below only if you want to override.
+              </div>
+            )}
+            {!awardRatesName ? (
+              <div>
+                <div
+                  {...awardRatesDz.getRootProps()}
+                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+                    awardRatesDz.isDragActive ? 'border-violet-400 bg-violet-50' : 'border-gray-200 hover:border-violet-300 hover:bg-violet-50/50'
+                  }`}
+                >
+                  <input {...awardRatesDz.getInputProps()} />
+                  <FileSpreadsheet className="w-7 h-7 text-gray-300 mx-auto mb-2" />
+                  {awardRatesLoading ? (
+                    <p className="text-sm text-gray-500">Parsing rates file...</p>
+                  ) : (
+                    <>
+                      <p className="font-medium text-gray-700 text-sm">
+                        {awardRatesDz.isDragActive ? 'Drop rates file' : 'Upload per-staff rates XLSX (optional)'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">Same format as the award calculator rates export</p>
+                    </>
+                  )}
+                </div>
+                {awardRatesError && (
+                  <div className="mt-2 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-2 text-sm">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    {awardRatesError}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2">
+                <FileSpreadsheet className="w-4 h-4 text-violet-600 shrink-0" />
+                <span className="text-sm text-violet-900 font-medium truncate">{awardRatesName}</span>
+                <button type="button" onClick={onRemoveAwardRates} className="ml-auto text-xs text-gray-400 hover:text-gray-600 shrink-0">Remove</button>
+              </div>
+            )}
+            {costBasisReady && (
+              <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm text-green-900">
+                <TrendingUp className="w-4 h-4 shrink-0" />
+                <span className="font-medium truncate">{payrollName}</span>
+                <span className="text-xs text-green-700 shrink-0">· {payrollMap.size} staff with cost basis</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -805,8 +1017,10 @@ function StaffProfitabilitySection({ sa, payrollMap, payrollName, payrollLoading
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700 flex items-start gap-2">
               <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
-                Margin calculated for <strong>{sa.matchedCount} matched staff</strong> (found in both files).
-                {sa.paidNotBilled.length > 0 && <> {sa.paidNotBilled.length} in payroll have no billing this period.</>}
+                Margin calculated for <strong>{sa.matchedCount} matched staff</strong> (found in billing and {wageSource === 'award' ? 'award cost' : 'payroll'} data).
+                {sa.paidNotBilled.length > 0 && (
+                  <> {sa.paidNotBilled.length} with wages/cost in file but no billing lines this period.</>
+                )}
               </span>
             </div>
 
@@ -1037,7 +1251,7 @@ function StaffProfitabilitySection({ sa, payrollMap, payrollName, payrollLoading
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-red-200 inline-block" /> Loss</span>
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-amber-200 inline-block" /> Low margin (0–20%)</span>
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-green-200 inline-block" /> Healthy (&gt;20%)</span>
-              <span className="flex items-center gap-1 ml-2"><span className="text-gray-300 font-bold">—</span> No payroll match</span>
+              <span className="flex items-center gap-1 ml-2"><span className="text-gray-300 font-bold">—</span> No wage match</span>
             </div>
 
             {/* Paid not billed */}
@@ -1083,7 +1297,7 @@ function StaffProfitabilitySection({ sa, payrollMap, payrollName, payrollLoading
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export function CostAnalysis() {
+export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesMap = null } = {}) {
   const [rows, setRows]           = useState(null);
   const [payrollMap, setPayrollMap] = useState(null);
   const [payrollName, setPayrollName] = useState('');
@@ -1091,6 +1305,62 @@ export function CostAnalysis() {
   const [payrollError, setPayrollError] = useState('');
   const [loading, setLoading]     = useState(false);
   const [payrollLoading, setPayrollLoading] = useState(false);
+  const [wageSource, setWageSource] = useState(embedded ? 'award' : 'payroll');
+  const [localAwardRatesMap, setLocalAwardRatesMap] = useState(null);
+  const [awardRatesName, setAwardRatesName] = useState('');
+  const [awardRatesError, setAwardRatesError] = useState('');
+  const [awardRatesLoading, setAwardRatesLoading] = useState(false);
+  const [superPct, setSuperPct] = useState(11.5);
+  const [awardDefaultRate, setAwardDefaultRate] = useState('');
+  const [awardEmpType, setAwardEmpType] = useState('casual');
+
+  const payHoursQueryParams = useMemo(() => {
+    const p = {};
+    if (locationId) p.locationId = locationId;
+    return p;
+  }, [locationId]);
+
+  const { data: payHoursData } = usePayHours(payHoursQueryParams);
+  const payHoursRows = payHoursData?.payHours ?? [];
+  const payHoursPeriodText =
+    payHoursData?.periodStart && payHoursData?.periodEnd
+      ? `${new Date(payHoursData.periodStart).toLocaleDateString('en-AU')} — ${new Date(payHoursData.periodEnd).toLocaleDateString('en-AU')}`
+      : '';
+
+  const mergedAwardRatesMap = useMemo(() => {
+    if (localAwardRatesMap && localAwardRatesMap.size > 0) return localAwardRatesMap;
+    if (hubStaffRatesMap && hubStaffRatesMap.size > 0) return hubStaffRatesMap;
+    return null;
+  }, [hubStaffRatesMap, localAwardRatesMap]);
+
+  const usingHubRates = Boolean(
+    hubStaffRatesMap && hubStaffRatesMap.size > 0 && !(localAwardRatesMap && localAwardRatesMap.size > 0),
+  );
+
+  const awardCostMap = useMemo(() => {
+    if (wageSource !== 'award' || !payHoursRows.length) return null;
+    const map = buildAwardCostMapFromPayHours({
+      payHoursRows,
+      staffRatesMap: mergedAwardRatesMap,
+      baseRates: {},
+      defaultRate: awardDefaultRate,
+      empTypes: {},
+      defaultEmpType: awardEmpType,
+      superPct,
+    });
+    return map.size > 0 ? map : null;
+  }, [wageSource, payHoursRows, mergedAwardRatesMap, awardDefaultRate, awardEmpType, superPct]);
+
+  const effectiveCostMap = wageSource === 'award' ? awardCostMap : payrollMap;
+  const effectiveCostLabel = useMemo(() => {
+    if (!effectiveCostMap?.size) return '';
+    if (wageSource === 'payroll') return payrollName;
+    const parts = ['SCHADS gross + super estimate'];
+    if (awardRatesName) parts.push(awardRatesName);
+    else if (mergedAwardRatesMap?.size) parts.push('per-staff rates');
+    else if (awardDefaultRate) parts.push(`default $${awardDefaultRate}/h`);
+    return parts.join(' · ');
+  }, [effectiveCostMap, wageSource, payrollName, awardRatesName, mergedAwardRatesMap, awardDefaultRate]);
 
   const onDrop = useCallback((accepted) => {
     const file = accepted[0];
@@ -1146,8 +1416,38 @@ export function CostAnalysis() {
     multiple: false,
   });
 
+  const onDropAwardRates = useCallback((accepted) => {
+    const file = accepted[0];
+    if (!file) return;
+    setAwardRatesError('');
+    setAwardRatesLoading(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const parsed = parseAwardRatesXlsx(e.target.result);
+        if (parsed.size === 0) throw new Error('No rate rows found — check file format');
+        setLocalAwardRatesMap(parsed);
+        setAwardRatesName(file.name);
+      } catch (err) {
+        setAwardRatesError(err.message);
+      } finally {
+        setAwardRatesLoading(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }, []);
+
+  const awardRatesDz = useDropzone({
+    onDrop: onDropAwardRates,
+    accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'], 'application/vnd.ms-excel': ['.xls'] },
+    multiple: false,
+  });
+
   const analysis    = useMemo(() => rows ? analyzeRows(rows) : null, [rows]);
-  const staffAnalysis = useMemo(() => (rows && payrollMap) ? analyzeStaffProfitability(rows, payrollMap) : null, [rows, payrollMap]);
+  const staffAnalysis = useMemo(
+    () => (rows && effectiveCostMap?.size) ? analyzeStaffProfitability(rows, effectiveCostMap) : null,
+    [rows, effectiveCostMap],
+  );
 
   if (!rows) {
     return (
@@ -1191,7 +1491,7 @@ export function CostAnalysis() {
             <li>High-intensity vs standard rate mix</li>
             <li>Staff fragmentation per client</li>
             <li>Cost by client, rate group, and time period</li>
-            <li>Staff revenue vs wages (requires payroll file)</li>
+            <li>Staff revenue vs wages (award calculation from pay hours or payroll file)</li>
           </ul>
         </div>
       </div>
@@ -1200,17 +1500,27 @@ export function CostAnalysis() {
 
   const a = analysis;
 
+  const resetBillingFile = () => {
+    setRows(null);
+    setPayrollMap(null);
+    setPayrollName('');
+    setLocalAwardRatesMap(null);
+    setAwardRatesName('');
+    setAwardRatesError('');
+  };
+
   return (
-    <div className="p-6 space-y-6">
+    <div className={embedded ? 'p-4 space-y-6' : 'p-6 space-y-6'}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Cost Analysis</h1>
+          {!embedded && <h1 className="text-2xl font-bold text-gray-900">Cost Analysis</h1>}
+          {embedded && <h2 className="text-lg font-semibold text-gray-900">Billing & cost outcomes</h2>}
           <p className="text-gray-500 text-sm mt-0.5">
             {rows.length} billing lines · {a.uniqueClients} clients · {a.uniqueStaff} staff
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => { setRows(null); setPayrollMap(null); setPayrollName(''); }}>
+        <Button variant="outline" size="sm" onClick={resetBillingFile}>
           <Upload className="w-4 h-4 mr-1" /> New File
         </Button>
       </div>
@@ -1487,15 +1797,31 @@ export function CostAnalysis() {
         </div>
       </SectionToggle>
 
-      {/* Staff Profitability — payroll upload + data */}
+      {/* Staff Profitability — wage basis + data */}
       <StaffProfitabilitySection
         sa={staffAnalysis}
-        payrollMap={payrollMap}
-        payrollName={payrollName}
+        payrollMap={effectiveCostMap}
+        payrollName={effectiveCostLabel}
         payrollLoading={payrollLoading}
         payrollError={payrollError}
         payrollDz={payrollDz}
         onRemovePayroll={() => { setPayrollMap(null); setPayrollName(''); }}
+        wageSource={wageSource}
+        onWageSourceChange={setWageSource}
+        awardRatesDz={awardRatesDz}
+        awardRatesLoading={awardRatesLoading}
+        awardRatesError={awardRatesError}
+        awardRatesName={awardRatesName}
+        onRemoveAwardRates={() => { setLocalAwardRatesMap(null); setAwardRatesName(''); setAwardRatesError(''); }}
+        superPct={superPct}
+        onSuperPctChange={setSuperPct}
+        awardDefaultRate={awardDefaultRate}
+        onAwardDefaultRateChange={setAwardDefaultRate}
+        awardEmpType={awardEmpType}
+        onAwardEmpTypeChange={setAwardEmpType}
+        payHoursCount={payHoursRows.length}
+        payHoursPeriodText={payHoursPeriodText}
+        usingHubRates={usingHubRates}
       />
 
       {/* Recommendations Summary */}

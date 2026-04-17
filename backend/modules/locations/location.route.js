@@ -5,7 +5,7 @@ import { listLocations, createLocation, deleteLocation, loadHolidayFixture } fro
 const router = express.Router();
 
 const authAll    = [authenticateJWT];
-const authAdmin  = [authenticateJWT, authorizeRoles('super_admin', 'finance', 'viewer')];
+const authAdmin  = [authenticateJWT, authorizeRoles('super_admin', 'finance', 'viewer', 'shifts_viewer')];
 
 router.get('/locations',                       ...authAll,   listLocations);
 router.post('/locations',                      ...authAdmin, createLocation);

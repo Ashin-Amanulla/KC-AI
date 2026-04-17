@@ -101,7 +101,7 @@ const ShiftDetail = ({ payHoursId }) => {
 
 // ─── Holiday Manager ──────────────────────────────────────────────────────────
 
-const HolidayManager = ({ locationId, locations }) => {
+export const HolidayManager = ({ locationId, locations }) => {
   const [newDate, setNewDate] = useState('');
   const [newName, setNewName] = useState('');
   const [collapsed, setCollapsed] = useState(true);
@@ -237,8 +237,10 @@ const HolidayManager = ({ locationId, locations }) => {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export const PayHours = () => {
-  const [locationId, setLocationId] = useState('');
+export const PayHours = ({ embedWorkforce = false, locationId: controlledLocationId, setLocationId: controlledSetLocationId } = {}) => {
+  const [internalLocationId, setInternalLocationId] = useState('');
+  const locationId = controlledLocationId !== undefined ? controlledLocationId : internalLocationId;
+  const setLocationId = controlledSetLocationId ?? setInternalLocationId;
   const [staffFilter, setStaffFilter] = useState('');
   const [expandedRows, setExpandedRows] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
@@ -352,6 +354,7 @@ export const PayHours = () => {
 
   return (
     <div className="space-y-6">
+      {!embedWorkforce && (
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Pay Hours</h2>
         {payHours.length > 0 && (
@@ -364,8 +367,21 @@ export const PayHours = () => {
           </a>
         )}
       </div>
+      )}
+      {embedWorkforce && payHours.length > 0 && (
+        <div className="flex justify-end">
+          <a
+            href={exportUrl}
+            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </a>
+        </div>
+      )}
 
       {/* Location Selector */}
+      {!embedWorkforce && (
       <Card>
         <CardContent className="pt-4 space-y-3">
           <div className="flex items-center gap-3 flex-wrap">
@@ -435,6 +451,7 @@ export const PayHours = () => {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Upload + Compute Section */}
       <Card>

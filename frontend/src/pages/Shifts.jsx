@@ -25,7 +25,7 @@ const SHIFT_TYPE_COLORS = {
   nursing_support: 'bg-green-100 text-green-800',
 };
 
-export const Shifts = () => {
+export const Shifts = ({ embedWorkforce = false, locationId: controlledLocationId, setLocationId: controlledSetLocationId } = {}) => {
   const [activeTab, setActiveTab] = useState('shifts');
   const [search, setSearch] = useState('');
   const [shiftTypeFilter, setShiftTypeFilter] = useState('all');
@@ -33,7 +33,9 @@ export const Shifts = () => {
   const [expandedRows, setExpandedRows] = useState({});
   const [uploadResult, setUploadResult] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [locationId, setLocationId] = useState('');
+  const [internalLocationId, setInternalLocationId] = useState('');
+  const locationId = controlledLocationId !== undefined ? controlledLocationId : internalLocationId;
+  const setLocationId = controlledSetLocationId ?? setInternalLocationId;
 
   const { data: locationsData } = useLocations();
   const locations = locationsData?.locations || [];
@@ -44,6 +46,7 @@ export const Shifts = () => {
     broken: shiftTypeFilter === 'broken' ? 'true' : undefined,
     page,
     perPage: 50,
+    ...(locationId ? { locationId } : {}),
   };
 
   const { data, isLoading, error } = useShifts(params);
@@ -113,6 +116,7 @@ export const Shifts = () => {
 
   return (
     <div className="space-y-6">
+      {!embedWorkforce && (
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Shifts</h2>
         <div className="flex items-center gap-2">
@@ -141,17 +145,29 @@ export const Shifts = () => {
           )}
         </div>
       </div>
+      )}
+      {embedWorkforce && (
+        <div className="flex justify-end">
+          <a
+            href="/api/shifts/export"
+            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </a>
+        </div>
+      )}
 
-      <div className={activeTab === 'calculator' ? '' : 'hidden'}><SchadsCalculator /></div>
+      <div className={embedWorkforce ? 'hidden' : (activeTab === 'calculator' ? '' : 'hidden')}><SchadsCalculator /></div>
 
-      <div className={activeTab === 'shifts' ? '' : 'hidden'}><>
+      <div className={embedWorkforce || activeTab === 'shifts' ? '' : 'hidden'}><>
       {/* Upload Section */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Upload Shifts CSV</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Location selector */}
+          {!embedWorkforce && (
           <div className="flex items-center gap-3">
             <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="text-sm font-medium">Location</span>
@@ -166,6 +182,7 @@ export const Shifts = () => {
               ))}
             </select>
           </div>
+          )}
 
           <div
             {...getRootProps()}
