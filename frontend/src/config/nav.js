@@ -16,6 +16,12 @@ export const NAV_ITEMS = [
   { path: '/timesheets', label: 'Timesheets', icon: 'Clock', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
   { path: '/workforce', label: 'Workforce', icon: 'Layers', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER] },
   { path: '/shift-analysis', label: 'Shift Analysis', icon: 'FileBarChart', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
+  {
+    path: '/forecast-actuals',
+    label: 'Forecast vs actuals',
+    icon: 'TrendingDown',
+    roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE],
+  },
   { path: '/users', label: 'User Management', icon: 'Shield', roles: [ROLES.SUPER_ADMIN] },
 ];
 

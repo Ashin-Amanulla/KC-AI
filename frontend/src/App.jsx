@@ -10,6 +10,7 @@ import { Staff } from './pages/Staff';
 import { Clients } from './pages/Clients';
 import { Timesheets } from './pages/Timesheets';
 import { ShiftAnalysis } from './pages/ShiftAnalysis';
+import { ForecastActuals } from './pages/ForecastActuals';
 import { UserManagement } from './pages/UserManagement';
 import { WorkforceHub } from './pages/WorkforceHub';
 import { canAccessPath } from './config/nav';
@@ -104,6 +105,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ShiftAnalysis />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/forecast-actuals"
+            element={
+              <ProtectedRoute>
+                <ForecastActuals />
               </ProtectedRoute>
             }
           />

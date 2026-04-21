@@ -31,6 +31,9 @@ export const config = {
   upload: {
     maxFileSizeBytes: parseInt(process.env.MAX_CSV_FILE_SIZE_MB || '50', 10) * 1024 * 1024,
   },
+  forecastActuals: {
+    pageSize: parseInt(process.env.FORECAST_PAGE_SIZE || '15', 10),
+  },
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
   },

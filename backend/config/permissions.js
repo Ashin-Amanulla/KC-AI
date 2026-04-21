@@ -21,6 +21,7 @@ export const ROUTE_PERMISSIONS = {
   // Timesheets and CSV analysis
   timesheets: [ROLES.SUPER_ADMIN, ROLES.FINANCE],
   'analyze-shift-report': [ROLES.SUPER_ADMIN, ROLES.FINANCE],
+  'forecast-actuals': [ROLES.SUPER_ADMIN, ROLES.FINANCE],
   // Pay hours
   'pay-hours': [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER],
   // User management - super admin only
