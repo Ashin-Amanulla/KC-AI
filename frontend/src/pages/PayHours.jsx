@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { Upload, Download, ChevronRight, Plus, Trash2, AlertCircle, Calculator, MapPin } from 'lucide-react';
@@ -381,6 +381,216 @@ export const PayHours = ({
 
   const exportUrl = `/api/pay-hours/export${locationId ? `?locationId=${locationId}` : ''}`;
 
+  const payHoursTableBody = (
+    <>
+      {isLoading ? (
+        <LoadingScreen message="Loading pay hours…" />
+      ) : payHours.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <Calculator className="mx-auto h-12 w-12 mb-3 opacity-30" />
+          <p className="text-lg">No pay hours yet</p>
+          <p className="text-sm mt-1 max-w-sm mx-auto">
+            Upload a ShiftCare CSV above. Shifts are imported and pay hours compute automatically — or click{' '}
+            <span className="font-medium text-foreground">Compute pay hours</span> to re-run.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="w-8"></TableHead>
+                <TableHead className="min-w-[160px]">Staff</TableHead>
+                <TableHead className="text-right bg-yellow-50/50 text-yellow-800">Morn</TableHead>
+                <TableHead className="text-right bg-orange-50/50 text-orange-800">Aft</TableHead>
+                <TableHead className="text-right bg-indigo-50/50 text-indigo-800">Night</TableHead>
+                <TableHead className="text-right bg-gray-50">WD OT≤2</TableHead>
+                <TableHead className="text-right bg-gray-50">WD OT&gt;2</TableHead>
+                <TableHead className="text-right bg-cyan-50/50 text-cyan-800">Sat</TableHead>
+                <TableHead className="text-right bg-cyan-50/50">Sat OT≤2</TableHead>
+                <TableHead className="text-right bg-cyan-50/50">Sat OT&gt;2</TableHead>
+                <TableHead className="text-right bg-teal-50/50 text-teal-800">Sun</TableHead>
+                <TableHead className="text-right bg-teal-50/50">Sun OT≤2</TableHead>
+                <TableHead className="text-right bg-teal-50/50">Sun OT&gt;2</TableHead>
+                <TableHead className="text-right bg-red-50/50 text-red-800">Hol</TableHead>
+                <TableHead className="text-right bg-red-50/50">Hol OT≤2</TableHead>
+                <TableHead className="text-right bg-red-50/50">Hol OT&gt;2</TableHead>
+                <TableHead className="text-right bg-blue-50/50 text-blue-800">Nursing</TableHead>
+                <TableHead className="text-right">Broken#</TableHead>
+                <TableHead className="text-right">Sleep#</TableHead>
+                <TableHead className="text-right">OT&gt;76</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {payHours.map((ph) => (
+                <React.Fragment key={ph._id}>
+                  <TableRow
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => toggleRow(ph._id)}
+                  >
+                    <TableCell>
+                      <ChevronRight className={`h-4 w-4 transition-transform ${expandedRows[ph._id] ? 'rotate-90' : ''}`} />
+                    </TableCell>
+                    <TableCell className="font-medium">{ph.staffName}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.morningHours)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.afternoonHours)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.nightHours)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.weekdayOtUpto2)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.weekdayOtAfter2)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.saturdayHours)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.saturdayOtUpto2)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.saturdayOtAfter2)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.sundayHours)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.sundayOtUpto2)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.sundayOtAfter2)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.holidayHours)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.holidayOtUpto2)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.holidayOtAfter2)}</TableCell>
+                    <TableCell className="text-right text-xs">{h(ph.nursingCareHours)}</TableCell>
+                    <TableCell className="text-right text-xs">{ph.brokenShiftCount ?? 0}</TableCell>
+                    <TableCell className="text-right text-xs">{ph.sleepoversCount ?? 0}</TableCell>
+                    <TableCell className="text-right text-xs font-semibold">{h(ph.otAfter76Hours)}</TableCell>
+                  </TableRow>
+                  {expandedRows[ph._id] && (
+                    <TableRow>
+                      <TableCell colSpan={20} className="p-0 bg-muted/10">
+                        <ShiftDetail payHoursId={ph._id} />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </>
+  );
+
+  if (embedWorkforce) {
+    return (
+      <div id="workforce-roster" className="scroll-mt-4">
+        <Card className="shadow-sm border-dashed">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <CardTitle className="text-lg">Shifts &amp; pay hours</CardTitle>
+                <p className="text-sm text-muted-foreground font-normal mt-1.5 leading-relaxed">
+                  One place for your roster: upload a <strong className="text-foreground font-medium">ShiftCare CSV</strong> (shifts
+                  are saved and pay hours compute automatically). Expand a staff row to review <strong className="text-foreground font-medium">individual shifts</strong>.
+                  Use <strong className="text-foreground font-medium">Compute pay hours</strong> to recalculate without uploading again.
+                </p>
+              </div>
+              {payHours.length > 0 && (
+                <a
+                  href={exportUrl}
+                  className="inline-flex shrink-0 items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent"
+                >
+                  <Download className="h-4 w-4" />
+                  Export pay hours CSV
+                </a>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div
+              {...getRootProps()}
+              className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${
+                isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+              }`}
+            >
+              <input {...getInputProps()} />
+              <Upload className="mb-2 h-6 w-6 text-muted-foreground" />
+              {selectedFile ? (
+                <p className="text-sm font-medium">{selectedFile.name}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">Drop a ShiftCare CSV or click to browse</p>
+              )}
+            </div>
+
+            <div className="flex gap-3 flex-wrap">
+              {selectedFile && (
+                <Button onClick={handleUpload} disabled={uploadMutation.isPending || computeMutation.isPending}>
+                  {uploadMutation.isPending ? 'Uploading…' : 'Upload & compute pay hours'}
+                </Button>
+              )}
+              <Button
+                onClick={handleCompute}
+                disabled={computeMutation.isPending || isJobActive}
+                variant="default"
+              >
+                <Calculator className="h-4 w-4 mr-2" />
+                {computeMutation.isPending || isJobActive ? 'Computing…' : 'Compute pay hours'}
+              </Button>
+            </div>
+
+            {uploadResult && (
+              <div className={`rounded-md p-3 text-sm ${uploadResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                <p>Shifts uploaded: {uploadResult.shiftsCreated} | Skipped: {uploadResult.shiftsSkipped}</p>
+                {uploadResult.errors?.slice(0, 3).map((e, i) => (
+                  <p key={i} className="flex gap-1 mt-1">
+                    <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                    {e}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {activeJobId && jobStatus && (
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>
+                    {jobStatus.status === 'completed'
+                      ? '✓ Computation complete'
+                      : jobStatus.status === 'failed'
+                        ? '✗ Computation failed'
+                        : `Computing pay hours… (${jobStatus.staffProcessed || 0} staff processed)`}
+                  </span>
+                  <span className="font-medium">{jobStatus.progress || 0}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${jobStatus.status === 'failed' ? 'bg-destructive' : 'bg-primary'}`}
+                    style={{ width: `${jobStatus.progress || 0}%` }}
+                  />
+                </div>
+                {jobStatus.status === 'completed' && (
+                  <p className="text-xs text-green-600">
+                    {jobStatus.payHoursCreated} pay hours records created
+                    {periodStart && ` for period ${formatDate(jobStatus.periodStart)} – ${formatDate(jobStatus.periodEnd)}`}
+                  </p>
+                )}
+                {jobStatus.errors?.length > 0 && (
+                  <p className="text-xs text-destructive">{jobStatus.errors.length} errors encountered</p>
+                )}
+              </div>
+            )}
+
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Staff totals</p>
+                  {periodStart && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Period: {formatDate(periodStart)} — {formatDate(periodEnd)}
+                    </p>
+                  )}
+                </div>
+                <Input
+                  placeholder="Filter by staff name…"
+                  value={staffFilter}
+                  onChange={(e) => setStaffFilter(e.target.value)}
+                  className="w-full sm:w-56"
+                />
+              </div>
+              {payHoursTableBody}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {!embedWorkforce && (
@@ -396,17 +606,6 @@ export const PayHours = ({
           </a>
         )}
       </div>
-      )}
-      {embedWorkforce && payHours.length > 0 && (
-        <div className="flex justify-end">
-          <a
-            href={exportUrl}
-            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent"
-          >
-            <Download className="h-4 w-4" />
-            Export CSV
-          </a>
-        </div>
       )}
 
       {/* Location Selector */}
@@ -589,88 +788,7 @@ export const PayHours = ({
             />
           </div>
         </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <LoadingScreen message="Loading pay hours…" />
-          ) : payHours.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Calculator className="mx-auto h-12 w-12 mb-3 opacity-30" />
-              <p className="text-lg">No pay hours computed yet</p>
-              <p className="text-sm mt-1">Upload shifts CSV and click "Compute Pay Hours" to generate results</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-8"></TableHead>
-                    <TableHead className="min-w-[160px]">Staff</TableHead>
-                    <TableHead className="text-right bg-yellow-50/50 text-yellow-800">Morn</TableHead>
-                    <TableHead className="text-right bg-orange-50/50 text-orange-800">Aft</TableHead>
-                    <TableHead className="text-right bg-indigo-50/50 text-indigo-800">Night</TableHead>
-                    <TableHead className="text-right bg-gray-50">WD OT≤2</TableHead>
-                    <TableHead className="text-right bg-gray-50">WD OT&gt;2</TableHead>
-                    <TableHead className="text-right bg-cyan-50/50 text-cyan-800">Sat</TableHead>
-                    <TableHead className="text-right bg-cyan-50/50">Sat OT≤2</TableHead>
-                    <TableHead className="text-right bg-cyan-50/50">Sat OT&gt;2</TableHead>
-                    <TableHead className="text-right bg-teal-50/50 text-teal-800">Sun</TableHead>
-                    <TableHead className="text-right bg-teal-50/50">Sun OT≤2</TableHead>
-                    <TableHead className="text-right bg-teal-50/50">Sun OT&gt;2</TableHead>
-                    <TableHead className="text-right bg-red-50/50 text-red-800">Hol</TableHead>
-                    <TableHead className="text-right bg-red-50/50">Hol OT≤2</TableHead>
-                    <TableHead className="text-right bg-red-50/50">Hol OT&gt;2</TableHead>
-                    <TableHead className="text-right bg-blue-50/50 text-blue-800">Nursing</TableHead>
-                    <TableHead className="text-right">Broken#</TableHead>
-                    <TableHead className="text-right">Sleep#</TableHead>
-                    <TableHead className="text-right">OT&gt;76</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payHours.map((ph) => (
-                    <>
-                      <TableRow
-                        key={ph._id}
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => toggleRow(ph._id)}
-                      >
-                        <TableCell>
-                          <ChevronRight className={`h-4 w-4 transition-transform ${expandedRows[ph._id] ? 'rotate-90' : ''}`} />
-                        </TableCell>
-                        <TableCell className="font-medium">{ph.staffName}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.morningHours)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.afternoonHours)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.nightHours)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.weekdayOtUpto2)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.weekdayOtAfter2)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.saturdayHours)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.saturdayOtUpto2)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.saturdayOtAfter2)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.sundayHours)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.sundayOtUpto2)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.sundayOtAfter2)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.holidayHours)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.holidayOtUpto2)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.holidayOtAfter2)}</TableCell>
-                        <TableCell className="text-right text-xs">{h(ph.nursingCareHours)}</TableCell>
-                        <TableCell className="text-right text-xs">{ph.brokenShiftCount ?? 0}</TableCell>
-                        <TableCell className="text-right text-xs">{ph.sleepoversCount ?? 0}</TableCell>
-                        <TableCell className="text-right text-xs font-semibold">{h(ph.otAfter76Hours)}</TableCell>
-                      </TableRow>
-
-                      {expandedRows[ph._id] && (
-                        <TableRow key={`${ph._id}-detail`}>
-                          <TableCell colSpan={20} className="p-0 bg-muted/10">
-                            <ShiftDetail payHoursId={ph._id} />
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
+        <CardContent>{payHoursTableBody}</CardContent>
       </Card>
     </div>
   );
