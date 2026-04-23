@@ -25,7 +25,12 @@ const SHIFT_TYPE_COLORS = {
   nursing_support: 'bg-green-100 text-green-800',
 };
 
-export const Shifts = ({ embedWorkforce = false, locationId: controlledLocationId, setLocationId: controlledSetLocationId } = {}) => {
+export const Shifts = ({
+  embedWorkforce = false,
+  locationId: controlledLocationId,
+  setLocationId: controlledSetLocationId,
+  onCsvUploadSuccess,
+} = {}) => {
   const [activeTab, setActiveTab] = useState('shifts');
   const [search, setSearch] = useState('');
   const [shiftTypeFilter, setShiftTypeFilter] = useState('all');
@@ -77,7 +82,10 @@ export const Shifts = ({ embedWorkforce = false, locationId: controlledLocationI
       setUploadResult(result);
       setSelectedFile(null);
       setPage(1);
-      if (result.errors?.length > 0) {
+      if (onCsvUploadSuccess) {
+        if (result.success) await onCsvUploadSuccess(result);
+        else toast.error('Upload did not complete — fix CSV issues and try again');
+      } else if (result.errors?.length > 0) {
         toast.warning(`Upload complete with ${result.errors.length} row errors`);
       } else {
         toast.success(`Uploaded ${result.shiftsCreated} shifts successfully`);
@@ -210,7 +218,7 @@ export const Shifts = ({ embedWorkforce = false, locationId: controlledLocationI
                 onClick={handleUpload}
                 disabled={uploadMutation.isPending}
               >
-                {uploadMutation.isPending ? 'Uploading…' : 'Upload Shifts'}
+                {uploadMutation.isPending ? 'Uploading…' : onCsvUploadSuccess ? 'Upload & compute pay hours' : 'Upload Shifts'}
               </Button>
               <Button variant="outline" onClick={() => setSelectedFile(null)}>
                 Clear

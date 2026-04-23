@@ -957,8 +957,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
         <CardContent className="text-sm space-y-3 pt-0">
           <ol className="list-decimal list-inside space-y-1.5 text-muted-foreground text-xs leading-relaxed">
             <li>
-              Upload shift CSV and click <strong>Compute Pay Hours</strong> on the{' '}
-              <Link to="/workforce?step=3" className="text-primary underline font-medium">Pay Hours</Link> step.
+              Upload shift CSV and click <strong>Compute Pay Hours</strong> in{' '}
+              <Link to="/workforce#workforce-pay-hours" className="text-primary underline font-medium">
+                Workforce → Setup → Pay hours
+              </Link>
+              .
             </li>
             <li>Upload your award <strong>rates</strong> workbook and optional <strong>payroll</strong> export for comparison (buttons in summary card or auto-detect below).</li>
           </ol>

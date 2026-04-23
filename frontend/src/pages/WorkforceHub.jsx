@@ -1,33 +1,57 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { MapPin, Plus, Trash2, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useLocations, useCreateLocation, useDeleteLocation } from '../api/locations';
+import { useComputePayHours } from '../api/payHours';
 import { HolidayManager, PayHours } from './PayHours';
 import { Shifts } from './Shifts';
 import { SchadsCalculator } from './SchadsCalculator';
 import { CostAnalysis } from './CostAnalysis';
 
+/** Canonical tabs; numeric ?step= values are legacy (1–5) and mapped on read. */
+const STEP_IDS = ['setup', 'calculator', 'cost'];
+
+const LEGACY_STEP = {
+  '1': 'setup',
+  '2': 'setup',
+  '3': 'setup',
+  '4': 'calculator',
+  '5': 'cost',
+};
+
+function parseWorkforceStep(searchParams) {
+  const s = searchParams.get('step');
+  if (STEP_IDS.includes(s)) return s;
+  if (s && LEGACY_STEP[s]) return LEGACY_STEP[s];
+  return 'setup';
+}
+
 const STEPS = [
-  { id: '1', title: 'Location & holidays', short: 'Location' },
-  { id: '2', title: 'Shifts roster', short: 'Shifts' },
-  { id: '3', title: 'Pay hours', short: 'Pay hours' },
-  { id: '4', title: 'Award calculator', short: 'Calculator' },
-  { id: '5', title: 'Billing & cost', short: 'Cost' },
+  { id: 'setup', title: 'Location, roster & pay hours', short: 'Setup' },
+  { id: 'calculator', title: 'Award calculator', short: 'Calculator' },
+  { id: 'cost', title: 'Billing & cost', short: 'Cost' },
 ];
 
 export function WorkforceHub() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const step = searchParams.get('step') || '1';
-  const setStep = useCallback((id) => {
-    setSearchParams(id === '1' ? {} : { step: id }, { replace: true });
-  }, [setSearchParams]);
+  const location = useLocation();
+  const step = parseWorkforceStep(searchParams);
+  const setStep = useCallback(
+    (id) => {
+      if (id === 'setup') setSearchParams({}, { replace: true });
+      else setSearchParams({ step: id }, { replace: true });
+    },
+    [setSearchParams]
+  );
 
   const [locationId, setLocationId] = useState('');
   const [hubStaffRatesMap, setHubStaffRatesMap] = useState(null);
+  const [payHoursJobId, setPayHoursJobId] = useState(null);
+  const computePayHoursMutation = useComputePayHours();
 
   const { data: locationsData } = useLocations();
   const locations = locationsData?.locations || [];
@@ -70,6 +94,38 @@ export function WorkforceHub() {
     setHubStaffRatesMap(null);
   }, [locationId]);
 
+  useEffect(() => {
+    setPayHoursJobId(null);
+  }, [locationId]);
+
+  const handleWorkforceShiftCsvUploaded = useCallback(
+    async (result) => {
+      if (!result?.success) return;
+      try {
+        const cr = await computePayHoursMutation.mutateAsync({ locationId: locationId || null });
+        setPayHoursJobId(cr.jobId);
+        if (result.errors?.length > 0) {
+          toast.warning(
+            `Uploaded with ${result.errors.length} row issues (${result.shiftsCreated} shifts). Pay hours running…`
+          );
+        } else {
+          toast.success(`Uploaded ${result.shiftsCreated} shifts — pay hours running…`);
+        }
+      } catch (e) {
+        toast.error(e.response?.data?.error || 'Shifts saved but pay hours could not start');
+      }
+    },
+    [locationId, computePayHoursMutation]
+  );
+
+  useEffect(() => {
+    const id = (location.hash || '').replace(/^#/, '');
+    if (!id || step !== 'setup') return;
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [location.hash, step]);
+
   const locationLabel = useMemo(() => {
     const loc = locations.find((l) => l._id === locationId);
     if (!locationId) return 'All locations';
@@ -81,12 +137,12 @@ export function WorkforceHub() {
       <div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Workforce</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Roster, SCHADS pay hours, award rates, and billing cost in one place.
+          Setup (location, shifts CSV, pay hours), then award rates and billing cost.
         </p>
       </div>
 
       <div className="flex flex-wrap gap-2 p-1 rounded-lg bg-muted/50 border">
-        {STEPS.map((s) => (
+        {STEPS.map((s, i) => (
           <Button
             key={s.id}
             type="button"
@@ -95,8 +151,10 @@ export function WorkforceHub() {
             className="flex-1 min-w-[100px]"
             onClick={() => setStep(s.id)}
           >
-            <span className="hidden sm:inline">{s.id}. {s.short}</span>
-            <span className="sm:hidden">{s.id}</span>
+            <span className="hidden sm:inline">
+              {i + 1}. {s.short}
+            </span>
+            <span className="sm:hidden">{i + 1}</span>
           </Button>
         ))}
       </div>
@@ -105,19 +163,19 @@ export function WorkforceHub() {
         <MapPin className="h-4 w-4 shrink-0" />
         <span>
           Active location: <strong className="text-foreground">{locationLabel}</strong>
-          {step !== '1' && (
-            <button type="button" className="ml-2 text-primary underline text-xs" onClick={() => setStep('1')}>
+          {step !== 'setup' && (
+            <button type="button" className="ml-2 text-primary underline text-xs" onClick={() => setStep('setup')}>
               Change
             </button>
           )}
         </span>
       </div>
 
-      {step === '1' && (
-        <div className="space-y-6">
-          <Card>
+      {step === 'setup' && (
+        <div className="space-y-8">
+          <Card id="workforce-location">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">1. Location &amp; public holidays</CardTitle>
+              <CardTitle className="text-lg">Location &amp; public holidays</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
@@ -203,85 +261,73 @@ export function WorkforceHub() {
             </CardContent>
           </Card>
           <HolidayManager locationId={locationId} locations={locations} />
-          <div className="flex justify-end">
-            <Button type="button" onClick={() => setStep('2')}>
-              Next: Shifts <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        </div>
-      )}
 
-      {step === '2' && (
-        <div className="space-y-4">
-          <Card>
+          <Card id="workforce-shifts">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">2. Upload &amp; review shifts</CardTitle>
+              <CardTitle className="text-lg">Upload &amp; review shifts</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              Uses the location selected in step 1 for tagged uploads. Export is available after data loads.
+            <CardContent className="text-sm text-muted-foreground pb-4">
+              Uses the location selected above for tagged uploads. After upload, pay hours start automatically (same as the Pay hours section below).
             </CardContent>
           </Card>
-          <Shifts embedWorkforce locationId={locationId} setLocationId={setLocationId} />
-          <div className="flex justify-between">
-            <Button type="button" variant="outline" onClick={() => setStep('1')}>
-              Back
-            </Button>
-            <Button type="button" onClick={() => setStep('3')}>
-              Next: Pay hours <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
-        </div>
-      )}
+          <Shifts
+            embedWorkforce
+            locationId={locationId}
+            setLocationId={setLocationId}
+            onCsvUploadSuccess={handleWorkforceShiftCsvUploaded}
+          />
 
-      {step === '3' && (
-        <div className="space-y-4">
-          <Card>
+          <Card id="workforce-pay-hours">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">3. Compute pay hours</CardTitle>
+              <CardTitle className="text-lg">Compute pay hours</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              Upload the same ShiftCare CSV if needed, then run compute. Expand a staff row to see per-shift SCHADS buckets.
+            <CardContent className="text-sm text-muted-foreground pb-4">
+              Upload runs compute automatically. Use Compute Pay Hours to re-run without re-uploading. Expand a staff row to see per-shift SCHADS buckets.
             </CardContent>
           </Card>
-          <PayHours embedWorkforce locationId={locationId} setLocationId={setLocationId} />
-          <div className="flex justify-between">
-            <Button type="button" variant="outline" onClick={() => setStep('2')}>
-              Back
-            </Button>
-            <Button type="button" onClick={() => setStep('4')}>
+          <PayHours
+            embedWorkforce
+            locationId={locationId}
+            setLocationId={setLocationId}
+            payHoursJobId={payHoursJobId}
+            setPayHoursJobId={setPayHoursJobId}
+          />
+
+          <div className="flex justify-end pt-2">
+            <Button type="button" onClick={() => setStep('calculator')}>
               Next: Calculator <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>
       )}
 
-      {step === '4' && (
+      {step === 'calculator' && (
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">4. Award calculator &amp; rates</CardTitle>
+              <CardTitle className="text-lg">Award calculator &amp; rates</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Upload a per-staff rates workbook here; step 5 can reuse it for Staff revenue vs wages. Uses the same location filter as step 1.
+              Upload a per-staff rates workbook here; billing &amp; cost can reuse it for staff revenue vs wages. Uses the same location as Setup.
             </CardContent>
           </Card>
           <SchadsCalculator locationId={locationId || undefined} onStaffRatesMapChange={setHubStaffRatesMap} />
           <div className="flex justify-between">
-            <Button type="button" variant="outline" onClick={() => setStep('3')}>
+            <Button type="button" variant="outline" onClick={() => setStep('setup')}>
               Back
             </Button>
-            <Button type="button" onClick={() => setStep('5')}>
+            <Button type="button" onClick={() => setStep('cost')}>
               Next: Cost analysis <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>
       )}
 
-      {step === '5' && (
+      {step === 'cost' && (
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">5. Billing &amp; cost analysis</CardTitle>
+              <CardTitle className="text-lg">Billing &amp; cost analysis</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
               Upload billing export. Staff revenue vs wages defaults to <strong>award calculation</strong> (pay hours + rates + super %). Switch to payroll file if you need the export comparison.
@@ -289,7 +335,7 @@ export function WorkforceHub() {
           </Card>
           <CostAnalysis embedded locationId={locationId || undefined} hubStaffRatesMap={hubStaffRatesMap} />
           <div className="flex justify-start">
-            <Button type="button" variant="outline" onClick={() => setStep('4')}>
+            <Button type="button" variant="outline" onClick={() => setStep('calculator')}>
               Back
             </Button>
           </div>

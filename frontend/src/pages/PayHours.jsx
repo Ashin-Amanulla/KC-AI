@@ -238,7 +238,13 @@ export const HolidayManager = ({ locationId, locations }) => {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export const PayHours = ({ embedWorkforce = false, locationId: controlledLocationId, setLocationId: controlledSetLocationId } = {}) => {
+export const PayHours = ({
+  embedWorkforce = false,
+  locationId: controlledLocationId,
+  setLocationId: controlledSetLocationId,
+  payHoursJobId: parentJobId,
+  setPayHoursJobId: setParentJobId,
+} = {}) => {
   const [internalLocationId, setInternalLocationId] = useState('');
   const locationId = controlledLocationId !== undefined ? controlledLocationId : internalLocationId;
   const setLocationId = controlledSetLocationId ?? setInternalLocationId;
@@ -246,7 +252,10 @@ export const PayHours = ({ embedWorkforce = false, locationId: controlledLocatio
   const [expandedRows, setExpandedRows] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadResult, setUploadResult] = useState(null);
-  const [activeJobId, setActiveJobId] = useState(null);
+  const [internalJobId, setInternalJobId] = useState(null);
+  const jobFromParent = embedWorkforce && typeof setParentJobId === 'function';
+  const activeJobId = jobFromParent ? parentJobId ?? null : internalJobId;
+  const setActiveJobId = jobFromParent ? setParentJobId : setInternalJobId;
 
   const { data: locationsData } = useLocations();
   const locations = locationsData?.locations || [];
@@ -298,6 +307,8 @@ export const PayHours = ({ embedWorkforce = false, locationId: controlledLocatio
     refetch();
   }
 
+  const isJobActive = activeJobId && jobStatus && !['completed', 'failed'].includes(jobStatus.status);
+
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) {
       setSelectedFile(acceptedFiles[0]);
@@ -309,7 +320,7 @@ export const PayHours = ({ embedWorkforce = false, locationId: controlledLocatio
     onDrop,
     accept: { 'text/csv': ['.csv'], 'application/csv': ['.csv'] },
     maxFiles: 1,
-    disabled: uploadMutation.isPending || computeMutation.isPending,
+    disabled: uploadMutation.isPending || computeMutation.isPending || isJobActive,
   });
 
   const handleUpload = async () => {
@@ -318,10 +329,29 @@ export const PayHours = ({ embedWorkforce = false, locationId: controlledLocatio
       const result = await uploadMutation.mutateAsync({ file: selectedFile, locationId: locationId || null });
       setUploadResult(result);
       setSelectedFile(null);
-      if (result.errors?.length > 0) {
-        toast.warning(`Upload complete with ${result.errors.length} row errors`);
-      } else {
-        toast.success(`Uploaded ${result.shiftsCreated} shifts`);
+      if (result.success === false) {
+        toast.error('Upload did not complete — fix CSV issues and try again');
+        return;
+      }
+      try {
+        const cr = await computeMutation.mutateAsync({ locationId: locationId || null });
+        setActiveJobId(cr.jobId);
+        if (result.errors?.length > 0) {
+          toast.warning(
+            `Uploaded with ${result.errors.length} row issues (${result.shiftsCreated} shifts). Pay hours running…`
+          );
+        } else {
+          toast.success(`Uploaded ${result.shiftsCreated} shifts. Pay hours running…`);
+        }
+      } catch (computeErr) {
+        if (result.errors?.length > 0) {
+          toast.warning(`Upload finished with ${result.errors.length} row issues`);
+        } else {
+          toast.success(`Uploaded ${result.shiftsCreated} shifts`);
+        }
+        toast.error(
+          computeErr.response?.data?.error || 'Pay hours could not start — use Compute Pay Hours to try again'
+        );
       }
     } catch (err) {
       toast.error(err.response?.data?.error || err.message || 'Upload failed');
@@ -348,8 +378,6 @@ export const PayHours = ({ embedWorkforce = false, locationId: controlledLocatio
   };
 
   const h = (v) => (v != null ? v.toFixed(2) : '-');
-
-  const isJobActive = activeJobId && jobStatus && !['completed', 'failed'].includes(jobStatus.status);
 
   const exportUrl = `/api/pay-hours/export${locationId ? `?locationId=${locationId}` : ''}`;
 
@@ -458,6 +486,9 @@ export const PayHours = ({ embedWorkforce = false, locationId: controlledLocatio
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Upload Shifts & Compute Pay Hours</CardTitle>
+          <p className="text-sm text-muted-foreground font-normal pt-1">
+            After a successful CSV upload, pay hours start automatically. Use Compute Pay Hours to re-run on the same file without re-uploading.
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div
@@ -477,8 +508,8 @@ export const PayHours = ({ embedWorkforce = false, locationId: controlledLocatio
 
           <div className="flex gap-3 flex-wrap">
             {selectedFile && (
-              <Button onClick={handleUpload} disabled={uploadMutation.isPending}>
-                {uploadMutation.isPending ? 'Uploading…' : 'Upload Shifts'}
+              <Button onClick={handleUpload} disabled={uploadMutation.isPending || computeMutation.isPending}>
+                {uploadMutation.isPending ? 'Uploading…' : 'Upload & compute pay hours'}
               </Button>
             )}
             <Button

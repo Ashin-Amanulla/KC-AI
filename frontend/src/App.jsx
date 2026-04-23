@@ -132,9 +132,9 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/shifts" element={<ProtectedRoute><Navigate to="/workforce?step=2" replace /></ProtectedRoute>} />
-          <Route path="/pay-hours" element={<ProtectedRoute><Navigate to="/workforce?step=3" replace /></ProtectedRoute>} />
-          <Route path="/cost-analysis" element={<ProtectedRoute><Navigate to="/workforce?step=5" replace /></ProtectedRoute>} />
+          <Route path="/shifts" element={<ProtectedRoute><Navigate to="/workforce#workforce-shifts" replace /></ProtectedRoute>} />
+          <Route path="/pay-hours" element={<ProtectedRoute><Navigate to="/workforce#workforce-pay-hours" replace /></ProtectedRoute>} />
+          <Route path="/cost-analysis" element={<ProtectedRoute><Navigate to="/workforce?step=cost" replace /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
