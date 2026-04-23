@@ -91,9 +91,9 @@ export function ForecastActuals() {
   const onDropForecast = async (files) => {
     const f = files?.[0];
     if (!f || !locationId) return;
-    const err = validateCsvFile(f);
-    if (err) {
-      toast.error(err);
+    const validation = validateCsvFile(f);
+    if (!validation.valid) {
+      toast.error(validation.error);
       return;
     }
     try {
@@ -107,9 +107,9 @@ export function ForecastActuals() {
   const onDropActuals = async (files) => {
     const f = files?.[0];
     if (!f || !locationId) return;
-    const err = validateCsvFile(f);
-    if (err) {
-      toast.error(err);
+    const validation = validateCsvFile(f);
+    if (!validation.valid) {
+      toast.error(validation.error);
       return;
     }
     try {
@@ -291,8 +291,8 @@ export function ForecastActuals() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {(forecastQ.data?.records || []).map((r) => (
-                            <TableRow key={r.id}>
+                          {(forecastQ.data?.records || []).map((r, ri) => (
+                            <TableRow key={r.id ?? `forecast-${ri}`}>
                               <TableCell>{formatDate(r.shiftDate)}</TableCell>
                               <TableCell>{r.clientName}</TableCell>
                               <TableCell>{r.staffName || '—'}</TableCell>
@@ -390,8 +390,8 @@ export function ForecastActuals() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {(actualsQ.data?.records || []).map((r) => (
-                            <TableRow key={r.id}>
+                          {(actualsQ.data?.records || []).map((r, ri) => (
+                            <TableRow key={r.id ?? `actuals-${ri}`}>
                               <TableCell>{formatDate(r.shiftDate)}</TableCell>
                               <TableCell>{r.clientName}</TableCell>
                               <TableCell>{r.staffName || '—'}</TableCell>
@@ -489,8 +489,8 @@ export function ForecastActuals() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {(summaryQ.data?.records || []).map((r) => (
-                            <TableRow key={r.clientId}>
+                          {(summaryQ.data?.records || []).map((r, ri) => (
+                            <TableRow key={r.clientId ?? r.clientName ?? `summary-${ri}`}>
                               <TableCell>{r.clientName}</TableCell>
                               <TableCell className="text-right">{r.forecastBudget?.toFixed(2)}</TableCell>
                               <TableCell className="text-right">{r.netActuals?.toFixed(2)}</TableCell>
@@ -503,7 +503,7 @@ export function ForecastActuals() {
                             </TableRow>
                           ))}
                           {summaryQ.data?.totals && (
-                            <TableRow className="bg-muted/50 font-medium">
+                            <TableRow key="summary-totals" className="bg-muted/50 font-medium">
                               <TableCell>{summaryQ.data.totals.clientName}</TableCell>
                               <TableCell className="text-right">
                                 {summaryQ.data.totals.forecastBudget?.toFixed(2)}

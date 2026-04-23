@@ -145,8 +145,8 @@ export const Dashboard = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {shifts.map((shift) => (
-                    <TableRow key={shift.id}>
+                  {shifts.map((shift, idx) => (
+                    <TableRow key={shift.id ?? shift.shiftcare_id ?? `shift-${idx}`}>
                       <TableCell className="font-medium">{shift.id}</TableCell>
                       <TableCell>{formatDateTime(shift.start_at)}</TableCell>
                       <TableCell>{formatDateTime(shift.end_at)}</TableCell>

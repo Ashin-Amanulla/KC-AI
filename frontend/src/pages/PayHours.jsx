@@ -13,6 +13,7 @@ import { useHolidays, useCreateHoliday, useDeleteHoliday } from '../api/holidays
 import { useLocations, useCreateLocation, useDeleteLocation, useLoadHolidayFixture } from '../api/locations';
 import { usePayHours, useShiftPayHours, useComputePayHours, usePayHoursJobStatus } from '../api/payHours';
 import { LoadingScreen } from '../ui/LoadingSpinner';
+import { VEHICLE_RATE } from '../lib/schadsWageCalc';
 
 // ─── Shift Pay Hours Detail (lazy-loaded on row expand) ──────────────────────
 
@@ -82,7 +83,7 @@ const ShiftDetail = ({ payHoursId }) => {
               </TableCell>
               <TableCell className="text-right text-xs text-emerald-600">
                 {shift.mileage != null && shift.mileage > 0
-                  ? `$${(shift.mileage * 0.99).toFixed(2)}`
+                  ? `$${(shift.mileage * VEHICLE_RATE).toFixed(2)}`
                   : '-'}
               </TableCell>
               <TableCell>

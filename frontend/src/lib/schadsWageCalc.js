@@ -15,6 +15,12 @@ export function r2(n) {
   return Math.round(n * 100) / 100;
 }
 
+/** Base sleepover allowance + optional per-staff extra (rates file / UI). */
+export function effectiveSleepoverRate(rates) {
+  if (!rates) return 0;
+  return r2((rates.sleepover || 0) + (rates.sleepoverExtra || 0));
+}
+
 export function normName(s) {
   return s?.toLowerCase().replace(/\s+/g, ' ').trim() ?? '';
 }
@@ -57,7 +63,7 @@ export function calcGrossFromRates(ph, rates) {
     (ph.otAfter76Holiday || 0) * rates.ph +
     (ph.brokenShiftCount || 0) * rates.brokenShift +
     (ph.brokenShift2BreakCount || 0) * BROKEN_ALLOWANCE_2 +
-    (ph.sleepoversCount || 0) * rates.sleepover +
+    (ph.sleepoversCount || 0) * effectiveSleepoverRate(rates) +
     mealAllow +
     mileageAllow
   );
@@ -123,7 +129,8 @@ export function calcBreakdownFromRates(ph, rates) {
   const broken1Allow = r2((ph.brokenShiftCount || 0) * rates.brokenShift);
   const broken2Allow = r2((ph.brokenShift2BreakCount || 0) * BROKEN_ALLOWANCE_2);
   const brokenAllow = r2(broken1Allow + broken2Allow);
-  const sleepAllow = r2((ph.sleepoversCount || 0) * rates.sleepover);
+  const sleepRate = effectiveSleepoverRate(rates);
+  const sleepAllow = r2((ph.sleepoversCount || 0) * sleepRate);
   const mileageAllow = r2((ph.totalKm || 0) * (rates.kmRate || VEHICLE_RATE));
   const allow = {
     brokenAllow,

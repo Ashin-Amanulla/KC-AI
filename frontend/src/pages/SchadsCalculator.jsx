@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { Plus, X, AlertCircle, Upload, FileSpreadsheet } from 'lucide-react';
+import { Plus, X, AlertCircle, Upload, FileSpreadsheet, ChevronDown, UserPlus, EyeOff, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -26,6 +27,7 @@ import {
   staffTotalHours,
   totalOtHrs,
   calcBreakdown,
+  effectiveSleepoverRate,
 } from '../lib/schadsWageCalc';
 
 const fmt = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -243,7 +245,12 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
             {bd.allow.sleepAllow > 0 && (
               <tr className="border-t border-border/30 bg-amber-50/30">
                 <td className="px-3 py-2 text-amber-700">
-                  Sleepover allowance ({mrow.sleepoversCount} × ${staffRates?.sleepover.toFixed(2)})
+                  Sleepover allowance ({mrow.sleepoversCount} × ${staffRates ? effectiveSleepoverRate(staffRates).toFixed(2) : '0.00'})
+                  {(staffRates?.sleepoverExtra || 0) > 0 && (
+                    <span className="block text-[10px] font-normal text-muted-foreground mt-0.5">
+                      base ${staffRates.sleepover.toFixed(2)} + extra ${staffRates.sleepoverExtra.toFixed(2)}/night
+                    </span>
+                  )}
                   <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.sleepoversCount}</td>
@@ -303,6 +310,91 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
     </div>
   );
 };
+
+/** Collapsible pay-hours grid (same metrics as summary row) below payslip breakdown. */
+const PayHoursSnapshot = ({ mrow, allow: allowProp }) => {
+  const allow = allowProp || calcAllowances(mrow);
+  const fmtSnap = (label, val) => {
+    if (val == null || (typeof val === 'number' && val <= 0)) return '—';
+    if (label.includes('$')) return fmt(val);
+    if (label === 'Km') return `${val} km`;
+    if (label.endsWith('#')) return String(val);
+    return fmtH(val);
+  };
+  const cells = [
+    ['Morning', mrow.morningHours, 'text-yellow-700'],
+    ['Afternoon', mrow.afternoonHours, 'text-orange-700'],
+    ['Night', mrow.nightHours, 'text-indigo-700'],
+    ['WD OT ≤2h', mrow.weekdayOtUpto2, 'text-orange-600'],
+    ['WD OT >2h', mrow.weekdayOtAfter2, 'text-orange-700'],
+    ['Saturday', mrow.saturdayHours, 'text-cyan-700'],
+    ['Sat OT ≤2h', mrow.saturdayOtUpto2, 'text-cyan-600'],
+    ['Sat OT >2h', mrow.saturdayOtAfter2, 'text-cyan-600'],
+    ['Sunday (all)', r2((mrow.sundayHours || 0) + (mrow.sundayOtUpto2 || 0) + (mrow.sundayOtAfter2 || 0)), 'text-red-700'],
+    ['Holiday (all)', r2((mrow.holidayHours || 0) + (mrow.holidayOtUpto2 || 0) + (mrow.holidayOtAfter2 || 0)), 'text-blue-700'],
+    ['Nursing', mrow.nursingCareHours, 'text-teal-700'],
+    ['Broken #', mrow.brokenShiftCount, 'text-orange-700'],
+    ['Sleepovers #', mrow.sleepoversCount, 'text-purple-700'],
+    ['OT >76 WD', mrow.otAfter76Weekday, 'text-rose-700'],
+    ['OT >76 Sat', mrow.otAfter76Saturday, 'text-rose-600'],
+    ['OT >76 Sun', mrow.otAfter76Sunday, 'text-rose-500'],
+    ['OT >76 PH', mrow.otAfter76Holiday, 'text-rose-800'],
+    ['Km', mrow.totalKm, 'text-emerald-700'],
+    ['Broken $', allow.brokenAllow, 'text-amber-700'],
+    ['Meal $', allow.mealAllow, 'text-amber-600'],
+    ['Mileage $', allow.mileageAllow, 'text-emerald-600'],
+  ];
+  return (
+    <details className="group border-t border-border/40 bg-muted/10">
+      <summary className="flex cursor-pointer items-center gap-2 px-4 py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted/30 list-none [&::-webkit-details-marker]:hidden">
+        <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+        Pay hours detail
+      </summary>
+      <div className="px-4 pb-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-[11px]">
+        {cells.map(([label, val, cls]) => (
+          <div key={label} className="rounded border border-border/50 bg-background px-2 py-1.5">
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
+            <div className={`font-mono font-medium tabular-nums ${cls}`}>{fmtSnap(label, val)}</div>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+};
+
+const EMPTY_PAY_HOURS = (staffName) => ({
+  staffName,
+  morningHours: 0,
+  afternoonHours: 0,
+  nightHours: 0,
+  weekdayOtUpto2: 0,
+  weekdayOtAfter2: 0,
+  saturdayHours: 0,
+  saturdayOtUpto2: 0,
+  saturdayOtAfter2: 0,
+  sundayHours: 0,
+  sundayOtUpto2: 0,
+  sundayOtAfter2: 0,
+  holidayHours: 0,
+  holidayOtUpto2: 0,
+  holidayOtAfter2: 0,
+  nursingCareHours: 0,
+  otAfter76Hours: 0,
+  otAfter76Weekday: 0,
+  otAfter76Saturday: 0,
+  otAfter76Sunday: 0,
+  otAfter76Holiday: 0,
+  brokenShiftCount: 0,
+  brokenShift2BreakCount: 0,
+  mealAllowanceCount: 0,
+  sleepoversCount: 0,
+  totalKm: 0,
+  _manualOnly: true,
+});
+
+function schadsStorageKey(locationId) {
+  return `schads-calculator-v1:${locationId || 'global'}`;
+}
 
 // ── Right-click editable field registry ──────────────────────────────
 const EDITABLE_FIELDS = {
@@ -430,6 +522,8 @@ function pillCls(type, isPH) {
 // Main Component
 // ════════════════════════════════════════════════════════════════════
 export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapChange } = {}) {
+  const normName = useCallback((s) => s?.toString().toLowerCase().replace(/\s+/g, ' ').trim() ?? '', []);
+
   const [view, setView] = useState('summary'); // 'summary' | 'manual'
 
   // ── Staff Summary state ──────────────────────────────────────────
@@ -447,6 +541,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   // key: `${staffName}:${field}`, value: number
   const [overrides, setOverrides] = useState({});
   const [ctxMenu, setCtxMenu]     = useState(null); // { x, y, staffName, field, original }
+
+  const [manualStaffNames, setManualStaffNames] = useState([]);
+  const [hiddenNormNames, setHiddenNormNames] = useState([]);
+  const [addStaffDraft, setAddStaffDraft] = useState('');
+  const unifiedDocRef = useRef(null);
 
   const saveOverride  = useCallback((staffName, field, value) => {
     setOverrides(prev => ({ ...prev, [`${staffName}:${field}`]: value }));
@@ -479,7 +578,32 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   }, [locationIdProp]);
 
   const { data: payHoursData, isLoading: phLoading, error: phError } = usePayHours(payHoursQueryParams);
-  const staffRows = (payHoursData?.payHours || []).slice().sort((a, b) => a.staffName.localeCompare(b.staffName));
+
+  const apiRows = useMemo(
+    () => (payHoursData?.payHours || []).slice().sort((a, b) => a.staffName.localeCompare(b.staffName)),
+    [payHoursData]
+  );
+
+  const staffRows = useMemo(() => {
+    const byNorm = new Map();
+    for (const row of apiRows) {
+      byNorm.set(normName(row.staffName), { ...row });
+    }
+    for (const name of manualStaffNames) {
+      const trimmed = name.trim();
+      if (!trimmed) continue;
+      const k = normName(trimmed);
+      if (!byNorm.has(k)) byNorm.set(k, EMPTY_PAY_HOURS(trimmed));
+    }
+    return Array.from(byNorm.values()).sort((a, b) => a.staffName.localeCompare(b.staffName));
+  }, [apiRows, manualStaffNames, normName]);
+
+  const displayRows = useMemo(
+    () => staffRows.filter((r) => !hiddenNormNames.includes(normName(r.staffName))),
+    [staffRows, hiddenNormNames, normName]
+  );
+
+  const storageKey = useMemo(() => schadsStorageKey(locationIdProp), [locationIdProp]);
 
   const getEmpType = useCallback((staffName) => empTypes[staffName] ?? defaultEmpType, [empTypes, defaultEmpType]);
 
@@ -492,7 +616,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     const t = Object.fromEntries(COLS.map(c => [c, 0]));
     t.totalHours = 0; t.gross = 0; t.brokenAllow = 0; t.mealAllow = 0; t.mileageAllow = 0; t.totalOT = 0; t.totalKm = 0;
     let grossCount = 0;
-    for (const row of staffRows) {
+    for (const row of displayRows) {
       const mrow = getMergedRow(row);
       for (const col of COLS) t[col] = r2((t[col] || 0) + (mrow[col] || 0));
       t.totalHours = r2(t.totalHours + staffTotalHours(mrow));
@@ -507,18 +631,18 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       const g = calcGross(mrow, rate, empT);
       if (g !== null) { t.gross = r2(t.gross + g); grossCount++; }
     }
-    return { ...t, grossReady: staffRows.length > 0 && grossCount === staffRows.length };
-  }, [staffRows, baseRates, defaultRate, empTypes, defaultEmpType, getMergedRow]);
+    return { ...t, grossReady: displayRows.length > 0 && grossCount === displayRows.length };
+  }, [displayRows, baseRates, defaultRate, empTypes, defaultEmpType, getMergedRow]);
 
   // Count staff with any exception (OT, OT>76, or broken shifts)
   const exceptionCount = useMemo(() =>
-    staffRows.filter(row => {
+    displayRows.filter(row => {
       const m = getMergedRow(row);
       return totalOtHrs(m) > 0 || (m.brokenShiftCount || 0) > 0 ||
         (m.otAfter76Weekday||0) > 0 || (m.otAfter76Saturday||0) > 0 ||
         (m.otAfter76Sunday||0) > 0  || (m.otAfter76Holiday||0) > 0;
     }).length,
-  [staffRows, getMergedRow]);
+  [displayRows, getMergedRow]);
 
   const setRate = useCallback((staffName, val) => {
     setBaseRates(prev => ({ ...prev, [staffName]: val }));
@@ -545,45 +669,98 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   const [payrollData,   setPayrollData]   = useState(null); // Map: normName → { name, earnings }
   const [staffRatesMap, setStaffRatesMap] = useState(null); // Map: normName → rates object
   const [ratesFileName, setRatesFileName] = useState(null);
+  const [schadsHydrated, setSchadsHydrated] = useState(false);
 
-  const normName = (s) => s?.toString().toLowerCase().replace(/\s+/g, ' ').trim() ?? '';
-
-  const parseRatesFile = useCallback((file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      let headerIdx = -1;
-      for (let i = 0; i < rows.length; i++) {
-        const r = rows[i].map(c => c?.toString().toLowerCase().trim());
-        if (r.some(h => h === 'employee name') && r.some(h => h.includes('daytime'))) { headerIdx = i; break; }
+  useEffect(() => {
+    setSchadsHydrated(false);
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s.baseRates && typeof s.baseRates === 'object') setBaseRates(s.baseRates);
+        if (s.empTypes && typeof s.empTypes === 'object') setEmpTypes(s.empTypes);
+        if (typeof s.defaultRate === 'string') setDefaultRate(s.defaultRate);
+        if (typeof s.defaultEmpType === 'string') setDefaultEmpType(s.defaultEmpType);
+        if (Array.isArray(s.manualStaffNames)) setManualStaffNames(s.manualStaffNames);
+        if (Array.isArray(s.hiddenNormNames)) setHiddenNormNames(s.hiddenNormNames);
+        if (Array.isArray(s.staffRatesEntries) && s.staffRatesEntries.length > 0) {
+          const m = new Map();
+          for (const e of s.staffRatesEntries) {
+            const { k, ...rest } = e;
+            if (k) m.set(k, rest);
+          }
+          setStaffRatesMap(m);
+          if (s.ratesFileName) onStaffRatesMapChange?.(m, s.ratesFileName);
+        }
+        if (s.ratesFileName) setRatesFileName(s.ratesFileName);
       }
-      if (headerIdx === -1) { alert('Could not find Employee Name / Daytime Shift columns.'); return; }
-      const h = rows[headerIdx].map(c => c?.toString().toLowerCase().trim());
-      const ci = (keyword) => h.findIndex(x => x.includes(keyword));
-      const idx = {
-        emp:        h.findIndex(x => x === 'employee name'),
-        daytime:    ci('daytime'),
-        afternoon:  ci('afternoon'),
-        night:      ci('night'),
-        otUpto2:    h.findIndex(x => x === 'ot upto 2 hours'),
-        otAfter2:   h.findIndex(x => x === 'ot after 2 hours'),
-        saturday:   h.findIndex(x => x === 'saturday'),
-        satOtAfter2:ci('saturday ot after'),
-        sunday:     h.findIndex(x => x === 'sunday'),
-        ph:         h.findIndex(x => x === 'public holiday'),
-        mealAllow:  ci('overtime meal'),
-        brokenShift:h.findIndex(x => x === 'broken shift'),
-        sleepover:  ci('sleepover'),
-        kmRate:     ci('mileage'),
+    } catch (_) { /* ignore */ }
+    setSchadsHydrated(true);
+  }, [storageKey, onStaffRatesMapChange]);
+
+  useEffect(() => {
+    if (!schadsHydrated) return;
+    try {
+      const staffRatesEntries = staffRatesMap
+        ? Array.from(staffRatesMap.entries()).map(([k, v]) => ({ k, ...v }))
+        : [];
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          baseRates,
+          empTypes,
+          defaultRate,
+          defaultEmpType,
+          manualStaffNames,
+          hiddenNormNames,
+          staffRatesEntries,
+          ratesFileName,
+        })
+      );
+    } catch (_) { /* ignore */ }
+  }, [schadsHydrated, storageKey, baseRates, empTypes, defaultRate, defaultEmpType, manualStaffNames, hiddenNormNames, staffRatesMap, ratesFileName]);
+
+  const ingestRatesWorkbook = useCallback((wb, fileLabel) => {
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    let headerIdx = -1;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i].map(c => c?.toString().toLowerCase().trim());
+      if (r.some(h => h === 'employee name') && r.some(h => h.includes('daytime'))) { headerIdx = i; break; }
+    }
+    if (headerIdx === -1) { alert('Could not find Employee Name / Daytime Shift columns.'); return; }
+    const h = rows[headerIdx].map(c => c?.toString().toLowerCase().trim());
+    const ci = (keyword) => h.findIndex(x => x.includes(keyword));
+    const sleepoverExtraCol = h.findIndex(
+      (x) => x.includes('sleepover') && (x.includes('extra') || x.includes('bonus') || x.includes('additional'))
+    );
+    const idx = {
+      emp:        h.findIndex(x => x === 'employee name'),
+      daytime:    ci('daytime'),
+      afternoon:  ci('afternoon'),
+      night:      ci('night'),
+      otUpto2:    h.findIndex(x => x === 'ot upto 2 hours'),
+      otAfter2:   h.findIndex(x => x === 'ot after 2 hours'),
+      saturday:   h.findIndex(x => x === 'saturday'),
+      satOtAfter2:ci('saturday ot after'),
+      sunday:     h.findIndex(x => x === 'sunday'),
+      ph:         h.findIndex(x => x === 'public holiday'),
+      mealAllow:  ci('overtime meal'),
+      brokenShift:h.findIndex(x => x === 'broken shift'),
+      sleepover:  ci('sleepover'),
+      kmRate:     ci('mileage'),
+    };
+    const map = new Map();
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const name = rows[i][idx.emp]?.toString().trim();
+      if (!name) continue;
+      const g = (k) => { const v = parseFloat(rows[i][idx[k]]); return isNaN(v) ? 0 : r2(v); };
+      const gx = (col) => {
+        if (col < 0) return 0;
+        const v = parseFloat(rows[i][col]);
+        return isNaN(v) ? 0 : r2(v);
       };
-      const map = new Map();
-      for (let i = headerIdx + 1; i < rows.length; i++) {
-        const name = rows[i][idx.emp]?.toString().trim();
-        if (!name) continue;
-        const g = (k) => { const v = parseFloat(rows[i][idx[k]]); return isNaN(v) ? 0 : r2(v); };
-        map.set(normName(name), {
+        const row = {
           name,
           daytime:    g('daytime'),
           afternoon:  g('afternoon'),
@@ -598,41 +775,88 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           brokenShift:g('brokenShift'),
           sleepover:  g('sleepover'),
           kmRate:     g('kmRate') || VEHICLE_RATE,
-        });
+        };
+        if (sleepoverExtraCol >= 0) row.sleepoverExtra = gx(sleepoverExtraCol);
+        map.set(normName(name), row);
+    }
+    setStaffRatesMap((prev) => {
+      const next = new Map(prev || []);
+      for (const [k, v] of map) {
+        const cur = next.get(k);
+        next.set(k, cur ? { ...cur, ...v, name: v.name || cur.name } : v);
       }
-      setStaffRatesMap(map);
-      setRatesFileName(file.name);
-      onStaffRatesMapChange?.(map, file.name);
+      onStaffRatesMapChange?.(next, fileLabel);
+      return next;
+    });
+    setRatesFileName(fileLabel);
+  }, [normName, onStaffRatesMapChange]);
+
+  const ingestPayrollWorkbook = useCallback((wb) => {
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    let headerIdx = -1;
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i].map(c => c?.toString().toLowerCase());
+      if (r.includes('employee') && r.includes('earnings')) { headerIdx = i; break; }
+    }
+    if (headerIdx === -1) { alert('Could not find Employee/Earnings columns in this file.'); return; }
+    const headers = rows[headerIdx].map(c => c?.toString().toLowerCase());
+    const empIdx  = headers.indexOf('employee');
+    const earnIdx = headers.indexOf('earnings');
+    const map = new Map();
+    for (let i = headerIdx + 1; i < rows.length; i++) {
+      const name = rows[i][empIdx]?.toString().trim();
+      const earn = parseFloat(rows[i][earnIdx]);
+      if (name && !isNaN(earn)) map.set(normName(name), { name, earnings: earn });
+    }
+    setPayrollData(map);
+  }, [normName]);
+
+  const parseRatesFile = useCallback((file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      ingestRatesWorkbook(wb, file.name);
     };
     reader.readAsArrayBuffer(file);
-  }, [onStaffRatesMapChange]);
+  }, [ingestRatesWorkbook]);
 
   const parsePayrollFile = useCallback((file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const wb = XLSX.read(e.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      // Find header row: look for a row containing 'Employee' and 'Earnings'
-      let headerIdx = -1;
-      for (let i = 0; i < rows.length; i++) {
-        const r = rows[i].map(c => c?.toString().toLowerCase());
-        if (r.includes('employee') && r.includes('earnings')) { headerIdx = i; break; }
-      }
-      if (headerIdx === -1) { alert('Could not find Employee/Earnings columns in this file.'); return; }
-      const headers = rows[headerIdx].map(c => c?.toString().toLowerCase());
-      const empIdx  = headers.indexOf('employee');
-      const earnIdx = headers.indexOf('earnings');
-      const map = new Map();
-      for (let i = headerIdx + 1; i < rows.length; i++) {
-        const name = rows[i][empIdx]?.toString().trim();
-        const earn = parseFloat(rows[i][earnIdx]);
-        if (name && !isNaN(earn)) map.set(normName(name), { name, earnings: earn });
-      }
-      setPayrollData(map);
+      ingestPayrollWorkbook(wb);
     };
     reader.readAsArrayBuffer(file);
-  }, []);
+  }, [ingestPayrollWorkbook]);
+
+  const parseUnifiedDoc = useCallback(
+    (file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        let kind = null;
+        for (let i = 0; i < Math.min(rows.length, 40); i++) {
+          const r = rows[i].map((c) => c?.toString().toLowerCase().trim());
+          if (r.includes('employee') && r.includes('earnings')) {
+            kind = 'payroll';
+            break;
+          }
+          if (r.some((h) => h === 'employee name') && r.some((h) => h.includes('daytime'))) {
+            kind = 'rates';
+            break;
+          }
+        }
+        if (kind === 'payroll') ingestPayrollWorkbook(wb);
+        else if (kind === 'rates') ingestRatesWorkbook(wb, file.name);
+        else alert('Could not detect file type. Use a rates workbook (Employee Name + Daytime) or payroll export (Employee + Earnings).');
+      };
+      reader.readAsArrayBuffer(file);
+    },
+    [ingestPayrollWorkbook, ingestRatesWorkbook]
+  );
 
   // ── Manual calculator state ──────────────────────────────────────
   const [manualRate, setManualRate]     = useState('');
@@ -698,6 +922,20 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   // ════════════════════════════════════════════════════════════════
   // Render
   // ════════════════════════════════════════════════════════════════
+  const addStaffRow = useCallback(() => {
+    const t = addStaffDraft.trim();
+    if (!t) return;
+    const k = normName(t);
+    if (manualStaffNames.some((n) => normName(n) === k)) {
+      setAddStaffDraft('');
+      return;
+    }
+    setManualStaffNames((prev) => [...prev, t]);
+    setAddStaffDraft('');
+  }, [addStaffDraft, manualStaffNames, normName]);
+
+  const summaryColSpan = 27 + (payrollData ? 3 : 0);
+
   return (
     <div className="space-y-4">
       {/* Floating cell editor (context menu) */}
@@ -708,6 +946,62 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
         onClear={clearOverride}
         onClose={closeCtx}
       />
+
+      <Card className="border-dashed border-2 border-primary/25 bg-primary/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Upload className="h-4 w-4 text-primary" />
+            Step 1 — Documents
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm space-y-3 pt-0">
+          <ol className="list-decimal list-inside space-y-1.5 text-muted-foreground text-xs leading-relaxed">
+            <li>
+              Upload shift CSV and click <strong>Compute Pay Hours</strong> on the{' '}
+              <Link to="/workforce?step=3" className="text-primary underline font-medium">Pay Hours</Link> step.
+            </li>
+            <li>Upload your award <strong>rates</strong> workbook and optional <strong>payroll</strong> export for comparison (buttons in summary card or auto-detect below).</li>
+          </ol>
+          <input
+            ref={unifiedDocRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files[0]) parseUnifiedDoc(e.target.files[0]);
+              e.target.value = '';
+            }}
+          />
+          <Button type="button" size="sm" variant="secondary" className="gap-2" onClick={() => unifiedDocRef.current?.click()}>
+            <FileSpreadsheet className="h-4 w-4" />
+            Upload spreadsheet (auto-detect rates or payroll)
+          </Button>
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="space-y-1">
+          <label className="text-xs uppercase tracking-wider text-muted-foreground">Add staff (manual row)</label>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Name"
+              value={addStaffDraft}
+              onChange={(e) => setAddStaffDraft(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addStaffRow()}
+              className="h-9 w-48 text-sm"
+            />
+            <Button type="button" size="sm" variant="outline" className="gap-1" onClick={addStaffRow}>
+              <UserPlus className="h-4 w-4" />
+              Add
+            </Button>
+          </div>
+        </div>
+        {hiddenNormNames.length > 0 && (
+          <Button type="button" size="sm" variant="ghost" className="text-xs text-muted-foreground" onClick={() => setHiddenNormNames([])}>
+            Show all hidden ({hiddenNormNames.length})
+          </Button>
+        )}
+      </div>
 
       {/* View toggle */}
       <div className="flex gap-2">
@@ -834,6 +1128,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 <div className="py-12 text-center text-muted-foreground text-sm">
                   No pay hours data. Go to the <strong>Pay Hours</strong> page, upload a CSV and click "Compute Pay Hours" first.
                 </div>
+              ) : displayRows.length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground text-sm">
+                  All staff are hidden.{' '}
+                  <button type="button" className="text-primary underline font-medium" onClick={() => setHiddenNormNames([])}>Show all</button>
+                </div>
               ) : (
                 <div className="overflow-x-auto" ref={tableContainerRef}>
                   <Table>
@@ -891,7 +1190,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {staffRows.map((row) => {
+                      {displayRows.map((row) => {
                         const mrow      = getMergedRow(row);
                         const rateVal   = baseRates[row.staffName] ?? defaultRate;
                         const empT      = getEmpType(row.staffName);
@@ -924,12 +1223,20 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         const n = (v) => v ? String(v) : <span className="text-muted-foreground/30">—</span>;
                         const hasOT     = otTotal > 0;
                         const hasBroken = (mrow.brokenShiftCount || 0) > 0;
+                        const isManualOnly = row._manualOnly === true;
+                        const hideRow = () =>
+                          setHiddenNormNames((h) => (h.includes(normName(row.staffName)) ? h : [...h, normName(row.staffName)]));
+                        const removeManual = () => {
+                          setManualStaffNames((prev) => prev.filter((n) => normName(n) !== normName(row.staffName)));
+                          setHiddenNormNames((prev) => prev.filter((k) => k !== normName(row.staffName)));
+                        };
                         return (
                           <React.Fragment key={row.staffName}>
                           <TableRow className={`hover:bg-muted/30 text-xs ${isCasual ? 'bg-blue-50/30' : ''}`}>
                             <TableCell className={`font-medium sticky left-0 z-10 text-sm border-r border-border/50 ${isCasual ? 'bg-blue-50/60' : 'bg-background'}`}>
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
                                 <button
+                                  type="button"
                                   onClick={() => toggleBreakdown(row.staffName)}
                                   title="Show pay breakdown"
                                   className={`shrink-0 w-5 h-5 flex items-center justify-center rounded border text-[11px] transition-all duration-200 ${
@@ -941,7 +1248,25 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                 >
                                   ▸
                                 </button>
-                                {row.staffName}
+                                <span className="truncate">{row.staffName}</span>
+                                {isManualOnly && (
+                                  <button
+                                    type="button"
+                                    title="Remove manual row"
+                                    onClick={removeManual}
+                                    className="shrink-0 p-0.5 rounded text-muted-foreground hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  title="Hide from list"
+                                  onClick={hideRow}
+                                  className="shrink-0 p-0.5 rounded text-muted-foreground hover:text-foreground"
+                                >
+                                  <EyeOff className="h-3.5 w-3.5" />
+                                </button>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -1039,7 +1364,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
 
                           {/* Breakdown panel — always rendered, animated via grid-template-rows */}
                           <TableRow className="hover:bg-transparent border-0">
-                            <TableCell colSpan={27} className="p-0 border-0" style={{ width: tableContainerWidth || '100%' }}>
+                            <TableCell colSpan={summaryColSpan} className="p-0 border-0" style={{ width: tableContainerWidth || '100%' }}>
                               <div
                                 style={{
                                   display: 'grid',
@@ -1058,6 +1383,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                     isCasual={isCasual}
                                     staffRates={staffRates}
                                   />
+                                  <PayHoursSnapshot mrow={mrow} allow={allow} />
                                 </div>
                               </div>
                             </TableCell>
@@ -1099,7 +1425,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         </TableCell>
                         {payrollData && (() => {
                           let totalPayroll = 0, matched = 0;
-                          for (const row of staffRows) {
+                          for (const row of displayRows) {
                             const m = payrollData.get(normName(row.staffName));
                             if (m) { totalPayroll = r2(totalPayroll + m.earnings); matched++; }
                           }
@@ -1108,7 +1434,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                           return (<>
                             <TableCell className="text-right text-emerald-700 border-l border-border/50">
                               {fmt(totalPayroll)}
-                              <div className="text-[10px] font-normal text-muted-foreground">{matched}/{staffRows.length} matched</div>
+                              <div className="text-[10px] font-normal text-muted-foreground">{matched}/{displayRows.length} matched</div>
                             </TableCell>
                             <TableCell className={`text-right ${diffCls}`}>
                               {totalDiff !== null ? (totalDiff >= 0 ? '+' : '') + fmt(totalDiff) : '—'}
@@ -1127,7 +1453,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           </Card>
 
           {/* Override hint */}
-          {staffRows.length > 0 && (
+          {displayRows.length > 0 && (
             <p className="text-[11px] text-muted-foreground/70 text-center -mt-2">
               Right-click any hour cell to override its value. Overridden cells are highlighted in blue and recalculate gross pay instantly.
               {Object.keys(overrides).length > 0 && (
@@ -1154,6 +1480,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 <span>Public Holiday:</span><span className="font-medium text-foreground">2.5×</span>
                 <span>WD/Sat OT — first 2h:</span><span className="font-medium text-foreground">1.5×</span>
                 <span>WD/Sat OT — after 2h:</span><span className="font-medium text-foreground">2.0×</span>
+                <span>Weekday ordinary cap / shift:</span><span className="font-medium text-foreground">4h before OT</span>
+                <span>Sat/Sun/PH cap / shift:</span><span className="font-medium text-foreground">10h before OT</span>
                 <span>Sun / PH OT:</span><span className="font-medium text-foreground">same as Sun/PH rate</span>
                 <span>OT &gt; 76h — WD/Sat:</span><span className="font-medium text-foreground">1.5× / 2× (tiered)</span>
                 <span>OT &gt; 76h — Sunday:</span><span className="font-medium text-foreground">2.0× flat</span>
@@ -1171,7 +1499,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
             <div className="bg-amber-50 border border-amber-300 rounded p-3 text-xs text-amber-800 space-y-1">
               <p className="font-semibold">⚠ SCHADS Award Rules Applied</p>
               <ul className="list-disc list-inside space-y-0.5 text-[11px] leading-relaxed">
-                <li><strong>OT triggers:</strong> &gt;76h/fortnight OR &gt;10h/day — same hour paid once, not double-counted</li>
+                <li><strong>OT triggers:</strong> &gt;76h/fortnight; weekday &gt;4h/shift; Sat/Sun/PH &gt;10h/shift — same hour paid once, not double-counted</li>
                 <li><strong>OT &gt; 76h rates:</strong> Weekday/Sat shifts use 1.5× (first 2h) then 2×; Sun shifts 2.0×; PH shifts 2.5×</li>
                 <li><strong>Sunday/PH OT:</strong> Same rate as ordinary day (2.0× / 2.5×) — no separate OT brackets</li>
                 <li><strong>Broken shifts:</strong> $20.82 per shift (1 break), $27.56 for 2 breaks (cap not tracked per-shift)</li>
@@ -1195,7 +1523,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
         );
 
         // Build per-staff exception rows
-        const exRows = staffRows.map(row => {
+        const exRows = displayRows.map(row => {
           const m   = getMergedRow(row);
           const ot  = totalOtHrs(m);
           const broken = m.brokenShiftCount || 0;
@@ -1238,7 +1566,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 <CardContent className="pt-4">
                   <div className="text-2xl font-bold text-orange-600">{visible.length}</div>
                   <p className="text-xs text-muted-foreground">Staff with exceptions</p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">of {staffRows.length} total</p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                    {displayRows.length} visible · {staffRows.length} in list
+                  </p>
                 </CardContent>
               </Card>
               <Card className="border-orange-200">

@@ -15,7 +15,10 @@ const AFTERNOON_START = 20;          // 20:00 local
 const CHRISTMAS_EVE_MONTH = 12;
 const CHRISTMAS_EVE_DAY = 24;
 const CHRISTMAS_EVE_HOLIDAY_START = 18; // 18:00 local
+/** Max ordinary hours in a shift before daily OT (Sat/Sun/PH). */
 const MAX_REGULAR_HOURS = 10;
+/** Weekday personal care: ordinary hours in a shift before daily OT (SCHADS). */
+const MAX_REGULAR_HOURS_WEEKDAY = 4;
 const SLEEPOVER_DEDUCTION = 8;
 const OT_TIER_1_MAX = 2;
 const TOTAL_HOURS_CAP = 76;
@@ -432,9 +435,10 @@ function getHighestDayType(dayTypes) {
 // ─── OVERTIME ────────────────────────────────────────────────────────────────
 
 function processOvertime(activeHours, dayType, timeCategory, data) {
-  if (activeHours <= MAX_REGULAR_HOURS) return;
+  const cap = dayType === 'weekday' ? MAX_REGULAR_HOURS_WEEKDAY : MAX_REGULAR_HOURS;
+  if (activeHours <= cap) return;
 
-  const otHours = r2(activeHours - MAX_REGULAR_HOURS);
+  const otHours = r2(activeHours - cap);
   const otTier1 = r2(Math.min(otHours, OT_TIER_1_MAX));
   const otTier2 = r2(Math.max(0, otHours - OT_TIER_1_MAX));
 
@@ -469,7 +473,7 @@ function addBrokenShiftOtToCategory(data, dayType, hours, isTier1) {
   }
 }
 
-function processBrokenShiftOvertime(currentShift, previousShifts, data) {
+function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
   if (previousShifts.length >= 2) {
     // 2nd break in same day — upgrade from 1-break to 2-break (don't double-count)
     data.brokenShiftCount       = Math.max(0, data.brokenShiftCount - 1);
@@ -492,9 +496,10 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data) {
   const dayType = currentShift.segments[0].dayType;
 
   if (spanHours < BROKEN_SHIFT_SHORT_SPAN) {
-    // Span < 12h: OT at 1.5× for active hours beyond 10h
-    if (totalActive > MAX_REGULAR_HOURS) {
-      const extraHours = r2(totalActive - MAX_REGULAR_HOURS);
+    // Span < 12h: OT at 1.5× for active hours beyond daily ordinary cap (weekday 4h / other 10h)
+    const cap = dayType === 'weekday' ? MAX_REGULAR_HOURS_WEEKDAY : MAX_REGULAR_HOURS;
+    if (totalActive > cap) {
+      const extraHours = r2(totalActive - cap);
       addBrokenShiftOtToCategory(data, dayType, extraHours, true);
       // Meal allowance per broken-shift OT event
       if (extraHours > 1) data.mealAllowanceCount += 1;
@@ -506,6 +511,7 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data) {
     // Span breach = full-shift penalty, regardless of when within the shift the mark falls.
     const doubleTimeHours = currentShift.activeHours;
     if (doubleTimeHours > 0) {
+      ctx.reclassifiedFullDoubleTimeShiftIds.add(currentShift.shiftId);
       addBrokenShiftOtToCategory(data, dayType, doubleTimeHours, false); // false = tier 2 = 2×
       // Meal allowance per broken-shift OT event
       if (doubleTimeHours > 1) data.mealAllowanceCount += 1;
@@ -514,15 +520,16 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data) {
   }
 }
 
-function handleBrokenShift(shift, processedShift, processedShifts, data) {
+function handleBrokenShift(shift, processedShift, processedShifts, data, ctx) {
   if (!shift.isBrokenShift) return;
 
+  const offsetStr = shift.timezoneOffset || '+10:00';
   const previousInSpan = [];
-  const shiftStartDateStr = new Date(shift.startDatetime).toISOString().split('T')[0];
+  const shiftStartDateStr = localDateStr(processedShift.startUtc, offsetStr);
 
   for (let i = processedShifts.length - 1; i >= 0; i--) {
     const prev = processedShifts[i];
-    const prevDateStr = new Date(prev.startUtc).toISOString().split('T')[0];
+    const prevDateStr = localDateStr(prev.startUtc, offsetStr);
     if (prevDateStr === shiftStartDateStr) {
       previousInSpan.unshift(prev);
     } else {
@@ -530,7 +537,7 @@ function handleBrokenShift(shift, processedShift, processedShifts, data) {
     }
   }
 
-  processBrokenShiftOvertime(processedShift, previousInSpan, data);
+  processBrokenShiftOvertime(processedShift, previousInSpan, data, ctx);
 }
 
 // ─── ACTIVE HOURS ─────────────────────────────────────────────────────────────
@@ -637,50 +644,41 @@ function applyOtByDayType(otByDayType, data) {
   }
 }
 
-function buildOrderedChainEntries(chain) {
+function buildOrderedChainEntries(chain, ctx) {
   const entries = [];
-  let weekdayHours = 0;
-  let weekdayInsertIdx = -1;
-  const weekdayCategoryInfluences = [];
-  const weekdayCategories = [];
-  let weekdayDate = null;
-  let nonWeekdayCount = 0;
+  let highestCategory = null;
 
   for (const ps of chain) {
+    if (ctx?.reclassifiedFullDoubleTimeShiftIds?.has(ps.shiftId)) continue;
+
     const seg = ps.segment;
-    if (ps.timeCategoryInfluence) {
-      weekdayCategoryInfluences.push(ps.timeCategoryInfluence);
-    }
+    if (seg.hours <= 0) continue;
+
     if (seg.dayType === 'weekday') {
-      weekdayHours = r2(weekdayHours + seg.hours);
-      weekdayCategories.push(seg.timeCategory);
-      if (weekdayDate === null) {
-        weekdayDate = seg.startUtc;
-        weekdayInsertIdx = nonWeekdayCount;
-      }
-    } else {
+      const influences = ps.timeCategoryInfluence ? [ps.timeCategoryInfluence] : [];
+      const tc =
+        seg.timeCategory ||
+        getHighestTimeCategory(influences) ||
+        'morning';
+      entries.push({
+        fieldName: `${tc}Hours`,
+        dayType: 'weekday',
+        hours: seg.hours,
+        entryDate: seg.startUtc,
+      });
+      highestCategory =
+        highestCategory && TIME_CATEGORY_PRIORITY[tc] !== undefined && TIME_CATEGORY_PRIORITY[highestCategory] !== undefined
+          ? TIME_CATEGORY_PRIORITY[tc] > TIME_CATEGORY_PRIORITY[highestCategory]
+            ? tc
+            : highestCategory
+          : tc;
+    } else if (['saturday', 'sunday', 'holiday'].includes(seg.dayType)) {
       entries.push({
         fieldName: `${seg.dayType}Hours`,
         dayType: seg.dayType,
         hours: seg.hours,
         entryDate: seg.startUtc,
       });
-      nonWeekdayCount++;
-    }
-  }
-
-  let highestCategory = null;
-  if (weekdayHours > 0) {
-    const allCats = [...weekdayCategories, ...weekdayCategoryInfluences];
-    highestCategory = getHighestTimeCategory(allCats);
-    if (highestCategory && weekdayDate !== null) {
-      const weekdayEntry = {
-        fieldName: `${highestCategory}Hours`,
-        dayType: 'weekday',
-        hours: weekdayHours,
-        entryDate: weekdayDate,
-      };
-      entries.splice(weekdayInsertIdx, 0, weekdayEntry);
     }
   }
 
@@ -688,7 +686,7 @@ function buildOrderedChainEntries(chain) {
 }
 
 function processSingleChain(chain, data, ctx) {
-  const { entries } = buildOrderedChainEntries(chain);
+  const { entries } = buildOrderedChainEntries(chain, ctx);
 
   const uniqueShiftIds = [...new Set(chain.map(ps => ps.shiftId))];
   const hasBroken = uniqueShiftIds.some(sid => ctx.shiftIsBroken.get(sid) === true);
@@ -697,8 +695,16 @@ function processSingleChain(chain, data, ctx) {
     const combinedActive = r2(
       uniqueShiftIds.reduce((sum, sid) => sum + (ctx.shiftActiveHours.get(sid) || 0), 0)
     );
-    if (combinedActive > MAX_REGULAR_HOURS) {
-      const otTotal = r2(combinedActive - MAX_REGULAR_HOURS);
+    const activeSegs = chain.filter(
+      (ps) =>
+        ps.segment.hours > 0 &&
+        !ctx.reclassifiedFullDoubleTimeShiftIds?.has(ps.shiftId)
+    );
+    const allWeekday =
+      activeSegs.length > 0 && activeSegs.every((ps) => ps.segment.dayType === 'weekday');
+    const threshold = allWeekday ? MAX_REGULAR_HOURS_WEEKDAY : MAX_REGULAR_HOURS;
+    if (combinedActive > threshold) {
+      const otTotal = r2(combinedActive - threshold);
       const { otByDayType } = deductOtFromEnd(entries, otTotal);
       applyOtByDayType(otByDayType, data);
       // Meal allowance: 1 per shift where OT > 1h; additional 1 where OT > 4h
@@ -736,20 +742,9 @@ function buildPerShiftBreakdowns(ctx, shifts) {
   const breakdowns = new Map();
   const shiftLookup = new Map(shifts.map(s => [String(s._id), s]));
 
-  const chains = groupSegmentsIntoChains(ctx.pendingSegments);
-
-  // For each chain, compute highest weekday category
-  const psToHighestCategory = new Map();
-  for (const chain of chains) {
-    const weekdayCats = chain.filter(ps => ps.segment.dayType === 'weekday').map(ps => ps.segment.timeCategory);
-    const catInfluences = chain.filter(ps => ps.timeCategoryInfluence).map(ps => ps.timeCategoryInfluence);
-    const highest = getHighestTimeCategory([...weekdayCats, ...catInfluences]);
-    for (const ps of chain) {
-      psToHighestCategory.set(ps, highest);
-    }
-  }
-
   for (const ps of ctx.pendingSegments) {
+    if (ctx.reclassifiedFullDoubleTimeShiftIds?.has(ps.shiftId)) continue;
+
     const sid = ps.shiftId;
     if (!breakdowns.has(sid)) {
       const shift = shiftLookup.get(sid);
@@ -774,7 +769,8 @@ function buildPerShiftBreakdowns(ctx, shifts) {
 
     let fieldName;
     if (seg.dayType === 'weekday') {
-      const tc = psToHighestCategory.get(ps) || seg.timeCategory || 'morning';
+      const influences = ps.timeCategoryInfluence ? [ps.timeCategoryInfluence] : [];
+      const tc = seg.timeCategory || getHighestTimeCategory(influences) || 'morning';
       fieldName = `${tc}Hours`;
     } else if (['saturday', 'sunday', 'holiday'].includes(seg.dayType)) {
       fieldName = `${seg.dayType}Hours`;
@@ -914,7 +910,7 @@ function processShiftForPayHours(shift, ctx) {
     segments,
   };
 
-  handleBrokenShift(shift, processedShift, ctx.processedShifts, ctx.data);
+  handleBrokenShift(shift, processedShift, ctx.processedShifts, ctx.data, ctx);
   ctx.processedShifts.push(processedShift);
   ctx.previousEndUtc = endUtc;
 }
@@ -943,6 +939,7 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     previousEndUtc: null,
     shiftActiveHours: new Map(),
     shiftIsBroken: new Map(),
+    reclassifiedFullDoubleTimeShiftIds: new Set(),
   };
 
   for (const shift of shifts) {

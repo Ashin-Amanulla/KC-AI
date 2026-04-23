@@ -60,7 +60,7 @@ export async function getDirectoryOptions(credentials) {
   };
 }
 
-function processRowCommon(row, normalizedColumns, staffMap, clientMap, rowNum) {
+export function processRowCommon(row, normalizedColumns, staffMap, clientMap, rowNum) {
   const getVal = (col) => getRowValue(row, col, normalizedColumns);
 
   const clientName = getVal('client name');
@@ -401,7 +401,7 @@ export async function listActuals({ locationId, staffId, clientId, page }) {
   };
 }
 
-function buildSummaryRecord(clientId, clientName, forecastBudget, netActuals, mileage) {
+export function buildSummaryRecord(clientId, clientName, forecastBudget, netActuals, mileage) {
   const fb = roundMoney(Number(forecastBudget) || 0);
   const na = roundMoney(Number(netActuals) || 0);
   const mi = roundMoney(Number(mileage) || 0);
