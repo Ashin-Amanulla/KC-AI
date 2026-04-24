@@ -96,3 +96,44 @@ test('weekday chain: preserves separate time bands (not one lump at highest pena
     'ordinary weekday hours should not exceed 10h once OT is extracted'
   );
 });
+
+test('sleepover weekday billable excess is night band, not morning/afternoon', () => {
+  // 12h same local day, +10: 8:00–20:00 → 4h excess after 8h sleepover deduction → all night
+  const s = shift({
+    _id: 'sosososososososososososo',
+    start: '2026-06-01T22:00:00.000Z',
+    end: '2026-06-02T10:00:00.000Z',
+    hours: 12,
+    shiftType: 'sleepover',
+    timezoneOffset: '+10:00',
+  });
+  const { data } = computePayHoursForStaff([s], new Set());
+  assert.strictEqual(data.nightHours, 4);
+  assert.strictEqual(data.morningHours, 0);
+  assert.strictEqual(data.afternoonHours, 0);
+});
+
+test('personal care immediately after sleepover (within 8h gap) is night band', () => {
+  const sleepover = shift({
+    _id: 'so1111111111111111111111',
+    start: '2026-06-01T10:00:00.000Z',
+    end: '2026-06-01T22:00:00.000Z',
+    hours: 12,
+    shiftType: 'sleepover',
+    isBrokenShift: false,
+    timezoneOffset: '+10:00',
+  });
+  const pc = shift({
+    _id: 'pc2222222222222222222222',
+    start: '2026-06-01T22:00:00.000Z',
+    end: '2026-06-02T02:00:00.000Z',
+    hours: 4,
+    shiftType: 'personal_care',
+    isBrokenShift: true,
+    timezoneOffset: '+10:00',
+  });
+  const { data } = computePayHoursForStaff([sleepover, pc], new Set());
+  assert.strictEqual(data.nightHours, 8, '4h SO excess + 4h attached PC');
+  assert.strictEqual(data.morningHours, 0);
+  assert.strictEqual(data.afternoonHours, 0);
+});

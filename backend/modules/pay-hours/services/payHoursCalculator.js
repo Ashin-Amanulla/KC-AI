@@ -20,6 +20,8 @@ const MAX_REGULAR_HOURS = 10;
 /** Weekday: ordinary hours in a shift before daily OT (same cap as Sat/Sun/PH). */
 const MAX_REGULAR_HOURS_WEEKDAY = 10;
 const SLEEPOVER_DEDUCTION = 8;
+/** Max ms gap after a sleepover that still "attaches" the next PC/nursing shift (same as shift CSV broken rule). */
+const SLEEPOVER_FOLLOWON_GAP_MS = 8 * 60 * 60 * 1000;
 const OT_TIER_1_MAX = 2;
 const TOTAL_HOURS_CAP = 76;
 const BROKEN_SHIFT_SHORT_SPAN = 12;
@@ -169,9 +171,12 @@ function getTimeCategory(startUtc, endUtc, offsetStr) {
  * ShiftSegment: { startUtc, endUtc, hours, dayType, timeCategory, isSleepoverExcess }
  */
 
-function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet) {
+function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options = {}) {
+  const { forceWeekdayNight = false } = options;
   const dayType = getDayType(startUtc, offsetStr, holidaySet);
-  const timeCategory = dayType === 'weekday' ? getTimeCategory(startUtc, endUtc, offsetStr) : null;
+  const useNight =
+    dayType === 'weekday' && (forceWeekdayNight || shiftType === 'sleepover');
+  const timeCategory = dayType === 'weekday' ? (useNight ? 'night' : getTimeCategory(startUtc, endUtc, offsetStr)) : null;
 
   let segHours = hours;
   let isSleepoverExcess = false;
@@ -235,14 +240,15 @@ function splitSleepoverAtChristmasEve6pm(
 
   if (remainingHours > 0 && midnightUtc !== null) {
     const day2Type = getDayType(endUtc, offsetStr, holidaySet);
-    const day2TimeCat = day2Type === 'weekday' ? getTimeCategory(midnightUtc, endUtc, offsetStr) : null;
+    const day2TimeCat = day2Type === 'weekday' ? 'night' : null;
     segments.push({ startUtc: midnightUtc, endUtc, hours: remainingHours, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: true });
   }
 
   return segments;
 }
 
-function splitAtChristmasEve6pm(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet) {
+function splitAtChristmasEve6pm(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options = {}) {
+  const { forceWeekdayNight = false } = options;
   const holidayStartUtc = localSixPmOn(startUtc, offsetStr);
 
   const beforeHours = r2((holidayStartUtc - startUtc) / 3600000);
@@ -262,7 +268,11 @@ function splitAtChristmasEve6pm(startUtc, endUtc, hours, shiftType, offsetStr, h
   }
 
   const beforeDayType = getDayTypeByWeekday(startUtc, offsetStr);
-  const beforeTimeCat = beforeDayType === 'weekday' ? getTimeCategory(startUtc, holidayStartUtc, offsetStr) : null;
+  const beforeTimeCat = beforeDayType === 'weekday'
+    ? (shiftType === 'sleepover' || forceWeekdayNight
+        ? 'night'
+        : getTimeCategory(startUtc, holidayStartUtc, offsetStr))
+    : null;
 
   if (shiftType === 'sleepover') {
     return splitSleepoverAtChristmasEve6pm(
@@ -283,7 +293,9 @@ function splitAtChristmasEve6pm(startUtc, endUtc, hours, shiftType, offsetStr, h
   }
   if (remainingHours > 0 && midnightUtc !== null) {
     const day2Type = getDayType(endUtc, offsetStr, holidaySet);
-    const day2TimeCat = day2Type === 'weekday' ? getTimeCategory(midnightUtc, endUtc, offsetStr) : null;
+    const day2TimeCat = day2Type === 'weekday'
+      ? (forceWeekdayNight ? 'night' : getTimeCategory(midnightUtc, endUtc, offsetStr))
+      : null;
     segments.push({ startUtc: midnightUtc, endUtc, hours: remainingHours, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: false });
   }
 
@@ -296,18 +308,18 @@ function splitSleepoverAtMidnight(startUtc, endUtc, midnightUtc, day1Type, day2T
   if (day1Hours >= SLEEPOVER_DEDUCTION) {
     const day1Excess = r2(day1Hours - SLEEPOVER_DEDUCTION);
     if (day1Excess > 0) {
-      const day1TimeCat = day1Type === 'weekday' ? getTimeCategory(startUtc, midnightUtc, offsetStr) : null;
+      const day1TimeCat = day1Type === 'weekday' ? 'night' : null;
       segments.push({ startUtc, endUtc: midnightUtc, hours: day1Excess, dayType: day1Type, timeCategory: day1TimeCat, isSleepoverExcess: true });
     }
     if (day2Hours > 0) {
-      const day2TimeCat = day2Type === 'weekday' ? getTimeCategory(midnightUtc, endUtc, offsetStr) : null;
+      const day2TimeCat = day2Type === 'weekday' ? 'night' : null;
       segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: true });
     }
   } else {
     const remainingDeduction = r2(SLEEPOVER_DEDUCTION - day1Hours);
     const day2Excess = r2(day2Hours - remainingDeduction);
     if (day2Excess > 0) {
-      const day2TimeCat = day2Type === 'weekday' ? getTimeCategory(midnightUtc, endUtc, offsetStr) : null;
+      const day2TimeCat = day2Type === 'weekday' ? 'night' : null;
       segments.push({ startUtc: midnightUtc, endUtc, hours: day2Excess, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: true });
     }
   }
@@ -319,10 +331,11 @@ function splitSleepoverAtMidnight(startUtc, endUtc, midnightUtc, day1Type, day2T
  * Split a shift at midnight (and/or Christmas Eve 6pm) into segments.
  * Returns array of ShiftSegment objects.
  */
-function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet) {
+function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options = {}) {
+  const { forceWeekdayNight = false } = options;
   // Christmas Eve 6pm split takes priority
   if (shiftSpansChristmasEve6pm(startUtc, endUtc, offsetStr)) {
-    return splitAtChristmasEve6pm(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet);
+    return splitAtChristmasEve6pm(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options);
   }
 
   const startDateStr = localDateStr(startUtc, offsetStr);
@@ -330,7 +343,7 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
 
   // Same local day — no midnight split
   if (startDateStr === endDateStr) {
-    return createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet);
+    return createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options);
   }
 
   // Ends exactly at local midnight (00:00)
@@ -349,11 +362,11 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
 
     let timeCategory = null;
     if (dayType === 'weekday') {
-      const startHour = localHour(startUtc, offsetStr);
-      if (startHour < MORNING_START) {
+      if (shiftType === 'sleepover' || forceWeekdayNight) {
         timeCategory = 'night';
       } else {
-        timeCategory = 'afternoon'; // starts in morning/afternoon window but ends at midnight
+        const startHour = localHour(startUtc, offsetStr);
+        timeCategory = startHour < MORNING_START ? 'night' : 'afternoon';
       }
     }
 
@@ -378,8 +391,12 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
     return splitSleepoverAtMidnight(startUtc, endUtc, midnightUtc, day1Type, day2Type, day1Hours, day2Hours, offsetStr);
   }
 
-  const day1TimeCat = day1Type === 'weekday' ? getTimeCategory(startUtc, midnightUtc, offsetStr) : null;
-  const day2TimeCat = day2Type === 'weekday' ? getTimeCategory(midnightUtc, endUtc, offsetStr) : null;
+  const day1TimeCat = day1Type === 'weekday'
+    ? (forceWeekdayNight ? 'night' : getTimeCategory(startUtc, midnightUtc, offsetStr))
+    : null;
+  const day2TimeCat = day2Type === 'weekday'
+    ? (forceWeekdayNight ? 'night' : getTimeCategory(midnightUtc, endUtc, offsetStr))
+    : null;
 
   return [
     { startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: day1TimeCat, isSleepoverExcess: false },
@@ -845,6 +862,14 @@ function processShiftForPayHours(shift, ctx) {
   const startUtc = new Date(shift.startDatetime);
   const endUtc = new Date(shift.endDatetime);
 
+  const gapAfterPrevious =
+    ctx.previousEndUtc !== null ? startUtc - ctx.previousEndUtc : Infinity;
+  const attachedToSleepover =
+    ctx.previousShiftType === 'sleepover' &&
+    (shift.shiftType === 'personal_care' || shift.shiftType === 'nursing_support') &&
+    gapAfterPrevious >= 0 &&
+    gapAfterPrevious < SLEEPOVER_FOLLOWON_GAP_MS;
+
   // Check if continuous with previous shift (gap = 0ms)
   let isContinuous = false;
   if (ctx.previousEndUtc !== null) {
@@ -862,11 +887,13 @@ function processShiftForPayHours(shift, ctx) {
 
   // Create segments
   let segments = [];
+  const segmentOpts = { forceWeekdayNight: attachedToSleepover };
+
   if (shift.shiftType === 'nursing_support') {
     // Split by day type so Saturday/Sunday/Holiday nursing attracts the correct penalty
     // rates. Weekday nursing still accumulates in nursingCareHours (paid at daytime rate).
     // All segments are kept on processedShift so broken-shift OT detection works.
-    const nsSegments = splitShiftAtMidnight(startUtc, endUtc, shift.hours, shift.shiftType, offsetStr, ctx.holidaySet);
+    const nsSegments = splitShiftAtMidnight(startUtc, endUtc, shift.hours, shift.shiftType, offsetStr, ctx.holidaySet, segmentOpts);
     for (let i = 0; i < nsSegments.length; i++) {
       const seg = nsSegments[i];
       if (seg.dayType === 'weekday') {
@@ -880,7 +907,7 @@ function processShiftForPayHours(shift, ctx) {
     }
     segments = nsSegments; // processedShift needs non-empty segments for broken-shift OT
   } else if (!isSleepoverNoExcess) {
-    segments = splitShiftAtMidnight(startUtc, endUtc, shift.hours, shift.shiftType, offsetStr, ctx.holidaySet);
+    segments = splitShiftAtMidnight(startUtc, endUtc, shift.hours, shift.shiftType, offsetStr, ctx.holidaySet, segmentOpts);
     // Add segments to pending list
     for (let i = 0; i < segments.length; i++) {
       const segContinuous = i === 0 ? isContinuous : true;
@@ -891,8 +918,8 @@ function processShiftForPayHours(shift, ctx) {
   // Sleepover with no excess: add placeholder for chain influence
   if (isSleepoverNoExcess) {
     const wd = localWeekday(startUtc, offsetStr);
-    if (wd < 5) { // weekday
-      const timeCat = getTimeCategory(startUtc, endUtc, offsetStr);
+    if (wd < 5) { // weekday — sleepover hours are night band for SCHADS
+      const timeCat = 'night';
       const placeholder = { startUtc, endUtc, hours: 0, dayType: 'weekday', timeCategory: timeCat, isSleepoverExcess: true };
       ctx.pendingSegments.push({ segment: placeholder, shiftId: sid, isContinuousWithPrevious: isContinuous, timeCategoryInfluence: timeCat });
     }
@@ -913,6 +940,7 @@ function processShiftForPayHours(shift, ctx) {
   handleBrokenShift(shift, processedShift, ctx.processedShifts, ctx.data, ctx);
   ctx.processedShifts.push(processedShift);
   ctx.previousEndUtc = endUtc;
+  ctx.previousShiftType = shift.shiftType;
 }
 
 // ─── MAIN ENTRY POINT ─────────────────────────────────────────────────────────
@@ -937,6 +965,7 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     pendingSegments: [],
     processedShifts: [],
     previousEndUtc: null,
+    previousShiftType: null,
     shiftActiveHours: new Map(),
     shiftIsBroken: new Map(),
     reclassifiedFullDoubleTimeShiftIds: new Set(),

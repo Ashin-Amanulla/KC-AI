@@ -6,7 +6,7 @@ import { useDropzone } from 'react-dropzone';
 import {
   Upload, TrendingDown, DollarSign, Clock, Users, AlertTriangle,
   ChevronDown, ChevronUp, Info, BarChart2, Calendar, UserX,
-  FileSpreadsheet, TrendingUp, Minus, Plus, Trash2, Save, FolderOpen, RotateCcw,
+  FileSpreadsheet, TrendingUp,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -19,72 +19,6 @@ const fmt = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const fmtK = (n) => n >= 1000 ? '$' + (n / 1000).toFixed(1) + 'k' : fmt(n);
 const pct = (part, total) => total > 0 ? ((part / total) * 100).toFixed(1) + '%' : '0%';
 const normName = (n) => n?.toLowerCase().replace(/\s+/g, ' ').trim() ?? '';
-
-/** One base $/h applied to all SCHADS hourly columns (meal/broken/sleepover 0; km default). */
-function defaultFlatAwardRates(baseHourly, displayName) {
-  const v = r2Schads(parseFloat(String(baseHourly).replace(',', '')) || 0);
-  return {
-    name: displayName.trim(),
-    daytime: v,
-    afternoon: v,
-    night: v,
-    otUpto2: v,
-    otAfter2: v,
-    saturday: v,
-    satOtAfter2: v,
-    sunday: v,
-    ph: v,
-    mealAllow: 0,
-    brokenShift: 0,
-    sleepover: 0,
-    kmRate: VEHICLE_RATE,
-  };
-}
-
-function serializeAwardRatesMap(map) {
-  return [...map.entries()].map(([key, row]) => ({
-    key,
-    name: row.name,
-    daytime: row.daytime,
-    afternoon: row.afternoon,
-    night: row.night,
-    otUpto2: row.otUpto2,
-    otAfter2: row.otAfter2,
-    saturday: row.saturday,
-    satOtAfter2: row.satOtAfter2,
-    sunday: row.sunday,
-    ph: row.ph,
-    mealAllow: row.mealAllow,
-    brokenShift: row.brokenShift,
-    sleepover: row.sleepover,
-    kmRate: row.kmRate ?? VEHICLE_RATE,
-  }));
-}
-
-function deserializeAwardRatesMap(rows) {
-  const m = new Map();
-  if (!Array.isArray(rows)) return m;
-  for (const r of rows) {
-    if (!r || !r.key) continue;
-    m.set(r.key, {
-      name: r.name || r.key,
-      daytime: r.daytime ?? 0,
-      afternoon: r.afternoon ?? 0,
-      night: r.night ?? 0,
-      otUpto2: r.otUpto2 ?? 0,
-      otAfter2: r.otAfter2 ?? 0,
-      saturday: r.saturday ?? 0,
-      satOtAfter2: r.satOtAfter2 ?? 0,
-      sunday: r.sunday ?? 0,
-      ph: r.ph ?? 0,
-      mealAllow: r.mealAllow ?? 0,
-      brokenShift: r.brokenShift ?? 0,
-      sleepover: r.sleepover ?? 0,
-      kmRate: r.kmRate ?? VEHICLE_RATE,
-    });
-  }
-  return m;
-}
 
 // ─── Payroll file parser (ShiftCare Payroll Employee Summary XLSX) ────────────
 function parsePayrollXlsx(arrayBuffer) {
@@ -890,207 +824,6 @@ function ClientDetailRows({ c, lineStaffPaidMap }) {
   );
 }
 
-function StaffAwardRatesLibrary({
-  storageKey,
-  hubXlsxRatesMerge,
-  staffLibraryMap,
-  setStaffLibraryMap,
-}) {
-  const [newName, setNewName] = useState('');
-  const [newHourly, setNewHourly] = useState('');
-
-  const displayMap = useMemo(() => {
-    if (staffLibraryMap !== undefined) return staffLibraryMap;
-    return hubXlsxRatesMerge || new Map();
-  }, [staffLibraryMap, hubXlsxRatesMerge]);
-
-  const entries = useMemo(
-    () => [...displayMap.entries()].sort((a, b) => (a[1].name || '').localeCompare(b[1].name || '', undefined, { sensitivity: 'base' })),
-    [displayMap],
-  );
-
-  const cloneBaseMap = () => {
-    if (staffLibraryMap !== undefined) return new Map(staffLibraryMap);
-    return new Map(hubXlsxRatesMerge || []);
-  };
-
-  const addStaff = () => {
-    const name = newName.trim();
-    if (!name) return;
-    const key = normName(name);
-    const hourly = newHourly.trim() || '0';
-    const m = cloneBaseMap();
-    m.set(key, defaultFlatAwardRates(hourly, name));
-    setStaffLibraryMap(m);
-    setNewName('');
-    setNewHourly('');
-  };
-
-  const removeStaff = (key) => {
-    const m = cloneBaseMap();
-    m.delete(key);
-    setStaffLibraryMap(m);
-  };
-
-  const updateBaseHourly = (key, rawVal) => {
-    const v = r2Schads(parseFloat(String(rawVal).replace(',', '')) || 0);
-    const m = cloneBaseMap();
-    const row = m.get(key);
-    if (!row) return;
-    m.set(key, {
-      ...row,
-      daytime: v,
-      afternoon: v,
-      night: v,
-      otUpto2: v,
-      otAfter2: v,
-      saturday: v,
-      satOtAfter2: v,
-      sunday: v,
-      ph: v,
-    });
-    setStaffLibraryMap(m);
-  };
-
-  const saveToBrowser = () => {
-    const map = staffLibraryMap !== undefined ? staffLibraryMap : hubXlsxRatesMerge;
-    if (!map || map.size === 0) return;
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(serializeAwardRatesMap(map)));
-    } catch (e) {
-      console.error('Save staff rates failed', e);
-    }
-  };
-
-  const loadFromBrowser = () => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      const map = deserializeAwardRatesMap(parsed);
-      if (map.size === 0) return;
-      setStaffLibraryMap(map);
-    } catch (e) {
-      console.error('Load staff rates failed', e);
-    }
-  };
-
-  const clearBrowserSaved = () => {
-    try {
-      localStorage.removeItem(storageKey);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const resetToHubOrFile = () => {
-    setStaffLibraryMap(undefined);
-  };
-
-  const libraryActive = staffLibraryMap !== undefined;
-
-  return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-violet-950">Staff pay rates (SCHADS)</p>
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={saveToBrowser}>
-            <Save className="w-3.5 h-3.5 mr-1" />
-            Save to browser
-          </Button>
-          <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={loadFromBrowser}>
-            <FolderOpen className="w-3.5 h-3.5 mr-1" />
-            Load saved
-          </Button>
-          <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" onClick={clearBrowserSaved}>
-            Clear saved
-          </Button>
-          {libraryActive && (
-            <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" onClick={resetToHubOrFile}>
-              <RotateCcw className="w-3.5 h-3.5 mr-1" />
-              Use hub / file only
-            </Button>
-          )}
-        </div>
-      </div>
-      <p className="text-xs text-violet-900/80">
-        Stored only in this browser (per location when embedded in Workforce). Base $/h sets all hourly SCHADS columns the same; upload the rates XLSX for full band breakdown.
-      </p>
-      <div className="flex flex-wrap items-end gap-2 border-t border-violet-200/60 pt-3">
-        <div className="space-y-1">
-          <label className="text-xs text-gray-600">Staff name</label>
-          <Input
-            className="h-9 w-44 text-sm"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="e.g. Jane Smith"
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs text-gray-600">Base $/h</label>
-          <Input
-            className="h-9 w-24 text-sm"
-            type="number"
-            step="0.01"
-            min="0"
-            value={newHourly}
-            onChange={(e) => setNewHourly(e.target.value)}
-            placeholder="0"
-          />
-        </div>
-        <Button type="button" size="sm" className="h-9" onClick={addStaff}>
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          Add staff
-        </Button>
-      </div>
-      {entries.length === 0 ? (
-        <p className="text-xs text-gray-500">No per-staff rate rows yet. Add staff above, load saved rates, upload XLSX, or use the Award calculator step.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-md border border-violet-100 bg-white">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-violet-50/80">
-                <TableHead>Staff</TableHead>
-                <TableHead className="text-right w-28">Base $/h</TableHead>
-                <TableHead className="w-20 text-right"> </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entries.map(([key, row]) => (
-                <TableRow key={key}>
-                  <TableCell className="font-medium text-sm">{row.name || key}</TableCell>
-                  <TableCell className="text-right">
-                    <Input
-                      className="h-8 w-24 text-sm ml-auto"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={row.daytime ?? ''}
-                      onChange={(e) => updateBaseHourly(key, e.target.value)}
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                      onClick={() => removeStaff(key)}
-                      title="Remove from list"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function StaffProfitabilitySection({
   sa,
   payrollMap,
@@ -1115,10 +848,6 @@ function StaffProfitabilitySection({
   payHoursCount,
   payHoursPeriodText,
   usingHubRates,
-  ratesStorageKey,
-  hubXlsxRatesMerge,
-  staffLibraryMap,
-  setStaffLibraryMap,
 }) {
   const [expanded, setExpanded] = useState(new Set());
   const [expandedClients, setExpandedClients] = useState(new Set());
@@ -1334,12 +1063,6 @@ function StaffProfitabilitySection({
                 <button type="button" onClick={onRemoveAwardRates} className="ml-auto text-xs text-gray-400 hover:text-gray-600 shrink-0">Remove</button>
               </div>
             )}
-            <StaffAwardRatesLibrary
-              storageKey={ratesStorageKey}
-              hubXlsxRatesMerge={hubXlsxRatesMerge}
-              staffLibraryMap={staffLibraryMap}
-              setStaffLibraryMap={setStaffLibraryMap}
-            />
             {costBasisReady && (
               <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm text-green-900">
                 <TrendingUp className="w-4 h-4 shrink-0" />
@@ -1647,19 +1370,12 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
   const [payrollLoading, setPayrollLoading] = useState(false);
   const [wageSource, setWageSource] = useState(embedded ? 'award' : 'payroll');
   const [localAwardRatesMap, setLocalAwardRatesMap] = useState(null);
-  /** When set (including empty Map), replaces hub + XLSX merge for award staff rates. */
-  const [staffLibraryMap, setStaffLibraryMap] = useState(undefined);
   const [awardRatesName, setAwardRatesName] = useState('');
   const [awardRatesError, setAwardRatesError] = useState('');
   const [awardRatesLoading, setAwardRatesLoading] = useState(false);
   const [superPct, setSuperPct] = useState(0);
   const [awardDefaultRate, setAwardDefaultRate] = useState('');
   const [awardEmpType, setAwardEmpType] = useState('casual');
-
-  const ratesStorageKey = useMemo(
-    () => `kcai-staff-award-rates-v1${locationId ? `-${locationId}` : ''}`,
-    [locationId],
-  );
 
   const payHoursQueryParams = useMemo(() => {
     const p = {};
@@ -1681,11 +1397,6 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
     return m.size > 0 ? m : null;
   }, [hubStaffRatesMap, localAwardRatesMap]);
 
-  const mergedAwardRatesMap = useMemo(() => {
-    if (staffLibraryMap !== undefined) return staffLibraryMap;
-    return hubXlsxRatesMerge;
-  }, [staffLibraryMap, hubXlsxRatesMerge]);
-
   const usingHubRates = Boolean(
     hubStaffRatesMap && hubStaffRatesMap.size > 0 && !(localAwardRatesMap && localAwardRatesMap.size > 0),
   );
@@ -1694,7 +1405,7 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
     if (wageSource !== 'award' || !payHoursRows.length) return null;
     const map = buildAwardCostMapFromPayHours({
       payHoursRows,
-      staffRatesMap: mergedAwardRatesMap,
+      staffRatesMap: hubXlsxRatesMerge,
       baseRates: {},
       defaultRate: awardDefaultRate,
       empTypes: {},
@@ -1702,7 +1413,7 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
       superPct,
     });
     return map.size > 0 ? map : null;
-  }, [wageSource, payHoursRows, mergedAwardRatesMap, awardDefaultRate, awardEmpType, superPct]);
+  }, [wageSource, payHoursRows, hubXlsxRatesMerge, awardDefaultRate, awardEmpType, superPct]);
 
   const effectiveCostMap = wageSource === 'award' ? awardCostMap : payrollMap;
   const effectiveCostLabel = useMemo(() => {
@@ -1710,10 +1421,10 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
     if (wageSource === 'payroll') return payrollName;
     const parts = ['SCHADS gross + super estimate'];
     if (awardRatesName) parts.push(awardRatesName);
-    else if (mergedAwardRatesMap?.size) parts.push('per-staff rates');
+    else if (hubXlsxRatesMerge?.size) parts.push('per-staff rates');
     else if (awardDefaultRate) parts.push(`default $${awardDefaultRate}/h`);
     return parts.join(' · ');
-  }, [effectiveCostMap, wageSource, payrollName, awardRatesName, mergedAwardRatesMap, awardDefaultRate]);
+  }, [effectiveCostMap, wageSource, payrollName, awardRatesName, hubXlsxRatesMerge, awardDefaultRate]);
 
   const onDrop = useCallback((accepted) => {
     const file = accepted[0];
@@ -1779,7 +1490,6 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
       try {
         const parsed = parseAwardRatesXlsx(e.target.result);
         if (parsed.size === 0) throw new Error('No rate rows found — check file format');
-        setStaffLibraryMap(undefined);
         setLocalAwardRatesMap(parsed);
         setAwardRatesName(file.name);
       } catch (err) {
@@ -1859,7 +1569,6 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
     setPayrollMap(null);
     setPayrollName('');
     setLocalAwardRatesMap(null);
-    setStaffLibraryMap(undefined);
     setAwardRatesName('');
     setAwardRatesError('');
   };
@@ -2169,7 +1878,6 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
         awardRatesName={awardRatesName}
         onRemoveAwardRates={() => {
           setLocalAwardRatesMap(null);
-          setStaffLibraryMap(undefined);
           setAwardRatesName('');
           setAwardRatesError('');
         }}
@@ -2182,10 +1890,6 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
         payHoursCount={payHoursRows.length}
         payHoursPeriodText={payHoursPeriodText}
         usingHubRates={usingHubRates}
-        ratesStorageKey={ratesStorageKey}
-        hubXlsxRatesMerge={hubXlsxRatesMerge}
-        staffLibraryMap={staffLibraryMap}
-        setStaffLibraryMap={setStaffLibraryMap}
       />
 
       {/* Recommendations Summary */}
