@@ -30,6 +30,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "backend.tar.gz"
           target: "/opt/kc-ai/"
+          debug: true
 
       - name: Deploy on Server
         uses: appleboy/ssh-action@master
@@ -37,6 +38,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          debug: true
           script: |
             set -e
             echo "Starting kc-ai backend deployment..."

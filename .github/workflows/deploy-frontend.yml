@@ -39,6 +39,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           timeout: 60s
+          debug: true
           script: |
             echo "SSH connection successful"
             whoami
@@ -51,6 +52,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           timeout: 60s
+          debug: true
           script: |
             rm -rf ~/deploy-temp
             mkdir -p ~/deploy-temp
@@ -73,6 +75,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           timeout: 60s
+          debug: true
           script: |
             echo "Deploying kc-aifrontend..."
 
