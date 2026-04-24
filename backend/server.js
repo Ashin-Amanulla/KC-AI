@@ -14,6 +14,7 @@ import holidaysRoutes from './modules/holidays/holiday.route.js';
 import locationsRoutes from './modules/locations/location.route.js';
 import payHoursRoutes from './modules/pay-hours/payHours.route.js';
 import forecastActualsRoutes from './modules/forecast-actuals/forecastActuals.route.js';
+import staffRatesRoutes from './modules/staff-rates/staffRates.route.js';
 import { formatErrorResponse } from './helpers/errors.js';
 import { Holiday } from './modules/holidays/holiday.model.js';
 import morgan from 'morgan';
@@ -70,6 +71,7 @@ app.use('/api', shiftsRoutes);
 app.use('/api', holidaysRoutes);
 app.use('/api', payHoursRoutes);
 app.use('/api', forecastActualsRoutes);
+app.use('/api', staffRatesRoutes);
 app.use('/api', csvAnalysisRoutes);
 app.use('/api', shiftcareRoutes);
 

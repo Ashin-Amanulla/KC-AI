@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { usePayHours } from '../api/payHours';
+import { useStaffRates, staffRatesArrayToMap } from '../api/staffRates';
 import { buildAwardCostMapFromPayHours, r2 as r2Schads, VEHICLE_RATE } from '../lib/schadsWageCalc';
 import { useDropzone } from 'react-dropzone';
 import {
@@ -1392,15 +1393,23 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
       ? `${new Date(payHoursData.periodStart).toLocaleDateString('en-AU')} — ${new Date(payHoursData.periodEnd).toLocaleDateString('en-AU')}`
       : '';
 
+  const { data: staffRatesApiData } = useStaffRates(locationId || undefined);
+  const dbStaffRatesByNorm = useMemo(
+    () => staffRatesArrayToMap(staffRatesApiData?.staffRates),
+    [staffRatesApiData]
+  );
+
   const hubXlsxRatesMerge = useMemo(() => {
     const m = new Map();
+    for (const [k, v] of dbStaffRatesByNorm) m.set(k, v);
     if (hubStaffRatesMap) for (const [k, v] of hubStaffRatesMap) m.set(k, v);
     if (localAwardRatesMap && localAwardRatesMap.size > 0) for (const [k, v] of localAwardRatesMap) m.set(k, v);
     return m.size > 0 ? m : null;
-  }, [hubStaffRatesMap, localAwardRatesMap]);
+  }, [dbStaffRatesByNorm, hubStaffRatesMap, localAwardRatesMap]);
 
   const usingHubRates = Boolean(
-    hubStaffRatesMap && hubStaffRatesMap.size > 0 && !(localAwardRatesMap && localAwardRatesMap.size > 0),
+    (hubStaffRatesMap?.size > 0 || dbStaffRatesByNorm.size > 0) &&
+      !(localAwardRatesMap && localAwardRatesMap.size > 0),
   );
 
   const awardCostMap = useMemo(() => {

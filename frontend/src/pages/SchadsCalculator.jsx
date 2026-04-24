@@ -9,6 +9,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../ui/table';
 import { usePayHours, useShiftPayHours } from '../api/payHours';
+import { useStaffRates, staffRatesArrayToMap } from '../api/staffRates';
+import { STAFF_RATES_TABLE_FIELDS } from '../lib/staffRateFieldMeta';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import {
   DAILY_ORD,
@@ -53,22 +55,6 @@ function schadsFlatRatesRow(displayName, baseHourly) {
     kmRate: VEHICLE_RATE,
   };
 }
-
-const STAFF_RATES_TABLE_FIELDS = [
-  ['daytime', 'Day'],
-  ['afternoon', 'Aft'],
-  ['night', 'Night'],
-  ['otUpto2', 'WD OT≤2'],
-  ['otAfter2', 'WD OT>2'],
-  ['saturday', 'Sat'],
-  ['satOtAfter2', 'Sat OT>2'],
-  ['sunday', 'Sun'],
-  ['ph', 'PH'],
-  ['mealAllow', 'Meal'],
-  ['brokenShift', 'Broken'],
-  ['sleepover', 'Sleep'],
-  ['kmRate', '$/km'],
-];
 
 // ── Manual calculator helpers ─────────────────────────────────────────
 const DAYS_CFG = [
@@ -709,9 +695,21 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   const [payrollData, setPayrollData] = useState(null); // Map: normName → { name, earnings }
   /** When true, Gross column uses imported payroll Earnings for name-matched staff so Diff = $0 (model unchanged; expand row for breakdown). */
   const [alignGrossToPayroll, setAlignGrossToPayroll] = useState(false);
-  const [staffRatesMap, setStaffRatesMap] = useState(null); // Map: normName → rates object
+  const [staffRatesMap, setStaffRatesMap] = useState(null); // Map: normName → rates object (XLSX/session overrides; wins over DB for same key)
   const [ratesFileName, setRatesFileName] = useState(null);
   const [schadsHydrated, setSchadsHydrated] = useState(false);
+
+  const { data: staffRatesApiData } = useStaffRates(locationIdProp || undefined);
+  const staffRatesFromDbMap = useMemo(
+    () => staffRatesArrayToMap(staffRatesApiData?.staffRates),
+    [staffRatesApiData]
+  );
+  /** DB (per location) + local/XLSX overrides: overrides replace same normName. */
+  const resolvedStaffRatesMap = useMemo(() => {
+    const m = new Map(staffRatesFromDbMap);
+    if (staffRatesMap) for (const [k, v] of staffRatesMap) m.set(k, v);
+    return m;
+  }, [staffRatesFromDbMap, staffRatesMap]);
 
   // Totals row
   const totals = useMemo(() => {
@@ -734,12 +732,12 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       t.mileageAllow  = r2(t.mileageAllow  + allow.mileageAllow);
       const rate = baseRates[row.staffName] ?? defaultRate;
       const empT = empTypes[row.staffName] ?? defaultEmpType;
-      const staffRates = staffRatesMap?.get(normName(row.staffName)) ?? null;
+      const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
       const g = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rate, empT);
       if (g !== null) { t.gross = r2(t.gross + g); grossCount++; }
     }
     return { ...t, grossReady: displayRows.length > 0 && grossCount === displayRows.length };
-  }, [displayRows, baseRates, defaultRate, empTypes, defaultEmpType, getMergedRow, staffRatesMap, normName]);
+  }, [displayRows, baseRates, defaultRate, empTypes, defaultEmpType, getMergedRow, resolvedStaffRatesMap, normName]);
 
   /** Sum of Gross column (uses payroll Earnings per row when alignGrossToPayroll + match). */
   const payrollFooterStats = useMemo(() => {
@@ -751,7 +749,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       const mrow = getMergedRow(row);
       const rateVal = baseRates[row.staffName] ?? defaultRate;
       const empT = getEmpType(row.staffName);
-      const staffRates = staffRatesMap?.get(normName(row.staffName)) ?? null;
+      const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
       const modeled = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
       const p = payrollData.get(normName(row.staffName));
       if (p) {
@@ -767,7 +765,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       totalDiff: r2(totalDisplayGross - totalPayroll),
       matched,
     };
-  }, [displayRows, payrollData, getMergedRow, baseRates, defaultRate, getEmpType, staffRatesMap, normName, alignGrossToPayroll]);
+  }, [displayRows, payrollData, getMergedRow, baseRates, defaultRate, getEmpType, resolvedStaffRatesMap, normName, alignGrossToPayroll]);
 
   // Count staff with any exception (OT, OT>76, or broken shifts)
   const exceptionCount = useMemo(() =>
@@ -1067,19 +1065,22 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   const displayNameForRateKey = useCallback(
     (key) =>
       staffRatesMap?.get(key)?.name ??
+      staffRatesFromDbMap.get(key)?.name ??
       staffRows.find((r) => normName(r.staffName) === key)?.staffName ??
+      staffRatesApiData?.staffRates?.find((r) => r.normName === key)?.staffName ??
       key,
-    [staffRatesMap, staffRows, normName],
+    [staffRatesMap, staffRatesFromDbMap, staffRows, staffRatesApiData, normName],
   );
 
   const staffRatesTabRowKeys = useMemo(() => {
     const keys = new Set();
     for (const r of staffRows) keys.add(normName(r.staffName));
     if (staffRatesMap) for (const k of staffRatesMap.keys()) keys.add(k);
+    for (const k of staffRatesFromDbMap.keys()) keys.add(k);
     return [...keys].sort((a, b) =>
       displayNameForRateKey(a).localeCompare(displayNameForRateKey(b), undefined, { sensitivity: 'base' }),
     );
-  }, [staffRows, staffRatesMap, normName, displayNameForRateKey]);
+  }, [staffRows, staffRatesMap, staffRatesFromDbMap, normName, displayNameForRateKey]);
 
   const patchStaffRatesField = useCallback(
     (key, field, rawVal) => {
@@ -1087,13 +1088,13 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       setStaffRatesMap((prev) => {
         const m = new Map(prev || []);
         const name = displayNameForRateKey(key);
-        const cur = m.get(key) || schadsFlatRatesRow(name, defaultRate || 0);
+        const cur = m.get(key) || staffRatesFromDbMap.get(key) || schadsFlatRatesRow(name, defaultRate || 0);
         m.set(key, { ...cur, [field]: num });
         onStaffRatesMapChange?.(m, ratesFileName || 'rates');
         return m;
       });
     },
-    [displayNameForRateKey, defaultRate, onStaffRatesMapChange, ratesFileName],
+    [displayNameForRateKey, defaultRate, onStaffRatesMapChange, ratesFileName, staffRatesFromDbMap],
   );
 
   const applyFlatBaseToStaffKey = useCallback(
@@ -1425,7 +1426,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         const mrow      = getMergedRow(row);
                         const rateVal   = baseRates[row.staffName] ?? defaultRate;
                         const empT      = getEmpType(row.staffName);
-                        const staffRates = staffRatesMap?.get(normName(row.staffName)) ?? null;
+                        const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
                         const modeledGross = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
                         const payrollForGross = payrollData?.get(normName(row.staffName));
                         const displayGross =
@@ -2195,7 +2196,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                     </TableHeader>
                     <TableBody>
                       {staffRatesTabRowKeys.map((key) => {
-                        const row = staffRatesMap?.get(key);
+                        const row = resolvedStaffRatesMap.get(key);
                         const label = displayNameForRateKey(key);
                         return (
                           <TableRow key={key} className="text-xs">
