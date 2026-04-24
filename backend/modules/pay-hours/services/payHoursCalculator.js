@@ -17,8 +17,8 @@ const CHRISTMAS_EVE_DAY = 24;
 const CHRISTMAS_EVE_HOLIDAY_START = 18; // 18:00 local
 /** Max ordinary hours in a shift before daily OT (Sat/Sun/PH). */
 const MAX_REGULAR_HOURS = 10;
-/** Weekday personal care: ordinary hours in a shift before daily OT (SCHADS). */
-const MAX_REGULAR_HOURS_WEEKDAY = 4;
+/** Weekday: ordinary hours in a shift before daily OT (same cap as Sat/Sun/PH). */
+const MAX_REGULAR_HOURS_WEEKDAY = 10;
 const SLEEPOVER_DEDUCTION = 8;
 const OT_TIER_1_MAX = 2;
 const TOTAL_HOURS_CAP = 76;
@@ -496,7 +496,7 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
   const dayType = currentShift.segments[0].dayType;
 
   if (spanHours < BROKEN_SHIFT_SHORT_SPAN) {
-    // Span < 12h: OT at 1.5× for active hours beyond daily ordinary cap (weekday 4h / other 10h)
+    // Span < 12h: OT at 1.5× for active hours beyond daily ordinary cap (10h all day types)
     const cap = dayType === 'weekday' ? MAX_REGULAR_HOURS_WEEKDAY : MAX_REGULAR_HOURS;
     if (totalActive > cap) {
       const extraHours = r2(totalActive - cap);

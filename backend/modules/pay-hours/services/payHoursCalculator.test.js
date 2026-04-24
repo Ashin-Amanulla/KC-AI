@@ -71,28 +71,28 @@ test('weekday chain: preserves separate time bands (not one lump at highest pena
   const s1 = shift({
     _id: 'd1d1d1d1d1d1d1d1d1d1d1d1',
     start: '2026-03-11T21:00:00.000Z',
-    end: '2026-03-12T01:00:00.000Z',
-    hours: 4,
+    end: '2026-03-12T03:00:00.000Z',
+    hours: 6,
     isBrokenShift: false,
     timezoneOffset: '+10:00',
   });
   const s2 = shift({
     _id: 'd2d2d2d2d2d2d2d2d2d2d2d2',
-    start: '2026-03-12T01:00:00.000Z',
-    end: '2026-03-12T05:00:00.000Z',
-    hours: 4,
+    start: '2026-03-12T03:00:00.000Z',
+    end: '2026-03-12T09:00:00.000Z',
+    hours: 6,
     isBrokenShift: false,
     timezoneOffset: '+10:00',
   });
   const { data } = computePayHoursForStaff([s1, s2], new Set());
   assert.ok((data.morningHours || 0) > 0, 'first segment contributes morning-classified hours');
-  // 8h continuous weekday chain: first 4h ordinary, next 4h spill to OT — must not be 8h all in "afternoon" ordinary
+  // 12h continuous weekday chain: first 10h ordinary, next 2h spill to OT — must not be 12h all ordinary
   assert.ok(
     (data.weekdayOtUpto2 || 0) + (data.weekdayOtAfter2 || 0) > 0,
-    'combined chain over 4h weekday cap produces OT from end segments'
+    'combined chain over 10h weekday cap produces OT from end segments'
   );
   assert.ok(
-    r2((data.morningHours || 0) + (data.afternoonHours || 0) + (data.nightHours || 0)) <= 4.01,
-    'ordinary weekday hours should not exceed 4h once OT is extracted'
+    r2((data.morningHours || 0) + (data.afternoonHours || 0) + (data.nightHours || 0)) <= 10.01,
+    'ordinary weekday hours should not exceed 10h once OT is extracted'
   );
 });
