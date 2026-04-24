@@ -33,6 +33,43 @@ import {
 const fmt = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const fmtH = (n) => n.toFixed(2) + 'h';
 
+/** SCHADS workbook-shaped row: one base $/h on all hourly columns (allowances 0; km default). */
+function schadsFlatRatesRow(displayName, baseHourly) {
+  const v = r2(parseFloat(String(baseHourly).replace(',', '')) || 0);
+  return {
+    name: displayName.trim(),
+    daytime: v,
+    afternoon: v,
+    night: v,
+    otUpto2: v,
+    otAfter2: v,
+    saturday: v,
+    satOtAfter2: v,
+    sunday: v,
+    ph: v,
+    mealAllow: 0,
+    brokenShift: 0,
+    sleepover: 0,
+    kmRate: VEHICLE_RATE,
+  };
+}
+
+const STAFF_RATES_TABLE_FIELDS = [
+  ['daytime', 'Day'],
+  ['afternoon', 'Aft'],
+  ['night', 'Night'],
+  ['otUpto2', 'WD OT≤2'],
+  ['otAfter2', 'WD OT>2'],
+  ['saturday', 'Sat'],
+  ['satOtAfter2', 'Sat OT>2'],
+  ['sunday', 'Sun'],
+  ['ph', 'PH'],
+  ['mealAllow', 'Meal'],
+  ['brokenShift', 'Broken'],
+  ['sleepover', 'Sleep'],
+  ['kmRate', '$/km'],
+];
+
 // ── Manual calculator helpers ─────────────────────────────────────────
 const DAYS_CFG = [
   { name: 'Monday',    short: 'MON', type: 'weekday' },
@@ -524,7 +561,7 @@ function pillCls(type, isPH) {
 export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapChange } = {}) {
   const normName = useCallback((s) => s?.toString().toLowerCase().replace(/\s+/g, ' ').trim() ?? '', []);
 
-  const [view, setView] = useState('summary'); // 'summary' | 'manual'
+  const [view, setView] = useState('summary'); // 'summary' | 'exceptions' | 'rates' | 'manual'
 
   // ── Staff Summary state ──────────────────────────────────────────
   const [baseRates, setBaseRates] = useState({});       // { staffName: string }
@@ -545,6 +582,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   const [manualStaffNames, setManualStaffNames] = useState([]);
   const [hiddenNormNames, setHiddenNormNames] = useState([]);
   const [addStaffDraft, setAddStaffDraft] = useState('');
+  const [ratesAddName, setRatesAddName] = useState('');
+  const [ratesAddBase, setRatesAddBase] = useState('');
   const unifiedDocRef = useRef(null);
 
   const saveOverride  = useCallback((staffName, field, value) => {
@@ -934,6 +973,82 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     setAddStaffDraft('');
   }, [addStaffDraft, manualStaffNames, normName]);
 
+  const displayNameForRateKey = useCallback(
+    (key) =>
+      staffRatesMap?.get(key)?.name ??
+      staffRows.find((r) => normName(r.staffName) === key)?.staffName ??
+      key,
+    [staffRatesMap, staffRows, normName],
+  );
+
+  const staffRatesTabRowKeys = useMemo(() => {
+    const keys = new Set();
+    for (const r of staffRows) keys.add(normName(r.staffName));
+    if (staffRatesMap) for (const k of staffRatesMap.keys()) keys.add(k);
+    return [...keys].sort((a, b) =>
+      displayNameForRateKey(a).localeCompare(displayNameForRateKey(b), undefined, { sensitivity: 'base' }),
+    );
+  }, [staffRows, staffRatesMap, normName, displayNameForRateKey]);
+
+  const patchStaffRatesField = useCallback(
+    (key, field, rawVal) => {
+      const num = r2(parseFloat(String(rawVal).replace(',', '')) || 0);
+      setStaffRatesMap((prev) => {
+        const m = new Map(prev || []);
+        const name = displayNameForRateKey(key);
+        const cur = m.get(key) || schadsFlatRatesRow(name, defaultRate || 0);
+        m.set(key, { ...cur, [field]: num });
+        onStaffRatesMapChange?.(m, ratesFileName || 'rates');
+        return m;
+      });
+    },
+    [displayNameForRateKey, defaultRate, onStaffRatesMapChange, ratesFileName],
+  );
+
+  const applyFlatBaseToStaffKey = useCallback(
+    (key, rawVal) => {
+      const v = r2(parseFloat(String(rawVal).replace(',', '')) || 0);
+      setStaffRatesMap((prev) => {
+        const m = new Map(prev || []);
+        const name = displayNameForRateKey(key);
+        m.set(key, schadsFlatRatesRow(name, v));
+        onStaffRatesMapChange?.(m, ratesFileName || 'rates');
+        return m;
+      });
+    },
+    [displayNameForRateKey, onStaffRatesMapChange, ratesFileName],
+  );
+
+  const removeStaffRatesRow = useCallback(
+    (key) => {
+      setStaffRatesMap((prev) => {
+        if (!prev) return null;
+        const m = new Map(prev);
+        m.delete(key);
+        const next = m.size > 0 ? m : null;
+        onStaffRatesMapChange?.(next, next ? ratesFileName : null);
+        return next;
+      });
+    },
+    [onStaffRatesMapChange, ratesFileName],
+  );
+
+  const addStaffRatesEntry = useCallback(() => {
+    const name = ratesAddName.trim();
+    if (!name) return;
+    const k = normName(name);
+    setManualStaffNames((prev) => (prev.some((n) => normName(n) === k) ? prev : [...prev, name]));
+    const base = ratesAddBase.trim() || defaultRate || '0';
+    setStaffRatesMap((prev) => {
+      const m = new Map(prev || []);
+      m.set(k, schadsFlatRatesRow(name, base));
+      onStaffRatesMapChange?.(m, ratesFileName || 'rates');
+      return m;
+    });
+    setRatesAddName('');
+    setRatesAddBase('');
+  }, [ratesAddName, ratesAddBase, defaultRate, normName, onStaffRatesMapChange, ratesFileName]);
+
   const summaryColSpan = 27 + (payrollData ? 3 : 0);
 
   return (
@@ -1014,6 +1129,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           {view !== 'exceptions' && exceptionCount > 0 && (
             <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-orange-500 text-white text-[10px] font-bold w-4 h-4">{exceptionCount}</span>
           )}
+        </Button>
+        <Button size="sm" variant={view === 'rates' ? 'default' : 'outline'} onClick={() => setView('rates')}>
+          Staff rates
         </Button>
         <Button size="sm" variant={view === 'manual'     ? 'default' : 'outline'} onClick={() => setView('manual')}>Manual Scenario</Button>
       </div>
@@ -1847,6 +1965,174 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           </>
         );
       })()}
+
+      {/* ── STAFF RATES (SCHADS workbook) ───────────────────────── */}
+      {view === 'rates' && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Staff SCHADS rates</CardTitle>
+              <p className="text-xs text-muted-foreground font-normal leading-relaxed">
+                Per-staff $/h columns match the award rates workbook. Values merge with pay hours for gross pay in{' '}
+                <strong>Staff Pay Summary</strong> and flow to Workforce step 5 when you use the calculator there. Changes save automatically in this browser (same store as the summary tab).
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={ratesFileRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files[0]) parseRatesFile(e.target.files[0]);
+                    e.target.value = '';
+                  }}
+                />
+                <Button type="button" size="sm" variant="outline" className="gap-1" onClick={() => ratesFileRef.current?.click()}>
+                  <FileSpreadsheet className="h-4 w-4 text-blue-600" />
+                  {ratesFileName ? 'Replace rates workbook' : 'Upload rates workbook'}
+                </Button>
+                {ratesFileName && (
+                  <span className="text-xs text-muted-foreground max-w-[200px] truncate" title={ratesFileName}>
+                    {ratesFileName}
+                  </span>
+                )}
+                {ratesFileName && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="text-xs text-destructive h-8"
+                    onClick={() => {
+                      setRatesFileName(null);
+                      setStaffRatesMap(null);
+                      onStaffRatesMapChange?.(null, null);
+                    }}
+                  >
+                    Clear file &amp; map
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap items-end gap-2 border-t border-border pt-4">
+                <div className="space-y-1">
+                  <label className="text-xs uppercase tracking-wider text-muted-foreground">Add staff + flat SCHADS row</label>
+                  <div className="flex flex-wrap gap-2">
+                    <Input
+                      placeholder="Name"
+                      value={ratesAddName}
+                      onChange={(e) => setRatesAddName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addStaffRatesEntry()}
+                      className="h-9 w-44 text-sm"
+                    />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder={`Base $/h${defaultRate ? ` (${defaultRate})` : ''}`}
+                      value={ratesAddBase}
+                      onChange={(e) => setRatesAddBase(e.target.value)}
+                      className="h-9 w-32 text-sm"
+                    />
+                    <Button type="button" size="sm" variant="secondary" className="gap-1" onClick={addStaffRatesEntry}>
+                      <Plus className="h-4 w-4" />
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {staffRatesTabRowKeys.length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center text-muted-foreground text-sm">
+                No staff yet. Add a name above, use <strong>Add staff (manual row)</strong> at the top, or load pay hours from the API.
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50 text-[10px]">
+                        <TableHead className="sticky left-0 bg-muted/50 z-10 min-w-[140px] border-r">Staff</TableHead>
+                        <TableHead className="text-center whitespace-nowrap min-w-[88px] border-r" title="Apply one $/h to all hourly columns">
+                          Flat base
+                        </TableHead>
+                        {STAFF_RATES_TABLE_FIELDS.map(([id, label]) => (
+                          <TableHead key={id} className="text-right whitespace-nowrap min-w-[72px] text-[10px]">
+                            {label}
+                          </TableHead>
+                        ))}
+                        <TableHead className="w-12 text-center"> </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {staffRatesTabRowKeys.map((key) => {
+                        const row = staffRatesMap?.get(key);
+                        const label = displayNameForRateKey(key);
+                        return (
+                          <TableRow key={key} className="text-xs">
+                            <TableCell className="sticky left-0 bg-background z-10 font-medium border-r">{label}</TableCell>
+                            <TableCell className="border-r">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="h-8 w-20 text-xs"
+                                placeholder="—"
+                                title="Set all hourly columns to this $/h"
+                                onKeyDown={(e) => {
+                                  if (e.key !== 'Enter') return;
+                                  applyFlatBaseToStaffKey(key, e.currentTarget.value);
+                                }}
+                                onBlur={(e) => {
+                                  if (e.target.value === '') return;
+                                  applyFlatBaseToStaffKey(key, e.target.value);
+                                }}
+                              />
+                            </TableCell>
+                            {STAFF_RATES_TABLE_FIELDS.map(([field]) => (
+                              <TableCell key={field} className="p-1">
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  className="h-8 w-[68px] text-xs px-1"
+                                  value={row ? row[field] ?? '' : ''}
+                                  placeholder={row ? '' : '—'}
+                                  onChange={(e) => patchStaffRatesField(key, field, e.target.value)}
+                                />
+                              </TableCell>
+                            ))}
+                            <TableCell className="text-center p-1">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-destructive"
+                                title="Remove custom rates for this staff"
+                                onClick={() => removeStaffRatesRow(key)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                <p className="text-[10px] text-muted-foreground px-4 py-2 border-t">
+                  Empty cells until you type: row is created from default base rate or zero. <strong>Flat base</strong> + Enter applies one rate to Day through PH; edit columns for fine control. Trash removes only the custom rate row (summary then uses default base rate).
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* ── MANUAL SCENARIO ────────────────────────────────────── */}
       {view === 'manual' && (
