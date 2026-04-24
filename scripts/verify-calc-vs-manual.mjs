@@ -1,6 +1,6 @@
 /**
  * Verifies calcGrossFromRates against an independent mirror of the same formula.
- * Also compares to payroll "Earnings" for one staff (optional). Logs to debug NDJSON via ingest.
+ * Also compares to payroll "Earnings" for one staff (optional).
  *
  * Run: node scripts/verify-calc-vs-manual.mjs [csv] [payroll.xlsx] [staff-rates.xlsx] "Staff Name"
  */
@@ -19,33 +19,12 @@ import {
 } from '../frontend/src/lib/schadsWageCalc.js';
 import { loadStaffRatesMap } from './lib/staffRatesFromXlsx.mjs';
 
-const INGEST = 'http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486';
-const SESSION = 'ebfa6e';
-
 const XLSX = require('../frontend/node_modules/xlsx/xlsx.js');
 
 const DEFAULT_CSV = '/home/cntrlx/Downloads/Scheduler_Timesheet_Export_2026-04-24-01-37.csv';
 const DEFAULT_PAY = '/home/cntrlx/Downloads/Payroll Employee Summary - FN ending 19th April (2).xlsx';
 const DEFAULT_RATES = '/home/cntrlx/Downloads/Support Staff Rates.xlsx';
 const DEFAULT_STAFF = 'Aini-Alem Goitom';
-
-// #region agent log
-function dbg(hypothesisId, message, data) {
-  fetch(INGEST, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': SESSION },
-    body: JSON.stringify({
-      sessionId: SESSION,
-      runId: 'verify-manual',
-      hypothesisId,
-      location: 'verify-calc-vs-manual.mjs',
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-}
-// #endregion
 
 /** Independent mirror of `calcGrossFromRates` in schadsWageCalc.js (must match line-by-line). */
 function manualGrossFromRatesMirror(ph, rates) {
@@ -121,9 +100,6 @@ function main() {
   const staffQ = process.argv[5] || DEFAULT_STAFF;
 
   if (!fs.existsSync(csv) || !fs.existsSync(payX) || !fs.existsSync(ratesX)) {
-    // #region agent log
-    dbg('H0', 'missing files', { csv, payX, ratesX });
-    // #endregion
     console.error('Missing file(s)');
     process.exit(1);
   }
@@ -136,7 +112,6 @@ function main() {
 
   const staffShifts = shifts.filter((s) => normName(s.staffName) === staffNorm);
   if (!staffShifts.length) {
-    dbg('H0', 'staff not in csv', { staffNorm, staffQ });
     console.error('No shifts for', staffQ);
     process.exit(1);
   }
@@ -145,7 +120,6 @@ function main() {
   const staffRatesMap = loadStaffRatesMap(fs.readFileSync(ratesX), { normName, r2, VEHICLE_RATE });
   const rates = staffRatesMap.get(staffNorm);
   if (!rates) {
-    dbg('H0', 'no rates row', { staffNorm, ratesFileSize: staffRatesMap.size });
     console.error('No staff rates row for', staffQ);
     process.exit(1);
   }
@@ -159,44 +133,7 @@ function main() {
   const g2 = manualGrossFromRatesMirror(ph, rates);
   const diffImpl = g1 != null && g2 != null ? r2(g1 - g2) : null;
 
-  // #region agent log
-  dbg('H1', 'module vs manual mirror', {
-    staff: staffQ,
-    calcGrossFromRates: g1,
-    manualMirror: g2,
-    diff: diffImpl,
-    match: diffImpl === 0,
-  });
-  // #endregion
-
   const payroll = loadPayrollEarnings(fs.readFileSync(payX), staffNorm);
-  // #region agent log
-  dbg('H2', 'rates row snapshot (no PII except name)', {
-    name: rates.name,
-    daytime: rates.daytime,
-    afternoon: rates.afternoon,
-    night: rates.night,
-    otUpto2: rates.otUpto2,
-    mealAllow: rates.mealAllow,
-    sleepover: rates.sleepover,
-    kmRate: rates.kmRate,
-  });
-  dbg('H3', 'ph buckets (hours)', {
-    morn: ph.morningHours,
-    aft: ph.afternoonHours,
-    night: ph.nightHours,
-    sat: ph.saturdayHours,
-    sun: (ph.sundayHours || 0) + (ph.sundayOtUpto2 || 0) + (ph.sundayOtAfter2 || 0),
-    wdOt: (ph.weekdayOtUpto2 || 0) + (ph.weekdayOtAfter2 || 0),
-    km: ph.totalKm,
-    sleepovers: ph.sleepoversCount,
-  });
-  dbg('H4', 'payroll file earnings vs model gross', {
-    payrollEarnings: payroll?.earnings ?? null,
-    modelGross: g1,
-    delta: payroll && g1 != null ? r2(payroll.earnings - g1) : null,
-  });
-  // #endregion
 
   console.log('Staff:', staffQ);
   console.log('calcGrossFromRates:', g1, '| manualMirror:', g2, '| diff:', diffImpl, '| match:', diffImpl === 0);
