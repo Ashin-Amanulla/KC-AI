@@ -53,12 +53,22 @@ export const createHoliday = async (req, res, next) => {
       return res.status(409).json({ error: `A holiday already exists on ${date} for this location` });
     }
 
-    const holiday = await Holiday.create({
-      location: locationId,
-      date: normalizedDate,
-      name: name.trim(),
-      createdBy: req.user?.userId ?? null,
-    });
+    let holiday;
+    try {
+      holiday = await Holiday.create({
+        location: locationId,
+        date: normalizedDate,
+        name: name.trim(),
+        createdBy: req.user?.userId ?? null,
+      });
+    } catch (e) {
+      if (e.code === 11000) {
+        return res.status(409).json({
+          error: 'A holiday already exists for this location on that date',
+        });
+      }
+      throw e;
+    }
 
     res.status(201).json({ holiday });
   } catch (error) {

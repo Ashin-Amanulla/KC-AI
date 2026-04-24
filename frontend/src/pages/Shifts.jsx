@@ -10,6 +10,7 @@ import {
 } from '../ui/table';
 import { useShifts, useUploadShifts } from '../api/shifts';
 import { useLocations } from '../api/locations';
+import { getErrorMessage } from '../utils/api';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import { SchadsCalculator } from './SchadsCalculator';
 
@@ -91,7 +92,7 @@ export const Shifts = ({
         toast.success(`Uploaded ${result.shiftsCreated} shifts successfully`);
       }
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message || 'Upload failed');
+      toast.error(getErrorMessage(err) || 'Upload failed');
     }
   };
 

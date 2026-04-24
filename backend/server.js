@@ -15,6 +15,7 @@ import locationsRoutes from './modules/locations/location.route.js';
 import payHoursRoutes from './modules/pay-hours/payHours.route.js';
 import forecastActualsRoutes from './modules/forecast-actuals/forecastActuals.route.js';
 import { formatErrorResponse } from './helpers/errors.js';
+import { Holiday } from './modules/holidays/holiday.model.js';
 import morgan from 'morgan';
 
 const app = express();
@@ -102,6 +103,11 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   try {
     await connectDB();
+    try {
+      await Holiday.syncIndexes();
+    } catch (idxErr) {
+      console.error('Holiday index sync failed (holiday date uniqueness may be wrong):', idxErr);
+    }
     startCsvAnalysisWorker();
     startPayHoursWorker();
     app.listen(config.port, () => {

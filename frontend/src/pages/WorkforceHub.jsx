@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { useLocations, useCreateLocation, useDeleteLocation } from '../api/locations';
+import { getErrorMessage } from '../utils/api';
 import { HolidayManager, PayHours } from './PayHours';
 import { SchadsCalculator } from './SchadsCalculator';
 import { CostAnalysis } from './CostAnalysis';
@@ -72,7 +73,7 @@ export function WorkforceHub() {
       setNewLocCode('');
       setShowNewLocation(false);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to create location');
+      toast.error(getErrorMessage(err) || 'Failed to create location');
     }
   };
 
@@ -83,7 +84,7 @@ export function WorkforceHub() {
       if (locationId === id) setLocationId('');
       toast.success('Location deleted');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to delete location');
+      toast.error(getErrorMessage(err) || 'Failed to delete location');
     }
   };
 

@@ -12,6 +12,7 @@ import { useUploadShifts } from '../api/shifts';
 import { useHolidays, useCreateHoliday, useDeleteHoliday } from '../api/holidays';
 import { useLocations, useCreateLocation, useDeleteLocation, useLoadHolidayFixture } from '../api/locations';
 import { usePayHours, useShiftPayHours, useComputePayHours, usePayHoursJobStatus } from '../api/payHours';
+import { getErrorMessage } from '../utils/api';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import { VEHICLE_RATE } from '../lib/schadsWageCalc';
 
@@ -124,7 +125,7 @@ export const HolidayManager = ({ locationId, locations }) => {
       setNewName('');
       toast.success('Holiday added');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to add holiday');
+      toast.error(getErrorMessage(err) || 'Failed to add holiday');
     }
   };
 
@@ -144,7 +145,7 @@ export const HolidayManager = ({ locationId, locations }) => {
       toast.success(`Loaded ${result.created} holidays for ${fixtureYear} (${result.skipped} already existed)`);
       if (result.errors?.length) toast.warning(`${result.errors.length} errors during load`);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to load holiday fixture');
+      toast.error(getErrorMessage(err) || 'Failed to load holiday fixture');
     }
   };
 
@@ -273,7 +274,7 @@ export const PayHours = ({
       toast.success(`Location "${newLocName.trim()}" created`);
       setNewLocName(''); setNewLocCode(''); setShowNewLocation(false);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to create location');
+      toast.error(getErrorMessage(err) || 'Failed to create location');
     }
   };
 
@@ -284,7 +285,7 @@ export const PayHours = ({
       if (locationId === id) setLocationId('');
       toast.success('Location deleted');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to delete location');
+      toast.error(getErrorMessage(err) || 'Failed to delete location');
     }
   };
 
@@ -350,11 +351,11 @@ export const PayHours = ({
           toast.success(`Uploaded ${result.shiftsCreated} shifts`);
         }
         toast.error(
-          computeErr.response?.data?.error || 'Pay hours could not start — use Compute Pay Hours to try again'
+          getErrorMessage(computeErr) || 'Pay hours could not start — use Compute Pay Hours to try again'
         );
       }
     } catch (err) {
-      toast.error(err.response?.data?.error || err.message || 'Upload failed');
+      toast.error(getErrorMessage(err) || 'Upload failed');
     }
   };
 
@@ -364,7 +365,7 @@ export const PayHours = ({
       setActiveJobId(result.jobId);
       toast.info('Pay hours computation started');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to start computation');
+      toast.error(getErrorMessage(err) || 'Failed to start computation');
     }
   };
 
