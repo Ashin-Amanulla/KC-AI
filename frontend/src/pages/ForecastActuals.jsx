@@ -57,6 +57,103 @@ function formatDt(d) {
   return new Date(d).toLocaleString();
 }
 
+/** Columns aligned with import CSV (`csvForecastActuals.js` + `processRowCommon`) — same for forecast & actuals */
+const FORECAST_ACTUALS_COLUMNS = [
+  { key: 'shiftDate', label: 'Date', kind: 'date' },
+  { key: 'clientName', label: 'Client name', kind: 'text' },
+  { key: 'staffName', label: 'Staff', kind: 'text' },
+  { key: 'startDatetime', label: 'Start date time', kind: 'dt' },
+  { key: 'endDatetime', label: 'End date time', kind: 'dt' },
+  { key: 'duration', label: 'Duration', kind: 'num' },
+  { key: 'cost', label: 'Cost', kind: 'money' },
+  { key: 'totalCost', label: 'Total cost', kind: 'money' },
+  { key: 'shiftcareId', label: 'Shift id', kind: 'text' },
+  { key: 'shiftDescription', label: 'Shift', kind: 'text' },
+  { key: 'additionalCost', label: 'Additional cost', kind: 'money' },
+  { key: 'kms', label: 'Kms', kind: 'num' },
+  { key: 'isAbsent', label: 'Absent', kind: 'bool' },
+  { key: 'status', label: 'Status', kind: 'text' },
+  { key: 'invoiceNumbers', label: 'Invoice nos.', kind: 'text' },
+  { key: 'rateGroups', label: 'Rate groups', kind: 'text' },
+  { key: 'referenceNo', label: 'Reference no', kind: 'text' },
+  { key: 'shiftType', label: 'Shift type', kind: 'text' },
+  { key: 'additionalShiftType', label: 'Additional shift type', kind: 'text' },
+  { key: 'clientType', label: 'Client type', kind: 'text' },
+];
+
+function formatMoneyVal(v) {
+  if (v == null || v === '') return '—';
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n.toFixed(2) : '—';
+}
+
+function formatNumVal(v) {
+  if (v == null || v === '') return '—';
+  const n = typeof v === 'number' ? v : Number(v);
+  if (!Number.isFinite(n)) return '—';
+  return Number.isInteger(n) ? String(n) : n.toFixed(2);
+}
+
+function renderForecastActualsCell(r, col) {
+  const v = r[col.key];
+  switch (col.kind) {
+    case 'date':
+      return formatDate(v);
+    case 'dt':
+      return formatDt(v);
+    case 'money':
+      return formatMoneyVal(v);
+    case 'num':
+      return formatNumVal(v);
+    case 'bool':
+      return v === true ? 'Yes' : v === false ? 'No' : '—';
+    case 'text':
+    default:
+      return v != null && String(v).trim() !== '' ? String(v) : '—';
+  }
+}
+
+function ForecastActualsDataTable({ records }) {
+  return (
+    <div className="rounded-md border overflow-x-auto max-w-full">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {FORECAST_ACTUALS_COLUMNS.map((col) => (
+              <TableHead
+                key={col.key}
+                className={cn(
+                  (col.kind === 'money' || col.kind === 'num') && 'text-right whitespace-nowrap',
+                  'whitespace-nowrap text-xs font-medium min-w-[5rem]'
+                )}
+              >
+                {col.label}
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {(records || []).map((r, ri) => (
+            <TableRow key={r.id ?? `fa-row-${ri}`}>
+              {FORECAST_ACTUALS_COLUMNS.map((col) => (
+                <TableCell
+                  key={col.key}
+                  className={cn(
+                    'text-xs p-2 align-top',
+                    (col.kind === 'money' || col.kind === 'num') && 'text-right tabular-nums whitespace-nowrap'
+                  )}
+                >
+                  {renderForecastActualsCell(r, col)}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
 export function ForecastActuals() {
   const { data: locData, isLoading: locLoading } = useLocations();
   const locations = locData?.locations ?? [];
@@ -277,34 +374,7 @@ export function ForecastActuals() {
                         : 'No forecast rows yet'}
                       {forecastQ.data?.total != null ? ` · ${forecastQ.data.total} rows` : ''}
                     </p>
-                    <div className="rounded-md border overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Client</TableHead>
-                            <TableHead>Staff</TableHead>
-                            <TableHead>Start</TableHead>
-                            <TableHead>End</TableHead>
-                            <TableHead className="text-right">Cost</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(forecastQ.data?.records || []).map((r, ri) => (
-                            <TableRow key={r.id ?? `forecast-${ri}`}>
-                              <TableCell>{formatDate(r.shiftDate)}</TableCell>
-                              <TableCell>{r.clientName}</TableCell>
-                              <TableCell>{r.staffName || '—'}</TableCell>
-                              <TableCell>{formatDt(r.startDatetime)}</TableCell>
-                              <TableCell>{formatDt(r.endDatetime)}</TableCell>
-                              <TableCell className="text-right">{r.cost?.toFixed?.(2) ?? r.cost}</TableCell>
-                              <TableCell className="text-right">{r.totalCost?.toFixed?.(2) ?? r.totalCost}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                    <ForecastActualsDataTable records={forecastQ.data?.records} />
                     <div className="flex items-center justify-between text-sm">
                       <span>
                         {forecastQ.data?.startIndex != null && forecastQ.data?.endIndex != null
@@ -376,34 +446,7 @@ export function ForecastActuals() {
                         : 'No actuals rows yet'}
                       {actualsQ.data?.total != null ? ` · ${actualsQ.data.total} rows` : ''}
                     </p>
-                    <div className="rounded-md border overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Client</TableHead>
-                            <TableHead>Staff</TableHead>
-                            <TableHead>Start</TableHead>
-                            <TableHead>End</TableHead>
-                            <TableHead className="text-right">Cost</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(actualsQ.data?.records || []).map((r, ri) => (
-                            <TableRow key={r.id ?? `actuals-${ri}`}>
-                              <TableCell>{formatDate(r.shiftDate)}</TableCell>
-                              <TableCell>{r.clientName}</TableCell>
-                              <TableCell>{r.staffName || '—'}</TableCell>
-                              <TableCell>{formatDt(r.startDatetime)}</TableCell>
-                              <TableCell>{formatDt(r.endDatetime)}</TableCell>
-                              <TableCell className="text-right">{r.cost?.toFixed?.(2) ?? r.cost}</TableCell>
-                              <TableCell className="text-right">{r.totalCost?.toFixed?.(2) ?? r.totalCost}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                    <ForecastActualsDataTable records={actualsQ.data?.records} />
                     <div className="flex items-center justify-between text-sm">
                       <span>
                         {actualsQ.data?.startIndex != null && actualsQ.data?.endIndex != null

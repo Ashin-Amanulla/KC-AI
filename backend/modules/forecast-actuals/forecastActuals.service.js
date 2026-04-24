@@ -506,58 +506,74 @@ export async function getSummary({ locationId, staffId, clientId, credentials })
   };
 }
 
+/** Aligned with `csvForecastActuals` + `processRowCommon` (import) column names */
+const FORECAST_ACTUALS_CSV_HEADER = [
+  'client name',
+  'date',
+  'staff',
+  'start date time',
+  'end date time',
+  'duration',
+  'cost',
+  'total cost',
+  'shift id',
+  'shift',
+  'additional cost',
+  'kms',
+  'absent',
+  'status',
+  'invoice nos.',
+  'rate groups',
+  'reference no',
+  'shift type',
+  'additional shift type',
+  'client type',
+].join(',');
+
+function formatCsvShiftDate(d, tz) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-AU', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+/** `dd/mm/yyyy hh:mm` 24h — matches `parseDateTime` au24 in csvForecastActuals */
+function formatCsvDateTimeForImport(d, tz) {
+  if (!d) return '';
+  const t = new Date(d);
+  const dmy = t.toLocaleDateString('en-AU', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' });
+  const hm = t.toLocaleTimeString('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${dmy} ${hm}`.trim();
+}
+
+function forecastActualsRowToCsvLine(r, tz) {
+  return [
+    csvEscape(r.clientName || ''),
+    formatCsvShiftDate(r.shiftDate, tz),
+    csvEscape(r.staffName || ''),
+    formatCsvDateTimeForImport(r.startDatetime, tz),
+    formatCsvDateTimeForImport(r.endDatetime, tz),
+    r.duration ?? '',
+    r.cost ?? '',
+    r.totalCost ?? '',
+    csvEscape(r.shiftcareId || ''),
+    csvEscape(r.shiftDescription || ''),
+    r.additionalCost ?? '',
+    r.kms ?? '',
+    r.isAbsent ? 'Yes' : 'No',
+    csvEscape(r.status || ''),
+    csvEscape(r.invoiceNumbers || ''),
+    csvEscape(r.rateGroups || ''),
+    csvEscape(r.referenceNo || ''),
+    csvEscape(r.shiftType || ''),
+    csvEscape(r.additionalShiftType || ''),
+    csvEscape(r.clientType || ''),
+  ].join(',');
+}
+
 export async function exportForecastCsv({ locationId, staffId, clientId, timezone }) {
   const filter = listFilter(locationId, staffId, clientId);
   const rows = await ForecastRecord.find(filter).sort({ shiftDate: 1, startDatetime: 1 }).lean();
-
-  const lines = [
-    [
-      'Date',
-      'Staff Name',
-      'Client Name',
-      'Start Time',
-      'End Time',
-      'Duration (hrs)',
-      'Cost',
-      'Additional Cost',
-      'Total Cost',
-      'Status',
-      'Shift Type',
-    ].join(','),
-  ];
-
   const tz = timezone || 'Australia/Brisbane';
-  for (const r of rows) {
-    const sd = r.shiftDate ? new Date(r.shiftDate) : null;
-    const dateStr = sd
-      ? sd.toLocaleDateString('en-AU', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' })
-      : '';
-    const st = r.startDatetime ? new Date(r.startDatetime) : null;
-    const en = r.endDatetime ? new Date(r.endDatetime) : null;
-    const startStr = st
-      ? st.toLocaleTimeString('en-AU', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false })
-      : '';
-    const endStr = en
-      ? en.toLocaleTimeString('en-AU', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false })
-      : '';
-
-    lines.push(
-      [
-        dateStr,
-        csvEscape(r.staffName || ''),
-        csvEscape(r.clientName || ''),
-        startStr,
-        endStr,
-        r.duration,
-        r.cost,
-        r.additionalCost,
-        r.totalCost,
-        csvEscape(r.status || ''),
-        csvEscape(r.shiftType || ''),
-      ].join(',')
-    );
-  }
-
+  const lines = [FORECAST_ACTUALS_CSV_HEADER, ...rows.map((r) => forecastActualsRowToCsvLine(r, tz))];
   const loc = await Location.findById(locationId).select('code').lean();
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
@@ -568,55 +584,8 @@ export async function exportForecastCsv({ locationId, staffId, clientId, timezon
 export async function exportActualsCsv({ locationId, staffId, clientId, timezone }) {
   const filter = listFilter(locationId, staffId, clientId);
   const rows = await ActualsRecord.find(filter).sort({ shiftDate: 1, startDatetime: 1 }).lean();
-
-  const lines = [
-    [
-      'Date',
-      'Staff Name',
-      'Client Name',
-      'Start Time',
-      'End Time',
-      'Duration (hrs)',
-      'Cost',
-      'Additional Cost',
-      'Total Cost',
-      'Status',
-      'Shift Type',
-    ].join(','),
-  ];
-
   const tz = timezone || 'Australia/Brisbane';
-  for (const r of rows) {
-    const sd = r.shiftDate ? new Date(r.shiftDate) : null;
-    const dateStr = sd
-      ? sd.toLocaleDateString('en-AU', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' })
-      : '';
-    const st = r.startDatetime ? new Date(r.startDatetime) : null;
-    const en = r.endDatetime ? new Date(r.endDatetime) : null;
-    const startStr = st
-      ? st.toLocaleTimeString('en-AU', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false })
-      : '';
-    const endStr = en
-      ? en.toLocaleTimeString('en-AU', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false })
-      : '';
-
-    lines.push(
-      [
-        dateStr,
-        csvEscape(r.staffName || ''),
-        csvEscape(r.clientName || ''),
-        startStr,
-        endStr,
-        r.duration,
-        r.cost,
-        r.additionalCost,
-        r.totalCost,
-        csvEscape(r.status || ''),
-        csvEscape(r.shiftType || ''),
-      ].join(',')
-    );
-  }
-
+  const lines = [FORECAST_ACTUALS_CSV_HEADER, ...rows.map((r) => forecastActualsRowToCsvLine(r, tz))];
   const loc = await Location.findById(locationId).select('code').lean();
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
