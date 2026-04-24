@@ -8,7 +8,10 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node --test",
-    "seed:user": "node seeds/user.seed.js"
+    "seed:user": "node seeds/user.seed.js",
+    "seed:melbourne-holidays": "node seeds/seed_melbourne_location_holidays.js",
+    "seed:melbourne-holidays-2026": "node seeds/seed_melbourne_location_holidays.js",
+    "migrate:holidays-legacy": "node seeds/migrate_holidays_legacy_date_to_recurring.js"
   },
   "keywords": [],
   "author": "",

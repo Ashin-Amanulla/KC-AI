@@ -43,8 +43,9 @@ export const useDeleteLocation = () => {
 export const useLoadHolidayFixture = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ locationId, year }) => {
-      const response = await api.post(`/api/locations/${locationId}/load-holidays`, { year });
+    mutationFn: async ({ locationId, file }) => {
+      const body = file ? { file } : {};
+      const response = await api.post(`/api/locations/${locationId}/load-holidays`, body);
       return response.data;
     },
     onSuccess: () => {

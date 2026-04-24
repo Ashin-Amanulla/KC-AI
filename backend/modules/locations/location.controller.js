@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { Location } from './location.model.js';
 import { Holiday } from '../holidays/holiday.model.js';
+import { normaliseFixtureEntry } from '../holidays/holidayFixture.util.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -52,38 +53,32 @@ export const deleteLocation = async (req, res, next) => {
 };
 
 /**
- * Load holiday fixture for a location + year.
- * Mirrors: python manage.py load_holidays --location BRISBANE --year 2026
+ * Load year-independent holiday definitions from fixtures/holidays_recurring.json
+ * (optional legacy per-year file holidays_YYYY.json still supported: dates become month+day only).
  *
  * POST /api/locations/:id/load-holidays
- * Body: { year: 2026 }
- *
- * Upsert strategy: skips dates that already exist, creates the rest.
+ * Body: { file?: "holidays_recurring" } — defaults to holidays_recurring.json
  */
 export const loadHolidayFixture = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const year = parseInt(req.body.year ?? new Date().getFullYear(), 10);
+    const fileBase = (req.body.file && String(req.body.file).replace(/\.json$/, '')) || 'holidays_recurring';
 
     const location = await Location.findById(id).lean();
     if (!location) return res.status(404).json({ error: 'Location not found' });
 
-    // Load fixture file
-    const fixturePath = join(__dirname, '../../fixtures', `holidays_${year}.json`);
+    const fixturePath = join(__dirname, '../../fixtures', `${fileBase}.json`);
     let fixtureData;
     try {
       fixtureData = JSON.parse(readFileSync(fixturePath, 'utf8'));
     } catch {
-      return res.status(404).json({ error: `No holiday fixture for year ${year}` });
+      return res.status(404).json({ error: `No holiday fixture file: ${fileBase}.json` });
     }
 
-    // Fixture is keyed by state code — try to match by location code
-    // e.g. code="BRISBANE" → try "QLD", then "BRISBANE", then fall back to flat array
     let holidays;
     if (Array.isArray(fixtureData)) {
       holidays = fixtureData;
     } else {
-      // Map known city codes → state keys
       const CODE_TO_STATE = {
         BRISBANE: 'QLD', GOLD_COAST: 'QLD', SUNSHINE_COAST: 'QLD', TOWNSVILLE: 'QLD',
         SYDNEY: 'NSW', NEWCASTLE: 'NSW', WOLLONGONG: 'NSW',
@@ -99,36 +94,47 @@ export const loadHolidayFixture = async (req, res, next) => {
     }
 
     if (!holidays.length) {
-      return res.status(404).json({ error: `No holidays found in fixture for location code "${location.code}" (year ${year})` });
+      return res.status(404).json({ error: `No holidays found in fixture for location code "${location.code}"` });
     }
 
     let created = 0;
     let skipped = 0;
     const errors = [];
 
-    for (const h of holidays) {
-      const normalizedDate = new Date(h.date);
-      normalizedDate.setUTCHours(0, 0, 0, 0);
+    for (const raw of holidays) {
+      let norm;
+      try {
+        norm = normaliseFixtureEntry(raw);
+      } catch (e) {
+        errors.push(String(e.message));
+        continue;
+      }
 
       try {
-        const exists = await Holiday.findOne({ location: id, date: normalizedDate }).lean();
+        const q = norm.rule
+          ? { location: id, rule: norm.rule }
+          : { location: id, month: norm.month, day: norm.day, rule: null };
+        const exists = await Holiday.findOne(q).lean();
         if (exists) {
           skipped++;
           continue;
         }
         await Holiday.create({
           location: id,
-          date: normalizedDate,
-          name: h.name,
+          name: norm.name,
+          rule: norm.rule || null,
+          month: norm.rule ? null : norm.month,
+          day: norm.rule ? null : norm.day,
+          date: null,
           createdBy: req.user?.userId ?? null,
         });
         created++;
       } catch (err) {
-        errors.push(`${h.date}: ${err.message}`);
+        errors.push(`${raw.name || raw.date || '?'}: ${err.message}`);
       }
     }
 
-    res.json({ year, created, skipped, errors });
+    res.json({ file: fileBase, created, skipped, errors });
   } catch (error) {
     next(error);
   }

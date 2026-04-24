@@ -1,51 +1,53 @@
 /**
- * Holiday Service
- *
- * Mirrors the KC Studio pattern from:
- *   kc_studio/app/holidays/services/holiday_service.py → get_holidays_in_range()
- *
- * Provides a pure data-access function that returns a Set<"YYYY-MM-DD"> of holiday
- * dates within a given UTC date range for a specific location. Callers (pay hours
- * orchestrator) pass this set directly to the calculator for O(1) holiday lookups
- * per shift segment.
- *
- * Holiday dates are stored as UTC midnight in MongoDB. The calculator compares against
- * local-time date strings (via toLocal() + offsetStr), so holidays stored on the correct
- * calendar date will always match correctly regardless of timezone offset.
+ * Holiday Service — Set<"YYYY-MM-DD"> for pay hours calculator.
+ * Holidays are stored as year-independent rules (month+day) or named rules
+ * (Easter, nth Monday in month, etc.) and materialised for each year in range.
  */
 
 import { Holiday } from './holiday.model.js';
+import { holidayToYmdUTC, ymdUTC } from './holidayRule.service.js';
+
+function ymdToUtcTime(ymd) {
+  const [Y, M, D] = ymd.split('-').map(Number);
+  return new Date(Date.UTC(Y, M - 1, D, 0, 0, 0, 0)).getTime();
+}
 
 /**
- * Build a Set of "YYYY-MM-DD" holiday strings for fast lookup.
- * Mirrors: kc_studio get_holidays_in_range(location, start_date, end_date)
- *
- * @param {string|ObjectId} locationId - Location to filter holidays by
- * @param {Date} startDate - Start of the period (inclusive)
- * @param {Date} endDate   - End of the period (inclusive)
- * @returns {Promise<Set<string>>} Set of "YYYY-MM-DD" strings
+ * @param {string|ObjectId} locationId
+ * @param {Date} startDate
+ * @param {Date} endDate
+ * @returns {Promise<Set<string>>}
  */
 export async function getHolidaysInRange(locationId, startDate, endDate) {
-  // Normalise bounds to midnight UTC so the range query is inclusive of full days
   const start = new Date(startDate);
   start.setUTCHours(0, 0, 0, 0);
-
   const end = new Date(endDate);
   end.setUTCHours(23, 59, 59, 999);
 
-  const holidays = await Holiday.find({
-    location: locationId,
-    date: { $gte: start, $lte: end },
-  })
-    .select('date')
-    .lean();
+  const holidays = await Holiday.find({ location: locationId }).lean();
+  const holidaySet = new Set();
+  const startT = start.getTime();
+  const endT = end.getTime();
+  const startY = start.getUTCFullYear();
+  const endY = end.getUTCFullYear();
 
-  const holidaySet = new Set(
-    holidays.map(h => {
+  for (const h of holidays) {
+    const isLegacy = h.date && h.month == null && !h.rule;
+    if (isLegacy) {
       const d = new Date(h.date);
-      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-    })
-  );
+      const ymd = ymdUTC(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
+      const t = ymdToUtcTime(ymd);
+      if (t >= startT && t <= endT) holidaySet.add(ymd);
+      continue;
+    }
+
+    for (let y = startY; y <= endY; y++) {
+      const ymd = holidayToYmdUTC(h, y);
+      if (!ymd) continue;
+      const t = ymdToUtcTime(ymd);
+      if (t >= startT && t <= endT) holidaySet.add(ymd);
+    }
+  }
 
   return holidaySet;
 }

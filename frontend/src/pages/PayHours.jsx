@@ -104,25 +104,36 @@ const ShiftDetail = ({ payHoursId }) => {
 // ─── Holiday Manager ──────────────────────────────────────────────────────────
 
 export const HolidayManager = ({ locationId, locations }) => {
+  const y = new Date().getFullYear();
   const [newDate, setNewDate] = useState('');
   const [newName, setNewName] = useState('');
+  const [newRule, setNewRule] = useState('');
   const [collapsed, setCollapsed] = useState(true);
-  const [fixtureYear, setFixtureYear] = useState(new Date().getFullYear());
 
-  const { data } = useHolidays(locationId ? { locationId } : {});
+  const { data } = useHolidays(locationId ? { locationId, sampleYear: y } : {});
   const createMutation = useCreateHoliday();
   const deleteMutation = useDeleteHoliday();
   const loadFixtureMutation = useLoadHolidayFixture();
 
   const holidays = data?.holidays || [];
+  const ruleOptions = data?.rules || [];
   const location = locations.find(l => l._id === locationId);
 
   const handleAdd = async () => {
-    if (!newDate || !newName.trim() || !locationId) return;
+    if (!newName.trim() || !locationId) return;
+    if (!newRule && !newDate) {
+      toast.error('Pick a recurring rule or a calendar day (year is ignored; repeats annually)');
+      return;
+    }
     try {
-      await createMutation.mutateAsync({ date: newDate, name: newName.trim(), locationId });
+      if (newRule) {
+        await createMutation.mutateAsync({ name: newName.trim(), locationId, rule: newRule });
+      } else {
+        await createMutation.mutateAsync({ name: newName.trim(), locationId, date: newDate });
+      }
       setNewDate('');
       setNewName('');
+      setNewRule('');
       toast.success('Holiday added');
     } catch (err) {
       toast.error(getErrorMessage(err) || 'Failed to add holiday');
@@ -141,8 +152,8 @@ export const HolidayManager = ({ locationId, locations }) => {
   const handleLoadFixture = async () => {
     if (!locationId) return;
     try {
-      const result = await loadFixtureMutation.mutateAsync({ locationId, year: fixtureYear });
-      toast.success(`Loaded ${result.created} holidays for ${fixtureYear} (${result.skipped} already existed)`);
+      const result = await loadFixtureMutation.mutateAsync({ locationId });
+      toast.success(`Loaded ${result.created} public holidays from fixture (${result.skipped} already existed)`);
       if (result.errors?.length) toast.warning(`${result.errors.length} errors during load`);
     } catch (err) {
       toast.error(getErrorMessage(err) || 'Failed to load holiday fixture');
@@ -174,16 +185,7 @@ export const HolidayManager = ({ locationId, locations }) => {
         <CardContent className="space-y-4">
           {/* Load fixture row */}
           <div className="flex gap-3 items-center flex-wrap p-3 rounded-md bg-muted/40 border">
-            <span className="text-sm font-medium">Load public holidays from fixture:</span>
-            <select
-              value={fixtureYear}
-              onChange={e => setFixtureYear(parseInt(e.target.value, 10))}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {[2024, 2025, 2026, 2027].map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+            <span className="text-sm font-medium">Load recurring public holidays (state-appropriate) from built-in list:</span>
             <Button
               size="sm"
               variant="outline"
@@ -195,12 +197,31 @@ export const HolidayManager = ({ locationId, locations }) => {
           </div>
 
           {/* Manual add row */}
-          <div className="flex gap-3 flex-wrap">
-            <Input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-44" />
-            <Input placeholder="Holiday name" value={newName} onChange={(e) => setNewName(e.target.value)} className="w-56" />
-            <Button onClick={handleAdd} disabled={!newDate || !newName.trim() || createMutation.isPending} size="sm">
-              <Plus className="h-4 w-4 mr-1" /> Add Holiday
-            </Button>
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-muted-foreground">Add by rule (Easter, nth Monday, …) or by fixed month/day — the date picker's year is ignored; the same day repeats every year.</p>
+            <div className="flex gap-3 flex-wrap items-end">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground">Recurring rule (optional)</label>
+                <select
+                  value={newRule}
+                  onChange={e => setNewRule(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-sm min-w-[14rem]"
+                >
+                  <option value="">— Fixed day (use date below) —</option>
+                  {ruleOptions.map((r) => (
+                    <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground">Date (for fixed day only)</label>
+                <Input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-44" disabled={Boolean(newRule)} />
+              </div>
+              <Input placeholder="Holiday name" value={newName} onChange={(e) => setNewName(e.target.value)} className="w-56" />
+              <Button onClick={handleAdd} disabled={(!newRule && !newDate) || !newName.trim() || createMutation.isPending} size="sm">
+                <Plus className="h-4 w-4 mr-1" /> Add
+              </Button>
+            </div>
           </div>
 
           {holidays.length > 0 ? (
@@ -208,7 +229,8 @@ export const HolidayManager = ({ locationId, locations }) => {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead>Date</TableHead>
+                    <TableHead>Recurrence</TableHead>
+                    <TableHead>Example in {y}</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead className="w-16"></TableHead>
                   </TableRow>
@@ -216,7 +238,12 @@ export const HolidayManager = ({ locationId, locations }) => {
                 <TableBody>
                   {holidays.map((h) => (
                     <TableRow key={h._id}>
-                      <TableCell>{new Date(h.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}</TableCell>
+                      <TableCell className="text-sm">{h.displaySchedule || '—'}</TableCell>
+                      <TableCell className="text-sm tabular-nums">
+                        {h.sampleYmd
+                          ? h.sampleYmd
+                          : '—'}
+                      </TableCell>
                       <TableCell>{h.name}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(h._id)} className="text-destructive hover:text-destructive">
