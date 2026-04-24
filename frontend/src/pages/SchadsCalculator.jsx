@@ -8,7 +8,7 @@ import { Input } from '../ui/input';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../ui/table';
-import { usePayHours } from '../api/payHours';
+import { usePayHours, useShiftPayHours } from '../api/payHours';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import {
   DAILY_ORD,
@@ -348,53 +348,110 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
   );
 };
 
-/** Collapsible pay-hours grid (same metrics as summary row) below payslip breakdown. */
-const PayHoursSnapshot = ({ mrow, allow: allowProp }) => {
-  const allow = allowProp || calcAllowances(mrow);
-  const fmtSnap = (label, val) => {
-    if (val == null || (typeof val === 'number' && val <= 0)) return '—';
-    if (label.includes('$')) return fmt(val);
-    if (label === 'Km') return `${val} km`;
-    if (label.endsWith('#')) return String(val);
-    return fmtH(val);
+/** Per-shift rows from the same pay-hours job that produced the summary (lazy-fetch when expanded). */
+const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly }) => {
+  const enabled = Boolean(payHoursId && expanded && !isManualOnly);
+  const { data, isLoading, isError, error } = useShiftPayHours(payHoursId, enabled);
+
+  const formatTime = (dt) => {
+    if (!dt) return '—';
+    return new Date(dt).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
   };
-  const cells = [
-    ['Morning', mrow.morningHours, 'text-yellow-700'],
-    ['Afternoon', mrow.afternoonHours, 'text-orange-700'],
-    ['Night', mrow.nightHours, 'text-indigo-700'],
-    ['WD OT ≤2h', mrow.weekdayOtUpto2, 'text-orange-600'],
-    ['WD OT >2h', mrow.weekdayOtAfter2, 'text-orange-700'],
-    ['Saturday', mrow.saturdayHours, 'text-cyan-700'],
-    ['Sat OT ≤2h', mrow.saturdayOtUpto2, 'text-cyan-600'],
-    ['Sat OT >2h', mrow.saturdayOtAfter2, 'text-cyan-600'],
-    ['Sunday (all)', r2((mrow.sundayHours || 0) + (mrow.sundayOtUpto2 || 0) + (mrow.sundayOtAfter2 || 0)), 'text-red-700'],
-    ['Holiday (all)', r2((mrow.holidayHours || 0) + (mrow.holidayOtUpto2 || 0) + (mrow.holidayOtAfter2 || 0)), 'text-blue-700'],
-    ['Nursing', mrow.nursingCareHours, 'text-teal-700'],
-    ['Broken #', mrow.brokenShiftCount, 'text-orange-700'],
-    ['Sleepovers #', mrow.sleepoversCount, 'text-purple-700'],
-    ['OT >76 WD', mrow.otAfter76Weekday, 'text-rose-700'],
-    ['OT >76 Sat', mrow.otAfter76Saturday, 'text-rose-600'],
-    ['OT >76 Sun', mrow.otAfter76Sunday, 'text-rose-500'],
-    ['OT >76 PH', mrow.otAfter76Holiday, 'text-rose-800'],
-    ['Km', mrow.totalKm, 'text-emerald-700'],
-    ['Broken $', allow.brokenAllow, 'text-amber-700'],
-    ['Meal $', allow.mealAllow, 'text-amber-600'],
-    ['Mileage $', allow.mileageAllow, 'text-emerald-600'],
-  ];
+  const formatDate = (dt) => {
+    if (!dt) return '—';
+    return new Date(dt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+  const h = (v) => (v != null && v > 0 ? v.toFixed(2) : '—');
+
+  const shifts = data?.shifts || [];
+
+  let body;
+  if (isManualOnly || !payHoursId) {
+    body = (
+      <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
+        No shift list for this row — it is manual-only or not linked to a pay-hours record. Add shifts on{' '}
+        <strong className="text-foreground">Pay Hours</strong> (upload CSV and compute) to see per-shift breakdown here.
+      </p>
+    );
+  } else if (!expanded) {
+    body = null;
+  } else if (isLoading) {
+    body = <p className="text-xs text-muted-foreground">Loading shifts…</p>;
+  } else if (isError) {
+    body = <p className="text-xs text-destructive">{error?.message || 'Could not load shifts'}</p>;
+  } else if (!shifts.length) {
+    body = <p className="text-xs text-muted-foreground">No shift breakdown found for this pay period.</p>;
+  } else {
+    body = (
+      <div className="overflow-x-auto -mx-1">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/30">
+              <TableHead className="text-[10px] whitespace-nowrap">Date</TableHead>
+              <TableHead className="text-[10px] whitespace-nowrap">Start</TableHead>
+              <TableHead className="text-[10px] whitespace-nowrap">End</TableHead>
+              <TableHead className="text-[10px] whitespace-nowrap">Client</TableHead>
+              <TableHead className="text-[10px] whitespace-nowrap">Type</TableHead>
+              <TableHead className="text-right text-[10px] whitespace-nowrap">Hrs</TableHead>
+              <TableHead className="text-right text-[10px] text-yellow-800 whitespace-nowrap">Morn</TableHead>
+              <TableHead className="text-right text-[10px] text-orange-800 whitespace-nowrap">Aft</TableHead>
+              <TableHead className="text-right text-[10px] text-indigo-800 whitespace-nowrap">Night</TableHead>
+              <TableHead className="text-right text-[10px] text-cyan-800 whitespace-nowrap">Sat</TableHead>
+              <TableHead className="text-right text-[10px] text-red-800 whitespace-nowrap">Sun</TableHead>
+              <TableHead className="text-right text-[10px] text-blue-800 whitespace-nowrap">Hol</TableHead>
+              <TableHead className="text-right text-[10px] text-teal-800 whitespace-nowrap">Nursing</TableHead>
+              <TableHead className="text-right text-[10px] text-emerald-800 whitespace-nowrap">km</TableHead>
+              <TableHead className="text-[10px] whitespace-nowrap">Flags</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {shifts.map((shift) => (
+              <TableRow key={shift._id} className="text-[11px]">
+                <TableCell>{formatDate(shift.shiftDate)}</TableCell>
+                <TableCell className="font-mono">{formatTime(shift.shiftStart)}</TableCell>
+                <TableCell className="font-mono">{formatTime(shift.shiftEnd)}</TableCell>
+                <TableCell className="text-muted-foreground max-w-[140px] truncate" title={shift.clientName || ''}>
+                  {shift.clientName || '—'}
+                </TableCell>
+                <TableCell>
+                  <span className="capitalize">{String(shift.shiftType || '').replace(/_/g, ' ')}</span>
+                </TableCell>
+                <TableCell className="text-right font-mono font-medium">{h(shift.totalHours)}</TableCell>
+                <TableCell className="text-right font-mono text-yellow-800">{h(shift.morningHours)}</TableCell>
+                <TableCell className="text-right font-mono text-orange-800">{h(shift.afternoonHours)}</TableCell>
+                <TableCell className="text-right font-mono text-indigo-800">{h(shift.nightHours)}</TableCell>
+                <TableCell className="text-right font-mono text-cyan-800">{h(shift.saturdayHours)}</TableCell>
+                <TableCell className="text-right font-mono text-red-800">{h(shift.sundayHours)}</TableCell>
+                <TableCell className="text-right font-mono text-blue-800">{h(shift.holidayHours)}</TableCell>
+                <TableCell className="text-right font-mono text-teal-800">{h(shift.nursingCareHours)}</TableCell>
+                <TableCell className="text-right font-mono text-emerald-800">
+                  {shift.mileage != null && shift.mileage > 0 ? `${shift.mileage}` : '—'}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {shift.isBrokenShift && (
+                      <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-orange-100 text-orange-800">Broken</span>
+                    )}
+                    {shift.isSleepover && (
+                      <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-purple-100 text-purple-800">Sleepover</span>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
   return (
     <details className="group border-t border-border/40 bg-muted/10">
       <summary className="flex cursor-pointer items-center gap-2 px-4 py-2.5 text-xs font-semibold text-muted-foreground hover:bg-muted/30 list-none [&::-webkit-details-marker]:hidden">
         <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
-        Pay hours detail
+        Shifts used in calculation
       </summary>
-      <div className="px-4 pb-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-[11px]">
-        {cells.map(([label, val, cls]) => (
-          <div key={label} className="rounded border border-border/50 bg-background px-2 py-1.5">
-            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
-            <div className={`font-mono font-medium tabular-nums ${cls}`}>{fmtSnap(label, val)}</div>
-          </div>
-        ))}
-      </div>
+      <div className="px-4 pb-4">{body}</div>
     </details>
   );
 };
@@ -1571,7 +1628,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                     isCasual={isCasual}
                                     staffRates={staffRates}
                                   />
-                                  <PayHoursSnapshot mrow={mrow} allow={allow} />
+                                  <PayHoursShiftsBreakdown
+                                    payHoursId={row._id}
+                                    expanded={!!expandedBreakdown[row.staffName]}
+                                    isManualOnly={isManualOnly}
+                                  />
                                 </div>
                               </div>
                             </TableCell>
