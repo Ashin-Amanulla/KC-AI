@@ -46,6 +46,8 @@ function parsePayrollXlsx(arrayBuffer) {
     const name = rows[i][empIdx]?.toString().trim();
     const earnings = parseFloat(rows[i][earnIdx]);
     if (!name || isNaN(earnings) || earnings <= 0) continue;
+    const nl = name.toLowerCase();
+    if (nl === 'total' || nl === 'totals' || nl === 'subtotal' || nl === 'summary') continue;
     const superAmt = superIdx >= 0 ? (parseFloat(rows[i][superIdx]) || 0) : 0;
     const tax      = taxIdx   >= 0 ? (parseFloat(rows[i][taxIdx])   || 0) : 0;
     const net      = netIdx   >= 0 ? (parseFloat(rows[i][netIdx])   || 0) : 0;

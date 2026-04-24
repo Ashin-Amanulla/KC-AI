@@ -111,6 +111,20 @@ function localSixPmOn(utcDate, offsetStr) {
   return new Date(sixPmLocal.getTime() - sign * (h * 60 + m) * 60000);
 }
 
+/**
+ * Create a UTC Date representing local 20:00 on the same local date as utcDate (SCHADS evening / “afternoon” band start in this codebase).
+ */
+function localEightPmOn(utcDate, offsetStr) {
+  const localDateStrVal = localDateStr(utcDate, offsetStr);
+  const [y, mo, d] = localDateStrVal.split('-').map(Number);
+  const eightPmLocal = new Date(Date.UTC(y, mo - 1, d, AFTERNOON_START, 0, 0, 0));
+  const sign = offsetStr[0] === '+' ? 1 : -1;
+  const clean = offsetStr.slice(1).replace(':', '');
+  const h = parseInt(clean.slice(0, 2), 10);
+  const m = parseInt(clean.slice(2, 4), 10);
+  return new Date(eightPmLocal.getTime() - sign * (h * 60 + m) * 60000);
+}
+
 // ─── DAY TYPE HELPERS ────────────────────────────────────────────────────────
 
 function getDayTypeByWeekday(utcDate, offsetStr) {
@@ -188,6 +202,45 @@ function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, h
   }
 
   return [{ startUtc, endUtc, hours: segHours, dayType, timeCategory, isSleepoverExcess }];
+}
+
+/**
+ * Same calendar day, weekday, non-sleepover: split at local 20:00 so hours before 8pm use morning/ordinary band
+ * and only hours from 8pm use the “afternoon” (evening) band — matches SCHADS-style day vs evening, instead of
+ * labelling the entire shift by end time only (which over-weighted pre-8pm work as 100% evening).
+ */
+function splitSameDayWeekdayAtEightPm(
+  startUtc,
+  endUtc,
+  hours,
+  shiftType,
+  offsetStr,
+  holidaySet,
+  options
+) {
+  const dayType = getDayType(startUtc, offsetStr, holidaySet);
+  if (dayType !== 'weekday' || shiftType === 'sleepover') {
+    return createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options);
+  }
+
+  const t20 = localEightPmOn(startUtc, offsetStr);
+  const msTotal = endUtc - startUtc;
+  if (msTotal <= 0) {
+    return createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options);
+  }
+
+  if (endUtc <= t20 || startUtc >= t20) {
+    return createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options);
+  }
+  if (t20 <= startUtc || t20 >= endUtc) {
+    return createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options);
+  }
+
+  const hBefore = r2((hours * (t20 - startUtc)) / msTotal);
+  const hAfter = r2(hours - hBefore);
+  const seg1 = createSingleDaySegment(startUtc, t20, hBefore, shiftType, offsetStr, holidaySet, options);
+  const seg2 = createSingleDaySegment(t20, endUtc, hAfter, shiftType, offsetStr, holidaySet, options);
+  return [...seg1, ...seg2];
 }
 
 function createNightShiftSegment(startUtc, endUtc, hours, shiftType) {
@@ -341,9 +394,9 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
   const startDateStr = localDateStr(startUtc, offsetStr);
   const endDateStr = localDateStr(endUtc, offsetStr);
 
-  // Same local day — no midnight split
+  // Same local day — split weekday at 8pm (local) where applicable, else single segment
   if (startDateStr === endDateStr) {
-    return createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options);
+    return splitSameDayWeekdayAtEightPm(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options);
   }
 
   // Ends exactly at local midnight (00:00)

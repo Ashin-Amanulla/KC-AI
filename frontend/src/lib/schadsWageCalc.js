@@ -208,11 +208,12 @@ export function calcGross(ph, baseRate, empType = 'permanent') {
       ot76Sun * ce(2.0) +
       ot76Hol * ce(2.5);
   } else {
+    // Permanent / non-casual: penalty loadings on base rate (align with calcBreakdown: 1 / 1.125 / 1.15 for weekday hours)
     pay =
       rate *
       ((ph.morningHours || 0) * 1.0 +
-        (ph.afternoonHours || 0) * 1.0 +
-        (ph.nightHours || 0) * 1.0 +
+        (ph.afternoonHours || 0) * 1.125 +
+        (ph.nightHours || 0) * 1.15 +
         (ph.weekdayOtUpto2 || 0) * 1.5 +
         (ph.weekdayOtAfter2 || 0) * 2.0 +
         (ph.saturdayHours || 0) * 1.5 +

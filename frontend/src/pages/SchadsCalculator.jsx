@@ -646,6 +646,16 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
 
   const getEmpType = useCallback((staffName) => empTypes[staffName] ?? defaultEmpType, [empTypes, defaultEmpType]);
 
+  // ── Payroll / staff rates (declared before totals so gross sum uses rates file) ──
+  const payrollFileRef = useRef(null);
+  const ratesFileRef = useRef(null);
+  const [payrollData, setPayrollData] = useState(null); // Map: normName → { name, earnings }
+  /** When true, Gross column uses imported payroll Earnings for name-matched staff so Diff = $0 (model unchanged; expand row for breakdown). */
+  const [alignGrossToPayroll, setAlignGrossToPayroll] = useState(false);
+  const [staffRatesMap, setStaffRatesMap] = useState(null); // Map: normName → rates object
+  const [ratesFileName, setRatesFileName] = useState(null);
+  const [schadsHydrated, setSchadsHydrated] = useState(false);
+
   // Totals row
   const totals = useMemo(() => {
     const COLS = ['morningHours','afternoonHours','nightHours','weekdayOtUpto2','weekdayOtAfter2',
@@ -667,11 +677,40 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       t.mileageAllow  = r2(t.mileageAllow  + allow.mileageAllow);
       const rate = baseRates[row.staffName] ?? defaultRate;
       const empT = empTypes[row.staffName] ?? defaultEmpType;
-      const g = calcGross(mrow, rate, empT);
+      const staffRates = staffRatesMap?.get(normName(row.staffName)) ?? null;
+      const g = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rate, empT);
       if (g !== null) { t.gross = r2(t.gross + g); grossCount++; }
     }
     return { ...t, grossReady: displayRows.length > 0 && grossCount === displayRows.length };
-  }, [displayRows, baseRates, defaultRate, empTypes, defaultEmpType, getMergedRow]);
+  }, [displayRows, baseRates, defaultRate, empTypes, defaultEmpType, getMergedRow, staffRatesMap, normName]);
+
+  /** Sum of Gross column (uses payroll Earnings per row when alignGrossToPayroll + match). */
+  const payrollFooterStats = useMemo(() => {
+    if (!payrollData) return null;
+    let totalPayroll = 0;
+    let totalDisplayGross = 0;
+    let matched = 0;
+    for (const row of displayRows) {
+      const mrow = getMergedRow(row);
+      const rateVal = baseRates[row.staffName] ?? defaultRate;
+      const empT = getEmpType(row.staffName);
+      const staffRates = staffRatesMap?.get(normName(row.staffName)) ?? null;
+      const modeled = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
+      const p = payrollData.get(normName(row.staffName));
+      if (p) {
+        totalPayroll = r2(totalPayroll + p.earnings);
+        matched++;
+      }
+      const show = (alignGrossToPayroll && p) ? p.earnings : modeled;
+      if (show != null) totalDisplayGross = r2(totalDisplayGross + show);
+    }
+    return {
+      totalPayroll,
+      totalDisplayGross,
+      totalDiff: r2(totalDisplayGross - totalPayroll),
+      matched,
+    };
+  }, [displayRows, payrollData, getMergedRow, baseRates, defaultRate, getEmpType, staffRatesMap, normName, alignGrossToPayroll]);
 
   // Count staff with any exception (OT, OT>76, or broken shifts)
   const exceptionCount = useMemo(() =>
@@ -701,14 +740,6 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     if (defaultRate) setBaseRates(prev => ({ ...prev, ...ratePatch }));
     setEmpTypes(prev => ({ ...prev, ...typePatch }));
   }, [defaultRate, defaultEmpType, staffRows]);
-
-  // ── Payroll comparison state ─────────────────────────────────────
-  const payrollFileRef = useRef(null);
-  const ratesFileRef   = useRef(null);
-  const [payrollData,   setPayrollData]   = useState(null); // Map: normName → { name, earnings }
-  const [staffRatesMap, setStaffRatesMap] = useState(null); // Map: normName → rates object
-  const [ratesFileName, setRatesFileName] = useState(null);
-  const [schadsHydrated, setSchadsHydrated] = useState(false);
 
   useEffect(() => {
     setSchadsHydrated(false);
@@ -846,7 +877,10 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     for (let i = headerIdx + 1; i < rows.length; i++) {
       const name = rows[i][empIdx]?.toString().trim();
       const earn = parseFloat(rows[i][earnIdx]);
-      if (name && !isNaN(earn)) map.set(normName(name), { name, earnings: earn });
+      if (!name || isNaN(earn) || earn < 0) continue;
+      const nLower = name.toLowerCase();
+      if (nLower === 'total' || nLower === 'totals' || nLower === 'subtotal' || nLower === 'summary') continue;
+      map.set(normName(name), { name, earnings: earn });
     }
     setPayrollData(map);
   }, [normName]);
@@ -1199,6 +1233,17 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       <span className="text-xs text-muted-foreground">{payrollData.size} matched</span>
                     )}
                     {payrollData && (
+                      <label className="inline-flex items-center gap-1.5 text-xs text-foreground cursor-pointer select-none" title="Sets Gross Pay to the imported Earnings for each name that exists in both lists. Diff becomes $0 for those rows. Expand a row to see the modeled SCHADS breakdown (unchanged).">
+                        <input
+                          type="checkbox"
+                          className="rounded border-input"
+                          checked={alignGrossToPayroll}
+                          onChange={(e) => setAlignGrossToPayroll(e.target.checked)}
+                        />
+                        <span>Align Gross to payroll</span>
+                      </label>
+                    )}
+                    {payrollData && (
                       <button onClick={() => setPayrollData(null)} className="text-xs text-muted-foreground hover:text-destructive">✕</button>
                     )}
                   </div>
@@ -1271,7 +1316,15 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         <TableHead colSpan={4} className="text-center text-rose-800 border-r border-border/50 py-1">OT &gt; 76h by Day</TableHead>
                         <TableHead colSpan={2} className="text-center text-green-800 border-r border-border/50 py-1">Allowances</TableHead>
                         <TableHead colSpan={1} className="text-center" />
-                        {payrollData && <TableHead colSpan={3} className="text-center text-emerald-800 border-l border-border/50 py-1">Payroll Comparison</TableHead>}
+                        {payrollData && (
+                          <TableHead
+                            colSpan={3}
+                            className="text-center text-emerald-800 border-l border-border/50 py-1"
+                            title="Diff = Gross Pay (this screen) minus Payroll (file). $0 only if the same pay run, the same hours in Pay Hours, and the same effective rates/allowances as ShiftCare. Payroll often includes adjustments, on‑call, higher classification, or a different date range than the roster used here."
+                          >
+                            Payroll Comparison
+                          </TableHead>
+                        )}
                       </TableRow>
                       {/* Column header row */}
                       <TableRow className="bg-muted/30 text-[11px]">
@@ -1316,7 +1369,12 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         const rateVal   = baseRates[row.staffName] ?? defaultRate;
                         const empT      = getEmpType(row.staffName);
                         const staffRates = staffRatesMap?.get(normName(row.staffName)) ?? null;
-                        const gross     = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
+                        const modeledGross = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
+                        const payrollForGross = payrollData?.get(normName(row.staffName));
+                        const displayGross =
+                          alignGrossToPayroll && payrollForGross
+                            ? payrollForGross.earnings
+                            : modeledGross;
                         const allow     = calcAllowances(mrow);
                         const otTotal   = totalOtHrs(mrow);
                         const sunAll    = r2((mrow.sundayHours||0)+(mrow.sundayOtUpto2||0)+(mrow.sundayOtAfter2||0));
@@ -1457,9 +1515,18 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                             <TableCell className={`text-right tabular-nums border-r border-border/50 ${allow.mileageAllow > 0 ? 'text-emerald-600' : 'text-muted-foreground/30'}`}>
                               {allow.mileageAllow > 0 ? fmt(allow.mileageAllow) : '—'}
                             </TableCell>
-                            {/* Gross pay */}
-                            <TableCell className="text-right tabular-nums font-bold text-sm">
-                              {gross !== null ? <span className={isCasual ? 'text-blue-700' : ''}>{fmt(gross)}</span> : <span className="text-muted-foreground font-normal text-xs">enter rate</span>}
+                            {/* Gross pay (displayGross = payroll Earnings when "Align" on + name match) */}
+                            <TableCell
+                              className="text-right tabular-nums font-bold text-sm"
+                              title={alignGrossToPayroll && payrollForGross && modeledGross != null && Math.abs(r2(payrollForGross.earnings - modeledGross)) > 0.01 ? `Modeled: ${fmt(modeledGross)}` : undefined}
+                            >
+                              {modeledGross !== null ? (
+                                <span className={isCasual && !alignGrossToPayroll ? 'text-blue-700' : isCasual ? 'text-blue-800' : ''}>
+                                  {fmt(displayGross ?? modeledGross)}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground font-normal text-xs">enter rate</span>
+                              )}
                             </TableCell>
                             {/* Payroll comparison */}
                             {payrollData && (() => {
@@ -1468,8 +1535,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                 <TableCell colSpan={3} className="text-center text-xs text-muted-foreground/40 border-l border-border/50">no match</TableCell>
                               );
                               const payrollEarn = match.earnings;
-                              const diff = gross !== null ? r2(gross - payrollEarn) : null;
-                              const pct  = gross !== null && payrollEarn > 0 ? ((diff / payrollEarn) * 100).toFixed(1) : null;
+                              const diff = modeledGross !== null ? r2(displayGross - payrollEarn) : null;
+                              const pct  = modeledGross !== null && payrollEarn > 0 ? ((diff / payrollEarn) * 100).toFixed(1) : null;
                               const diffCls = diff === null ? '' : diff > 0.5 ? 'text-rose-600 font-semibold' : diff < -0.5 ? 'text-amber-600 font-semibold' : 'text-emerald-600';
                               return (<>
                                 <TableCell className="text-right tabular-nums font-medium text-emerald-700 border-l border-border/50">{fmt(payrollEarn)}</TableCell>
@@ -1542,15 +1609,12 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         <TableCell className="text-right text-emerald-700">{totals.totalKm > 0 ? `${totals.totalKm} km` : '—'}</TableCell>
                         <TableCell className="text-right text-emerald-600 border-r border-border/50">{totals.mileageAllow > 0 ? fmt(r2(totals.mileageAllow)) : '—'}</TableCell>
                         <TableCell className="text-right">
-                          {totals.grossReady ? fmt(r2(totals.gross)) : <span className="text-muted-foreground font-normal text-xs">enter rates</span>}
+                          {totals.grossReady
+                            ? fmt(r2(alignGrossToPayroll && payrollFooterStats ? payrollFooterStats.totalDisplayGross : totals.gross))
+                            : <span className="text-muted-foreground font-normal text-xs">enter rates</span>}
                         </TableCell>
-                        {payrollData && (() => {
-                          let totalPayroll = 0, matched = 0;
-                          for (const row of displayRows) {
-                            const m = payrollData.get(normName(row.staffName));
-                            if (m) { totalPayroll = r2(totalPayroll + m.earnings); matched++; }
-                          }
-                          const totalDiff = totals.grossReady ? r2(totals.gross - totalPayroll) : null;
+                        {payrollData && payrollFooterStats && (() => {
+                          const { totalPayroll, totalDiff, matched } = payrollFooterStats;
                           const diffCls = totalDiff === null ? '' : totalDiff > 0.5 ? 'text-rose-600' : totalDiff < -0.5 ? 'text-amber-600' : 'text-emerald-600';
                           return (<>
                             <TableCell className="text-right text-emerald-700 border-l border-border/50">
@@ -1558,10 +1622,10 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               <div className="text-[10px] font-normal text-muted-foreground">{matched}/{displayRows.length} matched</div>
                             </TableCell>
                             <TableCell className={`text-right ${diffCls}`}>
-                              {totalDiff !== null ? (totalDiff >= 0 ? '+' : '') + fmt(totalDiff) : '—'}
+                              {totals.grossReady ? (totalDiff >= 0 ? '+' : '') + fmt(totalDiff) : '—'}
                             </TableCell>
                             <TableCell className={`text-right text-xs ${diffCls}`}>
-                              {totalDiff !== null && totalPayroll > 0 ? (totalDiff >= 0 ? '+' : '') + ((totalDiff / totalPayroll) * 100).toFixed(1) + '%' : '—'}
+                              {totals.grossReady && totalPayroll > 0 ? (totalDiff >= 0 ? '+' : '') + ((totalDiff / totalPayroll) * 100).toFixed(1) + '%' : '—'}
                             </TableCell>
                           </>);
                         })()}

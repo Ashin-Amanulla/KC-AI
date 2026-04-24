@@ -137,3 +137,18 @@ test('personal care immediately after sleepover (within 8h gap) is night band', 
   assert.strictEqual(data.morningHours, 0);
   assert.strictEqual(data.afternoonHours, 0);
 });
+
+test('same weekday same local day: split at 8pm so pre-evening = morning, post-8pm = afternoon', () => {
+  // 2026-04-07 = Tuesday AU. 14:00–22:00 +10, 8h → 6h to 20:00 + 2h after
+  const s = shift({
+    _id: 'e8e8e8e8e8e8e8e8e8e8e8e8',
+    start: '2026-04-07T04:00:00.000Z',
+    end: '2026-04-07T12:00:00.000Z',
+    hours: 8,
+    timezoneOffset: '+10:00',
+  });
+  const { data } = computePayHoursForStaff([s], new Set());
+  assert.strictEqual(data.morningHours, 6);
+  assert.strictEqual(data.afternoonHours, 2);
+  assert.strictEqual(data.nightHours, 0);
+});
