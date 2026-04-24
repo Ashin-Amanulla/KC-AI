@@ -1601,8 +1601,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 <span>Public Holiday:</span><span className="font-medium text-foreground">2.5×</span>
                 <span>WD/Sat OT — first 2h:</span><span className="font-medium text-foreground">1.5×</span>
                 <span>WD/Sat OT — after 2h:</span><span className="font-medium text-foreground">2.0×</span>
-                <span>Weekday ordinary cap / shift:</span><span className="font-medium text-foreground">4h before OT</span>
-                <span>Sat/Sun/PH cap / shift:</span><span className="font-medium text-foreground">10h before OT</span>
+                <span>Ordinary cap / shift (WD / Sat / Sun / PH):</span><span className="font-medium text-foreground">10h before OT</span>
                 <span>Sun / PH OT:</span><span className="font-medium text-foreground">same as Sun/PH rate</span>
                 <span>OT &gt; 76h — WD/Sat:</span><span className="font-medium text-foreground">1.5× / 2× (tiered)</span>
                 <span>OT &gt; 76h — Sunday:</span><span className="font-medium text-foreground">2.0× flat</span>
@@ -1620,7 +1619,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
             <div className="bg-amber-50 border border-amber-300 rounded p-3 text-xs text-amber-800 space-y-1">
               <p className="font-semibold">⚠ SCHADS Award Rules Applied</p>
               <ul className="list-disc list-inside space-y-0.5 text-[11px] leading-relaxed">
-                <li><strong>OT triggers:</strong> &gt;76h/fortnight; weekday &gt;4h/shift; Sat/Sun/PH &gt;10h/shift — same hour paid once, not double-counted</li>
+                <li><strong>OT triggers:</strong> &gt;76h/fortnight; &gt;10h active hours/shift (daily OT) — same hour paid once, not double-counted</li>
                 <li><strong>OT &gt; 76h rates:</strong> Weekday/Sat shifts use 1.5× (first 2h) then 2×; Sun shifts 2.0×; PH shifts 2.5×</li>
                 <li><strong>Sunday/PH OT:</strong> Same rate as ordinary day (2.0× / 2.5×) — no separate OT brackets</li>
                 <li><strong>Broken shifts:</strong> $20.82 per shift (1 break), $27.56 for 2 breaks (cap not tracked per-shift)</li>
