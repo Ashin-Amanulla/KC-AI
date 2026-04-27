@@ -40,6 +40,7 @@ function defaultRatesRow(displayName) {
     sleepover: 0,
     sleepoverExtra: 0,
     kmRate: VEHICLE_RATE,
+    allowance: 0,
   };
 }
 
@@ -439,9 +440,16 @@ export const Staff = () => {
                       min="0"
                       readOnly={!canEditRates}
                       className="h-8 text-xs"
-                      value={draft[field] ?? ''}
+                      value={
+                        field === 'allowance'
+                          ? draft.allowance ? draft.allowance : ''
+                          : draft[field] ?? ''
+                      }
                       onChange={(e) =>
-                        setDraft((d) => ({ ...d, [field]: r2(parseFloat(e.target.value) || 0) }))
+                        setDraft((d) => ({
+                          ...d,
+                          [field]: r2(parseFloat(e.target.value) || 0),
+                        }))
                       }
                     />
                   </div>

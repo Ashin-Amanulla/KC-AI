@@ -13,6 +13,7 @@ export const STAFF_RATES_TABLE_FIELDS = [
   ['brokenShift', 'Broken'],
   ['sleepover', 'Sleep'],
   ['kmRate', '$/km'],
+  ['allowance', 'Allowance'],
 ];
 
 export const STAFF_RATES_NUMERIC_KEYS = STAFF_RATES_TABLE_FIELDS.map(([k]) => k);

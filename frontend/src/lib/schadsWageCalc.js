@@ -65,7 +65,8 @@ export function calcGrossFromRates(ph, rates) {
     (ph.brokenShift2BreakCount || 0) * BROKEN_ALLOWANCE_2 +
     (ph.sleepoversCount || 0) * effectiveSleepoverRate(rates) +
     mealAllow +
-    mileageAllow
+    mileageAllow +
+    r2(rates.allowance || 0)
   );
   return pay;
 }
@@ -82,8 +83,8 @@ export function calcBreakdownFromRates(ph, rates) {
   const ot76SatT2 = r2(Math.max(0, ot76Sat - 2));
 
   const defs = [
-    ['Morning', ph.morningHours || 0, rates.daytime, 'ord'],
-    ['Afternoon', ph.afternoonHours || 0, rates.afternoon, 'penalty'],
+    ['Daytime (≤8pm)', ph.morningHours || 0, rates.daytime, 'ord'],
+    ['Evening (>8pm)', ph.afternoonHours || 0, rates.afternoon, 'penalty'],
     ['Night', ph.nightHours || 0, rates.night, 'penalty'],
     ['WD OT ≤2h', ph.weekdayOtUpto2 || 0, rates.otUpto2, 'ot'],
     ['WD OT >2h', ph.weekdayOtAfter2 || 0, rates.otAfter2, 'ot'],
@@ -132,6 +133,7 @@ export function calcBreakdownFromRates(ph, rates) {
   const sleepRate = effectiveSleepoverRate(rates);
   const sleepAllow = r2((ph.sleepoversCount || 0) * sleepRate);
   const mileageAllow = r2((ph.totalKm || 0) * (rates.kmRate || VEHICLE_RATE));
+  const otherAllow = r2(rates.allowance || 0);
   const allow = {
     brokenAllow,
     broken1Allow,
@@ -139,7 +141,8 @@ export function calcBreakdownFromRates(ph, rates) {
     mealAllow,
     sleepAllow,
     mileageAllow,
-    total: r2(brokenAllow + mealAllow + sleepAllow + mileageAllow),
+    otherAllow,
+    total: r2(brokenAllow + mealAllow + sleepAllow + mileageAllow + otherAllow),
   };
 
   const gross = r2(lines.reduce((s, l) => s + l.pay, 0) + allow.total);
@@ -288,8 +291,8 @@ export function calcBreakdown(ph, baseRate, empType = 'permanent') {
   const holAll = r2((ph.holidayHours || 0) + (ph.holidayOtUpto2 || 0) + (ph.holidayOtAfter2 || 0));
 
   const defs = [
-    ['Morning', ph.morningHours || 0, 1.0, 'ord'],
-    ['Afternoon', ph.afternoonHours || 0, 1.125, 'penalty'],
+    ['Daytime (≤8pm)', ph.morningHours || 0, 1.0, 'ord'],
+    ['Evening (>8pm)', ph.afternoonHours || 0, 1.125, 'penalty'],
     ['Night', ph.nightHours || 0, 1.15, 'penalty'],
     ['WD OT ≤2h', ph.weekdayOtUpto2 || 0, 1.5, 'ot'],
     ['WD OT >2h', ph.weekdayOtAfter2 || 0, 2.0, 'ot'],

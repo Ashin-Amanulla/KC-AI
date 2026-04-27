@@ -303,6 +303,17 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
                 <td className="text-right px-3 py-2 font-mono font-semibold text-emerald-700">{fmt(bd.allow.mileageAllow)}</td>
               </tr>
             )}
+            {staffRates && (bd.allow.otherAllow || 0) > 0 && (
+              <tr className="border-t border-border/30 bg-amber-50/30">
+                <td className="px-3 py-2 text-amber-700">
+                  Allowance (rates)
+                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.otherAllow)}</td>
+              </tr>
+            )}
             {/* Total row */}
             <tr className="border-t-2 border-border bg-muted/20 font-bold">
               <td className="px-3 py-2.5 text-sm">Total</td>
@@ -379,8 +390,8 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly }) => {
               <TableHead className="text-[10px] whitespace-nowrap">Client</TableHead>
               <TableHead className="text-[10px] whitespace-nowrap">Type</TableHead>
               <TableHead className="text-right text-[10px] whitespace-nowrap">Hrs</TableHead>
-              <TableHead className="text-right text-[10px] text-yellow-800 whitespace-nowrap">Morn</TableHead>
-              <TableHead className="text-right text-[10px] text-orange-800 whitespace-nowrap">Aft</TableHead>
+              <TableHead className="text-right text-[10px] text-yellow-800 whitespace-nowrap" title="Weekday ordinary: local 6am–8pm (1× base), not clock AM">Day</TableHead>
+              <TableHead className="text-right text-[10px] text-orange-800 whitespace-nowrap" title="After 8pm local (1.125×), not clock afternoon">Eve</TableHead>
               <TableHead className="text-right text-[10px] text-indigo-800 whitespace-nowrap">Night</TableHead>
               <TableHead className="text-right text-[10px] text-cyan-800 whitespace-nowrap">Sat</TableHead>
               <TableHead className="text-right text-[10px] text-red-800 whitespace-nowrap">Sun</TableHead>
@@ -478,8 +489,8 @@ function schadsStorageKey(locationId) {
 
 // ── Right-click editable field registry ──────────────────────────────
 const EDITABLE_FIELDS = {
-  morningHours:      'Morning Hours',
-  afternoonHours:    'Afternoon Hours',
+    morningHours:      'Daytime Hours (≤8pm local, 1×)',
+    afternoonHours:    'Evening Hours (>8pm local, 1.125×)',
   nightHours:        'Night Hours',
   weekdayOtUpto2:    'WD OT ≤2h',
   weekdayOtAfter2:   'WD OT >2h',
@@ -874,6 +885,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       brokenShift:h.findIndex(x => x === 'broken shift'),
       sleepover:  ci('sleepover'),
       kmRate:     ci('mileage'),
+      allowance:  h.findIndex((x) => x === 'allowance' || x === 'other allowance'),
     };
     const map = new Map();
     for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -900,6 +912,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           brokenShift:g('brokenShift'),
           sleepover:  g('sleepover'),
           kmRate:     g('kmRate') || VEHICLE_RATE,
+          allowance:  idx.allowance >= 0 ? g('allowance') : 0,
         };
         if (sleepoverExtraCol >= 0) row.sleepoverExtra = gx(sleepoverExtraCol);
         map.set(normName(name), row);
@@ -1319,7 +1332,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       {[
                         ['Base (÷1.25)', `$${base.toFixed(2)}`],
                         ['Loading (+25%)', `$${load.toFixed(2)}`],
-                        ['Afternoon (1.125×)', `$${r2(base*1.125+load).toFixed(2)}/h`],
+                        ['Evening / >8pm (1.125×)', `$${r2(base*1.125+load).toFixed(2)}/h`],
                         ['Night (1.15×)', `$${r2(base*1.15+load).toFixed(2)}/h`],
                         ['Saturday (1.5×)', `$${r2(base*1.5+load).toFixed(2)}/h`],
                         ['Sunday (2.0×)', `$${r2(base*2.0+load).toFixed(2)}/h`],
@@ -1389,8 +1402,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         <TableHead className="min-w-[160px] sticky left-0 bg-muted/30 z-10 border-r border-border/50">Staff</TableHead>
                         <TableHead className="min-w-[90px]">Rate ($)</TableHead>
                         <TableHead className="min-w-[100px] border-r border-border/50">Type</TableHead>
-                        <TableHead className="text-right text-yellow-700 whitespace-nowrap">Morn</TableHead>
-                        <TableHead className="text-right text-orange-700 whitespace-nowrap">Aft<br/><span className="text-[9px] font-normal opacity-70">1.125×</span></TableHead>
+                        <TableHead className="text-right text-yellow-700 whitespace-nowrap" title="Ordinary weekday hours up to 8pm local (1×). Not clock AM.">Day<br/><span className="text-[9px] font-normal opacity-70">≤8pm</span></TableHead>
+                        <TableHead className="text-right text-orange-700 whitespace-nowrap" title="After 8pm local (1.125×). Not clock afternoon.">Eve<br/><span className="text-[9px] font-normal opacity-70">1.125×</span></TableHead>
                         <TableHead className="text-right text-indigo-700 border-r border-border/50 whitespace-nowrap">Night<br/><span className="text-[9px] font-normal opacity-70">1.15×</span></TableHead>
                         <TableHead className="text-right text-orange-600 whitespace-nowrap">OT≤2h<br/><span className="text-[9px] font-normal opacity-70">1.5×</span></TableHead>
                         <TableHead className="text-right text-orange-700 border-r border-border/50 whitespace-nowrap">OT&gt;2h<br/><span className="text-[9px] font-normal opacity-70">2×</span></TableHead>
@@ -1720,7 +1733,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
               <p className="font-semibold text-[11px] uppercase tracking-wider">Pay Rate Multipliers</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground text-[11px]">
                 <span>Weekday ordinary:</span><span className="font-medium text-foreground">1.0×</span>
-                <span>Afternoon (after 8pm):</span><span className="font-medium text-foreground">1.125×</span>
+                <span>Evening (after 8pm local):</span><span className="font-medium text-foreground">1.125×</span>
                 <span>Night (before 6am):</span><span className="font-medium text-foreground">1.15×</span>
                 <span>Saturday ordinary:</span><span className="font-medium text-foreground">1.5×</span>
                 <span>Sunday:</span><span className="font-medium text-foreground">2.0×</span>
@@ -2226,7 +2239,13 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                   step="0.01"
                                   min="0"
                                   className="h-8 w-[68px] text-xs px-1"
-                                  value={row ? row[field] ?? '' : ''}
+                                  value={
+                                    row
+                                      ? field === 'allowance'
+                                        ? row[field] ? row[field] : ''
+                                        : row[field] ?? ''
+                                      : ''
+                                  }
                                   placeholder={row ? '' : '—'}
                                   onChange={(e) => patchStaffRatesField(key, field, e.target.value)}
                                 />

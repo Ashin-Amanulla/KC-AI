@@ -49,8 +49,8 @@ const ShiftDetail = ({ payHoursId }) => {
             <TableHead>Client</TableHead>
             <TableHead>Type</TableHead>
             <TableHead className="text-right">Total Hrs</TableHead>
-            <TableHead className="text-right">Morning</TableHead>
-            <TableHead className="text-right">Afternoon</TableHead>
+            <TableHead className="text-right" title="Ordinary to 8pm local (1×)">Daytime</TableHead>
+            <TableHead className="text-right" title="After 8pm local (1.125×)">Evening</TableHead>
             <TableHead className="text-right">Night</TableHead>
             <TableHead className="text-right">Sat</TableHead>
             <TableHead className="text-right">Sun</TableHead>
@@ -429,8 +429,8 @@ export const PayHours = ({
               <TableRow className="bg-muted/50">
                 <TableHead className="w-8"></TableHead>
                 <TableHead className="min-w-[160px]">Staff</TableHead>
-                <TableHead className="text-right bg-yellow-50/50 text-yellow-800">Morn</TableHead>
-                <TableHead className="text-right bg-orange-50/50 text-orange-800">Aft</TableHead>
+                <TableHead className="text-right bg-yellow-50/50 text-yellow-800" title="≤8pm local ordinary">Day</TableHead>
+                <TableHead className="text-right bg-orange-50/50 text-orange-800" title=">8pm local">Eve</TableHead>
                 <TableHead className="text-right bg-indigo-50/50 text-indigo-800">Night</TableHead>
                 <TableHead className="text-right bg-gray-50">WD OT≤2</TableHead>
                 <TableHead className="text-right bg-gray-50">WD OT&gt;2</TableHead>

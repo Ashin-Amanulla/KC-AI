@@ -17,6 +17,7 @@ const ratesSchema = new mongoose.Schema(
     sleepover: { type: Number, default: 0 },
     sleepoverExtra: { type: Number, default: 0 },
     kmRate: { type: Number, default: 0 },
+    allowance: { type: Number, default: 0 },
   },
   { _id: false }
 );

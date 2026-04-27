@@ -87,6 +87,7 @@ function parseAwardRatesXlsx(arrayBuffer) {
     brokenShift: h.findIndex(x => x === 'broken shift'),
     sleepover: ci('sleepover'),
     kmRate: ci('mileage'),
+    allowance: h.findIndex((x) => x === 'allowance' || x === 'other allowance'),
   };
   const map = new Map();
   for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -111,6 +112,7 @@ function parseAwardRatesXlsx(arrayBuffer) {
       brokenShift: g('brokenShift'),
       sleepover: g('sleepover'),
       kmRate: g('kmRate') || VEHICLE_RATE,
+      allowance: idx.allowance >= 0 ? g('allowance') : 0,
     });
   }
   return map;
