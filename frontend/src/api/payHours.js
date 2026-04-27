@@ -56,6 +56,15 @@ export const usePayHoursJobStatus = (jobId) => {
   });
 };
 
+export const useRunPayHoursTests = () => {
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.post('/api/pay-hours/tests/run');
+      return response.data;
+    },
+  });
+};
+
 export const getPayHoursExportUrl = (params = {}) => {
   const qs = new URLSearchParams(params).toString();
   return `/api/pay-hours/export${qs ? `?${qs}` : ''}`;

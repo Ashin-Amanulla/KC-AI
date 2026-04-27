@@ -11,7 +11,12 @@ import {
 import { useUploadShifts } from '../api/shifts';
 import { useHolidays, useCreateHoliday, useDeleteHoliday } from '../api/holidays';
 import { useLocations, useCreateLocation, useDeleteLocation, useLoadHolidayFixture } from '../api/locations';
-import { usePayHours, useShiftPayHours, useComputePayHours, usePayHoursJobStatus } from '../api/payHours';
+import {
+  usePayHours,
+  useShiftPayHours,
+  useComputePayHours,
+  usePayHoursJobStatus,
+} from '../api/payHours';
 import { getErrorMessage } from '../utils/api';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import { VEHICLE_RATE } from '../lib/schadsWageCalc';

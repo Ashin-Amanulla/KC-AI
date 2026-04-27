@@ -2,6 +2,11 @@ import { PayHours } from './payHours.model.js';
 import { ShiftPayHours } from './shiftPayHours.model.js';
 import { PayHoursJob } from './payHoursJob.model.js';
 import { addPayHoursJob } from '../../jobs/payHoursQueue.js';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
+
+const execFileAsync = promisify(execFile);
 
 export const computePayHours = async (req, res, next) => {
   try {
@@ -149,6 +154,33 @@ export const exportPayHoursCsv = async (req, res, next) => {
     res.end();
   } catch (error) {
     next(error);
+  }
+};
+
+export const runPayHoursEngineTests = async (_req, res, next) => {
+  try {
+    const testFilePath = fileURLToPath(new URL('./services/payHoursCalculator.test.js', import.meta.url));
+
+    const { stdout, stderr } = await execFileAsync(process.execPath, ['--test', testFilePath], {
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: 60000,
+    });
+
+    const output = [stdout, stderr].filter(Boolean).join('\n').trim();
+    res.json({
+      ok: true,
+      exitCode: 0,
+      output,
+      ranAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    const output = [error?.stdout, error?.stderr, error?.message].filter(Boolean).join('\n').trim();
+    res.status(500).json({
+      ok: false,
+      exitCode: typeof error?.code === 'number' ? error.code : 1,
+      output,
+      ranAt: new Date().toISOString(),
+    });
   }
 };
 

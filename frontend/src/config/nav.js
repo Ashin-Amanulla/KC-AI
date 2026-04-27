@@ -15,6 +15,7 @@ export const NAV_ITEMS = [
   { path: '/clients', label: 'Clients', icon: 'UserCheck', roles: [ROLES.SUPER_ADMIN, ROLES.VIEWER] },
   { path: '/timesheets', label: 'Timesheets', icon: 'Clock', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
   { path: '/workforce', label: 'Workforce', icon: 'Layers', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER] },
+  { path: '/pay-hours-tests', label: 'Pay Hours Tests', icon: 'Calculator', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER] },
   { path: '/shift-analysis', label: 'Shift Analysis', icon: 'FileBarChart', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
   {
     path: '/forecast-actuals',

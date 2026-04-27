@@ -13,6 +13,7 @@ import { ShiftAnalysis } from './pages/ShiftAnalysis';
 import { ForecastActuals } from './pages/ForecastActuals';
 import { UserManagement } from './pages/UserManagement';
 import { WorkforceHub } from './pages/WorkforceHub';
+import { PayHoursTests } from './pages/PayHoursTests';
 import { canAccessPath } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
@@ -121,6 +122,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <UserManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pay-hours-tests"
+            element={
+              <ProtectedRoute>
+                <PayHoursTests />
               </ProtectedRoute>
             }
           />
