@@ -156,8 +156,8 @@ test('personal care immediately after sleepover (within 8h gap) is night band', 
   assert.strictEqual(data.afternoonHours, 0);
 });
 
-test('weekday 2pm–10pm local (+10): 6h daytime (≤8pm 1×) + 2h evening (>8pm 1.125×) — not clock AM/PM', () => {
-  // 2026-04-07 = Tuesday AU. 14:00–22:00 +10 → split at local 20:00, not at noon
+test('weekday 2pm–10pm local (+10): whole shift paid as evening (highest band)', () => {
+  // 2026-04-07 = Tuesday AU. Crosses 8pm band boundary; entire shift must be evening.
   const s = shift({
     _id: 'e8e8e8e8e8e8e8e8e8e8e8e8',
     start: '2026-04-07T04:00:00.000Z',
@@ -166,12 +166,12 @@ test('weekday 2pm–10pm local (+10): 6h daytime (≤8pm 1×) + 2h evening (>8pm
     timezoneOffset: '+10:00',
   });
   const { data } = computePayHoursForStaff([s], new Set());
-  assert.strictEqual(data.morningHours, 6, 'morningHours field = weekday ordinary up to 8pm local');
-  assert.strictEqual(data.afternoonHours, 2, 'afternoonHours field = after 8pm local (evening penalty band)');
+  assert.strictEqual(data.morningHours, 0, 'no split when crossing into higher weekday band');
+  assert.strictEqual(data.afternoonHours, 8, 'full shift treated as evening band');
   assert.strictEqual(data.nightHours, 0);
 });
 
-test('weekday 11am–9pm local (+10): AM start still splits at 8pm (9h daytime + 1h evening, under ordinary cap)', () => {
+test('weekday 11am–9pm local (+10): whole shift paid as evening (highest band)', () => {
   const s = shift({
     _id: 'f1f1f1f1f1f1f1f1f1f1f1f1',
     start: '2026-04-07T01:00:00.000Z',
@@ -180,8 +180,8 @@ test('weekday 11am–9pm local (+10): AM start still splits at 8pm (9h daytime +
     timezoneOffset: '+10:00',
   });
   const { data } = computePayHoursForStaff([s], new Set());
-  assert.strictEqual(data.morningHours, 9);
-  assert.strictEqual(data.afternoonHours, 1);
+  assert.strictEqual(data.morningHours, 0);
+  assert.strictEqual(data.afternoonHours, 10);
   assert.strictEqual(data.nightHours, 0);
 });
 
@@ -335,7 +335,7 @@ describe('sleepover', () => {
     assert.strictEqual(data.morningHours, 0);
   });
 
-  test('PC gap ≥8h after sleepover: not attached; ordinary weekday split applies', () => {
+  test('PC gap ≥8h after sleepover: not attached; still follows highest weekday band rule', () => {
     const sleepover = shift({
       _id: 'so04a',
       start: '2026-06-01T10:00:00.000Z',
@@ -356,7 +356,7 @@ describe('sleepover', () => {
       timezoneOffset: '+10:00',
     });
     const { data } = computePayHoursForStaff([sleepover, pc], new Set());
-    assert.ok(data.morningHours > 0 || data.afternoonHours > 0, 'expect weekday ordinary bands');
+    assert.ok(data.morningHours > 0 || data.afternoonHours > 0, 'expect weekday hours (highest-band classification)');
     assert.strictEqual(data.nightHours, 4);
   });
 });
@@ -402,7 +402,7 @@ describe('daily ordinary cap (10h) & OT tiers', () => {
   test('single weekday 12h: 10 ordinary + 2h OT tier1', () => {
     const s = shiftBrisbane({ _id: 'ot01' }, '2026-04-07', 9, 0, 21, 0);
     const { data } = computePayHoursForStaff([s], new Set());
-    assert.strictEqual(data.morningHours, 10);
+    assert.strictEqual(data.afternoonHours, 10);
     assert.strictEqual(data.weekdayOtUpto2, 2);
     assert.strictEqual(data.weekdayOtAfter2, 0);
     assert.ok(data.mealAllowanceCount >= 1);
@@ -442,7 +442,7 @@ describe('daily ordinary cap (10h) & OT tiers', () => {
   test('weekday 13h: OT tier1 (2h) + tier2 (1h)', () => {
     const s = shiftBrisbane({ _id: 'ot05' }, '2026-04-07', 9, 0, 22, 0);
     const { data } = computePayHoursForStaff([s], new Set());
-    assert.strictEqual(data.morningHours, 10);
+    assert.strictEqual(data.afternoonHours, 10);
     assert.strictEqual(data.weekdayOtUpto2, 2);
     assert.strictEqual(data.weekdayOtAfter2, 1);
   });
