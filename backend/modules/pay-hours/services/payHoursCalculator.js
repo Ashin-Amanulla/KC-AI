@@ -25,6 +25,8 @@ const SLEEPOVER_FOLLOWON_GAP_MS = 8 * 60 * 60 * 1000;
 const OT_TIER_1_MAX = 2;
 const TOTAL_HOURS_CAP = 76;
 const BROKEN_SHIFT_SHORT_SPAN = 12;
+/** Treat ≤ this gap between shift end/start as contiguous (rounding / CSV quirks). */
+const GAP_CONTIGUOUS_TOLERANCE_MS = 60 * 1000;
 
 // Time category priority (higher = higher pay)
 const TIME_CATEGORY_PRIORITY = { morning: 1, afternoon: 2, night: 3 };
@@ -402,6 +404,62 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
     { startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: day1TimeCat, isSleepoverExcess: false },
     { startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: false },
   ];
+}
+
+// ─── SLEEPOVER-FLANKING PERSONAL CARE / NURSING ───────────────────────────────
+
+/** Milliseconds between previous.shift endDatetime and cur.shift startDatetime */
+function gapBetweenShiftsUtc(prevShift, curShift) {
+  return new Date(curShift.startDatetime) - new Date(prevShift.endDatetime);
+}
+
+/**
+ * PC / nursing immediately before a touching sleepovern, or PC / nursing immediately after sleepovern
+ * (within attach window), stack with the overnight period and bill as SCHADS weekday **night**.
+ * Overrides holiday/sat/sun segment bucket for those hours only.
+ *
+ * Exported for regression tests only.
+ *
+ * @param {Array<object>} shifts
+ * @returns {boolean[]}
+ */
+export function computeSleepovernAttachedNight(shifts) {
+  return shifts.map((s, i) => {
+    const pcLike = s.shiftType === 'personal_care' || s.shiftType === 'nursing_support';
+    if (!pcLike) return false;
+
+    let beforeSleepovern = false;
+    const next = i < shifts.length - 1 ? shifts[i + 1] : null;
+    if (next?.shiftType === 'sleepover') {
+      const g = gapBetweenShiftsUtc(s, next);
+      if (g >= 0 && g <= GAP_CONTIGUOUS_TOLERANCE_MS) beforeSleepovern = true;
+    }
+
+    let afterSleepovern = false;
+    const prev = i > 0 ? shifts[i - 1] : null;
+    if (prev?.shiftType === 'sleepover') {
+      const g = gapBetweenShiftsUtc(prev, s);
+      if (g >= 0 && g < SLEEPOVER_FOLLOWON_GAP_MS) afterSleepovern = true;
+    }
+
+    return beforeSleepovern || afterSleepovern;
+  });
+}
+
+/**
+ * Force all hourly segments onto weekday night (used when flanking a sleepovern).
+ */
+function applySleepovernChainNightSegments(segments) {
+  return segments.map((seg) => {
+    if (!seg) return seg;
+    if (seg.hours <= 0) return seg;
+    return {
+      ...seg,
+      dayType: 'weekday',
+      timeCategory: 'night',
+      isSleepoverExcess: !!seg.isSleepoverExcess,
+    };
+  });
 }
 
 // ─── PAY HOURS DATA ───────────────────────────────────────────────────────────
@@ -857,18 +915,10 @@ function buildPerShiftBreakdowns(ctx, shifts) {
 
 // ─── PROCESS SHIFT FOR PAY HOURS ─────────────────────────────────────────────
 
-function processShiftForPayHours(shift, ctx) {
+function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
   const offsetStr = shift.timezoneOffset || '+10:00';
   const startUtc = new Date(shift.startDatetime);
   const endUtc = new Date(shift.endDatetime);
-
-  const gapAfterPrevious =
-    ctx.previousEndUtc !== null ? startUtc - ctx.previousEndUtc : Infinity;
-  const attachedToSleepover =
-    ctx.previousShiftType === 'sleepover' &&
-    (shift.shiftType === 'personal_care' || shift.shiftType === 'nursing_support') &&
-    gapAfterPrevious >= 0 &&
-    gapAfterPrevious < SLEEPOVER_FOLLOWON_GAP_MS;
 
   // Check if continuous with previous shift (gap = 0ms)
   let isContinuous = false;
@@ -885,29 +935,48 @@ function processShiftForPayHours(shift, ctx) {
   const isSleepoverNoExcess = shift.shiftType === 'sleepover' && activeHours <= 0;
   if (shift.shiftType === 'sleepover') ctx.data.sleepoversCount += 1;
 
+  /** PC/nursing stacked before or after sleepovern bills as SCHADS weekday night (overrides PH/Sat/Sun buckets). */
+  const attachNight = !!sleepovernAttachedNight;
+
   // Create segments
   let segments = [];
-  const segmentOpts = { forceWeekdayNight: attachedToSleepover };
+  const segmentOpts = { forceWeekdayNight: attachNight };
 
   if (shift.shiftType === 'nursing_support') {
     // Split by day type so Saturday/Sunday/Holiday nursing attracts the correct penalty
     // rates. Weekday nursing still accumulates in nursingCareHours (paid at daytime rate).
     // All segments are kept on processedShift so broken-shift OT detection works.
-    const nsSegments = splitShiftAtMidnight(startUtc, endUtc, shift.hours, shift.shiftType, offsetStr, ctx.holidaySet, segmentOpts);
-    for (let i = 0; i < nsSegments.length; i++) {
-      const seg = nsSegments[i];
-      if (seg.dayType === 'weekday') {
-        // Weekday nursing: track separately at daytime rate
-        ctx.data.nursingCareHours = r2(ctx.data.nursingCareHours + seg.hours);
-      } else {
-        // Saturday / Sunday / Holiday nursing: chain processing applies penalty rates
+    let nsSegments = splitShiftAtMidnight(startUtc, endUtc, shift.hours, shift.shiftType, offsetStr, ctx.holidaySet, segmentOpts);
+    if (attachNight) nsSegments = applySleepovernChainNightSegments(nsSegments);
+
+    if (attachNight) {
+      for (let i = 0; i < nsSegments.length; i++) {
+        const seg = nsSegments[i];
+        if (seg.hours <= 0) continue;
         const segContinuous = i === 0 ? isContinuous : true;
         ctx.pendingSegments.push({ segment: seg, shiftId: sid, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
       }
+      segments = nsSegments;
+    } else {
+      for (let i = 0; i < nsSegments.length; i++) {
+        const seg = nsSegments[i];
+        if (seg.dayType === 'weekday') {
+          ctx.data.nursingCareHours = r2(ctx.data.nursingCareHours + seg.hours);
+        } else {
+          const segContinuous = i === 0 ? isContinuous : true;
+          ctx.pendingSegments.push({ segment: seg, shiftId: sid, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
+        }
+      }
+      segments = nsSegments;
     }
-    segments = nsSegments; // processedShift needs non-empty segments for broken-shift OT
   } else if (!isSleepoverNoExcess) {
     segments = splitShiftAtMidnight(startUtc, endUtc, shift.hours, shift.shiftType, offsetStr, ctx.holidaySet, segmentOpts);
+    if (
+      attachNight &&
+      (shift.shiftType === 'personal_care' || shift.shiftType === 'nursing_support')
+    ) {
+      segments = applySleepovernChainNightSegments(segments);
+    }
     // Add segments to pending list
     for (let i = 0; i < segments.length; i++) {
       const segContinuous = i === 0 ? isContinuous : true;
@@ -959,6 +1028,8 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     return { data, shiftBreakdowns: new Map() };
   }
 
+  const sleepovernAttachedNight = computeSleepovernAttachedNight(shifts);
+
   const ctx = {
     holidaySet,
     data,
@@ -971,8 +1042,8 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     reclassifiedFullDoubleTimeShiftIds: new Set(),
   };
 
-  for (const shift of shifts) {
-    processShiftForPayHours(shift, ctx);
+  for (let i = 0; i < shifts.length; i++) {
+    processShiftForPayHours(shifts[i], ctx, sleepovernAttachedNight[i]);
   }
 
   // Build per-shift breakdowns BEFORE chain processing modifies data
