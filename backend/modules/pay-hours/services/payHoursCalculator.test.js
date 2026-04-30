@@ -547,3 +547,33 @@ describe('76-hour ordinary cap', () => {
     assert.strictEqual(data.otAfter76Weekday, 4);
   });
 });
+
+describe('hours normalization from timestamps', () => {
+  test('weekday overnight with negative imported hours uses derived duration', () => {
+    const s = shift({
+      _id: 'hn01',
+      start: brisbaneLocal('2026-04-07', 20, 0).toISOString(),
+      end: brisbaneLocal('2026-04-08', 2, 0).toISOString(),
+      hours: -18,
+      timezoneOffset: '+10:00',
+    });
+    const { data } = computePayHoursForStaff([s], new Set());
+    assert.strictEqual(data.nightHours, 6);
+  });
+
+  test('fri to sat overnight with negative imported hours keeps split and OT', () => {
+    const s = shift({
+      _id: 'hn02',
+      start: brisbaneLocal('2026-04-10', 10, 0).toISOString(),
+      end: brisbaneLocal('2026-04-11', 1, 0).toISOString(),
+      hours: -9,
+      timezoneOffset: '+10:00',
+    });
+    const { data } = computePayHoursForStaff([s], new Set());
+    assert.strictEqual(data.nightHours, 10);
+    assert.strictEqual(data.saturdayHours, 0);
+    assert.strictEqual(data.saturdayOtUpto2, 1);
+    assert.strictEqual(data.weekdayOtUpto2, 2);
+    assert.strictEqual(data.weekdayOtAfter2, 2);
+  });
+});

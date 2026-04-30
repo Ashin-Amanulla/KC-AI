@@ -41,6 +41,10 @@ function r2(n) {
   return Math.round(n * 100) / 100;
 }
 
+function debugLog(payload) {
+  fetch('http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4fed41'},body:JSON.stringify({sessionId:'4fed41',timestamp:Date.now(),...payload})}).catch(()=>{});
+}
+
 // ─── TIMEZONE HELPERS ────────────────────────────────────────────────────────
 
 /**
@@ -622,6 +626,12 @@ function calculateActiveHours(hours, shiftType) {
   return hours;
 }
 
+function normalizeShiftHours(shift, startUtc, endUtc) {
+  const derived = r2((endUtc - startUtc) / 3600000);
+  if (!Number.isFinite(shift.hours) || shift.hours <= 0) return derived;
+  return shift.hours;
+}
+
 // ─── 76-HOUR CAP ─────────────────────────────────────────────────────────────
 
 function apply76HourCap(data, hourLedger) {
@@ -919,6 +929,8 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
   const offsetStr = shift.timezoneOffset || '+10:00';
   const startUtc = new Date(shift.startDatetime);
   const endUtc = new Date(shift.endDatetime);
+  const derivedHours = r2((endUtc - startUtc) / 3600000);
+  const normalizedHours = normalizeShiftHours(shift, startUtc, endUtc);
 
   // Check if continuous with previous shift (gap = 0ms)
   let isContinuous = false;
@@ -927,8 +939,19 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
     isContinuous = gap === 0;
   }
 
-  const activeHours = calculateActiveHours(shift.hours, shift.shiftType);
+  const activeHours = calculateActiveHours(normalizedHours, shift.shiftType);
   const sid = String(shift._id);
+  if (shift.hours < 0 || Math.abs((shift.hours || 0) - derivedHours) > 0.01) {
+    // #region agent log
+    debugLog({
+      runId: 'pre-fix',
+      hypothesisId: 'H2',
+      location: 'payHoursCalculator.js:processShiftForPayHours',
+      message: 'shift hours mismatch before segmentation',
+      data: { shiftId: sid, shiftType: shift.shiftType, importedHours: shift.hours, derivedHours, offsetStr },
+    });
+    // #endregion
+  }
   ctx.shiftActiveHours.set(sid, activeHours);
   ctx.shiftIsBroken.set(sid, shift.isBrokenShift);
 
@@ -946,7 +969,7 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
     // Split by day type so Saturday/Sunday/Holiday nursing attracts the correct penalty
     // rates. Weekday nursing still accumulates in nursingCareHours (paid at daytime rate).
     // All segments are kept on processedShift so broken-shift OT detection works.
-    let nsSegments = splitShiftAtMidnight(startUtc, endUtc, shift.hours, shift.shiftType, offsetStr, ctx.holidaySet, segmentOpts);
+      let nsSegments = splitShiftAtMidnight(startUtc, endUtc, normalizedHours, shift.shiftType, offsetStr, ctx.holidaySet, segmentOpts);
     if (attachNight) nsSegments = applySleepovernChainNightSegments(nsSegments);
 
     if (attachNight) {
@@ -970,7 +993,7 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
       segments = nsSegments;
     }
   } else if (!isSleepoverNoExcess) {
-    segments = splitShiftAtMidnight(startUtc, endUtc, shift.hours, shift.shiftType, offsetStr, ctx.holidaySet, segmentOpts);
+    segments = splitShiftAtMidnight(startUtc, endUtc, normalizedHours, shift.shiftType, offsetStr, ctx.holidaySet, segmentOpts);
     if (
       attachNight &&
       (shift.shiftType === 'personal_care' || shift.shiftType === 'nursing_support')
@@ -982,6 +1005,23 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
       const segContinuous = i === 0 ? isContinuous : true;
       ctx.pendingSegments.push({ segment: segments[i], shiftId: sid, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
     }
+  }
+  if (segments.length && (shift.hours < 0 || Math.abs((shift.hours || 0) - derivedHours) > 0.01)) {
+    // #region agent log
+    debugLog({
+      runId: 'pre-fix',
+      hypothesisId: 'H3',
+      location: 'payHoursCalculator.js:segments',
+      message: 'segments built from imported shift.hours',
+      data: {
+        shiftId: sid,
+        importedHours: shift.hours,
+        derivedHours,
+        segmentHours: segments.map((s) => s.hours),
+        segmentDayTypes: segments.map((s) => s.dayType),
+      },
+    });
+    // #endregion
   }
 
   // Sleepover with no excess: add placeholder for chain influence
@@ -1000,7 +1040,7 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
     startUtc,
     endUtc,
     shiftType: shift.shiftType,
-    hours: shift.hours,
+    hours: normalizedHours,
     activeHours,
     isBrokenShift: shift.isBrokenShift,
     segments,
