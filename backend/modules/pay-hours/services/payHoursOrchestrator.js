@@ -147,6 +147,7 @@ export async function computeAllPayHours(jobId, locationId = null) {
             holidayOtAfter2:  0,
             isBrokenShift:    bd.isBrokenShift,
             isSleepover:      bd.isSleepover,
+            minimumEngagementException: bd.minimumEngagementException,
             mileage:          bd.mileage ?? null,
           });
         }

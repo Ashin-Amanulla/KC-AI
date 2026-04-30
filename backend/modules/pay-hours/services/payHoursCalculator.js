@@ -632,6 +632,10 @@ function normalizeShiftHours(shift, startUtc, endUtc) {
   return shift.hours;
 }
 
+function isMinimumEngagementException(shiftType, hours) {
+  return shiftType === 'personal_care' && hours > 0 && hours < 2;
+}
+
 // ─── 76-HOUR CAP ─────────────────────────────────────────────────────────────
 
 function apply76HourCap(data, hourLedger) {
@@ -839,6 +843,7 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         nursingCareHours: 0,
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: shift?.shiftType === 'sleepover' || false,
+        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
         clientName: shift?.clientName || null,
         mileage: shift?.mileage ?? null,
         totalHours: shift?.hours || 0,
@@ -882,6 +887,7 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         nursingCareHours: shift.hours,
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: false,
+        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
         clientName: shift.clientName || null,
         mileage: shift.mileage ?? null,
         totalHours: shift.hours,
@@ -909,6 +915,7 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         nursingCareHours: 0,
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: true,
+        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
         clientName: shift.clientName || null,
         mileage: shift.mileage ?? null,
         totalHours: shift.hours,
@@ -939,8 +946,9 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
     isContinuous = gap === 0;
   }
 
-  const activeHours = calculateActiveHours(normalizedHours, shift.shiftType);
   const sid = String(shift._id);
+  const activeHours = calculateActiveHours(normalizedHours, shift.shiftType);
+  const minimumEngagementException = isMinimumEngagementException(shift.shiftType, normalizedHours);
   if (shift.hours < 0 || Math.abs((shift.hours || 0) - derivedHours) > 0.01) {
     // #region agent log
     debugLog({
@@ -952,8 +960,20 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
     });
     // #endregion
   }
+  if (minimumEngagementException) {
+    // #region agent log
+    debugLog({
+      runId: 'post-fix',
+      hypothesisId: 'H4',
+      location: 'payHoursCalculator.js:minimum-engagement',
+      message: 'minimum engagement exception flagged without top-up',
+      data: { shiftId: sid, shiftType: shift.shiftType, hours: normalizedHours },
+    });
+    // #endregion
+  }
   ctx.shiftActiveHours.set(sid, activeHours);
   ctx.shiftIsBroken.set(sid, shift.isBrokenShift);
+  ctx.shiftMinimumEngagementException.set(sid, minimumEngagementException);
 
   const isSleepoverNoExcess = shift.shiftType === 'sleepover' && activeHours <= 0;
   if (shift.shiftType === 'sleepover') ctx.data.sleepoversCount += 1;
@@ -1079,6 +1099,7 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     previousShiftType: null,
     shiftActiveHours: new Map(),
     shiftIsBroken: new Map(),
+    shiftMinimumEngagementException: new Map(),
     reclassifiedFullDoubleTimeShiftIds: new Set(),
   };
 

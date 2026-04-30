@@ -549,6 +549,13 @@ describe('76-hour ordinary cap', () => {
 });
 
 describe('hours normalization from timestamps', () => {
+  test('minimum engagement: 1h personal care remains 1h and is flagged as exception', () => {
+    const s = shiftBrisbane({ _id: 'hn00' }, '2026-04-07', 9, 0, 10, 0);
+    const { data, shiftBreakdowns } = computePayHoursForStaff([s], new Set());
+    assert.strictEqual(data.morningHours, 1);
+    assert.strictEqual(shiftBreakdowns.get('hn00')?.minimumEngagementException, true);
+  });
+
   test('weekday overnight with negative imported hours uses derived duration', () => {
     const s = shift({
       _id: 'hn01',
