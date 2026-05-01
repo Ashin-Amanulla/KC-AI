@@ -376,6 +376,38 @@ export function calcBreakdown(ph, baseRate, empType = 'permanent') {
   };
 }
 
+/** Daily OT + OT&gt;76h (hours × rates), plus broken-shift allowances only (excludes meal, mileage, sleepover). */
+export function calcOtAndBrokenPay(ph, { staffRates, baseRate, empType = 'casual' }) {
+  if (staffRates) {
+    const bd = calcBreakdownFromRates(ph, staffRates);
+    if (!bd) return null;
+    return {
+      otPay: bd.otPay,
+      brokenPay: bd.allow.brokenAllow,
+      total: r2(bd.otPay + bd.allow.brokenAllow),
+    };
+  }
+  const bd = calcBreakdown(ph, baseRate, empType);
+  if (!bd) return null;
+  return {
+    otPay: bd.otPay,
+    brokenPay: bd.allow.brokenAllow,
+    total: r2(bd.otPay + bd.allow.brokenAllow),
+  };
+}
+
+/** Dollar value of OT&gt;76h tier lines only (from same breakdown as gross). */
+export function calcOt76MonetaryPay(ph, { staffRates, baseRate, empType = 'casual' }) {
+  if (staffRates) {
+    const bd = calcBreakdownFromRates(ph, staffRates);
+    if (!bd) return null;
+    return r2(bd.lines.filter((l) => l.cat === 'ot76').reduce((s, l) => s + l.pay, 0));
+  }
+  const bd = calcBreakdown(ph, baseRate, empType);
+  if (!bd) return null;
+  return r2(bd.lines.filter((l) => l.cat === 'ot76').reduce((s, l) => s + l.pay, 0));
+}
+
 /**
  * Build a payroll-shaped Map for analyzeStaffProfitability from pay hours rows + rates.
  * @param {number} superPct - e.g. 11.5 for 11.5% of gross

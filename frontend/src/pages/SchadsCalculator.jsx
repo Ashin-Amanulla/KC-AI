@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useQueries } from '@tanstack/react-query';
+import api from '../utils/api';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { Plus, X, AlertCircle, Upload, FileSpreadsheet, ChevronDown, UserPlus, EyeOff, Trash2 } from 'lucide-react';
@@ -30,10 +32,25 @@ import {
   totalOtHrs,
   calcBreakdown,
   effectiveSleepoverRate,
+  calcOtAndBrokenPay,
+  calcOt76MonetaryPay,
 } from '../lib/schadsWageCalc';
 
 const fmt = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const fmtH = (n) => n.toFixed(2) + 'h';
+
+const fmtExDate = (dt) => {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+const fmtExTime = (dt) => {
+  if (!dt) return '—';
+  return new Date(dt).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+};
+const fmtPayPeriod = (row) => {
+  if (!row?.periodStart && !row?.periodEnd) return '—';
+  return `${fmtExDate(row.periodStart)} – ${fmtExDate(row.periodEnd)}`;
+};
 
 /** SCHADS workbook-shaped row: one base $/h on all hourly columns (allowances 0; km default). */
 function schadsFlatRatesRow(displayName, baseHourly) {
@@ -174,6 +191,9 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
     <div className="p-4 text-sm text-muted-foreground">Enter a base rate above to see the pay breakdown.</div>
   );
 
+  const addAl = r2(Number(mrow.additionalAllowance) || 0);
+  const showGross = r2(bd.gross + addAl);
+
   const pct = (n, total) => total > 0 ? ` (${((n / total) * 100).toFixed(0)}%)` : '';
 
   return (
@@ -182,7 +202,7 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
       <div className="flex items-end justify-between flex-wrap gap-3 bg-foreground text-background rounded p-4">
         <div>
           <p className="text-[10px] uppercase tracking-widest opacity-60 mb-1">Gross Pay — {staffName}</p>
-          <p className="font-bold text-2xl font-mono">{fmt(bd.gross)}</p>
+          <p className="font-bold text-2xl font-mono">{fmt(showGross)}</p>
           {bd.fromRates
             ? <p className="text-[11px] opacity-70 mt-0.5">Rates from file · daytime ${bd.base.toFixed(2)}/h</p>
             : isCasual && <p className="text-[11px] opacity-70 mt-0.5">Casual rate · base ${(bd.base||0).toFixed(2)}/h + ${(bd.load||0).toFixed(2)} loading</p>
@@ -200,7 +220,7 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
           { label: 'Base Pay',         val: fmt(bd.basePay),      cls: '' },
           { label: 'Penalty Loadings', val: fmt(bd.penaltyExtra), cls: 'text-orange-600' },
           { label: 'Overtime Pay',     val: fmt(bd.otPay),        cls: 'text-rose-600' },
-          { label: 'Allowances',       val: fmt(bd.allow.total),  cls: 'text-amber-600' },
+          { label: 'Allowances',       val: fmt(r2(bd.allow.total + addAl)),  cls: 'text-amber-600' },
           { label: 'Ordinary Hrs',     val: fmtH(bd.ordHours),    cls: '' },
           { label: 'OT Hours',         val: fmtH(bd.otHours),     cls: 'text-rose-600' },
         ].map(({ label, val, cls }) => (
@@ -292,6 +312,17 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
                 <td className="text-right px-3 py-2 font-mono font-semibold text-amber-600">{fmt(bd.allow.mealAllow)}</td>
               </tr>
             )}
+            {addAl > 0 && (
+              <tr className="border-t border-border/30 bg-amber-50/30">
+                <td className="px-3 py-2 text-amber-800">
+                  Additional allowance (summary)
+                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
+                <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-800">{fmt(addAl)}</td>
+              </tr>
+            )}
             {(bd.allow.mileageAllow || 0) > 0 && (
               <tr className="border-t border-border/30 bg-emerald-50/30">
                 <td className="px-3 py-2 text-emerald-700">
@@ -319,7 +350,7 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
               <td className="px-3 py-2.5 text-sm">Total</td>
               <td className="text-right px-3 py-2.5 font-mono">{fmtH(bd.totalHours)}</td>
               <td className="text-right px-3 py-2.5 text-muted-foreground">—</td>
-              <td className="text-right px-3 py-2.5 font-mono text-base">{fmt(bd.gross)}</td>
+              <td className="text-right px-3 py-2.5 font-mono text-base">{fmt(showGross)}</td>
             </tr>
           </tbody>
         </table>
@@ -329,16 +360,18 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
       <div className="space-y-1">
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Pay composition</p>
         <div className="flex rounded overflow-hidden h-3 text-[0px]">
-          {bd.basePay > 0 && <div title={`Base ${fmt(bd.basePay)}`} style={{ width: `${(bd.basePay / bd.gross) * 100}%` }} className="bg-slate-400" />}
-          {bd.penaltyExtra > 0 && <div title={`Penalty ${fmt(bd.penaltyExtra)}`} style={{ width: `${(bd.penaltyExtra / bd.gross) * 100}%` }} className="bg-orange-400" />}
-          {bd.otPay > 0 && <div title={`OT ${fmt(bd.otPay)}`} style={{ width: `${(bd.otPay / bd.gross) * 100}%` }} className="bg-rose-500" />}
-          {bd.allow.total > 0 && <div title={`Allow. ${fmt(bd.allow.total)}`} style={{ width: `${(bd.allow.total / bd.gross) * 100}%` }} className="bg-amber-400" />}
+          {showGross > 0 && bd.basePay > 0 && <div title={`Base ${fmt(bd.basePay)}`} style={{ width: `${(bd.basePay / showGross) * 100}%` }} className="bg-slate-400" />}
+          {showGross > 0 && bd.penaltyExtra > 0 && <div title={`Penalty ${fmt(bd.penaltyExtra)}`} style={{ width: `${(bd.penaltyExtra / showGross) * 100}%` }} className="bg-orange-400" />}
+          {showGross > 0 && bd.otPay > 0 && <div title={`OT ${fmt(bd.otPay)}`} style={{ width: `${(bd.otPay / showGross) * 100}%` }} className="bg-rose-500" />}
+          {showGross > 0 && bd.allow.total > 0 && <div title={`Allow. ${fmt(bd.allow.total)}`} style={{ width: `${(bd.allow.total / showGross) * 100}%` }} className="bg-amber-400" />}
+          {showGross > 0 && addAl > 0 && <div title={`Add’l ${fmt(addAl)}`} style={{ width: `${(addAl / showGross) * 100}%` }} className="bg-amber-600" />}
         </div>
         <div className="flex gap-4 flex-wrap text-[10px] text-muted-foreground">
-          <span><span className="inline-block w-2 h-2 rounded-sm bg-slate-400 mr-1" />Base {pct(bd.basePay, bd.gross)}</span>
-          <span><span className="inline-block w-2 h-2 rounded-sm bg-orange-400 mr-1" />Penalty {pct(bd.penaltyExtra, bd.gross)}</span>
-          <span><span className="inline-block w-2 h-2 rounded-sm bg-rose-500 mr-1" />OT {pct(bd.otPay, bd.gross)}</span>
-          {bd.allow.total > 0 && <span><span className="inline-block w-2 h-2 rounded-sm bg-amber-400 mr-1" />Allow. {pct(bd.allow.total, bd.gross)}</span>}
+          <span><span className="inline-block w-2 h-2 rounded-sm bg-slate-400 mr-1" />Base {pct(bd.basePay, showGross)}</span>
+          <span><span className="inline-block w-2 h-2 rounded-sm bg-orange-400 mr-1" />Penalty {pct(bd.penaltyExtra, showGross)}</span>
+          <span><span className="inline-block w-2 h-2 rounded-sm bg-rose-500 mr-1" />OT {pct(bd.otPay, showGross)}</span>
+          {bd.allow.total > 0 && <span><span className="inline-block w-2 h-2 rounded-sm bg-amber-400 mr-1" />Allow. {pct(bd.allow.total, showGross)}</span>}
+          {addAl > 0 && <span><span className="inline-block w-2 h-2 rounded-sm bg-amber-600 mr-1" />Add’l {pct(addAl, showGross)}</span>}
         </div>
       </div>
     </div>
@@ -516,6 +549,7 @@ const EDITABLE_FIELDS = {
   otAfter76Saturday: 'OT >76h (Saturday)',
   otAfter76Sunday:   'OT >76h (Sunday)',
   otAfter76Holiday:  'OT >76h (Holiday)',
+  additionalAllowance: 'Additional allowance ($)',
 };
 
 // ── Floating context-menu editor ─────────────────────────────────────
@@ -751,7 +785,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       const empT = empTypes[row.staffName] ?? defaultEmpType;
       const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
       const g = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rate, empT);
-      if (g !== null) { t.gross = r2(t.gross + g); grossCount++; }
+      const addAl = r2(Number(mrow.additionalAllowance) || 0);
+      t.additionalAllowanceSum = r2((t.additionalAllowanceSum || 0) + addAl);
+      if (g !== null) { t.gross = r2(t.gross + g + addAl); grossCount++; }
     }
     return { ...t, grossReady: displayRows.length > 0 && grossCount === displayRows.length };
   }, [displayRows, baseRates, defaultRate, empTypes, defaultEmpType, getMergedRow, resolvedStaffRatesMap, normName]);
@@ -768,12 +804,14 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       const empT = getEmpType(row.staffName);
       const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
       const modeled = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
+      const addAl = r2(Number(mrow.additionalAllowance) || 0);
+      const modeledWithAdd = modeled != null ? r2(modeled + addAl) : null;
       const p = payrollData.get(normName(row.staffName));
       if (p) {
         totalPayroll = r2(totalPayroll + p.earnings);
         matched++;
       }
-      const show = (alignGrossToPayroll && p) ? p.earnings : modeled;
+      const show = (alignGrossToPayroll && p) ? p.earnings : modeledWithAdd;
       if (show != null) totalDisplayGross = r2(totalDisplayGross + show);
     }
     return {
@@ -794,6 +832,42 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
         (m.minimumEngagementExceptionCount || 0) > 0;
     }).length,
   [displayRows, getMergedRow]);
+
+  const minEngExceptionFetchRows = useMemo(() => {
+    if (view !== 'exceptions') return [];
+    return displayRows.filter((row) => {
+      if (!row._id || row._manualOnly) return false;
+      const m = getMergedRow(row);
+      return (m.minimumEngagementExceptionCount || 0) > 0;
+    });
+  }, [view, displayRows, getMergedRow]);
+
+  const minEngShiftQueryResults = useQueries({
+    queries: minEngExceptionFetchRows.map((row) => ({
+      queryKey: ['pay-hours', 'shifts', row._id],
+      queryFn: async () => {
+        const { data } = await api.get(`/api/pay-hours/${row._id}/shifts`);
+        return { staffName: row.staffName, shifts: data?.shifts ?? [] };
+      },
+      staleTime: 60_000,
+    })),
+  });
+
+  const minEngExceptionLines = useMemo(() => {
+    const lines = [];
+    let loading = false;
+    for (const q of minEngShiftQueryResults) {
+      if (q.isLoading || q.isPending) loading = true;
+      if (!q.data?.shifts) continue;
+      const { staffName, shifts } = q.data;
+      for (const s of shifts) {
+        if (!s.minimumEngagementException) continue;
+        lines.push({ staffName, shift: s, key: `${staffName}-${s._id}` });
+      }
+    }
+    lines.sort((a, b) => new Date(a.shift.shiftStart) - new Date(b.shift.shiftStart));
+    return { lines, loading };
+  }, [minEngShiftQueryResults]);
 
   const setRate = useCallback((staffName, val) => {
     setBaseRates(prev => ({ ...prev, [staffName]: val }));
@@ -836,6 +910,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           if (s.ratesFileName) onStaffRatesMapChange?.(m, s.ratesFileName);
         }
         if (s.ratesFileName) setRatesFileName(s.ratesFileName);
+        if (s.overrides && typeof s.overrides === 'object') setOverrides(s.overrides);
       }
     } catch (_) { /* ignore */ }
     setSchadsHydrated(true);
@@ -858,10 +933,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           hiddenNormNames,
           staffRatesEntries,
           ratesFileName,
+          overrides,
         })
       );
     } catch (_) { /* ignore */ }
-  }, [schadsHydrated, storageKey, baseRates, empTypes, defaultRate, defaultEmpType, manualStaffNames, hiddenNormNames, staffRatesMap, ratesFileName]);
+  }, [schadsHydrated, storageKey, baseRates, empTypes, defaultRate, defaultEmpType, manualStaffNames, hiddenNormNames, staffRatesMap, ratesFileName, overrides]);
 
   const ingestRatesWorkbook = useCallback((wb, fileLabel) => {
     const ws = wb.Sheets[wb.SheetNames[0]];
@@ -1161,7 +1237,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     setRatesAddBase('');
   }, [ratesAddName, ratesAddBase, defaultRate, normName, onStaffRatesMapChange, ratesFileName]);
 
-  const summaryColSpan = 27 + (payrollData ? 3 : 0);
+  const summaryColSpan = 28 + (payrollData ? 3 : 0);
 
   return (
     <div className="space-y-4">
@@ -1392,7 +1468,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         <TableHead colSpan={1} className="text-center text-teal-800 border-r border-border/50 py-1">Nursing</TableHead>
                         <TableHead colSpan={2} className="text-center text-amber-800 border-r border-border/50 py-1">⚠ Exceptions</TableHead>
                         <TableHead colSpan={4} className="text-center text-rose-800 border-r border-border/50 py-1">OT &gt; 76h by Day</TableHead>
-                        <TableHead colSpan={2} className="text-center text-green-800 border-r border-border/50 py-1">Allowances</TableHead>
+                        <TableHead colSpan={5} className="text-center text-green-800 border-r border-border/50 py-1">Allowances</TableHead>
                         <TableHead colSpan={1} className="text-center" />
                         {payrollData && (
                           <TableHead
@@ -1430,7 +1506,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         <TableHead className="text-right text-rose-500 whitespace-nowrap" title="OT>76 from Sunday shifts (2.0×)">Sun<br/><span className="text-[9px] font-normal opacity-70">2×</span></TableHead>
                         <TableHead className="text-right border-r border-border/50 text-rose-800 whitespace-nowrap" title="OT>76 from Holiday shifts (2.5×)">Hol<br/><span className="text-[9px] font-normal opacity-70">2.5×</span></TableHead>
                         <TableHead className="text-right text-amber-700 whitespace-nowrap">Broken<br/><span className="text-[9px] font-normal opacity-70">allow.</span></TableHead>
-                        <TableHead className="text-right text-amber-600 border-r border-border/50 whitespace-nowrap">Meal<br/><span className="text-[9px] font-normal opacity-70">allow.~</span></TableHead>
+                        <TableHead className="text-right text-amber-600 whitespace-nowrap">Meal<br/><span className="text-[9px] font-normal opacity-70">allow.~</span></TableHead>
+                        <TableHead className="text-right text-amber-800 border-r border-border/50 whitespace-nowrap" title="Right-click to add a one-off allowance (saved with overrides)">Add’l $<br/><span className="text-[9px] font-normal opacity-70">edit</span></TableHead>
                         <TableHead className="text-right text-emerald-700 whitespace-nowrap">KM</TableHead>
                         <TableHead className="text-right text-emerald-600 border-r border-border/50 whitespace-nowrap">Km Allow<br/><span className="text-[9px] font-normal opacity-70">${VEHICLE_RATE}/km</span></TableHead>
                         <TableHead className="text-right font-semibold whitespace-nowrap min-w-[100px]">Gross Pay</TableHead>
@@ -1447,7 +1524,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         const rateVal   = baseRates[row.staffName] ?? defaultRate;
                         const empT      = getEmpType(row.staffName);
                         const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
-                        const modeledGross = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
+                        const modeledBase = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
+                        const addAlRow = r2(Number(mrow.additionalAllowance) || 0);
+                        const modeledGross = modeledBase !== null ? r2(modeledBase + addAlRow) : null;
                         const payrollForGross = payrollData?.get(normName(row.staffName));
                         const displayGross =
                           alignGrossToPayroll && payrollForGross
@@ -1585,7 +1664,21 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                             {ov('otAfter76Holiday',  (mrow.otAfter76Holiday||0)  > 0 ? fmtH(mrow.otAfter76Holiday)  : '—', `border-r border-border/50 ${(mrow.otAfter76Holiday||0) > 0 ? 'text-rose-800 font-medium' : 'text-muted-foreground/30'}`)}
                             {/* Allowances — derived, not directly editable */}
                             <TableCell className={`text-right tabular-nums ${allow.brokenAllow > 0 ? 'text-amber-700' : 'text-muted-foreground/30'}`}>{allow.brokenAllow > 0 ? fmt(allow.brokenAllow) : '—'}</TableCell>
-                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${allow.mealAllow > 0 ? 'text-amber-600' : 'text-muted-foreground/30'}`}>{allow.mealAllow > 0 ? fmt(allow.mealAllow) : '—'}</TableCell>
+                            <TableCell className={`text-right tabular-nums ${allow.mealAllow > 0 ? 'text-amber-600' : 'text-muted-foreground/30'}`}>{allow.mealAllow > 0 ? fmt(allow.mealAllow) : '—'}</TableCell>
+                            {(() => {
+                              const k = `${row.staffName}:additionalAllowance`;
+                              const isOv = k in overrides;
+                              return (
+                                <TableCell
+                                  className={`text-right tabular-nums border-r border-border/50 cursor-context-menu select-none ${addAlRow > 0 || isOv ? 'text-amber-800 font-medium' : 'text-muted-foreground/30'} ${isOv ? 'ring-1 ring-inset ring-blue-400 bg-blue-50/40' : ''}`}
+                                  onContextMenu={(e) => handleCtx(e, row.staffName, 'additionalAllowance', row.additionalAllowance ?? 0)}
+                                  title="Right-click to edit additional allowance ($)"
+                                >
+                                  {(addAlRow > 0 || isOv) ? fmt(addAlRow) : '—'}
+                                  {isOv && <span className="ml-0.5 inline-block w-1.5 h-1.5 rounded-full bg-blue-500 align-middle" />}
+                                </TableCell>
+                              );
+                            })()}
                             {/* KM */}
                             <TableCell className={`text-right tabular-nums ${(mrow.totalKm || 0) > 0 ? 'text-emerald-700' : 'text-muted-foreground/30'}`}>
                               {(mrow.totalKm || 0) > 0 ? `${mrow.totalKm} km` : '—'}
@@ -1596,7 +1689,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                             {/* Gross pay (displayGross = payroll Earnings when "Align" on + name match) */}
                             <TableCell
                               className="text-right tabular-nums font-bold text-sm"
-                              title={alignGrossToPayroll && payrollForGross && modeledGross != null && Math.abs(r2(payrollForGross.earnings - modeledGross)) > 0.01 ? `Modeled: ${fmt(modeledGross)}` : undefined}
+                              title={alignGrossToPayroll && payrollForGross && modeledGross != null && Math.abs(r2(payrollForGross.earnings - modeledGross)) > 0.01 ? `Modeled (incl. add’l): ${fmt(modeledGross)}` : undefined}
                             >
                               {modeledGross !== null ? (
                                 <span className={isCasual && !alignGrossToPayroll ? 'text-blue-700' : isCasual ? 'text-blue-800' : ''}>
@@ -1687,7 +1780,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         <TableCell className="text-right text-rose-500">{totals.otAfter76Sunday > 0 ? fmtH(r2(totals.otAfter76Sunday)) : '—'}</TableCell>
                         <TableCell className="text-right border-r border-border/50 text-rose-800">{totals.otAfter76Holiday > 0 ? fmtH(r2(totals.otAfter76Holiday)) : '—'}</TableCell>
                         <TableCell className="text-right text-amber-700">{totals.brokenAllow > 0 ? fmt(r2(totals.brokenAllow)) : '—'}</TableCell>
-                        <TableCell className="text-right text-amber-600 border-r border-border/50">{totals.mealAllow > 0 ? fmt(r2(totals.mealAllow)) : '—'}</TableCell>
+                        <TableCell className="text-right text-amber-600">{totals.mealAllow > 0 ? fmt(r2(totals.mealAllow)) : '—'}</TableCell>
+                        <TableCell className="text-right text-amber-800 border-r border-border/50">{(totals.additionalAllowanceSum || 0) > 0 ? fmt(r2(totals.additionalAllowanceSum)) : '—'}</TableCell>
                         <TableCell className="text-right text-emerald-700">{totals.totalKm > 0 ? `${totals.totalKm} km` : '—'}</TableCell>
                         <TableCell className="text-right text-emerald-600 border-r border-border/50">{totals.mileageAllow > 0 ? fmt(r2(totals.mileageAllow)) : '—'}</TableCell>
                         <TableCell className="text-right">
@@ -1722,7 +1816,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           {/* Override hint */}
           {displayRows.length > 0 && (
             <p className="text-[11px] text-muted-foreground/70 text-center -mt-2">
-              Right-click any hour cell to override its value. Overridden cells are highlighted in blue and recalculate gross pay instantly.
+              Right-click any hour cell or the <strong>Add’l $</strong> allowance column to override. Overridden cells are highlighted in blue and recalculate gross pay instantly.
               {Object.keys(overrides).length > 0 && (
                 <button
                   onClick={() => setOverrides({})}
@@ -1802,10 +1896,16 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           const allow   = calcAllowances(m);
           const rate    = baseRates[row.staffName] ?? defaultRate;
           const empT    = getEmpType(row.staffName);
+          const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
           const gross   = calcGross(m, rate, empT);
+          const otBrokenPay = calcOtAndBrokenPay(m, { staffRates, baseRate: rate, empType: empT });
+          const ot76Monetary = calcOt76MonetaryPay(m, { staffRates, baseRate: rate, empType: empT });
           const minEng  = m.minimumEngagementExceptionCount || 0;
           const hasAny  = ot > 0 || broken > 0 || ot76tot > 0 || minEng > 0;
-          return { row, m, ot, broken, sleep, ot76wd, ot76sat, ot76sun, ot76hol, ot76tot, allow, gross, hasAny, minEng };
+          return {
+            row, m, ot, broken, sleep, ot76wd, ot76sat, ot76sun, ot76hol, ot76tot, allow, gross, hasAny, minEng,
+            otBrokenPay, ot76Monetary,
+          };
         });
 
         const allHaveExceptions = exRows.every(r => r.hasAny);
@@ -1825,6 +1925,14 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
         const totAllow     = r2(totBrokAllow + totMealAllow);
         const totGross     = visible.every(r => r.gross !== null) ? r2(visible.reduce((s, r) => s + (r.gross || 0), 0)) : null;
         const totMinEng    = r2(visible.reduce((s, r) => s + (r.minEng || 0), 0));
+        const obPayRows = visible.filter((r) => r.ot > 0 || r.broken > 0);
+        const totOtBroken$ = obPayRows.length && obPayRows.every((r) => r.otBrokenPay != null)
+          ? r2(obPayRows.reduce((s, r) => s + r.otBrokenPay.total, 0))
+          : null;
+        const o76PayRows = visible.filter((r) => r.ot76tot > 0);
+        const totOt76$ = o76PayRows.length && o76PayRows.every((r) => r.ot76Monetary != null)
+          ? r2(o76PayRows.reduce((s, r) => s + r.ot76Monetary, 0))
+          : null;
 
         return (
           <>
@@ -1893,24 +2001,47 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       </p>
                     </CardHeader>
                     <CardContent className="p-0">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-amber-50/60 text-[11px]">
-                              <TableHead className="min-w-[160px]">Staff</TableHead>
-                              <TableHead className="text-right whitespace-nowrap">Shifts flagged</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {visible.filter((r) => r.minEng > 0).map(({ row, minEng }) => (
-                              <TableRow key={row.staffName} className="text-xs hover:bg-muted/30">
-                                <TableCell className="font-medium">{row.staffName}</TableCell>
-                                <TableCell className="text-right font-mono font-medium text-amber-900">{minEng}</TableCell>
+                      {minEngExceptionLines.loading ? (
+                        <div className="px-6 py-4 text-xs text-muted-foreground">Loading shift times…</div>
+                      ) : minEngExceptionLines.lines.length === 0 ? (
+                        <div className="px-6 py-4 text-xs text-muted-foreground">
+                          No shift rows returned (recompute pay hours if counts look wrong).
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-amber-50/60 text-[11px]">
+                                <TableHead className="min-w-[140px]">Staff</TableHead>
+                                <TableHead className="whitespace-nowrap">Pay period</TableHead>
+                                <TableHead className="whitespace-nowrap">Date</TableHead>
+                                <TableHead className="whitespace-nowrap">Start</TableHead>
+                                <TableHead className="whitespace-nowrap">End</TableHead>
+                                <TableHead className="text-right whitespace-nowrap">Hours</TableHead>
+                                <TableHead className="min-w-[120px]">Client</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                            </TableHeader>
+                            <TableBody>
+                              {minEngExceptionLines.lines.map(({ staffName, shift, key }) => {
+                                const prRow = displayRows.find((dr) => dr.staffName === staffName);
+                                return (
+                                  <TableRow key={key} className="text-xs hover:bg-muted/30">
+                                    <TableCell className="font-medium">{staffName}</TableCell>
+                                    <TableCell className="text-muted-foreground">{fmtPayPeriod(prRow)}</TableCell>
+                                    <TableCell>{fmtExDate(shift.shiftStart)}</TableCell>
+                                    <TableCell className="font-mono">{fmtExTime(shift.shiftStart)}</TableCell>
+                                    <TableCell className="font-mono">{fmtExTime(shift.shiftEnd)}</TableCell>
+                                    <TableCell className="text-right font-mono">
+                                      {shift.hours != null ? r2(Number(shift.hours)).toFixed(2) : '—'}
+                                    </TableCell>
+                                    <TableCell>{shift.clientName || '—'}</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -1929,6 +2060,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         <TableHeader>
                           <TableRow className="bg-muted/40 text-[11px]">
                             <TableHead className="min-w-[160px]">Staff</TableHead>
+                            <TableHead className="min-w-[140px] whitespace-nowrap">Pay period</TableHead>
                             <TableHead className="text-right text-orange-600 whitespace-nowrap">Total OT<br/><span className="font-normal opacity-70">all days</span></TableHead>
                             <TableHead className="text-right text-orange-600 whitespace-nowrap">WD OT ≤2h<br/><span className="font-normal opacity-70">1.5×</span></TableHead>
                             <TableHead className="text-right text-orange-700 whitespace-nowrap">WD OT &gt;2h<br/><span className="font-normal opacity-70">2×</span></TableHead>
@@ -1939,19 +2071,18 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                             <TableHead className="text-right text-orange-700 whitespace-nowrap">Broken#</TableHead>
                             <TableHead className="text-right text-emerald-600 whitespace-nowrap">KMs</TableHead>
                             <TableHead className="text-right text-emerald-700 whitespace-nowrap">Mileage Allow</TableHead>
+                            <TableHead className="text-right whitespace-nowrap">OT + broken pay<br/><span className="font-normal opacity-70 text-muted-foreground">excl. meal / km</span></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {visible.filter(r => r.ot > 0 || r.broken > 0).map(({ row, m, ot, broken, allow }) => {
+                          {visible.filter(r => r.ot > 0 || r.broken > 0).map(({ row, m, ot, broken, allow, otBrokenPay }) => {
                             const d = (v, cls = '') => v > 0
                               ? <span className={`font-medium ${cls}`}>{fmtH(v)}</span>
-                              : <span className="text-muted-foreground/30">—</span>;
-                            const n = (v, cls = '') => v > 0
-                              ? <span className={`font-medium ${cls}`}>{v}</span>
                               : <span className="text-muted-foreground/30">—</span>;
                             return (
                               <TableRow key={row.staffName} className="text-xs hover:bg-muted/30">
                                 <TableCell className="font-medium">{row.staffName}</TableCell>
+                                <TableCell className="text-muted-foreground text-[11px] whitespace-nowrap">{fmtPayPeriod(row)}</TableCell>
                                 <TableCell className="text-right">{d(ot, 'text-orange-600')}</TableCell>
                                 <TableCell className="text-right">{d(m.weekdayOtUpto2 || 0, 'text-orange-500')}</TableCell>
                                 <TableCell className="text-right">{d(m.weekdayOtAfter2 || 0, 'text-orange-700')}</TableCell>
@@ -1977,12 +2108,18 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                     ? <span className="font-medium text-emerald-600">{fmt(allow.mileageAllow)}</span>
                                     : <span className="text-muted-foreground/30">—</span>}
                                 </TableCell>
+                                <TableCell className="text-right font-mono font-semibold">
+                                  {otBrokenPay != null
+                                    ? <span>{fmt(otBrokenPay.total)}</span>
+                                    : <span className="text-muted-foreground/50 font-normal">—</span>}
+                                </TableCell>
                               </TableRow>
                             );
                           })}
                           {/* Totals */}
                           <TableRow className="border-t-2 font-bold text-xs bg-muted/20">
                             <TableCell>Totals</TableCell>
+                            <TableCell className="text-muted-foreground font-normal">—</TableCell>
                             <TableCell className="text-right text-orange-600">{fmtH(totOT)}</TableCell>
                             <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+(r.m.weekdayOtUpto2||0),0)))}</TableCell>
                             <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+(r.m.weekdayOtAfter2||0),0)))}</TableCell>
@@ -1993,6 +2130,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                             <TableCell className="text-right text-orange-700">{totBroken || '—'}</TableCell>
                             <TableCell className="text-right text-emerald-700">{r2(visible.reduce((s,r)=>s+(r.m.totalKm||0),0)) || '—'} km</TableCell>
                             <TableCell className="text-right text-emerald-600">{r2(visible.reduce((s,r)=>s+(r.allow.mileageAllow||0),0)) > 0 ? fmt(r2(visible.reduce((s,r)=>s+(r.allow.mileageAllow||0),0))) : '—'}</TableCell>
+                            <TableCell className="text-right font-mono">{totOtBroken$ != null ? fmt(totOtBroken$) : '—'}</TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
@@ -2018,6 +2156,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                           <TableHeader>
                             <TableRow className="bg-rose-50/60 text-[11px]">
                               <TableHead className="min-w-[160px]">Staff</TableHead>
+                              <TableHead className="min-w-[140px] whitespace-nowrap">Pay period</TableHead>
                               <TableHead className="text-right text-rose-700 whitespace-nowrap">Total OT&gt;76<br/><span className="font-normal opacity-70">all days</span></TableHead>
                               <TableHead className="text-right text-rose-700 whitespace-nowrap">Weekday<br/><span className="font-normal opacity-70">1.5×/2×</span></TableHead>
                               <TableHead className="text-right text-rose-600 whitespace-nowrap">Saturday<br/><span className="font-normal opacity-70">1.5×/2×</span></TableHead>
@@ -2027,10 +2166,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               <TableHead className="text-right whitespace-nowrap">WD tier 2<br/><span className="font-normal opacity-70 text-muted-foreground">&gt;2h @ 2×</span></TableHead>
                               <TableHead className="text-right whitespace-nowrap">Sat tier 1<br/><span className="font-normal opacity-70 text-muted-foreground">≤2h @ 1.5×</span></TableHead>
                               <TableHead className="text-right whitespace-nowrap">Sat tier 2<br/><span className="font-normal opacity-70 text-muted-foreground">&gt;2h @ 2×</span></TableHead>
+                              <TableHead className="text-right whitespace-nowrap">OT&gt;76 pay</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {visible.filter(r => r.ot76tot > 0).map(({ row, ot76wd, ot76sat, ot76sun, ot76hol, ot76tot }) => {
+                            {visible.filter(r => r.ot76tot > 0).map(({ row, ot76wd, ot76sat, ot76sun, ot76hol, ot76tot, ot76Monetary }) => {
                               const wdT1 = r2(Math.min(ot76wd, 2));
                               const wdT2 = r2(Math.max(0, ot76wd - 2));
                               const sT1  = r2(Math.min(ot76sat, 2));
@@ -2041,6 +2181,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               return (
                                 <TableRow key={row.staffName} className="text-xs hover:bg-rose-50/30">
                                   <TableCell className="font-medium">{row.staffName}</TableCell>
+                                  <TableCell className="text-muted-foreground text-[11px] whitespace-nowrap">{fmtPayPeriod(row)}</TableCell>
                                   <TableCell className="text-right">{cell(ot76tot)}</TableCell>
                                   <TableCell className="text-right">{cell(ot76wd)}</TableCell>
                                   <TableCell className="text-right">{cell(ot76sat, 'text-rose-600')}</TableCell>
@@ -2050,12 +2191,18 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                   <TableCell className="text-right text-muted-foreground">{cell(wdT2, 'text-orange-700')}</TableCell>
                                   <TableCell className="text-right text-muted-foreground">{cell(sT1,  'text-cyan-500')}</TableCell>
                                   <TableCell className="text-right text-muted-foreground">{cell(sT2,  'text-cyan-700')}</TableCell>
+                                  <TableCell className="text-right font-mono font-semibold">
+                                    {ot76Monetary != null
+                                      ? <span>{fmt(ot76Monetary)}</span>
+                                      : <span className="text-muted-foreground/50 font-normal">—</span>}
+                                  </TableCell>
                                 </TableRow>
                               );
                             })}
                             {/* Totals */}
                             <TableRow className="border-t-2 font-bold text-xs bg-rose-50/20">
                               <TableCell>Totals</TableCell>
+                              <TableCell className="text-muted-foreground font-normal">—</TableCell>
                               <TableCell className="text-right text-rose-700">{fmtH(totOt76)}</TableCell>
                               <TableCell className="text-right">{totOt76wd  > 0 ? fmtH(totOt76wd)  : '—'}</TableCell>
                               <TableCell className="text-right">{totOt76sat > 0 ? fmtH(totOt76sat) : '—'}</TableCell>
@@ -2065,6 +2212,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+Math.max(0,r.ot76wd-2),0)))}</TableCell>
                               <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+Math.min(r.ot76sat,2),0)))}</TableCell>
                               <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+Math.max(0,r.ot76sat-2),0)))}</TableCell>
+                              <TableCell className="text-right font-mono">{totOt76$ != null ? fmt(totOt76$) : '—'}</TableCell>
                             </TableRow>
                           </TableBody>
                         </Table>
