@@ -65,10 +65,6 @@ const BROKEN_SHIFT_GAP_PERSONAL_CARE_MS = 10 * 60 * 60 * 1000; // 10 hours
 const BROKEN_SHIFT_GAP_SLEEPOVER_MS = 8 * 60 * 60 * 1000;      // 8 hours
 const BROKEN_SHIFT_GAP_NURSING_SUPPORT_MS = 10 * 60 * 60 * 1000; // 10 hours
 
-function debugLog(payload) {
-  fetch('http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4fed41'},body:JSON.stringify({sessionId:'4fed41',timestamp:Date.now(),...payload})}).catch(()=>{});
-}
-
 /**
  * Normalize a CSV column name for case-insensitive matching with alias support.
  */
@@ -262,18 +258,6 @@ function processCsvRow(row, rowNum, normalizedColumns, uploadedBy) {
   }
   if (hours <= 0) {
     hours = derivedHours;
-  }
-
-  if (hours < 0 || Math.abs(hours - derivedHours) > 0.01) {
-    // #region agent log
-    debugLog({
-      runId: 'pre-fix',
-      hypothesisId: 'H1',
-      location: 'shiftCsvParser.js:hours-parse',
-      message: 'CSV hours differs from timestamp-derived hours',
-      data: { rowNum, importedHours: hours, derivedHours, offset: startParsed.offsetStr },
-    });
-    // #endregion
   }
 
   // Parse shift type

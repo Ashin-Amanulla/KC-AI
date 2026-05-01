@@ -54,6 +54,8 @@ const payHoursSchema = new mongoose.Schema(
     brokenShift2BreakCount: { type: Number, default: 0 }, // days with 2 breaks ($27.56)
     mealAllowanceCount:     { type: Number, default: 0 }, // shifts where OT>1h (+1 each) or OT>4h (+2 each)
     sleepoversCount: { type: Number, default: 0 },
+    /** Personal care shifts under 2h (minimum payment review; engine pays actual hours). */
+    minimumEngagementExceptionCount: { type: Number, default: 0 },
     totalKm: { type: Number, default: 0 },
     computedAt: {
       type: Date,

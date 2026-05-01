@@ -108,6 +108,9 @@ export async function computeAllPayHours(jobId, locationId = null) {
 
         const payHoursId = new mongoose.Types.ObjectId();
         const totalKm = staffShifts.reduce((sum, s) => sum + (s.mileage || 0), 0);
+        const minimumEngagementExceptionCount = [...shiftBreakdowns.values()].filter(
+          (bd) => bd.minimumEngagementException
+        ).length;
         payHoursDocs.push({
           _id: payHoursId,
           location: locKey ? new mongoose.Types.ObjectId(locKey) : null,
@@ -115,6 +118,7 @@ export async function computeAllPayHours(jobId, locationId = null) {
           periodStart: staffStart,
           periodEnd:   staffEnd,
           ...data,
+          minimumEngagementExceptionCount,
           totalKm,
           computedAt: new Date(),
         });

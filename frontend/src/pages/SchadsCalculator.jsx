@@ -432,6 +432,11 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly }) => {
                     {shift.isSleepover && (
                       <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-purple-100 text-purple-800">Sleepover</span>
                     )}
+                    {shift.minimumEngagementException && (
+                      <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-amber-100 text-amber-900" title="Personal care shift under 2h — review minimum payment / adjust hours manually">
+                        Min 2h review
+                      </span>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -479,6 +484,7 @@ const EMPTY_PAY_HOURS = (staffName) => ({
   brokenShift2BreakCount: 0,
   mealAllowanceCount: 0,
   sleepoversCount: 0,
+  minimumEngagementExceptionCount: 0,
   totalKm: 0,
   _manualOnly: true,
 });
@@ -778,13 +784,14 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     };
   }, [displayRows, payrollData, getMergedRow, baseRates, defaultRate, getEmpType, resolvedStaffRatesMap, normName, alignGrossToPayroll]);
 
-  // Count staff with any exception (OT, OT>76, or broken shifts)
+  // Count staff with any exception (OT, OT>76, broken shifts, or short PC minimum-engagement flags)
   const exceptionCount = useMemo(() =>
     displayRows.filter(row => {
       const m = getMergedRow(row);
       return totalOtHrs(m) > 0 || (m.brokenShiftCount || 0) > 0 ||
         (m.otAfter76Weekday||0) > 0 || (m.otAfter76Saturday||0) > 0 ||
-        (m.otAfter76Sunday||0) > 0  || (m.otAfter76Holiday||0) > 0;
+        (m.otAfter76Sunday||0) > 0  || (m.otAfter76Holiday||0) > 0 ||
+        (m.minimumEngagementExceptionCount || 0) > 0;
     }).length,
   [displayRows, getMergedRow]);
 
@@ -1796,8 +1803,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           const rate    = baseRates[row.staffName] ?? defaultRate;
           const empT    = getEmpType(row.staffName);
           const gross   = calcGross(m, rate, empT);
-          const hasAny  = ot > 0 || broken > 0 || ot76tot > 0;
-          return { row, m, ot, broken, sleep, ot76wd, ot76sat, ot76sun, ot76hol, ot76tot, allow, gross, hasAny };
+          const minEng  = m.minimumEngagementExceptionCount || 0;
+          const hasAny  = ot > 0 || broken > 0 || ot76tot > 0 || minEng > 0;
+          return { row, m, ot, broken, sleep, ot76wd, ot76sat, ot76sun, ot76hol, ot76tot, allow, gross, hasAny, minEng };
         });
 
         const allHaveExceptions = exRows.every(r => r.hasAny);
@@ -1816,11 +1824,12 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
         const totMealAllow = r2(visible.reduce((s, r) => s + r.allow.mealAllow, 0));
         const totAllow     = r2(totBrokAllow + totMealAllow);
         const totGross     = visible.every(r => r.gross !== null) ? r2(visible.reduce((s, r) => s + (r.gross || 0), 0)) : null;
+        const totMinEng    = r2(visible.reduce((s, r) => s + (r.minEng || 0), 0));
 
         return (
           <>
             {/* Summary cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
               <Card className="border-orange-200">
                 <CardContent className="pt-4">
                   <div className="text-2xl font-bold text-orange-600">{visible.length}</div>
@@ -1851,17 +1860,61 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                   <p className="text-[11px] text-muted-foreground/70 mt-0.5">{r2(visible.reduce((s,r)=>s+(r.m.totalKm||0),0))} km total</p>
                 </CardContent>
               </Card>
+              <Card className="border-amber-300 lg:col-span-1 col-span-2">
+                <CardContent className="pt-4">
+                  <div className="text-2xl font-bold text-amber-900">{totMinEng}</div>
+                  <p className="text-xs text-muted-foreground">Short PC shifts (&lt;2h)</p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">Minimum engagement — review / manual hours</p>
+                </CardContent>
+              </Card>
             </div>
 
             {visible.length === 0 ? (
               <Card>
                 <CardContent className="py-10 text-center">
                   <p className="text-lg font-medium text-green-600">✓ No exceptions</p>
-                  <p className="text-sm text-muted-foreground mt-1">No staff have overtime, OT&nbsp;&gt;&nbsp;76h, or broken shifts this period.</p>
+                  <p className="text-sm text-muted-foreground mt-1">No staff have overtime, OT&nbsp;&gt;&nbsp;76h, broken shifts, or short personal-care shifts this period.</p>
                 </CardContent>
               </Card>
             ) : (
               <>
+                {/* ── Minimum engagement (short PC) ── */}
+                {totMinEng > 0 && (
+                  <Card className="border-amber-300">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <span className="text-amber-700">⚠</span> Minimum engagement — short personal care
+                        <span className="text-xs font-normal text-muted-foreground">
+                          ({visible.filter((r) => r.minEng > 0).length} staff · {totMinEng} shift{totMinEng === 1 ? '' : 's'})
+                        </span>
+                      </CardTitle>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Shifts under 2 hours are paid at actual hours in the calculator; flag them here for payroll review or manual adjustment.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-amber-50/60 text-[11px]">
+                              <TableHead className="min-w-[160px]">Staff</TableHead>
+                              <TableHead className="text-right whitespace-nowrap">Shifts flagged</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {visible.filter((r) => r.minEng > 0).map(({ row, minEng }) => (
+                              <TableRow key={row.staffName} className="text-xs hover:bg-muted/30">
+                                <TableCell className="font-medium">{row.staffName}</TableCell>
+                                <TableCell className="text-right font-mono font-medium text-amber-900">{minEng}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* ── OT & Broken exceptions ── */}
                 <Card>
                   <CardHeader className="pb-2">

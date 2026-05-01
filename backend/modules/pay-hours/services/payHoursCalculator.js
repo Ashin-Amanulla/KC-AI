@@ -41,10 +41,6 @@ function r2(n) {
   return Math.round(n * 100) / 100;
 }
 
-function debugLog(payload) {
-  fetch('http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4fed41'},body:JSON.stringify({sessionId:'4fed41',timestamp:Date.now(),...payload})}).catch(()=>{});
-}
-
 // ─── TIMEZONE HELPERS ────────────────────────────────────────────────────────
 
 /**
@@ -949,28 +945,6 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
   const sid = String(shift._id);
   const activeHours = calculateActiveHours(normalizedHours, shift.shiftType);
   const minimumEngagementException = isMinimumEngagementException(shift.shiftType, normalizedHours);
-  if (shift.hours < 0 || Math.abs((shift.hours || 0) - derivedHours) > 0.01) {
-    // #region agent log
-    debugLog({
-      runId: 'pre-fix',
-      hypothesisId: 'H2',
-      location: 'payHoursCalculator.js:processShiftForPayHours',
-      message: 'shift hours mismatch before segmentation',
-      data: { shiftId: sid, shiftType: shift.shiftType, importedHours: shift.hours, derivedHours, offsetStr },
-    });
-    // #endregion
-  }
-  if (minimumEngagementException) {
-    // #region agent log
-    debugLog({
-      runId: 'post-fix',
-      hypothesisId: 'H4',
-      location: 'payHoursCalculator.js:minimum-engagement',
-      message: 'minimum engagement exception flagged without top-up',
-      data: { shiftId: sid, shiftType: shift.shiftType, hours: normalizedHours },
-    });
-    // #endregion
-  }
   ctx.shiftActiveHours.set(sid, activeHours);
   ctx.shiftIsBroken.set(sid, shift.isBrokenShift);
   ctx.shiftMinimumEngagementException.set(sid, minimumEngagementException);
@@ -1026,24 +1000,6 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
       ctx.pendingSegments.push({ segment: segments[i], shiftId: sid, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
     }
   }
-  if (segments.length && (shift.hours < 0 || Math.abs((shift.hours || 0) - derivedHours) > 0.01)) {
-    // #region agent log
-    debugLog({
-      runId: 'pre-fix',
-      hypothesisId: 'H3',
-      location: 'payHoursCalculator.js:segments',
-      message: 'segments built from imported shift.hours',
-      data: {
-        shiftId: sid,
-        importedHours: shift.hours,
-        derivedHours,
-        segmentHours: segments.map((s) => s.hours),
-        segmentDayTypes: segments.map((s) => s.dayType),
-      },
-    });
-    // #endregion
-  }
-
   // Sleepover with no excess: add placeholder for chain influence
   if (isSleepoverNoExcess) {
     const wd = localWeekday(startUtc, offsetStr);
