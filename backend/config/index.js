@@ -37,4 +37,9 @@ export const config = {
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
   },
+  rosterCoverage: {
+    /** First day of first fortnight (local date in defaultTimezone). */
+    fortnightAnchorISO: process.env.ROSTER_FORTNIGHT_ANCHOR || '2025-01-06',
+    defaultTimezone: process.env.ROSTER_DEFAULT_TZ || 'Australia/Brisbane',
+  },
 };

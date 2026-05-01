@@ -14,6 +14,14 @@ import { ForecastActuals } from './pages/ForecastActuals';
 import { UserManagement } from './pages/UserManagement';
 import { WorkforceHub } from './pages/WorkforceHub';
 import { PayHoursTests } from './pages/PayHoursTests';
+import { RosterCoverageLayout } from './pages/roster-coverage/RosterCoverageLayout';
+import { RosterDashboard } from './pages/roster-coverage/RosterDashboard';
+import { RosterFindCover } from './pages/roster-coverage/RosterFindCover';
+import { RosterParticipants } from './pages/roster-coverage/RosterParticipants';
+import { RosterTeam } from './pages/roster-coverage/RosterTeam';
+import { RosterStaffProfile } from './pages/roster-coverage/RosterStaffProfile';
+import { RosterTimesheetUpload } from './pages/roster-coverage/RosterTimesheetUpload';
+import { RosterReports } from './pages/roster-coverage/RosterReports';
 import { canAccessPath } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
@@ -141,6 +149,22 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/roster-coverage"
+            element={
+              <ProtectedRoute>
+                <RosterCoverageLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<RosterDashboard />} />
+            <Route path="find-cover" element={<RosterFindCover />} />
+            <Route path="participants" element={<RosterParticipants />} />
+            <Route path="team" element={<RosterTeam />} />
+            <Route path="team/:staffId" element={<RosterStaffProfile />} />
+            <Route path="timesheet" element={<RosterTimesheetUpload />} />
+            <Route path="reports" element={<RosterReports />} />
+          </Route>
           <Route path="/shifts" element={<ProtectedRoute><Navigate to="/workforce#workforce-roster" replace /></ProtectedRoute>} />
           <Route path="/pay-hours" element={<ProtectedRoute><Navigate to="/workforce#workforce-roster" replace /></ProtectedRoute>} />
           <Route path="/cost-analysis" element={<ProtectedRoute><Navigate to="/workforce?step=cost" replace /></ProtectedRoute>} />

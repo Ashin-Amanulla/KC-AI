@@ -79,7 +79,9 @@ export function Sidebar() {
       <nav className="flex flex-1 flex-col gap-1 p-2">
         {navItems.map((item) => {
           const Icon = iconMap[item.icon];
-          const isActive = location.pathname === item.path;
+          const isActive =
+            location.pathname === item.path ||
+            (item.path === '/roster-coverage' && location.pathname.startsWith('/roster-coverage'));
           const link = (
             <Link
               key={item.path}

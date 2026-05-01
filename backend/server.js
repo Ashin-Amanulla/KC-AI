@@ -15,6 +15,7 @@ import locationsRoutes from './modules/locations/location.route.js';
 import payHoursRoutes from './modules/pay-hours/payHours.route.js';
 import forecastActualsRoutes from './modules/forecast-actuals/forecastActuals.route.js';
 import staffRatesRoutes from './modules/staff-rates/staffRates.route.js';
+import rosterCoverageRoutes from './modules/roster-coverage/rosterCoverage.route.js';
 import { formatErrorResponse } from './helpers/errors.js';
 import { Holiday } from './modules/holidays/holiday.model.js';
 import morgan from 'morgan';
@@ -74,6 +75,7 @@ app.use('/api', forecastActualsRoutes);
 app.use('/api', staffRatesRoutes);
 app.use('/api', csvAnalysisRoutes);
 app.use('/api', shiftcareRoutes);
+app.use('/api', rosterCoverageRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -88,7 +90,10 @@ app.use((err, req, res, next) => {
       },
     });
   }
-  if (err.message?.includes('Only CSV files are allowed')) {
+  if (
+    err.message?.includes('Only CSV files are allowed') ||
+    err.message?.includes('Only CSV or XLSX')
+  ) {
     return res.status(400).json({
       success: false,
       error: {
