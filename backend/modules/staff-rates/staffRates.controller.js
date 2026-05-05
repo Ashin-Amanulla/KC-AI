@@ -47,6 +47,7 @@ function normalizeRatesBody(raw) {
     if (out[k] === undefined) out[k] = 0;
   }
   if (out.sleepoverExtra === undefined) out.sleepoverExtra = 0;
+  if (!out.sleepover) out.sleepover = 90;
   return out;
 }
 

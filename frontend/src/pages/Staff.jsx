@@ -37,7 +37,7 @@ function defaultRatesRow(displayName) {
     ph: v,
     mealAllow: 0,
     brokenShift: 0,
-    sleepover: 0,
+    sleepover: 90,
     sleepoverExtra: 0,
     kmRate: VEHICLE_RATE,
     allowance: 0,

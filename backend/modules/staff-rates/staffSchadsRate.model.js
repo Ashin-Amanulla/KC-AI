@@ -14,7 +14,7 @@ const ratesSchema = new mongoose.Schema(
     ph: { type: Number, default: 0 },
     mealAllow: { type: Number, default: 0 },
     brokenShift: { type: Number, default: 0 },
-    sleepover: { type: Number, default: 0 },
+    sleepover: { type: Number, default: 90 },
     sleepoverExtra: { type: Number, default: 0 },
     kmRate: { type: Number, default: 0 },
     allowance: { type: Number, default: 0 },

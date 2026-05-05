@@ -84,7 +84,7 @@ function schadsFlatRatesRow(displayName, baseHourly) {
     ph: v,
     mealAllow: 0,
     brokenShift: 0,
-    sleepover: 0,
+    sleepover: 90,
     kmRate: VEHICLE_RATE,
   };
 }
@@ -615,7 +615,7 @@ const CellContextMenu = ({ menu, overrides, onSave, onClear, onClose }) => {
 
   const handleSave = () => {
     const n = parseFloat(draft);
-    if (!isNaN(n) && n >= 0) onSave(menu.staffName, menu.field, n);
+    if (!isNaN(n)) onSave(menu.staffName, menu.field, n);
     onClose();
   };
 
@@ -676,6 +676,81 @@ const CellContextMenu = ({ menu, overrides, onSave, onClear, onClose }) => {
     </div>
   );
 };
+const StaffRatesEditModal = ({ edit, displayNameForRateKey, onSave, onClose }) => {
+  const ref = useRef(null);
+  const [draft, setDraft] = useState(null);
+
+  useEffect(() => {
+    if (!edit) { setDraft(null); return; }
+    const row = { ...edit.row };
+    if (!row.sleepover) row.sleepover = 90;
+    setDraft(row);
+  }, [edit]);
+
+  useEffect(() => {
+    if (!edit) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown); };
+  }, [edit, onClose]);
+
+  if (!edit || !draft) return null;
+
+  const patch = (field, raw) => {
+    const num = r2(parseFloat(String(raw).replace(',', '')) || 0);
+    setDraft(d => ({ ...d, [field]: num }));
+  };
+
+  const handleSaveAll = () => {
+    onSave(edit.key, draft);
+    onClose();
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+    >
+      <Card ref={ref} className="w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base">Edit SCHADS rates — {displayNameForRateKey(edit.key)}</CardTitle>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close">
+            <X className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {STAFF_RATES_TABLE_FIELDS.map(([field, label]) => (
+              <div key={field} className="space-y-1">
+                <span className="text-[10px] uppercase text-muted-foreground">{label}</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="h-8 text-xs"
+                  value={
+                    field === 'allowance'
+                      ? draft[field] ? draft[field] : ''
+                      : draft[field] ?? ''
+                  }
+                  onChange={(e) => patch(field, e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" onClick={handleSaveAll}>Save All</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 function pillCls(type, isPH) {
   if (isPH) return 'border-blue-400 text-blue-700 bg-blue-50';
   if (type === 'saturday') return 'border-purple-400 text-purple-700 bg-purple-50';
@@ -706,6 +781,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   // key: `${staffName}:${field}`, value: number
   const [overrides, setOverrides] = useState({});
   const [ctxMenu, setCtxMenu]     = useState(null); // { x, y, staffName, field, original }
+  const [ratesEdit, setRatesEdit] = useState(null); // { key, row } — popup for rates section
 
   const [manualStaffNames, setManualStaffNames] = useState([]);
   const [hiddenNormNames, setHiddenNormNames] = useState([]);
@@ -1202,6 +1278,22 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     [staffRatesMap, staffRatesFromDbMap, staffRows, staffRatesApiData, normName],
   );
 
+  const closeRatesEdit = useCallback(() => setRatesEdit(null), []);
+  const handleRatesCtx = useCallback((e, key, row) => {
+    e.preventDefault();
+    setRatesEdit({ key, row });
+  }, []);
+  const saveRatesEdit = useCallback((key, updatedRow) => {
+    setStaffRatesMap((prev) => {
+      const m = new Map(prev || []);
+      const name = displayNameForRateKey(key);
+      const cur = m.get(key) || staffRatesFromDbMap.get(key) || schadsFlatRatesRow(name, defaultRate || 0);
+      m.set(key, { ...cur, ...updatedRow });
+      onStaffRatesMapChange?.(m, ratesFileName || 'rates');
+      return m;
+    });
+  }, [displayNameForRateKey, defaultRate, onStaffRatesMapChange, ratesFileName, staffRatesFromDbMap]);
+
   const staffRatesTabRowKeys = useMemo(() => {
     const keys = new Set();
     for (const r of staffRows) keys.add(normName(r.staffName));
@@ -1282,6 +1374,14 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
         onSave={saveOverride}
         onClear={clearOverride}
         onClose={closeCtx}
+      />
+
+      {/* Staff rates edit popup (right-click on rates table rows) */}
+      <StaffRatesEditModal
+        edit={ratesEdit}
+        displayNameForRateKey={displayNameForRateKey}
+        onSave={saveRatesEdit}
+        onClose={closeRatesEdit}
       />
 
       <Card className="border-dashed border-2 border-primary/25 bg-primary/5">
@@ -1639,7 +1739,18 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                 </button>
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell
+                              className="cursor-context-menu"
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                const key = normName(row.staffName);
+                                const existing = resolvedStaffRatesMap.get(key);
+                                const rowData = existing ? { ...existing } : schadsFlatRatesRow(row.staffName, rateVal || defaultRate || 0);
+                                if (!rowData.sleepover) rowData.sleepover = 90;
+                                setRatesEdit({ key, row: rowData });
+                              }}
+                              title="Right-click to edit all SCHADS rates for this staff"
+                            >
                               {staffRates ? (
                                 <div className="text-xs font-mono text-foreground">
                                   ${staffRates.daytime.toFixed(2)}
@@ -2447,7 +2558,12 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         const row = resolvedStaffRatesMap.get(key);
                         const label = displayNameForRateKey(key);
                         return (
-                          <TableRow key={key} className="text-xs">
+                          <TableRow
+                            key={key}
+                            className="text-xs cursor-context-menu"
+                            onContextMenu={(e) => handleRatesCtx(e, key, row)}
+                            title="Right-click to edit all rates for this staff"
+                          >
                             <TableCell className="sticky left-0 bg-background z-10 font-medium border-r">{label}</TableCell>
                             <TableCell className="border-r">
                               <Input
