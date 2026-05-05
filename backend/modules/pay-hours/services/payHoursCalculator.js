@@ -226,14 +226,11 @@ function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, h
   }
 
   if (dayType === 'weekday') {
-    if (isPostSleepoverWeekday) {
-      return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: 'night', isSleepoverExcess }];
-    }
     if (isSleepoverExcess) {
       // Sleepover excess only: split at 6am/8pm per new SCHADS split-loading rule.
       return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
     }
-    // Regular or pre-sleepover shift: whole-shift classification (highest band wins, no split).
+    // All other shifts: whole-shift classification (highest band wins, no split).
     const tc = getTimeCategory(startUtc, endUtc, offsetStr);
     return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: tc, isSleepoverExcess: false }];
   }
@@ -434,11 +431,10 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
     return splitSleepoverAtMidnight(startUtc, endUtc, midnightUtc, day1Type, day2Type, day1Hours, day2Hours, offsetStr);
   }
 
-  const { isPostSleepoverWeekday = false } = options;
   const segments = [];
 
   if (day1Type === 'weekday') {
-    if (forceWeekdayNight || isPostSleepoverWeekday) {
+    if (forceWeekdayNight) {
       segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
     } else {
       // Day1 ends at midnight (past 8pm): night if starts before 6am, otherwise afternoon.
