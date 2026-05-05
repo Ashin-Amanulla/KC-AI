@@ -399,13 +399,31 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly }) => {
   const enabled = Boolean(payHoursId && expanded && !isManualOnly);
   const { data, isLoading, isError, error } = useShiftPayHours(payHoursId, enabled);
 
-  const formatTime = (dt) => {
+  const formatTime = (dt, tzOffset) => {
     if (!dt) return '—';
-    return new Date(dt).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+    const d = new Date(dt);
+    if (!tzOffset) return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+    // Apply timezone offset to show original shift time
+    const sign = tzOffset[0] === '+' ? 1 : -1;
+    const clean = tzOffset.slice(1).replace(':', '');
+    const h = parseInt(clean.slice(0, 2), 10);
+    const m = parseInt(clean.slice(2, 4), 10);
+    const adjustedMs = d.getTime() + sign * (h * 60 + m) * 60000;
+    const adjusted = new Date(adjustedMs);
+    return adjusted.toISOString().slice(11, 16);
   };
-  const formatDate = (dt) => {
+  const formatDate = (dt, tzOffset) => {
     if (!dt) return '—';
-    return new Date(dt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    const d = new Date(dt);
+    if (!tzOffset) return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    // Apply timezone offset to show original shift date
+    const sign = tzOffset[0] === '+' ? 1 : -1;
+    const clean = tzOffset.slice(1).replace(':', '');
+    const h = parseInt(clean.slice(0, 2), 10);
+    const m = parseInt(clean.slice(2, 4), 10);
+    const adjustedMs = d.getTime() + sign * (h * 60 + m) * 60000;
+    const adjusted = new Date(adjustedMs);
+    return adjusted.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
   };
   const h = (v) => (v != null && v > 0 ? v.toFixed(2) : '—');
 
@@ -453,9 +471,9 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly }) => {
           <TableBody>
             {shifts.map((shift) => (
               <TableRow key={shift._id} className="text-[11px]">
-                <TableCell>{formatDate(shift.shiftDate)}</TableCell>
-                <TableCell className="font-mono">{formatTime(shift.shiftStart)}</TableCell>
-                <TableCell className="font-mono">{formatTime(shift.shiftEnd)}</TableCell>
+                <TableCell>{formatDate(shift.shiftDate, shift.timezoneOffset)}</TableCell>
+                <TableCell className="font-mono">{formatTime(shift.shiftStart, shift.timezoneOffset)}</TableCell>
+                <TableCell className="font-mono">{formatTime(shift.shiftEnd, shift.timezoneOffset)}</TableCell>
                 <TableCell className="text-muted-foreground max-w-[140px] truncate" title={shift.clientName || ''}>
                   {shift.clientName || '—'}
                 </TableCell>

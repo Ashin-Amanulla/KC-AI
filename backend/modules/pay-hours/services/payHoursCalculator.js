@@ -240,9 +240,8 @@ function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, h
       // Sleepover excess only: split at 6am/8pm per new SCHADS split-loading rule.
       return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
     }
-    // All other shifts: whole-shift classification (highest band wins, no split).
-    const tc = getTimeCategory(startUtc, endUtc, offsetStr);
-    return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: tc, isSleepoverExcess: false }];
+    // Split at 6:01 and 20:01 to correctly attribute time bands.
+    return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
   }
 
   return [{ startUtc, endUtc, hours: segHours, dayType, timeCategory: null, isSleepoverExcess }];
