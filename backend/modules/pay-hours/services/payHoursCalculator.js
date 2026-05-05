@@ -801,18 +801,22 @@ function buildOrderedChainEntries(chain, ctx) {
         seg.timeCategory ||
         getHighestTimeCategory(influences) ||
         'morning';
+      
       entries.push({
+        _psRef: ps,
         fieldName: `${tc}Hours`,
         dayType: 'weekday',
         hours: seg.hours,
         entryDate: seg.startUtc,
       });
-      highestCategory =
-        highestCategory && TIME_CATEGORY_PRIORITY[tc] !== undefined && TIME_CATEGORY_PRIORITY[highestCategory] !== undefined
-          ? TIME_CATEGORY_PRIORITY[tc] > TIME_CATEGORY_PRIORITY[highestCategory]
-            ? tc
-            : highestCategory
-          : tc;
+      if (!seg.isSleepoverExcess && !ps.timeCategoryInfluence) {
+        highestCategory =
+          highestCategory && TIME_CATEGORY_PRIORITY[tc] !== undefined && TIME_CATEGORY_PRIORITY[highestCategory] !== undefined
+            ? TIME_CATEGORY_PRIORITY[tc] > TIME_CATEGORY_PRIORITY[highestCategory]
+              ? tc
+              : highestCategory
+            : tc;
+      }
     } else if (['saturday', 'sunday', 'holiday'].includes(seg.dayType)) {
       entries.push({
         fieldName: `${seg.dayType}Hours`,
@@ -821,6 +825,23 @@ function buildOrderedChainEntries(chain, ctx) {
         entryDate: seg.startUtc,
       });
     }
+  }
+
+  // Upgrade all weekday entries (excluding sleepovers) to the highest category in the chain
+  if (highestCategory) {
+    for (const entry of entries) {
+      if (entry.dayType === 'weekday' && entry._psRef && !entry._psRef.segment.isSleepoverExcess && !entry._psRef.timeCategoryInfluence) {
+        entry.fieldName = `${highestCategory}Hours`;
+        if (entry._psRef.segment) {
+          entry._psRef.segment.timeCategory = highestCategory;
+        }
+      }
+    }
+  }
+
+  // Cleanup temporary references
+  for (const entry of entries) {
+    delete entry._psRef;
   }
 
   return { entries, highestCategory };
