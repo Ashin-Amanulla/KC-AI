@@ -287,8 +287,10 @@ describe('midnight crossings', () => {
     const end = brisbaneLocal('2026-04-25', 6, 0);
     const s = shift({ _id: 'mc03', start: start.toISOString(), end: end.toISOString(), hours: 8 });
     const { data } = computePayHoursForStaff([s], new Set(['2026-04-25']));
-    assert.strictEqual(data.nightHours, 2);
-    assert.strictEqual(data.holidayHours, 6);
+    // New overflow logic: hours after 6PM on day1 → holiday (6PM-midnight = 2h holiday)
+    // Day2 (holiday) → holiday (midnight-6AM = 6h holiday)
+    assert.strictEqual(data.nightHours, 0); // No night hours (overflow to holiday)
+    assert.strictEqual(data.holidayHours, 8); // All 8h → holiday (overflow logic)
   });
 
   test('public holiday → sunday: split into holiday + sunday hours', () => {

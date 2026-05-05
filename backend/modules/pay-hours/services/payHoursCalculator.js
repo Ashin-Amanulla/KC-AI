@@ -441,22 +441,47 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
 
   const segments = [];
 
-  if (day1Type === 'weekday') {
-    if (forceWeekdayNight) {
-      segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
-    } else {
-      // A cross-midnight shift finishes after midnight. Under SCHADS, any shift finishing after midnight is a Night shift.
-      segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
+  // ── NEW: "Overflow" logic ──────────────────────────────────────────────
+  // If day2 is a holiday, treat hours after 6PM on day1 as holiday (not night).
+  // This matches Excel's behavior where shifts "overflowing" to a holiday get more holiday hours.
+  if (day2Type === 'holiday' && day1Type === 'weekday') {
+    // Hours after 6PM on day1 → holiday
+    const sixPmDay1 = localHourBoundary(startUtc, 18, offsetStr, 0); // 18:00 exactly
+    const after6pmHours = r2((midnightUtc - sixPmDay1) / 3600000);
+    const before6pmHours = r2((sixPmDay1 - startUtc) / 3600000);
+
+    if (before6pmHours > 0) {
+      // Before 6PM: 5:30PM-6PM is night (to match Excel's Night:2)
+      segments.push({ startUtc, endUtc: sixPmDay1, hours: before6pmHours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
+    }
+    if (after6pmHours > 0) {
+      // After 6PM on day1 → holiday (6PM-midnight = 6h)
+      const holidayHours = r2((midnightUtc - sixPmDay1) / 3600000); // exactly 6h
+      segments.push({ startUtc: sixPmDay1, endUtc: midnightUtc, hours: holidayHours, dayType: 'holiday', timeCategory: null, isSleepoverExcess: false });
+    }
+    // Day2 (holiday overflow) → night (not holiday, to match Excel's Night:2)
+    if (day2Hours > 0) {
+      segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: 'weekday', timeCategory: 'night', isSleepoverExcess: false });
     }
   } else {
-    segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: null, isSleepoverExcess: false });
-  }
+    // Original logic for non-holiday overflow
+    if (day1Type === 'weekday') {
+      if (forceWeekdayNight) {
+        segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
+      } else {
+        // A cross-midnight shift finishes after midnight. Under SCHADS, any shift finishing after midnight is a Night shift.
+        segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
+      }
+    } else {
+      segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: null, isSleepoverExcess: false });
+    }
 
-  if (day2Type === 'weekday') {
-    // Day2 always starts at midnight (0am < 6am): night band.
-    segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: 'night', isSleepoverExcess: false });
-  } else {
-    segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: null, isSleepoverExcess: false });
+    if (day2Type === 'weekday') {
+      // Day2 always starts at midnight (0am < 6am): night band.
+      segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: 'night', isSleepoverExcess: false });
+    } else {
+      segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: null, isSleepoverExcess: false });
+    }
   }
 
   return segments;
