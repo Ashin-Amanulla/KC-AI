@@ -39,13 +39,29 @@ import {
 const fmt = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const fmtH = (n) => n.toFixed(2) + 'h';
 
-const fmtExDate = (dt) => {
+const fmtExDate = (dt, tzOffset) => {
   if (!dt) return '—';
-  return new Date(dt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  const d = new Date(dt);
+  if (!tzOffset) return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  const sign = tzOffset[0] === '+' ? 1 : -1;
+  const clean = tzOffset.slice(1).replace(':', '');
+  const h = parseInt(clean.slice(0, 2), 10);
+  const m = parseInt(clean.slice(2, 4), 10);
+  const adjustedMs = d.getTime() + sign * (h * 60 + m) * 60000;
+  const adjusted = new Date(adjustedMs);
+  return adjusted.toISOString().slice(0, 10);
 };
-const fmtExTime = (dt) => {
+const fmtExTime = (dt, tzOffset) => {
   if (!dt) return '—';
-  return new Date(dt).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+  const d = new Date(dt);
+  if (!tzOffset) return d.toISOString().slice(11, 16);
+  const sign = tzOffset[0] === '+' ? 1 : -1;
+  const clean = tzOffset.slice(1).replace(':', '');
+  const h = parseInt(clean.slice(0, 2), 10);
+  const m = parseInt(clean.slice(2, 4), 10);
+  const adjustedMs = d.getTime() + sign * (h * 60 + m) * 60000;
+  const adjusted = new Date(adjustedMs);
+  return adjusted.toISOString().slice(11, 16);
 };
 const fmtPayPeriod = (row) => {
   if (!row?.periodStart && !row?.periodEnd) return '—';
@@ -2028,9 +2044,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                   <TableRow key={key} className="text-xs hover:bg-muted/30">
                                     <TableCell className="font-medium">{staffName}</TableCell>
                                     <TableCell className="text-muted-foreground">{fmtPayPeriod(prRow)}</TableCell>
-                                    <TableCell>{fmtExDate(shift.shiftStart)}</TableCell>
-                                    <TableCell className="font-mono">{fmtExTime(shift.shiftStart)}</TableCell>
-                                    <TableCell className="font-mono">{fmtExTime(shift.shiftEnd)}</TableCell>
+                                    <TableCell>{fmtExDate(shift.shiftStart, shift.timezoneOffset)}</TableCell>
+                                    <TableCell className="font-mono">{fmtExTime(shift.shiftStart, shift.timezoneOffset)}</TableCell>
+                                    <TableCell className="font-mono">{fmtExTime(shift.shiftEnd, shift.timezoneOffset)}</TableCell>
                                     <TableCell className="text-right font-mono">
                                       {shift.hours != null ? r2(Number(shift.hours)).toFixed(2) : '—'}
                                     </TableCell>

@@ -261,8 +261,25 @@ describe('midnight crossings', () => {
     const end = brisbaneLocal('2026-04-11', 2, 0);
     const s = shift({ _id: 'mc02', start: start.toISOString(), end: end.toISOString(), hours: 4 });
     const { data } = computePayHoursForStaff([s], new Set());
-    assert.strictEqual(data.nightHours, 2.02);
-    assert.strictEqual(data.saturdayHours, 1.98);
+    assert.strictEqual(data.nightHours, 2);
+    assert.strictEqual(data.saturdayHours, 2);
+  });
+
+  test('5:30pm Thu → 1:30am Fri: both weekdays → single night segment', () => {
+    const start = brisbaneLocal('2026-04-23', 17, 30);
+    const end = brisbaneLocal('2026-04-24', 1, 30);
+    const s = shift({ _id: 'mc02b', start: start.toISOString(), end: end.toISOString(), hours: 8 });
+    const { data } = computePayHoursForStaff([s], new Set());
+    assert.strictEqual(data.nightHours, 8, 'both weekdays → entire shift is night');
+  });
+
+  test('5:30pm Fri → 1:30am Sat: split at midnight gives exact 6.5h + 1.5h', () => {
+    const start = brisbaneLocal('2026-04-10', 17, 30);
+    const end = brisbaneLocal('2026-04-11', 1, 30);
+    const s = shift({ _id: 'mc02c', start: start.toISOString(), end: end.toISOString(), hours: 8 });
+    const { data } = computePayHoursForStaff([s], new Set());
+    assert.strictEqual(data.nightHours, 6.5, '5:30pm–midnight = 6.5h weekday night');
+    assert.strictEqual(data.saturdayHours, 1.5, 'midnight–1:30am = 1.5h Saturday');
   });
 
   test('weekday → public holiday: split into weekday night + holiday hours', () => {
@@ -270,8 +287,8 @@ describe('midnight crossings', () => {
     const end = brisbaneLocal('2026-04-25', 6, 0);
     const s = shift({ _id: 'mc03', start: start.toISOString(), end: end.toISOString(), hours: 8 });
     const { data } = computePayHoursForStaff([s], new Set(['2026-04-25']));
-    assert.strictEqual(data.nightHours, 2.02);
-    assert.strictEqual(data.holidayHours, 5.98);
+    assert.strictEqual(data.nightHours, 2);
+    assert.strictEqual(data.holidayHours, 6);
   });
 
   test('public holiday → sunday: split into holiday + sunday hours', () => {
@@ -279,8 +296,8 @@ describe('midnight crossings', () => {
     const end = brisbaneLocal('2026-04-26', 8, 0);
     const s = shift({ _id: 'mc04', start: start.toISOString(), end: end.toISOString(), hours: 10 });
     const { data } = computePayHoursForStaff([s], new Set(['2026-04-25']));
-    assert.strictEqual(data.holidayHours, 2.02);
-    assert.strictEqual(data.sundayHours, 7.98);
+    assert.strictEqual(data.holidayHours, 2);
+    assert.strictEqual(data.sundayHours, 8);
   });
 });
 
@@ -297,6 +314,23 @@ describe('Christmas Eve (local 6pm boundary)', () => {
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.morningHours, 2);
     assert.strictEqual(data.holidayHours, 3);
+  });
+
+  test('10pm Dec 24 – 6am Dec 25: split holiday + weekday night at midnight', () => {
+    const start = brisbaneLocal('2026-12-24', 22, 0);
+    const end = brisbaneLocal('2026-12-25', 6, 0);
+    const s = shift({ _id: 'ce03', start: start.toISOString(), end: end.toISOString(), hours: 8 });
+    const { data } = computePayHoursForStaff([s], new Set());
+    assert.strictEqual(data.holidayHours, 2, '10pm–midnight = 2h holiday');
+    assert.strictEqual(data.nightHours, 6, 'midnight–6am = 6h weekday night');
+    assert.strictEqual(data.afternoonHours, 0, 'no evening portion');
+  });
+
+  test('10pm–11pm Dec 24: same-day holiday (after 6pm, no midnight cross)', () => {
+    const s = shiftBrisbane({ _id: 'ce04' }, '2026-12-24', 22, 0, 23, 0);
+    const { data } = computePayHoursForStaff([s], new Set());
+    assert.strictEqual(data.holidayHours, 1);
+    assert.strictEqual(data.afternoonHours, 0);
   });
 });
 
@@ -546,11 +580,11 @@ describe('hours normalization from timestamps', () => {
       timezoneOffset: '+10:00',
     });
     const { data } = computePayHoursForStaff([s], new Set());
-    assert.strictEqual(data.nightHours, 10, '10am-midnight Friday → night (crosses midnight, finishes after midnight)');
+    assert.strictEqual(data.nightHours, 10, '10am-1am Sat → night (crosses midnight, finishes after midnight)');
     assert.strictEqual(data.morningHours, 0);
     assert.strictEqual(data.saturdayHours, 0);
-    assert.strictEqual(data.saturdayOtUpto2, 0.98);
+    assert.strictEqual(data.saturdayOtUpto2, 1);
     assert.strictEqual(data.weekdayOtUpto2, 2);
-    assert.strictEqual(data.weekdayOtAfter2, 2.02);
+    assert.strictEqual(data.weekdayOtAfter2, 2);
   });
 });

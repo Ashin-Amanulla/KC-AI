@@ -430,8 +430,9 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
     return createNightShiftSegment(startUtc, endUtc, hours, shiftType, offsetStr, options);
   }
 
-  // One day is special — split at 00:01 of the next day
-  const midnightUtc = localHourBoundary(startUtc, 24, offsetStr, 1);
+  // One day is special — split at 00:00 of the next day
+  // Use 00:00 for hour calculations; time band classification still uses :01 boundaries.
+  const midnightUtc = localMidnightAfter(startUtc, offsetStr);
   const day1Hours = r2((midnightUtc - startUtc) / 3600000);
   const day2Hours = r2((endUtc - midnightUtc) / 3600000);
 
@@ -613,13 +614,16 @@ function addBrokenShiftOtToCategory(data, dayType, hours, isTier1) {
 }
 
 function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
-  if (previousShifts.length >= 2) {
-    // 2nd break in same day — upgrade from 1-break to 2-break (don't double-count)
-    data.brokenShiftCount       = Math.max(0, data.brokenShiftCount - 1);
-    data.brokenShift2BreakCount += 1;
-  } else {
-    // First break in this day
-    data.brokenShiftCount += 1;
+  // Check if there's an actual break (gap > 0) in the current link
+  if (currentShift.isBrokenShift) {
+    if (previousShifts.length >= 2) {
+      // 2nd break in same day — upgrade from 1-break to 2-break (don't double-count)
+      data.brokenShiftCount       = Math.max(0, data.brokenShiftCount - 1);
+      data.brokenShift2BreakCount += 1;
+    } else {
+      // First break in this day
+      data.brokenShiftCount += 1;
+    }
   }
 
   if (!previousShifts.length || !currentShift.segments.length) return;
@@ -660,7 +664,8 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
 }
 
 function handleBrokenShift(shift, processedShift, processedShifts, data, ctx) {
-  if (!shift.isBrokenShift) return;
+  // A shift is part of a chain if it's explicitly broken OR continuous with the previous shift
+  if (!shift.isBrokenShift && !processedShift.isContinuous) return;
 
   const offsetStr = shift.timezoneOffset || '+10:00';
   const previousInSpan = [];
@@ -930,6 +935,7 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         shiftStart: shift?.startDatetime || null,
         shiftEnd: shift?.endDatetime || null,
         shiftType: shift?.shiftType || '',
+        timezoneOffset: shift?.timezoneOffset || '+10:00',
       });
     }
 
@@ -1107,6 +1113,7 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
     hours: normalizedHours,
     activeHours,
     isBrokenShift: shift.isBrokenShift,
+    isContinuous,
     segments,
   };
 
