@@ -113,6 +113,45 @@ function localSixPmOn(utcDate, offsetStr) {
   return new Date(sixPmLocal.getTime() - sign * (h * 60 + m) * 60000);
 }
 
+function localHourBoundary(refUtc, hour, offsetStr) {
+  const ds = localDateStr(refUtc, offsetStr);
+  const [y, mo, d] = ds.split('-').map(Number);
+  const sign = offsetStr[0] === '+' ? 1 : -1;
+  const clean = offsetStr.slice(1).replace(':', '');
+  const oh = parseInt(clean.slice(0, 2), 10);
+  const om = parseInt(clean.slice(2, 4), 10);
+  return new Date(Date.UTC(y, mo - 1, d, hour, 0, 0) - sign * (oh * 60 + om) * 60000);
+}
+
+/**
+ * Split a weekday segment at 06:00 and 20:00 local-time boundaries.
+ * Handles cross-midnight shifts by iterating over each spanned local day.
+ */
+function splitWeekdayByTimeBand(startUtc, endUtc, hours, isSleepoverExcess, offsetStr) {
+  const cuts = new Set([startUtc.getTime(), endUtc.getTime()]);
+
+  let checkDate = startUtc;
+  while (checkDate < endUtc) {
+    const b6am = localHourBoundary(checkDate, MORNING_START, offsetStr);
+    const b8pm = localHourBoundary(checkDate, AFTERNOON_START, offsetStr);
+    if (b6am > startUtc && b6am < endUtc) cuts.add(b6am.getTime());
+    if (b8pm > startUtc && b8pm < endUtc) cuts.add(b8pm.getTime());
+    checkDate = localMidnightAfter(checkDate, offsetStr);
+  }
+
+  const sortedCuts = [...cuts].sort((a, b) => a - b).map(t => new Date(t));
+  const totalMs = endUtc - startUtc;
+
+  return sortedCuts.slice(0, -1).map((s, i) => {
+    const e = sortedCuts[i + 1];
+    const h = r2(hours * ((e - s) / totalMs));
+    if (h <= 0) return null;
+    const midH = localHour(new Date((s.getTime() + e.getTime()) / 2), offsetStr);
+    const tc = midH < MORNING_START ? 'night' : midH < AFTERNOON_START ? 'morning' : 'afternoon';
+    return { startUtc: s, endUtc: e, hours: h, dayType: 'weekday', timeCategory: tc, isSleepoverExcess };
+  }).filter(Boolean);
+}
+
 // ─── DAY TYPE HELPERS ────────────────────────────────────────────────────────
 
 function getDayTypeByWeekday(utcDate, offsetStr) {
@@ -173,12 +212,8 @@ function getTimeCategory(startUtc, endUtc, offsetStr) {
  * ShiftSegment: { startUtc, endUtc, hours, dayType, timeCategory, isSleepoverExcess }
  */
 
-function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options = {}) {
-  const { forceWeekdayNight = false } = options;
+function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet) {
   const dayType = getDayType(startUtc, offsetStr, holidaySet);
-  const useNight =
-    dayType === 'weekday' && (forceWeekdayNight || shiftType === 'sleepover');
-  const timeCategory = dayType === 'weekday' ? (useNight ? 'night' : getTimeCategory(startUtc, endUtc, offsetStr)) : null;
 
   let segHours = hours;
   let isSleepoverExcess = false;
@@ -189,10 +224,14 @@ function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, h
     if (segHours <= 0) return [];
   }
 
-  return [{ startUtc, endUtc, hours: segHours, dayType, timeCategory, isSleepoverExcess }];
+  if (dayType === 'weekday') {
+    return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
+  }
+
+  return [{ startUtc, endUtc, hours: segHours, dayType, timeCategory: null, isSleepoverExcess }];
 }
 
-function createNightShiftSegment(startUtc, endUtc, hours, shiftType) {
+function createNightShiftSegment(startUtc, endUtc, hours, shiftType, offsetStr) {
   let segHours = hours;
   let isSleepoverExcess = false;
 
@@ -202,7 +241,7 @@ function createNightShiftSegment(startUtc, endUtc, hours, shiftType) {
     if (segHours <= 0) return [];
   }
 
-  return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: 'night', isSleepoverExcess }];
+  return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
 }
 
 function shiftSpansChristmasEve6pm(startUtc, endUtc, offsetStr) {
@@ -381,7 +420,7 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
 
   // Both weekdays = night hours (no split)
   if (day1Type === 'weekday' && day2Type === 'weekday') {
-    return createNightShiftSegment(startUtc, endUtc, hours, shiftType);
+    return createNightShiftSegment(startUtc, endUtc, hours, shiftType, offsetStr);
   }
 
   // One day is special — split at midnight
