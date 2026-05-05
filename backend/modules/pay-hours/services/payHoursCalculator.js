@@ -212,7 +212,8 @@ function getTimeCategory(startUtc, endUtc, offsetStr) {
  * ShiftSegment: { startUtc, endUtc, hours, dayType, timeCategory, isSleepoverExcess }
  */
 
-function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet) {
+function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options = {}) {
+  const { isPreSleepoverWeekday = false, isPostSleepoverWeekday = false } = options;
   const dayType = getDayType(startUtc, offsetStr, holidaySet);
 
   let segHours = hours;
@@ -225,13 +226,21 @@ function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, h
   }
 
   if (dayType === 'weekday') {
+    if (isPostSleepoverWeekday) {
+      return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: 'night', isSleepoverExcess }];
+    }
+    if (isPreSleepoverWeekday) {
+      const tc = getTimeCategory(startUtc, endUtc, offsetStr);
+      return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: tc, isSleepoverExcess }];
+    }
     return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
   }
 
   return [{ startUtc, endUtc, hours: segHours, dayType, timeCategory: null, isSleepoverExcess }];
 }
 
-function createNightShiftSegment(startUtc, endUtc, hours, shiftType, offsetStr) {
+function createNightShiftSegment(startUtc, endUtc, hours, shiftType, offsetStr, options = {}) {
+  const { isPreSleepoverWeekday = false, isPostSleepoverWeekday = false } = options;
   let segHours = hours;
   let isSleepoverExcess = false;
 
@@ -239,6 +248,12 @@ function createNightShiftSegment(startUtc, endUtc, hours, shiftType, offsetStr) 
     segHours = r2(Math.max(0, hours - SLEEPOVER_DEDUCTION));
     isSleepoverExcess = true;
     if (segHours <= 0) return [];
+    // Sleepover excess always split by time band — not affected by adjacent-shift flags.
+    return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
+  }
+
+  if (isPostSleepoverWeekday || isPreSleepoverWeekday) {
+    return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: 'night', isSleepoverExcess: false }];
   }
 
   return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
@@ -411,7 +426,7 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
 
   // Both weekdays = night hours (no split)
   if (day1Type === 'weekday' && day2Type === 'weekday') {
-    return createNightShiftSegment(startUtc, endUtc, hours, shiftType, offsetStr);
+    return createNightShiftSegment(startUtc, endUtc, hours, shiftType, offsetStr, options);
   }
 
   // One day is special — split at midnight
@@ -423,11 +438,15 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
     return splitSleepoverAtMidnight(startUtc, endUtc, midnightUtc, day1Type, day2Type, day1Hours, day2Hours, offsetStr);
   }
 
+  const { isPreSleepoverWeekday = false, isPostSleepoverWeekday = false } = options;
   const segments = [];
 
   if (day1Type === 'weekday') {
-    if (forceWeekdayNight) {
+    if (forceWeekdayNight || isPostSleepoverWeekday) {
       segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
+    } else if (isPreSleepoverWeekday) {
+      const tc = getTimeCategory(startUtc, midnightUtc, offsetStr);
+      segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: tc, isSleepoverExcess: false });
     } else {
       segments.push(...splitWeekdayByTimeBand(startUtc, midnightUtc, day1Hours, false, offsetStr));
     }
@@ -436,8 +455,11 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
   }
 
   if (day2Type === 'weekday') {
-    if (forceWeekdayNight) {
+    if (forceWeekdayNight || isPostSleepoverWeekday) {
       segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: 'night', isSleepoverExcess: false });
+    } else if (isPreSleepoverWeekday) {
+      const tc = getTimeCategory(midnightUtc, endUtc, offsetStr);
+      segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: tc, isSleepoverExcess: false });
     } else {
       segments.push(...splitWeekdayByTimeBand(midnightUtc, endUtc, day2Hours, false, offsetStr));
     }
@@ -467,6 +489,33 @@ function gapBetweenShiftsUtc(prevShift, curShift) {
  */
 export function computeSleepovernAttachedNight(shifts) {
   return shifts.map(() => false);
+}
+
+/**
+ * For each shift, flag whether it is immediately before or after a regular sleepover.
+ *
+ * Pre-sleepover weekday shifts: use highest time band (no split at 6am/8pm boundaries).
+ * Post-sleepover weekday shifts: forced to night band regardless of actual clock hours.
+ * The sleepover's own excess hours are always split by time band — these flags don't affect it.
+ */
+function computeSleepoverAdjacentFlags(shifts) {
+  const n = shifts.length;
+  const isPreSleepover = new Array(n).fill(false);
+  const isPostSleepover = new Array(n).fill(false);
+
+  for (let i = 0; i < n; i++) {
+    if (shifts[i].shiftType !== 'sleepover') continue;
+    if (i > 0) {
+      const gap = new Date(shifts[i].startDatetime) - new Date(shifts[i - 1].endDatetime);
+      if (Math.abs(gap) <= GAP_CONTIGUOUS_TOLERANCE_MS) isPreSleepover[i - 1] = true;
+    }
+    if (i < n - 1) {
+      const gap = new Date(shifts[i + 1].startDatetime) - new Date(shifts[i].endDatetime);
+      if (gap >= 0 && gap <= SLEEPOVER_FOLLOWON_GAP_MS) isPostSleepover[i + 1] = true;
+    }
+  }
+
+  return { isPreSleepover, isPostSleepover };
 }
 
 /**
@@ -951,7 +1000,7 @@ function buildPerShiftBreakdowns(ctx, shifts) {
 
 // ─── PROCESS SHIFT FOR PAY HOURS ─────────────────────────────────────────────
 
-function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
+function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, isPreSleepover = false, isPostSleepover = false) {
   const offsetStr = shift.timezoneOffset || '+10:00';
   const startUtc = new Date(shift.startDatetime);
   const endUtc = new Date(shift.endDatetime);
@@ -977,10 +1026,16 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false) {
 
   /** PC/nursing stacked before or after sleepovern bills as SCHADS weekday night (overrides PH/Sat/Sun buckets). */
   const attachNight = !!sleepovernAttachedNight;
+  // Only apply pre/post sleepover band rules to non-sleepover shifts
+  const isSleepoverShift = shift.shiftType === 'sleepover';
 
   // Create segments
   let segments = [];
-  const segmentOpts = { forceWeekdayNight: attachNight };
+  const segmentOpts = {
+    forceWeekdayNight: attachNight,
+    isPreSleepoverWeekday: !isSleepoverShift && isPreSleepover,
+    isPostSleepoverWeekday: !isSleepoverShift && isPostSleepover,
+  };
 
   if (shift.shiftType === 'nursing_support') {
     // Split by day type so Saturday/Sunday/Holiday nursing attracts the correct penalty
@@ -1068,6 +1123,7 @@ export function computePayHoursForStaff(shifts, holidaySet) {
   }
 
   const sleepovernAttachedNight = computeSleepovernAttachedNight(shifts);
+  const { isPreSleepover, isPostSleepover } = computeSleepoverAdjacentFlags(shifts);
 
   const ctx = {
     holidaySet,
@@ -1083,7 +1139,7 @@ export function computePayHoursForStaff(shifts, holidaySet) {
   };
 
   for (let i = 0; i < shifts.length; i++) {
-    processShiftForPayHours(shifts[i], ctx, sleepovernAttachedNight[i]);
+    processShiftForPayHours(shifts[i], ctx, sleepovernAttachedNight[i], isPreSleepover[i], isPostSleepover[i]);
   }
 
   // Build per-shift breakdowns BEFORE chain processing modifies data

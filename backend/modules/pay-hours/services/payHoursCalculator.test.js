@@ -151,8 +151,8 @@ test('personal care immediately after sleepover (within 8h gap) is night band', 
     timezoneOffset: '+10:00',
   });
   const { data } = computePayHoursForStaff([sleepover, pc], new Set());
-  assert.strictEqual(data.nightHours, 3.33, '3.33h SO excess only');
-  assert.strictEqual(data.morningHours, 4.67);
+  assert.strictEqual(data.nightHours, 7.33, '3.33h SO excess + 4h attached PC');
+  assert.strictEqual(data.morningHours, 0.67);
   assert.strictEqual(data.afternoonHours, 0);
 });
 
@@ -350,8 +350,8 @@ describe('sleepover', () => {
       timezoneOffset: '+10:00',
     });
     const { data } = computePayHoursForStaff([sleepover, pc], new Set());
-    assert.strictEqual(data.nightHours, 3.33);
-    assert.strictEqual(data.morningHours, 4.67);
+    assert.strictEqual(data.nightHours, 7.33);
+    assert.strictEqual(data.morningHours, 0.67);
   });
 
   test('PC gap ≥8h after sleepover: not attached; still follows highest weekday band rule', () => {
