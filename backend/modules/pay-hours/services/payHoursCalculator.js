@@ -229,18 +229,19 @@ function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, h
     if (isPostSleepoverWeekday) {
       return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: 'night', isSleepoverExcess }];
     }
-    if (isPreSleepoverWeekday) {
-      const tc = getTimeCategory(startUtc, endUtc, offsetStr);
-      return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: tc, isSleepoverExcess }];
+    if (isSleepoverExcess) {
+      // Sleepover excess only: split at 6am/8pm per new SCHADS split-loading rule.
+      return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
     }
-    return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
+    // Regular or pre-sleepover shift: whole-shift classification (highest band wins, no split).
+    const tc = getTimeCategory(startUtc, endUtc, offsetStr);
+    return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: tc, isSleepoverExcess: false }];
   }
 
   return [{ startUtc, endUtc, hours: segHours, dayType, timeCategory: null, isSleepoverExcess }];
 }
 
-function createNightShiftSegment(startUtc, endUtc, hours, shiftType, offsetStr, options = {}) {
-  const { isPreSleepoverWeekday = false, isPostSleepoverWeekday = false } = options;
+function createNightShiftSegment(startUtc, endUtc, hours, shiftType, offsetStr) {
   let segHours = hours;
   let isSleepoverExcess = false;
 
@@ -248,15 +249,12 @@ function createNightShiftSegment(startUtc, endUtc, hours, shiftType, offsetStr, 
     segHours = r2(Math.max(0, hours - SLEEPOVER_DEDUCTION));
     isSleepoverExcess = true;
     if (segHours <= 0) return [];
-    // Sleepover excess always split by time band — not affected by adjacent-shift flags.
+    // Sleepover excess only: split at 6am/8pm per new SCHADS split-loading rule.
     return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
   }
 
-  if (isPostSleepoverWeekday || isPreSleepoverWeekday) {
-    return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: 'night', isSleepoverExcess: false }];
-  }
-
-  return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
+  // Regular cross-midnight weekday (both days weekday): whole segment is night.
+  return [{ startUtc, endUtc, hours: segHours, dayType: 'weekday', timeCategory: 'night', isSleepoverExcess: false }];
 }
 
 function shiftSpansChristmasEve6pm(startUtc, endUtc, offsetStr) {
@@ -338,7 +336,8 @@ function splitAtChristmasEve6pm(startUtc, endUtc, hours, shiftType, offsetStr, h
 
   if (beforeHours > 0) {
     if (beforeDayType === 'weekday' && !forceWeekdayNight) {
-      segments.push(...splitWeekdayByTimeBand(startUtc, holidayStartUtc, beforeHours, false, offsetStr));
+      const tc = getTimeCategory(startUtc, holidayStartUtc, offsetStr);
+      segments.push({ startUtc, endUtc: holidayStartUtc, hours: beforeHours, dayType: beforeDayType, timeCategory: tc, isSleepoverExcess: false });
     } else {
       segments.push({ startUtc, endUtc: holidayStartUtc, hours: beforeHours, dayType: beforeDayType, timeCategory: beforeTimeCat, isSleepoverExcess: false });
     }
@@ -349,12 +348,9 @@ function splitAtChristmasEve6pm(startUtc, endUtc, hours, shiftType, offsetStr, h
   }
   if (remainingHours > 0 && midnightUtc !== null) {
     const day2Type = getDayType(endUtc, offsetStr, holidaySet);
-    if (day2Type === 'weekday' && !forceWeekdayNight) {
-      segments.push(...splitWeekdayByTimeBand(midnightUtc, endUtc, remainingHours, false, offsetStr));
-    } else {
-      const day2TimeCat = day2Type === 'weekday' ? 'night' : null;
-      segments.push({ startUtc: midnightUtc, endUtc, hours: remainingHours, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: false });
-    }
+    // Day2 starts at midnight (0am): weekday portion is always night.
+    const day2TimeCat = day2Type === 'weekday' ? 'night' : null;
+    segments.push({ startUtc: midnightUtc, endUtc, hours: remainingHours, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: false });
   }
 
   return segments;
@@ -438,31 +434,25 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
     return splitSleepoverAtMidnight(startUtc, endUtc, midnightUtc, day1Type, day2Type, day1Hours, day2Hours, offsetStr);
   }
 
-  const { isPreSleepoverWeekday = false, isPostSleepoverWeekday = false } = options;
+  const { isPostSleepoverWeekday = false } = options;
   const segments = [];
 
   if (day1Type === 'weekday') {
     if (forceWeekdayNight || isPostSleepoverWeekday) {
       segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
-    } else if (isPreSleepoverWeekday) {
-      const tc = getTimeCategory(startUtc, midnightUtc, offsetStr);
-      segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: tc, isSleepoverExcess: false });
     } else {
-      segments.push(...splitWeekdayByTimeBand(startUtc, midnightUtc, day1Hours, false, offsetStr));
+      // Day1 ends at midnight (past 8pm): night if starts before 6am, otherwise afternoon.
+      const startHour = localHour(startUtc, offsetStr);
+      const tc = startHour < MORNING_START ? 'night' : 'afternoon';
+      segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: tc, isSleepoverExcess: false });
     }
   } else {
     segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: null, isSleepoverExcess: false });
   }
 
   if (day2Type === 'weekday') {
-    if (forceWeekdayNight || isPostSleepoverWeekday) {
-      segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: 'night', isSleepoverExcess: false });
-    } else if (isPreSleepoverWeekday) {
-      const tc = getTimeCategory(midnightUtc, endUtc, offsetStr);
-      segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: tc, isSleepoverExcess: false });
-    } else {
-      segments.push(...splitWeekdayByTimeBand(midnightUtc, endUtc, day2Hours, false, offsetStr));
-    }
+    // Day2 always starts at midnight (0am < 6am): night band.
+    segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: 'night', isSleepoverExcess: false });
   } else {
     segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: null, isSleepoverExcess: false });
   }
@@ -1033,7 +1023,6 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
   let segments = [];
   const segmentOpts = {
     forceWeekdayNight: attachNight,
-    isPreSleepoverWeekday: !isSleepoverShift && isPreSleepover,
     isPostSleepoverWeekday: !isSleepoverShift && isPostSleepover,
   };
 
