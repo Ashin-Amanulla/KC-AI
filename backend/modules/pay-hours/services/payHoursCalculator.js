@@ -437,10 +437,8 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
     if (forceWeekdayNight) {
       segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
     } else {
-      // Day1 ends at midnight (past 8pm): night if starts before 6am, otherwise afternoon.
-      const startHour = localHour(startUtc, offsetStr);
-      const tc = startHour < MORNING_START ? 'night' : 'afternoon';
-      segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: tc, isSleepoverExcess: false });
+      // A cross-midnight shift finishes after midnight. Under SCHADS, any shift finishing after midnight is a Night shift.
+      segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
     }
   } else {
     segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: null, isSleepoverExcess: false });

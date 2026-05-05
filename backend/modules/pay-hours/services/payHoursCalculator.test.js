@@ -151,8 +151,8 @@ test('personal care immediately after sleepover (within 8h gap) is night band', 
     timezoneOffset: '+10:00',
   });
   const { data } = computePayHoursForStaff([sleepover, pc], new Set());
-  assert.strictEqual(data.nightHours, 7.33, '3.33h SO excess + 4h attached PC');
-  assert.strictEqual(data.morningHours, 0.67);
+  assert.strictEqual(data.nightHours, 3.33, '3.33h SO excess only');
+  assert.strictEqual(data.morningHours, 4.67);
   assert.strictEqual(data.afternoonHours, 0);
 });
 
@@ -256,21 +256,21 @@ describe('midnight crossings', () => {
     assert.strictEqual(data.morningHours, 0);
   });
 
-  test('Friday → Saturday: split 2h weekday afternoon + 2h Saturday', () => {
+  test('Friday → Saturday: split 2h weekday night + 2h Saturday', () => {
     const start = brisbaneLocal('2026-04-10', 22, 0);
     const end = brisbaneLocal('2026-04-11', 2, 0);
     const s = shift({ _id: 'mc02', start: start.toISOString(), end: end.toISOString(), hours: 4 });
     const { data } = computePayHoursForStaff([s], new Set());
-    assert.strictEqual(data.afternoonHours, 2);
+    assert.strictEqual(data.nightHours, 2);
     assert.strictEqual(data.saturdayHours, 2);
   });
 
-  test('weekday → public holiday: split into weekday afternoon + holiday hours', () => {
+  test('weekday → public holiday: split into weekday night + holiday hours', () => {
     const start = brisbaneLocal('2026-04-24', 22, 0);
     const end = brisbaneLocal('2026-04-25', 6, 0);
     const s = shift({ _id: 'mc03', start: start.toISOString(), end: end.toISOString(), hours: 8 });
     const { data } = computePayHoursForStaff([s], new Set(['2026-04-25']));
-    assert.strictEqual(data.afternoonHours, 2);
+    assert.strictEqual(data.nightHours, 2);
     assert.strictEqual(data.holidayHours, 6);
   });
 
@@ -331,7 +331,7 @@ describe('sleepover', () => {
     assert.strictEqual(data.sleepoversCount, 1);
   });
 
-  test('PC within 8h after sleepover end: forced night band (attached)', () => {
+  test('PC within 8h after sleepover end: NOT forced night band (SCHADS split-loading)', () => {
     const sleepover = shift({
       _id: 'so03a',
       start: '2026-06-01T10:00:00.000Z',
@@ -350,8 +350,8 @@ describe('sleepover', () => {
       timezoneOffset: '+10:00',
     });
     const { data } = computePayHoursForStaff([sleepover, pc], new Set());
-    assert.strictEqual(data.nightHours, 7.33);
-    assert.strictEqual(data.morningHours, 0.67);
+    assert.strictEqual(data.nightHours, 3.33);
+    assert.strictEqual(data.morningHours, 4.67);
   });
 
   test('PC gap ≥8h after sleepover: not attached; still follows highest weekday band rule', () => {
@@ -546,7 +546,7 @@ describe('hours normalization from timestamps', () => {
       timezoneOffset: '+10:00',
     });
     const { data } = computePayHoursForStaff([s], new Set());
-    assert.strictEqual(data.afternoonHours, 10, '10am-midnight Friday → afternoon (extends past 8pm, highest band)');
+    assert.strictEqual(data.nightHours, 10, '10am-midnight Friday → night (crosses midnight, finishes after midnight)');
     assert.strictEqual(data.morningHours, 0);
     assert.strictEqual(data.saturdayHours, 0);
     assert.strictEqual(data.saturdayOtUpto2, 1);
