@@ -309,11 +309,7 @@ function splitAtChristmasEve6pm(startUtc, endUtc, hours, shiftType, offsetStr, h
   }
 
   const beforeDayType = getDayTypeByWeekday(startUtc, offsetStr);
-  const beforeTimeCat = beforeDayType === 'weekday'
-    ? (shiftType === 'sleepover' || forceWeekdayNight
-        ? 'night'
-        : getTimeCategory(startUtc, holidayStartUtc, offsetStr))
-    : null;
+  const beforeTimeCat = beforeDayType === 'weekday' && (shiftType === 'sleepover' || forceWeekdayNight) ? 'night' : null;
 
   if (shiftType === 'sleepover') {
     return splitSleepoverAtChristmasEve6pm(
@@ -326,7 +322,11 @@ function splitAtChristmasEve6pm(startUtc, endUtc, hours, shiftType, offsetStr, h
   const segments = [];
 
   if (beforeHours > 0) {
-    segments.push({ startUtc, endUtc: holidayStartUtc, hours: beforeHours, dayType: beforeDayType, timeCategory: beforeTimeCat, isSleepoverExcess: false });
+    if (beforeDayType === 'weekday' && !forceWeekdayNight) {
+      segments.push(...splitWeekdayByTimeBand(startUtc, holidayStartUtc, beforeHours, false, offsetStr));
+    } else {
+      segments.push({ startUtc, endUtc: holidayStartUtc, hours: beforeHours, dayType: beforeDayType, timeCategory: beforeTimeCat, isSleepoverExcess: false });
+    }
   }
   if (afterHours > 0) {
     const afterEnd = midnightUtc === null ? endUtc : midnightUtc;
@@ -334,10 +334,12 @@ function splitAtChristmasEve6pm(startUtc, endUtc, hours, shiftType, offsetStr, h
   }
   if (remainingHours > 0 && midnightUtc !== null) {
     const day2Type = getDayType(endUtc, offsetStr, holidaySet);
-    const day2TimeCat = day2Type === 'weekday'
-      ? (forceWeekdayNight ? 'night' : getTimeCategory(midnightUtc, endUtc, offsetStr))
-      : null;
-    segments.push({ startUtc: midnightUtc, endUtc, hours: remainingHours, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: false });
+    if (day2Type === 'weekday' && !forceWeekdayNight) {
+      segments.push(...splitWeekdayByTimeBand(midnightUtc, endUtc, remainingHours, false, offsetStr));
+    } else {
+      const day2TimeCat = day2Type === 'weekday' ? 'night' : null;
+      segments.push({ startUtc: midnightUtc, endUtc, hours: remainingHours, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: false });
+    }
   }
 
   return segments;
@@ -349,19 +351,28 @@ function splitSleepoverAtMidnight(startUtc, endUtc, midnightUtc, day1Type, day2T
   if (day1Hours >= SLEEPOVER_DEDUCTION) {
     const day1Excess = r2(day1Hours - SLEEPOVER_DEDUCTION);
     if (day1Excess > 0) {
-      const day1TimeCat = day1Type === 'weekday' ? 'night' : null;
-      segments.push({ startUtc, endUtc: midnightUtc, hours: day1Excess, dayType: day1Type, timeCategory: day1TimeCat, isSleepoverExcess: true });
+      if (day1Type === 'weekday') {
+        segments.push(...splitWeekdayByTimeBand(startUtc, midnightUtc, day1Excess, true, offsetStr));
+      } else {
+        segments.push({ startUtc, endUtc: midnightUtc, hours: day1Excess, dayType: day1Type, timeCategory: null, isSleepoverExcess: true });
+      }
     }
     if (day2Hours > 0) {
-      const day2TimeCat = day2Type === 'weekday' ? 'night' : null;
-      segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: true });
+      if (day2Type === 'weekday') {
+        segments.push(...splitWeekdayByTimeBand(midnightUtc, endUtc, day2Hours, true, offsetStr));
+      } else {
+        segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: null, isSleepoverExcess: true });
+      }
     }
   } else {
     const remainingDeduction = r2(SLEEPOVER_DEDUCTION - day1Hours);
     const day2Excess = r2(day2Hours - remainingDeduction);
     if (day2Excess > 0) {
-      const day2TimeCat = day2Type === 'weekday' ? 'night' : null;
-      segments.push({ startUtc: midnightUtc, endUtc, hours: day2Excess, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: true });
+      if (day2Type === 'weekday') {
+        segments.push(...splitWeekdayByTimeBand(midnightUtc, endUtc, day2Excess, true, offsetStr));
+      } else {
+        segments.push({ startUtc: midnightUtc, endUtc, hours: day2Excess, dayType: day2Type, timeCategory: null, isSleepoverExcess: true });
+      }
     }
   }
 
@@ -391,27 +402,7 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
   const endLocalHour = localHour(endUtc, offsetStr);
   const endLocalMin = toLocal(endUtc, offsetStr).getUTCMinutes();
   if (endLocalHour === 0 && endLocalMin === 0) {
-    const dayType = getDayType(startUtc, offsetStr, holidaySet);
-    let segHours = hours;
-    let isSleepoverExcess = false;
-
-    if (shiftType === 'sleepover') {
-      segHours = r2(Math.max(0, hours - SLEEPOVER_DEDUCTION));
-      isSleepoverExcess = true;
-      if (segHours <= 0) return [];
-    }
-
-    let timeCategory = null;
-    if (dayType === 'weekday') {
-      if (shiftType === 'sleepover' || forceWeekdayNight) {
-        timeCategory = 'night';
-      } else {
-        const startHour = localHour(startUtc, offsetStr);
-        timeCategory = startHour < MORNING_START ? 'night' : 'afternoon';
-      }
-    }
-
-    return [{ startUtc, endUtc, hours: segHours, dayType, timeCategory, isSleepoverExcess }];
+    return createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, holidaySet, options);
   }
 
   // Shift crosses midnight — check day types
@@ -432,17 +423,29 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
     return splitSleepoverAtMidnight(startUtc, endUtc, midnightUtc, day1Type, day2Type, day1Hours, day2Hours, offsetStr);
   }
 
-  const day1TimeCat = day1Type === 'weekday'
-    ? (forceWeekdayNight ? 'night' : getTimeCategory(startUtc, midnightUtc, offsetStr))
-    : null;
-  const day2TimeCat = day2Type === 'weekday'
-    ? (forceWeekdayNight ? 'night' : getTimeCategory(midnightUtc, endUtc, offsetStr))
-    : null;
+  const segments = [];
 
-  return [
-    { startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: day1TimeCat, isSleepoverExcess: false },
-    { startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: day2TimeCat, isSleepoverExcess: false },
-  ];
+  if (day1Type === 'weekday') {
+    if (forceWeekdayNight) {
+      segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
+    } else {
+      segments.push(...splitWeekdayByTimeBand(startUtc, midnightUtc, day1Hours, false, offsetStr));
+    }
+  } else {
+    segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: null, isSleepoverExcess: false });
+  }
+
+  if (day2Type === 'weekday') {
+    if (forceWeekdayNight) {
+      segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: 'night', isSleepoverExcess: false });
+    } else {
+      segments.push(...splitWeekdayByTimeBand(midnightUtc, endUtc, day2Hours, false, offsetStr));
+    }
+  } else {
+    segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: day2Type, timeCategory: null, isSleepoverExcess: false });
+  }
+
+  return segments;
 }
 
 // ─── SLEEPOVER-FLANKING PERSONAL CARE / NURSING ───────────────────────────────
@@ -463,26 +466,7 @@ function gapBetweenShiftsUtc(prevShift, curShift) {
  * @returns {boolean[]}
  */
 export function computeSleepovernAttachedNight(shifts) {
-  return shifts.map((s, i) => {
-    const pcLike = s.shiftType === 'personal_care' || s.shiftType === 'nursing_support';
-    if (!pcLike) return false;
-
-    let beforeSleepovern = false;
-    const next = i < shifts.length - 1 ? shifts[i + 1] : null;
-    if (next?.shiftType === 'sleepover') {
-      const g = gapBetweenShiftsUtc(s, next);
-      if (g >= 0 && g <= GAP_CONTIGUOUS_TOLERANCE_MS) beforeSleepovern = true;
-    }
-
-    let afterSleepovern = false;
-    const prev = i > 0 ? shifts[i - 1] : null;
-    if (prev?.shiftType === 'sleepover') {
-      const g = gapBetweenShiftsUtc(prev, s);
-      if (g >= 0 && g < SLEEPOVER_FOLLOWON_GAP_MS) afterSleepovern = true;
-    }
-
-    return beforeSleepovern || afterSleepovern;
-  });
+  return shifts.map(() => false);
 }
 
 /**

@@ -256,13 +256,31 @@ describe('midnight crossings', () => {
     assert.strictEqual(data.morningHours, 0);
   });
 
-  test('Friday → Saturday: split 2h weekday night + 2h Saturday', () => {
+  test('Friday → Saturday: split 2h weekday afternoon + 2h Saturday', () => {
     const start = brisbaneLocal('2026-04-10', 22, 0);
     const end = brisbaneLocal('2026-04-11', 2, 0);
     const s = shift({ _id: 'mc02', start: start.toISOString(), end: end.toISOString(), hours: 4 });
     const { data } = computePayHoursForStaff([s], new Set());
-    assert.strictEqual(data.nightHours, 2);
+    assert.strictEqual(data.afternoonHours, 2);
     assert.strictEqual(data.saturdayHours, 2);
+  });
+
+  test('weekday → public holiday: split into weekday afternoon + holiday hours', () => {
+    const start = brisbaneLocal('2026-04-24', 22, 0);
+    const end = brisbaneLocal('2026-04-25', 6, 0);
+    const s = shift({ _id: 'mc03', start: start.toISOString(), end: end.toISOString(), hours: 8 });
+    const { data } = computePayHoursForStaff([s], new Set(['2026-04-25']));
+    assert.strictEqual(data.afternoonHours, 2);
+    assert.strictEqual(data.holidayHours, 6);
+  });
+
+  test('public holiday → sunday: split into holiday + sunday hours', () => {
+    const start = brisbaneLocal('2026-04-25', 22, 0);
+    const end = brisbaneLocal('2026-04-26', 8, 0);
+    const s = shift({ _id: 'mc04', start: start.toISOString(), end: end.toISOString(), hours: 10 });
+    const { data } = computePayHoursForStaff([s], new Set(['2026-04-25']));
+    assert.strictEqual(data.holidayHours, 2);
+    assert.strictEqual(data.sundayHours, 8);
   });
 });
 
@@ -582,7 +600,7 @@ describe('hours normalization from timestamps', () => {
       timezoneOffset: '+10:00',
     });
     const { data } = computePayHoursForStaff([s], new Set());
-    assert.strictEqual(data.nightHours, 10);
+    assert.strictEqual(data.morningHours, 10);
     assert.strictEqual(data.saturdayHours, 0);
     assert.strictEqual(data.saturdayOtUpto2, 1);
     assert.strictEqual(data.weekdayOtUpto2, 2);

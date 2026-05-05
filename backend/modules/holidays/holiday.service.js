@@ -20,8 +20,10 @@ function ymdToUtcTime(ymd) {
  */
 export async function getHolidaysInRange(locationId, startDate, endDate) {
   const start = new Date(startDate);
+  start.setUTCDate(start.getUTCDate() - 2);
   start.setUTCHours(0, 0, 0, 0);
   const end = new Date(endDate);
+  end.setUTCDate(end.getUTCDate() + 2);
   end.setUTCHours(23, 59, 59, 999);
 
   const holidays = await Holiday.find({ location: locationId }).lean();

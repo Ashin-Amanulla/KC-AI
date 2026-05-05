@@ -3,7 +3,14 @@ import { StaffSchadsRate } from './staffSchadsRate.model.js';
 import { Location } from '../locations/location.model.js';
 
 function normName(s) {
-  return s?.toString().toLowerCase().replace(/\s+/g, ' ').trim() ?? '';
+  if (!s) return '';
+  let n = s.toString().toLowerCase().replace(/\([^)]*\)/g, '').trim();
+  n = n.replace(/\s+/g, ' ');
+  const parts = n.split(' ');
+  if (parts.length >= 2) {
+    return `${parts[0]} ${parts[parts.length - 1]}`;
+  }
+  return n;
 }
 
 function r2(n) {
