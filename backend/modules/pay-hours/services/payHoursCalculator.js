@@ -905,8 +905,6 @@ function buildPerShiftBreakdowns(ctx, shifts) {
   const shiftLookup = new Map(shifts.map(s => [String(s._id), s]));
 
   for (const ps of ctx.pendingSegments) {
-    if (ctx.reclassifiedFullDoubleTimeShiftIds?.has(ps.shiftId)) continue;
-
     const sid = ps.shiftId;
     if (!breakdowns.has(sid)) {
       const shift = shiftLookup.get(sid);
