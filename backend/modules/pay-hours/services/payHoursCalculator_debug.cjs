@@ -140,6 +140,10 @@ function splitWeekdayByTimeBand(startUtc, endUtc, hours, isSleepoverExcess, offs
   }
 
   const sortedCuts = [...cuts].sort((a, b) => a - b).map(t => new Date(t));
+  console.log("Cuts:", sortedCuts);
+  console.log("TotalMs:", totalMs);
+  console.log("Hours to split:", hours);
+
   const totalMs = endUtc - startUtc;
 
   return sortedCuts.slice(0, -1).map((s, i) => {
