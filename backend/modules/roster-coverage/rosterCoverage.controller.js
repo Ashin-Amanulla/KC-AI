@@ -768,3 +768,57 @@ export async function listAuditLog(req, res, next) {
     next(e);
   }
 }
+
+// ─── Shift Dashboard ─────────────────────────────────────────────────────────
+
+export async function listShiftDashboard(req, res, next) {
+  try {
+    const { status, priority } = req.query;
+    const filter = {};
+    if (status && status !== 'all') filter.status = status;
+    if (priority && priority !== 'all') filter.priority = priority;
+
+    const shifts = await RosterVacantShift.find(filter)
+      .populate('rosterParticipantId', 'name locationLabel')
+      .populate('filledByStaffId', 'fullName')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const counts = {
+      open: await RosterVacantShift.countDocuments({ status: 'open' }),
+      in_progress: await RosterVacantShift.countDocuments({ status: 'in_progress' }),
+      filled: await RosterVacantShift.countDocuments({ status: 'filled' }),
+      critical: await RosterVacantShift.countDocuments({
+        priority: 'critical',
+        status: { $in: ['open', 'in_progress'] },
+      }),
+    };
+
+    res.json({ shifts, counts });
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function addVacantShiftUpdate(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (badId(res, id)) return;
+    const { authorName, text } = req.body;
+    if (!text?.trim()) return res.status(400).json({ error: 'text required' });
+
+    const shift = await RosterVacantShift.findByIdAndUpdate(
+      id,
+      { $push: { updateLogs: { authorName: (authorName || 'Staff').trim(), text: text.trim() } } },
+      { new: true }
+    )
+      .populate('rosterParticipantId', 'name locationLabel')
+      .populate('filledByStaffId', 'fullName')
+      .lean();
+
+    if (!shift) return res.status(404).json({ error: 'Not found' });
+    res.json({ shift });
+  } catch (e) {
+    next(e);
+  }
+}

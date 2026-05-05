@@ -3,6 +3,7 @@ import api from '../utils/api';
 
 const Q = {
   dashboard: ['roster-coverage', 'dashboard'],
+  shiftDashboard: ['roster-coverage', 'shift-dashboard'],
   staff: ['roster-coverage', 'staff'],
   participants: ['roster-coverage', 'participants'],
   workedShifts: (params) => ['roster-coverage', 'worked-shifts', params],
@@ -202,5 +203,45 @@ export function usePatchContactStatus() {
         )
       ).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: Q.audit }),
+  });
+}
+
+export function useShiftDashboard(refetchInterval = 15000) {
+  return useQuery({
+    queryKey: Q.shiftDashboard,
+    queryFn: async () => (await api.get('/api/roster-coverage/shift-dashboard')).data,
+    refetchInterval,
+  });
+}
+
+export function useCreateVacantShift() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body) => (await api.post('/api/roster-coverage/vacant-shifts', body)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: Q.shiftDashboard });
+      qc.invalidateQueries({ queryKey: Q.dashboard });
+    },
+  });
+}
+
+export function usePatchVacantShift() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...body }) =>
+      (await api.patch(`/api/roster-coverage/vacant-shifts/${id}`, body)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: Q.shiftDashboard });
+      qc.invalidateQueries({ queryKey: Q.dashboard });
+    },
+  });
+}
+
+export function useAddVacantShiftUpdate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...body }) =>
+      (await api.post(`/api/roster-coverage/vacant-shifts/${id}/updates`, body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: Q.shiftDashboard }),
   });
 }

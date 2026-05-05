@@ -3,6 +3,7 @@ import { cn } from '../../lib/utils';
 
 const links = [
   { to: '/roster-coverage', end: true, label: 'Home' },
+  { to: '/roster-coverage/shift-log', label: 'Shift Log' },
   { to: '/roster-coverage/find-cover', label: 'Find cover' },
   { to: '/roster-coverage/participants', label: 'Participants' },
   { to: '/roster-coverage/team', label: 'Team' },

@@ -16,7 +16,8 @@ export const getCsvAnalysisQueue = () => {
           type: 'exponential',
           delay: 2000,
         },
-        removeOnComplete: { count: 100 },
+        removeOnComplete: { count: 20 },
+        removeOnFail: { count: 20 },
       },
     });
   }

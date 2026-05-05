@@ -16,7 +16,8 @@ export const getPayHoursQueue = () => {
           type: 'exponential',
           delay: 3000,
         },
-        removeOnComplete: { count: 50 },
+        removeOnComplete: { count: 20 },
+        removeOnFail: { count: 20 },
       },
     });
   }

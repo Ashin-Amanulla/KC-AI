@@ -22,6 +22,7 @@ import { RosterTeam } from './pages/roster-coverage/RosterTeam';
 import { RosterStaffProfile } from './pages/roster-coverage/RosterStaffProfile';
 import { RosterTimesheetUpload } from './pages/roster-coverage/RosterTimesheetUpload';
 import { RosterReports } from './pages/roster-coverage/RosterReports';
+import { RosterShiftLog } from './pages/roster-coverage/RosterShiftLog';
 import { canAccessPath } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
@@ -158,6 +159,7 @@ function App() {
             }
           >
             <Route index element={<RosterDashboard />} />
+            <Route path="shift-log" element={<RosterShiftLog />} />
             <Route path="find-cover" element={<RosterFindCover />} />
             <Route path="participants" element={<RosterParticipants />} />
             <Route path="team" element={<RosterTeam />} />

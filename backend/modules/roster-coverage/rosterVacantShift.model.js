@@ -2,6 +2,14 @@ import mongoose from 'mongoose';
 
 const vacancyReasonEnum = ['sick_call', 'vacancy', 'other'];
 
+const updateLogSchema = new mongoose.Schema(
+  {
+    authorName: { type: String, trim: true, default: 'Staff' },
+    text: { type: String, required: true, trim: true },
+  },
+  { timestamps: true, _id: true }
+);
+
 const rosterVacantShiftSchema = new mongoose.Schema(
   {
     rosterParticipantId: {
@@ -19,10 +27,17 @@ const rosterVacantShiftSchema = new mongoose.Schema(
       enum: vacancyReasonEnum,
       default: 'vacancy',
     },
+    priority: {
+      type: String,
+      enum: ['critical', 'high', 'medium', 'low'],
+      default: 'medium',
+      index: true,
+    },
     notes: { type: String, default: '' },
+    updateLogs: { type: [updateLogSchema], default: [] },
     status: {
       type: String,
-      enum: ['open', 'filled', 'cancelled'],
+      enum: ['open', 'in_progress', 'filled', 'cancelled'],
       default: 'open',
       index: true,
     },

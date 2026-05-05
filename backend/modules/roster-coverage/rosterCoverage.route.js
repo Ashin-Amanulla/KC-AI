@@ -26,6 +26,8 @@ import {
   exportIneligibilityXlsx,
   patchContactStatus,
   listAuditLog,
+  listShiftDashboard,
+  addVacantShiftUpdate,
 } from './rosterCoverage.controller.js';
 
 const router = express.Router();
@@ -74,8 +76,10 @@ router.get('/roster-coverage/worked-shifts', ...authAll, listWorkedShifts);
 router.post('/roster-coverage/worked-shifts', ...authRoster, createWorkedShifts);
 router.delete('/roster-coverage/worked-shifts/:id', ...authRoster, deleteWorkedShift);
 
+router.get('/roster-coverage/shift-dashboard', ...authAll, listShiftDashboard);
 router.get('/roster-coverage/vacant-shifts', ...authAll, listVacantShifts);
 router.post('/roster-coverage/vacant-shifts', ...authRoster, createVacantShift);
+router.post('/roster-coverage/vacant-shifts/:id/updates', ...authAll, addVacantShiftUpdate);
 router.patch(
   '/roster-coverage/vacant-shifts/:vacantId/contact/:staffId',
   ...authRoster,
