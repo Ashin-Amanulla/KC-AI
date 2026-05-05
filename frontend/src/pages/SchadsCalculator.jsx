@@ -11,7 +11,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../ui/table';
 import { usePayHours, useShiftPayHours } from '../api/payHours';
-import { useStaffRates, staffRatesArrayToMap } from '../api/staffRates';
+import { useStaffRates, staffRatesArrayToMap, useUpsertStaffRate } from '../api/staffRates';
 import { STAFF_RATES_TABLE_FIELDS } from '../lib/staffRateFieldMeta';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import {
@@ -679,12 +679,14 @@ const CellContextMenu = ({ menu, overrides, onSave, onClear, onClose }) => {
 const StaffRatesEditModal = ({ edit, displayNameForRateKey, onSave, onClose }) => {
   const ref = useRef(null);
   const [draft, setDraft] = useState(null);
+  const [aliasesStr, setAliasesStr] = useState('');
 
   useEffect(() => {
-    if (!edit) { setDraft(null); return; }
+    if (!edit) { setDraft(null); setAliasesStr(''); return; }
     const row = { ...edit.row };
     if (!row.sleepover) row.sleepover = 90;
     setDraft(row);
+    setAliasesStr((edit.aliases || []).join(', '));
   }, [edit]);
 
   useEffect(() => {
@@ -704,7 +706,8 @@ const StaffRatesEditModal = ({ edit, displayNameForRateKey, onSave, onClose }) =
   };
 
   const handleSaveAll = () => {
-    onSave(edit.key, draft);
+    const parsedAliases = aliasesStr.split(',').map(a => a.trim()).filter(Boolean);
+    onSave(edit.key, draft, parsedAliases);
     onClose();
   };
 
@@ -722,6 +725,16 @@ const StaffRatesEditModal = ({ edit, displayNameForRateKey, onSave, onClose }) =
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase text-muted-foreground">Aliases (comma-separated)</span>
+            <Input
+              type="text"
+              className="h-8 text-xs"
+              value={aliasesStr}
+              onChange={(e) => setAliasesStr(e.target.value)}
+              placeholder="e.g. J. Smith, John S"
+            />
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {STAFF_RATES_TABLE_FIELDS.map(([field, label]) => (
               <div key={field} className="space-y-1">
@@ -861,6 +874,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   const [schadsHydrated, setSchadsHydrated] = useState(false);
 
   const { data: staffRatesApiData } = useStaffRates(locationIdProp || undefined);
+  const { mutate: upsertStaffRate } = useUpsertStaffRate();
   const staffRatesFromDbMap = useMemo(
     () => staffRatesArrayToMap(staffRatesApiData?.staffRates),
     [staffRatesApiData]
@@ -1278,12 +1292,17 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     [staffRatesMap, staffRatesFromDbMap, staffRows, staffRatesApiData, normName],
   );
 
+  const getAliasesForKey = useCallback((key) => {
+    const dbRow = staffRatesApiData?.staffRates?.find((r) => r.normName === key);
+    return dbRow?.aliases || [];
+  }, [staffRatesApiData]);
+
   const closeRatesEdit = useCallback(() => setRatesEdit(null), []);
   const handleRatesCtx = useCallback((e, key, row) => {
     e.preventDefault();
-    setRatesEdit({ key, row });
-  }, []);
-  const saveRatesEdit = useCallback((key, updatedRow) => {
+    setRatesEdit({ key, row, aliases: getAliasesForKey(key) });
+  }, [getAliasesForKey]);
+  const saveRatesEdit = useCallback((key, updatedRow, aliases) => {
     setStaffRatesMap((prev) => {
       const m = new Map(prev || []);
       const name = displayNameForRateKey(key);
@@ -1292,7 +1311,19 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       onStaffRatesMapChange?.(m, ratesFileName || 'rates');
       return m;
     });
-  }, [displayNameForRateKey, defaultRate, onStaffRatesMapChange, ratesFileName, staffRatesFromDbMap]);
+    if (aliases !== undefined && locationIdProp) {
+      const dbRow = staffRatesApiData?.staffRates?.find((r) => r.normName === key);
+      if (dbRow) {
+        upsertStaffRate({
+          locationId: locationIdProp,
+          shiftcareStaffId: dbRow.shiftcareStaffId,
+          staffName: dbRow.staffName,
+          aliases,
+          rates: dbRow.rates,
+        }).catch(() => {});
+      }
+    }
+  }, [displayNameForRateKey, defaultRate, onStaffRatesMapChange, ratesFileName, staffRatesFromDbMap, staffRatesApiData, locationIdProp]);
 
   const staffRatesTabRowKeys = useMemo(() => {
     const keys = new Set();
@@ -1747,7 +1778,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                 const existing = resolvedStaffRatesMap.get(key);
                                 const rowData = existing ? { ...existing } : schadsFlatRatesRow(row.staffName, rateVal || defaultRate || 0);
                                 if (!rowData.sleepover) rowData.sleepover = 90;
-                                setRatesEdit({ key, row: rowData });
+                                setRatesEdit({ key, row: rowData, aliases: getAliasesForKey(key) });
                               }}
                               title="Right-click to edit all SCHADS rates for this staff"
                             >

@@ -122,17 +122,21 @@ export const Staff = () => {
 
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState(null);
+  const [aliasesDraft, setAliasesDraft] = useState('');
 
   const openEdit = (member) => {
     const displayName = member.name || `${member.first_name || ''} ${member.family_name || ''}`.trim();
-    const existing = ratesByStaffId.get(String(member.id))?.rates;
+    const dbRow = ratesByStaffId.get(String(member.id));
+    const existing = dbRow?.rates;
     setDraft(ratesToDraft({ ...defaultRatesRow(displayName), ...existing, name: displayName }));
+    setAliasesDraft((dbRow?.aliases || []).join(', '));
     setEditing({ member, displayName });
   };
 
   const closeEdit = () => {
     setEditing(null);
     setDraft(null);
+    setAliasesDraft('');
   };
 
   const saveRates = useCallback(async () => {
@@ -143,6 +147,7 @@ export const Staff = () => {
         locationId,
         shiftcareStaffId: String(member.id),
         staffName: displayName,
+        aliases: aliasesDraft.split(',').map(a => a.trim()).filter(Boolean),
         rates: {
           name: displayName,
           ...Object.fromEntries(STAFF_RATES_NUMERIC_KEYS.map((k) => [k, draft[k] ?? 0])),
@@ -154,7 +159,7 @@ export const Staff = () => {
     } catch (e) {
       toast.error(getErrorMessage(e) || 'Save failed');
     }
-  }, [editing, draft, locationId, upsertMutation]);
+  }, [editing, draft, aliasesDraft, locationId, upsertMutation]);
 
   const clearRates = useCallback(async () => {
     if (!editing || !locationId) return;
@@ -430,6 +435,18 @@ export const Staff = () => {
                 Location-scoped. Calculator and cost for this site use these values unless overridden by a rates file in
                 the award calculator.
               </p>
+              {canEditRates && (
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase text-muted-foreground">Aliases (comma-separated alternate names for file matching)</span>
+                  <Input
+                    type="text"
+                    className="h-8 text-xs"
+                    value={aliasesDraft}
+                    onChange={(e) => setAliasesDraft(e.target.value)}
+                    placeholder="e.g. J. Smith, John S"
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {STAFF_RATES_TABLE_FIELDS.map(([field, label]) => (
                   <div key={field} className="space-y-1">

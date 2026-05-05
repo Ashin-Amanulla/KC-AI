@@ -8,7 +8,13 @@ export function staffRatesArrayToMap(rows) {
   const m = new Map();
   for (const r of rows || []) {
     if (!r?.normName || !r.rates) continue;
-    m.set(r.normName, { ...r.rates, name: r.rates.name || r.staffName });
+    const ratesObj = { ...r.rates, name: r.rates.name || r.staffName };
+    m.set(r.normName, ratesObj);
+    if (Array.isArray(r.aliases)) {
+      for (const alias of r.aliases) {
+        if (alias && !m.has(alias)) m.set(alias, ratesObj);
+      }
+    }
   }
   return m;
 }

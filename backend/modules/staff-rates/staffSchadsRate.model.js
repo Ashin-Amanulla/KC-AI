@@ -33,6 +33,7 @@ const staffSchadsRateSchema = new mongoose.Schema(
     shiftcareStaffId: { type: String, required: true, trim: true },
     staffName: { type: String, required: true, trim: true },
     normName: { type: String, required: true, trim: true, index: true },
+    aliases: { type: [String], default: [] },
     rates: { type: ratesSchema, required: true },
   },
   { timestamps: true }

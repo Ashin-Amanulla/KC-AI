@@ -73,7 +73,7 @@ export const listStaffRates = async (req, res, next) => {
 
 export const upsertStaffRate = async (req, res, next) => {
   try {
-    const { locationId, shiftcareStaffId, staffName, rates: rawRates } = req.body || {};
+    const { locationId, shiftcareStaffId, staffName, aliases, rates: rawRates } = req.body || {};
     if (!locationId || !mongoose.isValidObjectId(String(locationId))) {
       return res.status(400).json({ error: 'locationId is required and must be a valid ObjectId' });
     }
@@ -110,6 +110,7 @@ export const upsertStaffRate = async (req, res, next) => {
           shiftcareStaffId: scId,
           staffName: nameStr,
           normName: n,
+          aliases: Array.isArray(aliases) ? aliases.filter(a => typeof a === 'string' && a.trim()).map(a => a.trim()) : [],
           rates,
         },
       },
@@ -173,6 +174,7 @@ export const bulkUpsertStaffRates = async (req, res, next) => {
       if (!n) {
         return res.status(400).json({ error: 'Invalid staffName in row' });
       }
+      const aliases = Array.isArray(r.aliases) ? r.aliases.filter(a => typeof a === 'string' && a.trim()).map(a => a.trim()) : [];
       const rates = normalizeRatesBody({ ...r.rates, name: r.rates?.name != null ? r.rates.name : nameStr });
       if (!rates) {
         return res.status(400).json({ error: 'Invalid rates in row' });
@@ -188,6 +190,7 @@ export const bulkUpsertStaffRates = async (req, res, next) => {
               shiftcareStaffId: scId,
               staffName: nameStr,
               normName: n,
+              aliases,
               rates,
             },
           },
