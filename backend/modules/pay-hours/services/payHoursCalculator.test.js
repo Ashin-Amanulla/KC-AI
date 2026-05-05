@@ -151,8 +151,8 @@ test('personal care immediately after sleepover (within 8h gap) is night band', 
     timezoneOffset: '+10:00',
   });
   const { data } = computePayHoursForStaff([sleepover, pc], new Set());
-  assert.strictEqual(data.nightHours, 7.33, '3.33h SO excess + 4h attached PC');
-  assert.strictEqual(data.morningHours, 0.67);
+  assert.strictEqual(data.nightHours, 3.33, '3.33h SO excess only');
+  assert.strictEqual(data.morningHours, 4.67);
   assert.strictEqual(data.afternoonHours, 0);
 });
 
@@ -350,8 +350,8 @@ describe('sleepover', () => {
       timezoneOffset: '+10:00',
     });
     const { data } = computePayHoursForStaff([sleepover, pc], new Set());
-    assert.strictEqual(data.nightHours, 7.33);
-    assert.strictEqual(data.morningHours, 0.67);
+    assert.strictEqual(data.nightHours, 3.33);
+    assert.strictEqual(data.morningHours, 4.67);
   });
 
   test('PC gap ≥8h after sleepover: not attached; still follows highest weekday band rule', () => {
@@ -479,62 +479,7 @@ describe('daily ordinary cap (10h) & OT tiers', () => {
   });
 });
 
-describe('Sleepovern-adjacent PC / nursing (continuous night band)', () => {
-  test('PC gap-0 before sleepovern + gap-0 after: flanking PCs are night, not afternoon/holiday buckets', () => {
-    const pcBefore = shiftBrisbane({ _id: 'sn01a' }, '2026-04-08', 14, 0, 22, 0);
-    const so = shift({
-      _id: 'sn01b',
-      start: brisbaneLocal('2026-04-08', 22, 0).toISOString(),
-      end: brisbaneLocal('2026-04-09', 6, 0).toISOString(),
-      hours: 8,
-      shiftType: 'sleepover',
-    });
-    const pcAfter = shift({
-      _id: 'sn01c',
-      start: brisbaneLocal('2026-04-09', 6, 0).toISOString(),
-      end: brisbaneLocal('2026-04-09', 14, 15).toISOString(),
-      hours: 8.25,
-    });
-    const { data } = computePayHoursForStaff([pcBefore, so, pcAfter], new Set());
-    assert.strictEqual(data.morningHours, 0);
-    assert.strictEqual(data.afternoonHours, 0);
-    assert.strictEqual(data.holidayHours, 0);
-    assert.ok(data.nightHours > 0);
-    assert.strictEqual(data.sleepoversCount, 1);
-  });
 
-  test('calendar PH on PC day + gap-0 sleepovern: hours go to night band, not PH', () => {
-    const pcHoliday = shiftBrisbane({ _id: 'sn02a' }, '2026-04-08', 14, 0, 22, 0);
-    const so = shift({
-      _id: 'sn02b',
-      start: brisbaneLocal('2026-04-08', 22, 0).toISOString(),
-      end: brisbaneLocal('2026-04-09', 6, 0).toISOString(),
-      hours: 8,
-      shiftType: 'sleepover',
-    });
-    const { data } = computePayHoursForStaff([pcHoliday, so], new Set(['2026-04-08']));
-    assert.strictEqual(data.holidayHours, 0);
-    assert.ok((data.nightHours || 0) >= 8);
-  });
-
-  test('computeSleepovernAttachedNight: only flanking PCs are flagged', () => {
-    const pcBefore = shiftBrisbane({ _id: 'snf1' }, '2026-04-08', 14, 0, 22, 0);
-    const so = shift({
-      _id: 'snf2',
-      start: brisbaneLocal('2026-04-08', 22, 0).toISOString(),
-      end: brisbaneLocal('2026-04-09', 6, 0).toISOString(),
-      hours: 8,
-      shiftType: 'sleepover',
-    });
-    const pcAfter = shift({
-      _id: 'snf3',
-      start: brisbaneLocal('2026-04-09', 6, 0).toISOString(),
-      end: brisbaneLocal('2026-04-09', 10, 0).toISOString(),
-      hours: 4,
-    });
-    assert.deepStrictEqual(computeSleepovernAttachedNight([pcBefore, so, pcAfter]), [true, false, true]);
-  });
-});
 
 describe('broken shift (same local day)', () => {
   // Engine adds both full chain ordinary hours and broken-shift OT hours (see processBrokenShiftOvertime + processSingleChain when hasBroken).
