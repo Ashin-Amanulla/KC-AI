@@ -68,25 +68,40 @@ const fmtPayPeriod = (row) => {
   return `${fmtExDate(row.periodStart)} – ${fmtExDate(row.periodEnd)}`;
 };
 
-/** SCHADS workbook-shaped row: one base $/h on all hourly columns (allowances 0; km default). */
+/** SCHADS casual defaults derived from a base daytime rate (includes 25% casual loading). */
 function schadsFlatRatesRow(displayName, baseHourly) {
   const v = r2(parseFloat(String(baseHourly).replace(',', '')) || 0);
   return {
     name: displayName.trim(),
     daytime: v,
-    afternoon: v,
-    night: v,
-    otUpto2: v,
-    otAfter2: v,
-    saturday: v,
-    satOtAfter2: v,
-    sunday: v,
-    ph: v,
-    mealAllow: 0,
-    brokenShift: 0,
+    afternoon: r2(v * 1.1),
+    night: r2(v * 1.12),
+    otUpto2: r2(v * 1.4),
+    otAfter2: r2(v * 1.8),
+    saturday: r2(v * 1.4),
+    satOtAfter2: r2(v * 1.8),
+    sunday: r2(v * 1.8),
+    ph: r2(v * 2.2),
+    mealAllow: 16.62,
+    brokenShift: 20.82,
     sleepover: 90,
     kmRate: VEHICLE_RATE,
+    allowance: 0,
   };
+}
+
+function isRateMissing(v) {
+  return v === null || v === undefined || v === '' || Number(v) <= 0;
+}
+
+function autofillRatesFromBaseIfMissing(row, baseVal) {
+  const defaults = schadsFlatRatesRow(row?.name || '', baseVal);
+  const next = { ...(row || {}), daytime: defaults.daytime };
+  for (const [field] of STAFF_RATES_TABLE_FIELDS) {
+    if (field === 'daytime') continue;
+    if (isRateMissing(next[field])) next[field] = defaults[field];
+  }
+  return next;
 }
 
 // ── Manual calculator helpers ─────────────────────────────────────────
@@ -792,7 +807,10 @@ const StaffRatesEditModal = ({ edit, displayNameForRateKey, onSave, onClose }) =
 
   const patch = (field, raw) => {
     const num = r2(parseFloat(String(raw).replace(',', '')) || 0);
-    setDraft(d => ({ ...d, [field]: num }));
+    setDraft((d) => {
+      if (field === 'daytime') return autofillRatesFromBaseIfMissing(d, num);
+      return { ...d, [field]: num };
+    });
   };
 
   const handleSaveAll = () => {
@@ -1393,27 +1411,31 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     setRatesEdit({ key, row, aliases: getAliasesForKey(key) });
   }, [getAliasesForKey]);
   const saveRatesEdit = useCallback((key, updatedRow, aliases) => {
+    const mergedRates = {
+      ...(staffRatesFromDbMap.get(key) || {}),
+      ...updatedRow,
+    };
     setStaffRatesMap((prev) => {
       const m = new Map(prev || []);
       const name = displayNameForRateKey(key);
       const cur = m.get(key) || staffRatesFromDbMap.get(key) || schadsFlatRatesRow(name, defaultRate || 0);
-      m.set(key, { ...cur, ...updatedRow });
+      m.set(key, { ...cur, ...mergedRates });
       onStaffRatesMapChange?.(m, ratesFileName || 'rates');
       return m;
     });
-    if (aliases !== undefined && locationIdProp) {
+    if (locationIdProp) {
       const dbRow = staffRatesApiData?.staffRates?.find((r) => r.normName === key);
       if (dbRow) {
         upsertStaffRate({
           locationId: locationIdProp,
           shiftcareStaffId: dbRow.shiftcareStaffId,
           staffName: dbRow.staffName,
-          aliases,
-          rates: dbRow.rates,
+          aliases: aliases ?? dbRow.aliases ?? [],
+          rates: mergedRates,
         }).catch(() => {});
       }
     }
-  }, [displayNameForRateKey, defaultRate, onStaffRatesMapChange, ratesFileName, staffRatesFromDbMap, staffRatesApiData, locationIdProp]);
+  }, [displayNameForRateKey, defaultRate, onStaffRatesMapChange, ratesFileName, staffRatesFromDbMap, staffRatesApiData, locationIdProp, upsertStaffRate]);
 
   const staffRatesTabRowKeys = useMemo(() => {
     const keys = new Set();
@@ -2694,7 +2716,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                 min="0"
                                 className="h-8 w-20 text-xs"
                                 placeholder="—"
-                                title="Set all hourly columns to this $/h"
+                                title="Auto-fill SCHADS casual rates from base"
                                 onKeyDown={(e) => {
                                   if (e.key !== 'Enter') return;
                                   applyFlatBaseToStaffKey(key, e.currentTarget.value);
