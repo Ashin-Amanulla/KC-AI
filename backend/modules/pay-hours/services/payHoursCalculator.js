@@ -789,6 +789,7 @@ function groupSegmentsIntoChains(pendingSegments) {
 function deductOtFromEnd(entries, otTotal) {
   let otRemaining = otTotal;
   const otByDayType = {};
+  const otByShiftId = {};
 
   for (let i = entries.length - 1; i >= 0; i--) {
     if (otRemaining <= 0) break;
@@ -797,9 +798,15 @@ function deductOtFromEnd(entries, otTotal) {
     entry.hours = r2(entry.hours - deduct);
     otRemaining = r2(otRemaining - deduct);
     otByDayType[entry.dayType] = r2((otByDayType[entry.dayType] || 0) + deduct);
+    if (entry.shiftId) {
+      if (!otByShiftId[entry.shiftId]) otByShiftId[entry.shiftId] = {};
+      otByShiftId[entry.shiftId][entry.dayType] = r2(
+        (otByShiftId[entry.shiftId][entry.dayType] || 0) + deduct
+      );
+    }
   }
 
-  return { entries, otByDayType };
+  return { entries, otByDayType, otByShiftId };
 }
 
 function applyOtByDayType(otByDayType, data) {
@@ -838,9 +845,10 @@ function buildOrderedChainEntries(chain, ctx) {
         seg.timeCategory ||
         getHighestTimeCategory(influences) ||
         'morning';
-      
+
       entries.push({
         _psRef: ps,
+        shiftId: ps.shiftId,
         fieldName: `${tc}Hours`,
         dayType: 'weekday',
         hours: seg.hours,
@@ -856,6 +864,7 @@ function buildOrderedChainEntries(chain, ctx) {
       }
     } else if (['saturday', 'sunday', 'holiday'].includes(seg.dayType)) {
       entries.push({
+        shiftId: ps.shiftId,
         fieldName: `${seg.dayType}Hours`,
         dayType: seg.dayType,
         hours: seg.hours,
@@ -890,6 +899,8 @@ function processSingleChain(chain, data, ctx) {
   const uniqueShiftIds = [...new Set(chain.map(ps => ps.shiftId))];
   const hasBroken = uniqueShiftIds.some(sid => ctx.shiftIsBroken.get(sid) === true);
 
+  let perShiftOt = {};
+
   if (!hasBroken) {
     const combinedActive = r2(
       uniqueShiftIds.reduce((sum, sid) => sum + (ctx.shiftActiveHours.get(sid) || 0), 0)
@@ -904,8 +915,9 @@ function processSingleChain(chain, data, ctx) {
     const threshold = allWeekday ? MAX_REGULAR_HOURS_WEEKDAY : MAX_REGULAR_HOURS;
     if (combinedActive > threshold) {
       const otTotal = r2(combinedActive - threshold);
-      const { otByDayType } = deductOtFromEnd(entries, otTotal);
+      const { otByDayType, otByShiftId } = deductOtFromEnd(entries, otTotal);
       applyOtByDayType(otByDayType, data);
+      perShiftOt = otByShiftId;
       // Meal allowance: 1 per shift where OT > 1h; additional 1 where OT > 4h
       if (otTotal > 1) data.mealAllowanceCount += 1;
       if (otTotal > 4) data.mealAllowanceCount += 1;
@@ -918,37 +930,50 @@ function processSingleChain(chain, data, ctx) {
     }
   }
 
-  return entries.filter(e => e.hours > 0);
+  return { entries: entries.filter(e => e.hours > 0), perShiftOt };
 }
 
 function processContinuousChains(pendingSegments, data, ctx) {
-  if (!pendingSegments.length) return [];
+  if (!pendingSegments.length) return { hourLedger: [], perShiftOt: {} };
 
   const chains = groupSegmentsIntoChains(pendingSegments);
   const hourLedger = [];
+  const perShiftOt = {};
 
   for (const chain of chains) {
-    const chainEntries = processSingleChain(chain, data, ctx);
+    const { entries: chainEntries, perShiftOt: chainOt } = processSingleChain(chain, data, ctx);
     hourLedger.push(...chainEntries);
+    for (const [sid, otByDayType] of Object.entries(chainOt)) {
+      if (!perShiftOt[sid]) perShiftOt[sid] = {};
+      for (const [dt, h] of Object.entries(otByDayType)) {
+        perShiftOt[sid][dt] = r2((perShiftOt[sid][dt] || 0) + h);
+      }
+    }
   }
 
-  return hourLedger;
+  return { hourLedger, perShiftOt };
 }
 
 // ─── PER-SHIFT BREAKDOWNS ────────────────────────────────────────────────────
 
-function buildPerShiftBreakdowns(ctx, shifts) {
+function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
   const breakdowns = new Map();
   const shiftLookup = new Map(shifts.map(s => [String(s._id), s]));
 
-  for (const ps of ctx.pendingSegments) {
-    const sid = ps.shiftId;
+  // Initialise breakdown record for every shift that has ledger entries
+  for (const entry of hourLedger) {
+    const sid = entry.shiftId;
+    if (!sid) continue;
     if (!breakdowns.has(sid)) {
       const shift = shiftLookup.get(sid);
       breakdowns.set(sid, {
         morningHours: 0, afternoonHours: 0, nightHours: 0,
         saturdayHours: 0, sundayHours: 0, holidayHours: 0,
         nursingCareHours: 0,
+        weekdayOtUpto2: 0, weekdayOtAfter2: 0,
+        saturdayOtUpto2: 0, saturdayOtAfter2: 0,
+        sundayOtUpto2: 0, sundayOtAfter2: 0,
+        holidayOtUpto2: 0, holidayOtAfter2: 0,
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: shift?.shiftType === 'sleepover' || false,
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
@@ -962,23 +987,55 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         timezoneOffset: shift?.timezoneOffset || '+10:00',
       });
     }
-
-    const seg = ps.segment;
-    if (seg.hours <= 0) continue;
-
-    let fieldName;
-    if (seg.dayType === 'weekday') {
-      const influences = ps.timeCategoryInfluence ? [ps.timeCategoryInfluence] : [];
-      const tc = seg.timeCategory || getHighestTimeCategory(influences) || 'morning';
-      fieldName = `${tc}Hours`;
-    } else if (['saturday', 'sunday', 'holiday'].includes(seg.dayType)) {
-      fieldName = `${seg.dayType}Hours`;
-    } else {
-      continue;
-    }
-
     const bd = breakdowns.get(sid);
-    bd[fieldName] = r2((bd[fieldName] || 0) + seg.hours);
+    if (entry.hours > 0) {
+      bd[entry.fieldName] = r2((bd[entry.fieldName] || 0) + entry.hours);
+    }
+  }
+
+  // Apply per-shift OT (tiered, same logic as applyOtByDayType)
+  for (const [sid, otByDayType] of Object.entries(perShiftOt)) {
+    if (!breakdowns.has(sid)) {
+      const shift = shiftLookup.get(sid);
+      breakdowns.set(sid, {
+        morningHours: 0, afternoonHours: 0, nightHours: 0,
+        saturdayHours: 0, sundayHours: 0, holidayHours: 0,
+        nursingCareHours: 0,
+        weekdayOtUpto2: 0, weekdayOtAfter2: 0,
+        saturdayOtUpto2: 0, saturdayOtAfter2: 0,
+        sundayOtUpto2: 0, sundayOtAfter2: 0,
+        holidayOtUpto2: 0, holidayOtAfter2: 0,
+        isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
+        isSleepover: shift?.shiftType === 'sleepover' || false,
+        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
+        clientName: shift?.clientName || null,
+        mileage: shift?.mileage ?? null,
+        totalHours: shift?.hours || 0,
+        shiftDate: shift?.startDatetime || null,
+        shiftStart: shift?.startDatetime || null,
+        shiftEnd: shift?.endDatetime || null,
+        shiftType: shift?.shiftType || '',
+        timezoneOffset: shift?.timezoneOffset || '+10:00',
+      });
+    }
+    const bd = breakdowns.get(sid);
+    for (const [dayType, otHours] of Object.entries(otByDayType)) {
+      const tier1 = r2(Math.min(otHours, OT_TIER_1_MAX));
+      const tier2 = r2(Math.max(0, otHours - OT_TIER_1_MAX));
+      if (dayType === 'weekday') {
+        bd.weekdayOtUpto2 = r2(bd.weekdayOtUpto2 + tier1);
+        bd.weekdayOtAfter2 = r2(bd.weekdayOtAfter2 + tier2);
+      } else if (dayType === 'saturday') {
+        bd.saturdayOtUpto2 = r2(bd.saturdayOtUpto2 + tier1);
+        bd.saturdayOtAfter2 = r2(bd.saturdayOtAfter2 + tier2);
+      } else if (dayType === 'sunday') {
+        bd.sundayOtUpto2 = r2(bd.sundayOtUpto2 + tier1);
+        bd.sundayOtAfter2 = r2(bd.sundayOtAfter2 + tier2);
+      } else if (dayType === 'holiday') {
+        bd.holidayOtUpto2 = r2(bd.holidayOtUpto2 + tier1);
+        bd.holidayOtAfter2 = r2(bd.holidayOtAfter2 + tier2);
+      }
+    }
   }
 
   // Handle nursing shifts — set nursingCareHours to the weekday portion only.
@@ -994,6 +1051,10 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         morningHours: 0, afternoonHours: 0, nightHours: 0,
         saturdayHours: 0, sundayHours: 0, holidayHours: 0,
         nursingCareHours: shift.hours,
+        weekdayOtUpto2: 0, weekdayOtAfter2: 0,
+        saturdayOtUpto2: 0, saturdayOtAfter2: 0,
+        sundayOtUpto2: 0, sundayOtAfter2: 0,
+        holidayOtUpto2: 0, holidayOtAfter2: 0,
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: false,
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
@@ -1005,12 +1066,6 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         shiftEnd: shift.endDatetime,
         shiftType: shift.shiftType,
       });
-    } else {
-      // Mixed nursing (some non-weekday segments already in breakdown).
-      // nursingCareHours = weekday portion = total hours minus penalty-day hours.
-      const bd = breakdowns.get(sid);
-      const penaltyHours = r2((bd.saturdayHours || 0) + (bd.sundayHours || 0) + (bd.holidayHours || 0));
-      bd.nursingCareHours = r2(shift.hours - penaltyHours);
     }
   }
 
@@ -1022,6 +1077,10 @@ function buildPerShiftBreakdowns(ctx, shifts) {
         morningHours: 0, afternoonHours: 0, nightHours: 0,
         saturdayHours: 0, sundayHours: 0, holidayHours: 0,
         nursingCareHours: 0,
+        weekdayOtUpto2: 0, weekdayOtAfter2: 0,
+        saturdayOtUpto2: 0, saturdayOtAfter2: 0,
+        sundayOtUpto2: 0, sundayOtAfter2: 0,
+        holidayOtUpto2: 0, holidayOtAfter2: 0,
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: true,
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
@@ -1097,6 +1156,13 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
         const seg = nsSegments[i];
         if (seg.dayType === 'weekday') {
           ctx.data.nursingCareHours = r2(ctx.data.nursingCareHours + seg.hours);
+          ctx.nursingWeekdayLedger.push({
+            shiftId: sid,
+            fieldName: 'nursingCareHours',
+            dayType: 'weekday',
+            hours: seg.hours,
+            entryDate: seg.startUtc,
+          });
         } else {
           const segContinuous = i === 0 ? isContinuous : true;
           ctx.pendingSegments.push({ segment: seg, shiftId: sid, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
@@ -1170,6 +1236,7 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     holidaySet,
     data,
     pendingSegments: [],
+    nursingWeekdayLedger: [],
     processedShifts: [],
     previousEndUtc: null,
     previousShiftType: null,
@@ -1183,14 +1250,17 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     processShiftForPayHours(shifts[i], ctx, sleepovernAttachedNight[i], isPreSleepover[i], isPostSleepover[i]);
   }
 
-  // Build per-shift breakdowns BEFORE chain processing modifies data
-  const shiftBreakdowns = buildPerShiftBreakdowns(ctx, shifts);
+  // Apply continuous chain logic first (OT deduction mutates entries)
+  const { hourLedger, perShiftOt } = processContinuousChains(ctx.pendingSegments, data, ctx);
 
-  // Apply continuous chain logic
-  const hourLedger = processContinuousChains(ctx.pendingSegments, data, ctx);
+  // 76h cap must see ALL ordinary hours (including weekday nursingCareHours which bypass chain processing)
+  const capLedger = [...hourLedger, ...ctx.nursingWeekdayLedger];
 
-  // Apply 76-hour cap
-  apply76HourCap(data, hourLedger);
+  // Apply 76-hour cap (mutates ledger + data)
+  apply76HourCap(data, capLedger);
+
+  // Build per-shift breakdowns from the post-OT-deduction + post-76h-cap ledger
+  const shiftBreakdowns = buildPerShiftBreakdowns(capLedger, perShiftOt, ctx, shifts);
 
   return { data, shiftBreakdowns };
 }

@@ -395,7 +395,7 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
 };
 
 /** Per-shift rows from the same pay-hours job that produced the summary (lazy-fetch when expanded). */
-const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly }) => {
+const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow }) => {
   const enabled = Boolean(payHoursId && expanded && !isManualOnly);
   const { data, isLoading, isError, error } = useShiftPayHours(payHoursId, enabled);
 
@@ -480,13 +480,39 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly }) => {
                 <TableCell>
                   <span className="capitalize">{String(shift.shiftType || '').replace(/_/g, ' ')}</span>
                 </TableCell>
-                <TableCell className="text-right font-mono font-medium">{h(shift.totalHours)}</TableCell>
+                <TableCell className="text-right font-mono font-medium">
+                  {h(
+                    r2(
+                      (shift.morningHours || 0) +
+                        (shift.afternoonHours || 0) +
+                        (shift.nightHours || 0) +
+                        (shift.weekdayOtUpto2 || 0) +
+                        (shift.weekdayOtAfter2 || 0) +
+                        (shift.saturdayHours || 0) +
+                        (shift.saturdayOtUpto2 || 0) +
+                        (shift.saturdayOtAfter2 || 0) +
+                        (shift.sundayHours || 0) +
+                        (shift.sundayOtUpto2 || 0) +
+                        (shift.sundayOtAfter2 || 0) +
+                        (shift.holidayHours || 0) +
+                        (shift.holidayOtUpto2 || 0) +
+                        (shift.holidayOtAfter2 || 0) +
+                        (shift.nursingCareHours || 0)
+                    )
+                  )}
+                </TableCell>
                 <TableCell className="text-right font-mono text-yellow-800">{h(shift.morningHours)}</TableCell>
                 <TableCell className="text-right font-mono text-orange-800">{h(shift.afternoonHours)}</TableCell>
                 <TableCell className="text-right font-mono text-indigo-800">{h(shift.nightHours)}</TableCell>
-                <TableCell className="text-right font-mono text-cyan-800">{h(shift.saturdayHours)}</TableCell>
-                <TableCell className="text-right font-mono text-red-800">{h(shift.sundayHours)}</TableCell>
-                <TableCell className="text-right font-mono text-blue-800">{h(shift.holidayHours)}</TableCell>
+                <TableCell className="text-right font-mono text-cyan-800">
+                  {h(r2((shift.saturdayHours || 0) + (shift.saturdayOtUpto2 || 0) + (shift.saturdayOtAfter2 || 0)))}
+                </TableCell>
+                <TableCell className="text-right font-mono text-red-800">
+                  {h(r2((shift.sundayHours || 0) + (shift.sundayOtUpto2 || 0) + (shift.sundayOtAfter2 || 0)))}
+                </TableCell>
+                <TableCell className="text-right font-mono text-blue-800">
+                  {h(r2((shift.holidayHours || 0) + (shift.holidayOtUpto2 || 0) + (shift.holidayOtAfter2 || 0)))}
+                </TableCell>
                 <TableCell className="text-right font-mono text-teal-800">{h(shift.nursingCareHours)}</TableCell>
                 <TableCell className="text-right font-mono text-emerald-800">
                   {shift.mileage != null && shift.mileage > 0 ? `${shift.mileage}` : '—'}
@@ -504,11 +530,75 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly }) => {
                         Min 2h review
                       </span>
                     )}
+                    {(() => {
+                      const wdOt = r2((shift.weekdayOtUpto2 || 0) + (shift.weekdayOtAfter2 || 0));
+                      const satOt = r2((shift.saturdayOtUpto2 || 0) + (shift.saturdayOtAfter2 || 0));
+                      const sunOt = r2((shift.sundayOtUpto2 || 0) + (shift.sundayOtAfter2 || 0));
+                      const holOt = r2((shift.holidayOtUpto2 || 0) + (shift.holidayOtAfter2 || 0));
+                      const totalOt = r2(wdOt + satOt + sunOt + holOt);
+                      if (totalOt <= 0) return null;
+                      const parts = [];
+                      if (wdOt > 0) parts.push(`WD ${wdOt.toFixed(2)}h`);
+                      if (satOt > 0) parts.push(`Sat ${satOt.toFixed(2)}h`);
+                      if (sunOt > 0) parts.push(`Sun ${sunOt.toFixed(2)}h`);
+                      if (holOt > 0) parts.push(`Hol ${holOt.toFixed(2)}h`);
+                      return (
+                        <span
+                          className="inline-block px-1 py-0.5 rounded text-[9px] bg-rose-100 text-rose-800"
+                          title={parts.join(' · ')}
+                        >
+                          OT {totalOt.toFixed(2)}h
+                        </span>
+                      );
+                    })()}
                   </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
+          {mrow && (
+            <tfoot>
+              <tr className="border-t-2 border-foreground/20 bg-foreground/5 text-[11px] font-semibold">
+                <td colSpan={5} className="px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Used in calculation
+                </td>
+                <td className="text-right px-3 py-2 font-mono font-bold">
+                  {h(staffTotalHours(mrow))}
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-yellow-800" title="Weekday day hours (ordinary, not OT)">
+                  {h(mrow.morningHours)}
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-orange-800" title="Weekday evening hours (ordinary, not OT)">
+                  {h(mrow.afternoonHours)}
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-indigo-800">
+                  {h(mrow.nightHours)}
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-cyan-800" title="Includes Sat OT">
+                  {h(r2((mrow.saturdayHours || 0) + (mrow.saturdayOtUpto2 || 0) + (mrow.saturdayOtAfter2 || 0)))}
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-red-800" title="Includes Sun OT">
+                  {h(r2((mrow.sundayHours || 0) + (mrow.sundayOtUpto2 || 0) + (mrow.sundayOtAfter2 || 0)))}
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-blue-800" title="Includes Holiday OT">
+                  {h(r2((mrow.holidayHours || 0) + (mrow.holidayOtUpto2 || 0) + (mrow.holidayOtAfter2 || 0)))}
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-teal-800">
+                  {h(mrow.nursingCareHours)}
+                </td>
+                <td className="text-right px-3 py-2 font-mono text-emerald-800">
+                  {(mrow.totalKm || 0) > 0 ? mrow.totalKm : '—'}
+                </td>
+                <td className="px-3 py-2 text-[10px] text-muted-foreground">
+                  {(mrow.weekdayOtUpto2 || 0) + (mrow.weekdayOtAfter2 || 0) > 0 && (
+                    <span className="inline-block px-1 py-0.5 rounded bg-rose-100 text-rose-800 whitespace-nowrap">
+                      WD OT {h(r2((mrow.weekdayOtUpto2 || 0) + (mrow.weekdayOtAfter2 || 0)))}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </Table>
       </div>
     );
@@ -1922,6 +2012,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                     payHoursId={row._id}
                                     expanded={!!expandedBreakdown[row.staffName]}
                                     isManualOnly={isManualOnly}
+                                    mrow={mrow}
                                   />
                                 </div>
                               </div>
