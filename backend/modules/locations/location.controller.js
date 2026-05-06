@@ -63,6 +63,7 @@ export const loadHolidayFixture = async (req, res, next) => {
   try {
     const { id } = req.params;
     const fileBase = (req.body.file && String(req.body.file).replace(/\.json$/, '')) || 'holidays_recurring';
+    const replaceExisting = req.body.replaceExisting !== false;
 
     const location = await Location.findById(id).lean();
     if (!location) return res.status(404).json({ error: 'Location not found' });
@@ -99,7 +100,13 @@ export const loadHolidayFixture = async (req, res, next) => {
 
     let created = 0;
     let skipped = 0;
+    let removed = 0;
     const errors = [];
+
+    if (replaceExisting) {
+      const delRes = await Holiday.deleteMany({ location: id });
+      removed = delRes.deletedCount || 0;
+    }
 
     for (const raw of holidays) {
       let norm;
@@ -134,7 +141,7 @@ export const loadHolidayFixture = async (req, res, next) => {
       }
     }
 
-    res.json({ file: fileBase, created, skipped, errors });
+    res.json({ file: fileBase, created, skipped, removed, replaceExisting, errors });
   } catch (error) {
     next(error);
   }

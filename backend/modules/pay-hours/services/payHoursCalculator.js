@@ -451,17 +451,17 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
   if (day2Type === 'holiday' && day1Type === 'weekday') {
     // Hours after 6PM on day1 → holiday
     const sixPmDay1 = localHourBoundary(startUtc, 18, offsetStr, 0); // 18:00 exactly
-    const after6pmHours = r2((midnightUtc - sixPmDay1) / 3600000);
-    const before6pmHours = r2((sixPmDay1 - startUtc) / 3600000);
+    const holidayStartUtc = startUtc > sixPmDay1 ? startUtc : sixPmDay1;
+    const before6pmHours = r2(Math.max(0, (holidayStartUtc - startUtc) / 3600000));
+    const after6pmHours = r2(Math.max(0, (midnightUtc - holidayStartUtc) / 3600000));
 
     if (before6pmHours > 0) {
       // Before 6PM: 5:30PM-6PM is night (to match Excel's Night:2)
-      segments.push({ startUtc, endUtc: sixPmDay1, hours: before6pmHours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
+      segments.push({ startUtc, endUtc: holidayStartUtc, hours: before6pmHours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
     }
     if (after6pmHours > 0) {
-      // After 6PM on day1 → holiday (6PM-midnight = 6h)
-      const holidayHours = r2((midnightUtc - sixPmDay1) / 3600000); // exactly 6h
-      segments.push({ startUtc: sixPmDay1, endUtc: midnightUtc, hours: holidayHours, dayType: 'holiday', timeCategory: null, isSleepoverExcess: false });
+      // After 6PM on day1 that overlaps the actual shift range → holiday
+      segments.push({ startUtc: holidayStartUtc, endUtc: midnightUtc, hours: after6pmHours, dayType: 'holiday', timeCategory: null, isSleepoverExcess: false });
     }
     // Day2 (holiday overflow) → night (not holiday, to match Excel's Night:2)
     if (day2Hours > 0) {
@@ -722,11 +722,20 @@ function calculateActiveHours(hours, shiftType) {
 function normalizeShiftHours(shift, startUtc, endUtc) {
   const derived = r2((endUtc - startUtc) / 3600000);
   if (!Number.isFinite(shift.hours) || shift.hours <= 0) return derived;
-  return shift.hours;
+  // Guard against bad imported "hours" values; trust timestamps when mismatch is material.
+  return Math.abs(r2(shift.hours) - derived) <= 0.05 ? r2(shift.hours) : derived;
 }
 
 function isMinimumEngagementException(shiftType, hours) {
   return shiftType === 'personal_care' && hours > 0 && hours < 2;
+}
+
+function computeShiftDurationHours(shift) {
+  if (!shift?.startDatetime || !shift?.endDatetime) return r2(Number(shift?.hours) || 0);
+  const start = new Date(shift.startDatetime);
+  const end = new Date(shift.endDatetime);
+  const derived = r2((end - start) / 3600000);
+  return derived > 0 ? derived : r2(Number(shift?.hours) || 0);
 }
 
 // ─── 76-HOUR CAP ─────────────────────────────────────────────────────────────
@@ -962,7 +971,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
         clientName: shift?.clientName || null,
         mileage: shift?.mileage ?? null,
-        totalHours: shift?.hours || 0,
+        totalHours: computeShiftDurationHours(shift),
         shiftDate: shift?.startDatetime || null,
         shiftStart: shift?.startDatetime || null,
         shiftEnd: shift?.endDatetime || null,
@@ -993,7 +1002,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
         clientName: shift?.clientName || null,
         mileage: shift?.mileage ?? null,
-        totalHours: shift?.hours || 0,
+        totalHours: computeShiftDurationHours(shift),
         shiftDate: shift?.startDatetime || null,
         shiftStart: shift?.startDatetime || null,
         shiftEnd: shift?.endDatetime || null,
@@ -1043,7 +1052,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
         clientName: shift.clientName || null,
         mileage: shift.mileage ?? null,
-        totalHours: shift.hours,
+        totalHours: computeShiftDurationHours(shift),
         shiftDate: shift.startDatetime,
         shiftStart: shift.startDatetime,
         shiftEnd: shift.endDatetime,
@@ -1069,7 +1078,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
         clientName: shift.clientName || null,
         mileage: shift.mileage ?? null,
-        totalHours: shift.hours,
+        totalHours: computeShiftDurationHours(shift),
         shiftDate: shift.startDatetime,
         shiftStart: shift.startDatetime,
         shiftEnd: shift.endDatetime,

@@ -286,19 +286,13 @@ function processCsvRow(row, rowNum, normalizedColumns, uploadedBy) {
     return { shift: null, error: `Row ${rowNum}: End time must be after start time` };
   }
 
-  // Compute hours
-  let hours;
+  // Compute hours from timestamps; only trust CSV hours when it closely matches.
+  // This avoids phantom-hour inflation from malformed/mis-mapped Hours columns.
   const derivedHours = Math.round(((endParsed.date - startParsed.date) / 3600000) * 100) / 100;
-  if (hoursStr) {
-    hours = parseDecimal(hoursStr);
-    if (hours === null) {
-      hours = derivedHours;
-    }
-  } else {
-    hours = derivedHours;
-  }
-  if (hours <= 0) {
-    hours = derivedHours;
+  const parsedHours = hoursStr ? parseDecimal(hoursStr) : null;
+  let hours = derivedHours;
+  if (parsedHours != null && parsedHours > 0 && Math.abs(parsedHours - derivedHours) <= 0.05) {
+    hours = parsedHours;
   }
 
   // Parse shift type
