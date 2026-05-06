@@ -33,6 +33,7 @@ const shiftPayHoursSchema = new mongoose.Schema(
     sundayHours: { type: Number, default: 0 },
     holidayHours: { type: Number, default: 0 },
     nursingCareHours: { type: Number, default: 0 },
+    shortTurnaroundHours: { type: Number, default: 0 },
     weekdayOtUpto2: { type: Number, default: 0 },
     weekdayOtAfter2: { type: Number, default: 0 },
     saturdayOtUpto2: { type: Number, default: 0 },

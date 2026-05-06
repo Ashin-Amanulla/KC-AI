@@ -1020,6 +1020,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         morningHours: 0, afternoonHours: 0, nightHours: 0,
         saturdayHours: 0, sundayHours: 0, holidayHours: 0,
         nursingCareHours: 0,
+        shortTurnaroundHours: 0,
         weekdayOtUpto2: 0, weekdayOtAfter2: 0,
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
         sundayOtUpto2: 0, sundayOtAfter2: 0,
@@ -1051,6 +1052,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         morningHours: 0, afternoonHours: 0, nightHours: 0,
         saturdayHours: 0, sundayHours: 0, holidayHours: 0,
         nursingCareHours: 0,
+        shortTurnaroundHours: 0,
         weekdayOtUpto2: 0, weekdayOtAfter2: 0,
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
         sundayOtUpto2: 0, sundayOtAfter2: 0,
@@ -1101,6 +1103,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         morningHours: 0, afternoonHours: 0, nightHours: 0,
         saturdayHours: 0, sundayHours: 0, holidayHours: 0,
         nursingCareHours: shift.hours,
+        shortTurnaroundHours: 0,
         weekdayOtUpto2: 0, weekdayOtAfter2: 0,
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
         sundayOtUpto2: 0, sundayOtAfter2: 0,
@@ -1127,6 +1130,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         morningHours: 0, afternoonHours: 0, nightHours: 0,
         saturdayHours: 0, sundayHours: 0, holidayHours: 0,
         nursingCareHours: 0,
+        shortTurnaroundHours: 0,
         weekdayOtUpto2: 0, weekdayOtAfter2: 0,
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
         sundayOtUpto2: 0, sundayOtAfter2: 0,
@@ -1143,6 +1147,35 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         shiftType: shift.shiftType,
       });
     }
+  }
+
+  for (const [sid, stHours] of Object.entries(ctx.shortTurnaroundByShift || {})) {
+    if (!breakdowns.has(sid)) {
+      const shift = shiftLookup.get(sid);
+      breakdowns.set(sid, {
+        morningHours: 0, afternoonHours: 0, nightHours: 0,
+        saturdayHours: 0, sundayHours: 0, holidayHours: 0,
+        nursingCareHours: 0,
+        shortTurnaroundHours: 0,
+        weekdayOtUpto2: 0, weekdayOtAfter2: 0,
+        saturdayOtUpto2: 0, saturdayOtAfter2: 0,
+        sundayOtUpto2: 0, sundayOtAfter2: 0,
+        holidayOtUpto2: 0, holidayOtAfter2: 0,
+        isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
+        isSleepover: shift?.shiftType === 'sleepover' || false,
+        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
+        clientName: shift?.clientName || null,
+        mileage: shift?.mileage ?? null,
+        totalHours: computeShiftDurationHours(shift),
+        shiftDate: shift?.startDatetime || null,
+        shiftStart: shift?.startDatetime || null,
+        shiftEnd: shift?.endDatetime || null,
+        shiftType: shift?.shiftType || '',
+        timezoneOffset: shift?.timezoneOffset || '+10:00',
+      });
+    }
+    const bd = breakdowns.get(sid);
+    bd.shortTurnaroundHours = r2((bd.shortTurnaroundHours || 0) + stHours);
   }
 
   return breakdowns;
@@ -1273,6 +1306,7 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
       if (!seg || seg.hours <= 0) continue;
       ctx.data.shortTurnaroundHours = r2((ctx.data.shortTurnaroundHours || 0) + seg.hours);
     }
+    ctx.shortTurnaroundByShift[sid] = r2((ctx.shortTurnaroundByShift[sid] || 0) + activeHours);
     ctx.reclassifiedFullDoubleTimeShiftIds.add(sid);
   }
 
@@ -1326,6 +1360,7 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     shiftIsBroken: new Map(),
     shiftMinimumEngagementException: new Map(),
     reclassifiedFullDoubleTimeShiftIds: new Set(),
+    shortTurnaroundByShift: {},
   };
 
   for (let i = 0; i < shifts.length; i++) {

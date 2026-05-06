@@ -521,7 +521,8 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow }) =
                         (shift.holidayHours || 0) +
                         (shift.holidayOtUpto2 || 0) +
                         (shift.holidayOtAfter2 || 0) +
-                        (shift.nursingCareHours || 0)
+                        (shift.nursingCareHours || 0) +
+                        (shift.shortTurnaroundHours || 0)
                     )
                   )}
                 </TableCell>
@@ -552,6 +553,11 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow }) =
                     {shift.minimumEngagementException && (
                       <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-amber-100 text-amber-900" title="Personal care shift under 2h — review minimum payment / adjust hours manually">
                         Min 2h review
+                      </span>
+                    )}
+                    {(shift.shortTurnaroundHours || 0) > 0 && (
+                      <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-fuchsia-100 text-fuchsia-800" title="Double Time (No Break)">
+                        No-break DT {h(shift.shortTurnaroundHours)}
                       </span>
                     )}
                     {(() => {

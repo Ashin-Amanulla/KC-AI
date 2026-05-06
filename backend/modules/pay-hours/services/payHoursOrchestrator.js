@@ -142,6 +142,7 @@ export async function computeAllPayHours(jobId, locationId = null) {
             sundayHours:      bd.sundayHours,
             holidayHours:     bd.holidayHours,
             nursingCareHours: bd.nursingCareHours,
+            shortTurnaroundHours: bd.shortTurnaroundHours || 0,
             weekdayOtUpto2:   bd.weekdayOtUpto2  || 0,
             weekdayOtAfter2:  bd.weekdayOtAfter2 || 0,
             saturdayOtUpto2:  bd.saturdayOtUpto2  || 0,
