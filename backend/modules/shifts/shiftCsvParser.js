@@ -375,6 +375,9 @@ function calculateIsBrokenShift(currentShift, previousShift) {
 
   const gap = currentShift.startDatetime - previousShift.endDatetime;
   if (gap <= 0) return false;
+  if (!isSameLocalDate(currentShift.startDatetime, previousShift.startDatetime, currentShift.timezoneOffset || '+10:00')) {
+    return false;
+  }
 
   switch (previousShift.shiftType) {
     case 'personal_care':
@@ -386,6 +389,16 @@ function calculateIsBrokenShift(currentShift, previousShift) {
     default:
       return false;
   }
+}
+
+function isSameLocalDate(aUtc, bUtc, offsetStr) {
+  const aLocal = applyOffset(aUtc, offsetStr);
+  const bLocal = applyOffset(bUtc, offsetStr);
+  return (
+    aLocal.getUTCFullYear() === bLocal.getUTCFullYear() &&
+    aLocal.getUTCMonth() === bLocal.getUTCMonth() &&
+    aLocal.getUTCDate() === bLocal.getUTCDate()
+  );
 }
 
 /**

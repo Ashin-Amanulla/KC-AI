@@ -666,6 +666,7 @@ const EMPTY_PAY_HOURS = (staffName) => ({
   otAfter76Saturday: 0,
   otAfter76Sunday: 0,
   otAfter76Holiday: 0,
+  shortTurnaroundHours: 0,
   brokenShiftCount: 0,
   brokenShift2BreakCount: 0,
   mealAllowanceCount: 0,

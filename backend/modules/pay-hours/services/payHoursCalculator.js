@@ -22,6 +22,8 @@ const MAX_REGULAR_HOURS_WEEKDAY = 10;
 const SLEEPOVER_DEDUCTION = 8;
 /** Max ms gap after a sleepover that still "attaches" the next PC/nursing shift (same as shift CSV broken rule). */
 const SLEEPOVER_FOLLOWON_GAP_MS = 8 * 60 * 60 * 1000;
+/** Minimum unpaid break between consecutive shifts before short-turnaround penalty applies. */
+const MIN_BREAK_BETWEEN_SHIFTS_MS = 10 * 60 * 60 * 1000;
 const OT_TIER_1_MAX = 2;
 const TOTAL_HOURS_CAP = 76;
 const BROKEN_SHIFT_SHORT_SPAN = 12;
@@ -560,6 +562,7 @@ export function newPayHoursData() {
     nursingSundayHours: 0,
     nursingHolidayHours: 0,
     otAfter76Hours: 0,
+    shortTurnaroundHours: 0,
     otAfter76Weekday: 0, otAfter76Saturday: 0,
     otAfter76Sunday: 0, otAfter76Holiday: 0,
     brokenShiftCount: 0,
@@ -941,13 +944,14 @@ function processSingleChain(chain, data, ctx) {
   let perShiftOt = {};
 
   if (!hasBroken) {
-    const combinedActive = r2(
-      uniqueShiftIds.reduce((sum, sid) => sum + (ctx.shiftActiveHours.get(sid) || 0), 0)
-    );
     const activeSegs = chain.filter(
       (ps) =>
         ps.segment.hours > 0 &&
         !ctx.reclassifiedFullDoubleTimeShiftIds?.has(ps.shiftId)
+    );
+    const activeShiftIds = [...new Set(activeSegs.map((ps) => ps.shiftId))];
+    const combinedActive = r2(
+      activeShiftIds.reduce((sum, sid) => sum + (ctx.shiftActiveHours.get(sid) || 0), 0)
     );
     const allWeekday =
       activeSegs.length > 0 && activeSegs.every((ps) => ps.segment.dayType === 'weekday');
@@ -1155,10 +1159,15 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
 
   // Check if continuous with previous shift (gap = 0ms)
   let isContinuous = false;
+  let gapMs = null;
   if (ctx.previousEndUtc !== null) {
-    const gap = startUtc - ctx.previousEndUtc;
-    isContinuous = gap === 0;
+    gapMs = startUtc - ctx.previousEndUtc;
+    isContinuous = gapMs === 0;
   }
+  const shortTurnaround =
+    gapMs !== null &&
+    gapMs > 0 &&
+    gapMs < MIN_BREAK_BETWEEN_SHIFTS_MS;
 
   const sid = String(shift._id);
   const activeHours = calculateActiveHours(normalizedHours, shift.shiftType);
@@ -1201,15 +1210,17 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
       for (let i = 0; i < nsSegments.length; i++) {
         const seg = nsSegments[i];
         if (seg.dayType === 'weekday') {
-          ctx.data.nursingCareHours = r2(ctx.data.nursingCareHours + seg.hours);
-          ctx.nursingWeekdayLedger.push({
-            shiftId: sid,
-            fieldName: 'nursingCareHours',
-            dayType: 'weekday',
-            hours: seg.hours,
-            entryDate: seg.startUtc,
-            isNursing: true,
-          });
+          if (!shortTurnaround) {
+            ctx.data.nursingCareHours = r2(ctx.data.nursingCareHours + seg.hours);
+            ctx.nursingWeekdayLedger.push({
+              shiftId: sid,
+              fieldName: 'nursingCareHours',
+              dayType: 'weekday',
+              hours: seg.hours,
+              entryDate: seg.startUtc,
+              isNursing: true,
+            });
+          }
         } else {
           const segContinuous = i === 0 ? isContinuous : true;
           ctx.pendingSegments.push({ segment: seg, shiftId: sid, shiftType: shift.shiftType, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
@@ -1239,6 +1250,30 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
       const placeholder = { startUtc, endUtc, hours: 0, dayType: 'weekday', timeCategory: timeCat, isSleepoverExcess: true };
       ctx.pendingSegments.push({ segment: placeholder, shiftId: sid, shiftType: shift.shiftType, isContinuousWithPrevious: isContinuous, timeCategoryInfluence: timeCat });
     }
+  }
+
+  // Short turnaround (<10h break) override: current shift paid at double time
+  // until a compliant break is achieved. Reclassify this shift's active hours to OT tier 2.
+  if (shortTurnaround && activeHours > 0) {
+    if (shift.shiftType === 'nursing_support') {
+      const weekdayNursingHours = r2(
+        (segments || [])
+          .filter((seg) => seg && seg.hours > 0 && seg.dayType === 'weekday')
+          .reduce((sum, seg) => sum + seg.hours, 0)
+      );
+      if (weekdayNursingHours > 0) {
+        ctx.data.nursingCareHours = r2(Math.max(0, ctx.data.nursingCareHours - weekdayNursingHours));
+      }
+      if (ctx.nursingWeekdayLedger?.length) {
+        ctx.nursingWeekdayLedger = ctx.nursingWeekdayLedger.filter((e) => e.shiftId !== sid);
+      }
+    }
+
+    for (const seg of segments || []) {
+      if (!seg || seg.hours <= 0) continue;
+      ctx.data.shortTurnaroundHours = r2((ctx.data.shortTurnaroundHours || 0) + seg.hours);
+    }
+    ctx.reclassifiedFullDoubleTimeShiftIds.add(sid);
   }
 
   // Create processed shift record

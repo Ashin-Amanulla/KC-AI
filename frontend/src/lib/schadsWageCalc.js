@@ -86,6 +86,7 @@ export function calcGrossFromRates(ph, rates) {
     holAll * rates.ph +
     nursingHol * nursingPhRate +
     (ph.nursingCareHours || 0) * nursingDay +
+    (ph.shortTurnaroundHours || 0) * rates.otAfter2 +
     ot76WdT1 * rates.otUpto2 +
     ot76WdT2 * rates.otAfter2 +
     ot76SatT1 * rates.otUpto2 +
@@ -147,6 +148,7 @@ export function calcBreakdownFromRates(ph, rates) {
     ['Public Holiday', holAll, rates.ph, 'penalty'],
     ['Nursing Holiday', nursingHol, nursingPhRate, 'penalty'],
     ['Nursing Care', ph.nursingCareHours || 0, nursingDay, 'ord'],
+    ['Double Time (No Break)', ph.shortTurnaroundHours || 0, rates.otAfter2, 'penalty'],
     ['OT >76h WD ≤2h', ot76WdT1, rates.otUpto2, 'ot76'],
     ['OT >76h WD >2h', ot76WdT2, rates.otAfter2, 'ot76'],
     ['OT >76h Sat ≤2h', ot76SatT1, rates.otUpto2, 'ot76'],
@@ -258,6 +260,7 @@ export function calcGross(ph, baseRate, empType = 'permanent') {
       sunAll * ce(2.0) +
       holAll * ce(2.5) +
       (ph.nursingCareHours || 0) * ce(1.0) +
+      (ph.shortTurnaroundHours || 0) * ce(2.0) +
       ot76WdT1 * ce(1.5) +
       ot76WdT2 * ce(2.0) +
       ot76SatT1 * ce(1.5) +
@@ -279,6 +282,7 @@ export function calcGross(ph, baseRate, empType = 'permanent') {
         sunAll * 2.0 +
         holAll * 2.5 +
         (ph.nursingCareHours || 0) * 1.0 +
+        (ph.shortTurnaroundHours || 0) * 2.0 +
         ot76WdT1 * 1.5 +
         ot76WdT2 * 2.0 +
         ot76SatT1 * 1.5 +
@@ -306,7 +310,8 @@ export function staffTotalHours(ph) {
       (ph.holidayHours || 0) +
       (ph.holidayOtUpto2 || 0) +
       (ph.holidayOtAfter2 || 0) +
-      (ph.nursingCareHours || 0)
+      (ph.nursingCareHours || 0) +
+      (ph.shortTurnaroundHours || 0)
   );
 }
 
