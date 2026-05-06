@@ -689,8 +689,8 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
 }
 
 function handleBrokenShift(shift, processedShift, processedShifts, data, ctx) {
-  // A shift is part of a chain if it's explicitly broken OR continuous with the previous shift
-  if (!shift.isBrokenShift && !processedShift.isContinuous) return;
+  // Broken-shift rules apply only when the current shift is explicitly broken.
+  if (!shift.isBrokenShift) return;
 
   const offsetStr = shift.timezoneOffset || '+10:00';
   const previousInSpan = [];
