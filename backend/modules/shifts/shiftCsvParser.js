@@ -70,6 +70,7 @@ const SHIFT_TYPE_MAP = {
 const BROKEN_SHIFT_GAP_PERSONAL_CARE_MS = 10 * 60 * 60 * 1000; // 10 hours
 const BROKEN_SHIFT_GAP_SLEEPOVER_MS = 8 * 60 * 60 * 1000;      // 8 hours
 const BROKEN_SHIFT_GAP_NURSING_SUPPORT_MS = 10 * 60 * 60 * 1000; // 10 hours
+const DEFAULT_SHIFT_OFFSET = process.env.SHIFT_CSV_DEFAULT_OFFSET || '+10:00';
 
 /**
  * Normalize a CSV column name for case-insensitive matching with alias support.
@@ -82,6 +83,8 @@ function normalizeColumnName(name) {
 /**
  * Parse a datetime string with timezone offset.
  * Supports: "YYYY-MM-DD HH:MM:SS +HHMM" and "YYYY-MM-DD HH:MM:SS +HH:MM"
+ * When no offset is provided, interpret clock time as local wall time in DEFAULT_SHIFT_OFFSET
+ * (so imported times remain exactly as in the source file).
  * Returns { date: Date (UTC), offsetStr: '+10:00' } or null on failure.
  */
 function parseDatetimeWithOffset(dtStr) {
@@ -95,18 +98,50 @@ function parseDatetimeWithOffset(dtStr) {
     s = s.slice(0, -5) + raw.slice(0, 3) + ':' + raw.slice(3);
   }
 
+  const offsetMatch = s.match(/([+-]\d{2}:\d{2}|Z)$/i);
+  if (!offsetMatch) {
+    const naive = parseNaiveLocalDatetime(s, DEFAULT_SHIFT_OFFSET);
+    if (naive) return naive;
+  }
+
   try {
     const d = new Date(s);
     if (isNaN(d.getTime())) return null;
 
     // Extract the offset string for storage
-    const offsetMatch = s.match(/([+-]\d{2}:\d{2})$/);
-    const offsetStr = offsetMatch ? offsetMatch[1] : '+00:00';
+    const explicitOffsetMatch = s.match(/([+-]\d{2}:\d{2}|Z)$/i);
+    const offsetStr = explicitOffsetMatch
+      ? (explicitOffsetMatch[1].toUpperCase() === 'Z' ? '+00:00' : explicitOffsetMatch[1])
+      : DEFAULT_SHIFT_OFFSET;
 
     return { date: d, offsetStr };
   } catch {
     return null;
   }
+}
+
+function parseNaiveLocalDatetime(raw, offsetStr) {
+  const m = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  const year = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  const day = parseInt(m[3], 10);
+  const hour = parseInt(m[4], 10);
+  const minute = parseInt(m[5], 10);
+  const second = parseInt(m[6] || '0', 10);
+  if (
+    month < 1 || month > 12 || day < 1 || day > 31 ||
+    hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59
+  ) {
+    return null;
+  }
+  const sign = offsetStr[0] === '+' ? 1 : -1;
+  const clean = offsetStr.slice(1).replace(':', '');
+  const oh = parseInt(clean.slice(0, 2), 10);
+  const om = parseInt(clean.slice(2, 4), 10);
+  const offsetMinutes = sign * (oh * 60 + om);
+  const utcMs = Date.UTC(year, month - 1, day, hour, minute, second) - offsetMinutes * 60000;
+  return { date: new Date(utcMs), offsetStr };
 }
 
 /**

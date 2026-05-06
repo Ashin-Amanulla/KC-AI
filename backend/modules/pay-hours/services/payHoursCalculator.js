@@ -199,21 +199,15 @@ function getTimeCategory(startUtc, endUtc, offsetStr) {
   const startDate = localDateStr(startUtc, offsetStr);
   const endDate = localDateStr(endUtc, offsetStr);
 
-  const nightBoundary = 1 / 60; // 00:01
-  const morningBoundary = MORNING_START + 1 / 60; // 06:01
-  const afternoonBoundary = AFTERNOON_START + 1 / 60; // 20:01
+  // Night: starts before 06:00 OR crosses midnight
+  if (startFloat < MORNING_START) return 'night';
+  if (startDate !== endDate) return 'night';
 
-  // Night: starts before 06:01 OR finishes after 00:01 (meaning end is on a different day and > 00:01)
-  if (startFloat < morningBoundary) return 'night';
-  if (startDate !== endDate && endFloat > nightBoundary) return 'night';
-
-  // Morning: starts >= 06:01 AND finishes at or before 20:01
-  if (startDate === endDate && endFloat <= afternoonBoundary) {
-    return 'morning';
-  }
-
-  // Afternoon: finishes after 20:01 and at or before 00:01
-  return 'afternoon';
+  // Same-day weekday shifts:
+  // - Afternoon if finish after 20:00
+  // - Otherwise Daytime (ordinary)
+  if (endFloat > AFTERNOON_START) return 'afternoon';
+  return 'morning';
 }
 
 // ─── SHIFT SEGMENT CREATION ──────────────────────────────────────────────────
@@ -240,8 +234,18 @@ function createSingleDaySegment(startUtc, endUtc, hours, shiftType, offsetStr, h
       // Sleepover excess only: split at 6am/8pm per new SCHADS split-loading rule.
       return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
     }
-    // Split at 6:01 and 20:01 to correctly attribute time bands.
-    return splitWeekdayByTimeBand(startUtc, endUtc, segHours, isSleepoverExcess, offsetStr);
+    // SCHADS weekday classification applies to the whole qualifying shift:
+    // - Afternoon if it finishes after 8:00pm and at/before midnight
+    // - Night if it starts before 6:00am or finishes after midnight
+    // - Otherwise daytime
+    return [{
+      startUtc,
+      endUtc,
+      hours: segHours,
+      dayType: 'weekday',
+      timeCategory: getTimeCategory(startUtc, endUtc, offsetStr),
+      isSleepoverExcess: false,
+    }];
   }
 
   return [{ startUtc, endUtc, hours: segHours, dayType, timeCategory: null, isSleepoverExcess }];

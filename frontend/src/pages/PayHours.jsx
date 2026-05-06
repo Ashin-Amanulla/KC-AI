@@ -31,14 +31,28 @@ const ShiftDetail = ({ payHoursId }) => {
   const shifts = data?.shifts || [];
   if (!shifts.length) return <div className="p-4 text-sm text-muted-foreground">No shift breakdown available</div>;
 
-  const formatTime = (dt) => {
+  const formatTime = (dt, tzOffset) => {
     if (!dt) return '-';
-    return new Date(dt).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+    const d = new Date(dt);
+    if (!tzOffset) return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+    const sign = tzOffset[0] === '+' ? 1 : -1;
+    const clean = tzOffset.slice(1).replace(':', '');
+    const h = parseInt(clean.slice(0, 2), 10);
+    const m = parseInt(clean.slice(2, 4), 10);
+    const adjustedMs = d.getTime() + sign * (h * 60 + m) * 60000;
+    return new Date(adjustedMs).toISOString().slice(11, 16);
   };
 
-  const formatDate = (dt) => {
+  const formatDate = (dt, tzOffset) => {
     if (!dt) return '-';
-    return new Date(dt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    const d = new Date(dt);
+    if (!tzOffset) return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    const sign = tzOffset[0] === '+' ? 1 : -1;
+    const clean = tzOffset.slice(1).replace(':', '');
+    const h = parseInt(clean.slice(0, 2), 10);
+    const m = parseInt(clean.slice(2, 4), 10);
+    const adjustedMs = d.getTime() + sign * (h * 60 + m) * 60000;
+    return new Date(adjustedMs).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   const h = (v) => (v ? v.toFixed(2) : '-');
@@ -69,9 +83,9 @@ const ShiftDetail = ({ payHoursId }) => {
         <TableBody>
           {shifts.map((shift) => (
             <TableRow key={shift._id}>
-              <TableCell>{formatDate(shift.shiftDate)}</TableCell>
-              <TableCell className="font-mono text-xs">{formatTime(shift.shiftStart)}</TableCell>
-              <TableCell className="font-mono text-xs">{formatTime(shift.shiftEnd)}</TableCell>
+              <TableCell>{formatDate(shift.shiftDate, shift.timezoneOffset)}</TableCell>
+              <TableCell className="font-mono text-xs">{formatTime(shift.shiftStart, shift.timezoneOffset)}</TableCell>
+              <TableCell className="font-mono text-xs">{formatTime(shift.shiftEnd, shift.timezoneOffset)}</TableCell>
               <TableCell className="text-muted-foreground text-xs">{shift.clientName || '-'}</TableCell>
               <TableCell>
                 <span className="text-xs capitalize">{shift.shiftType?.replace('_', ' ')}</span>
