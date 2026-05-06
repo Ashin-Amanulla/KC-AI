@@ -131,6 +131,7 @@ export async function computeAllPayHours(jobId, locationId = null) {
             shiftDate:        bd.shiftDate,
             shiftStart:       bd.shiftStart,
             shiftEnd:         bd.shiftEnd,
+            timezoneOffset:   bd.timezoneOffset || '+10:00',
             shiftType:        bd.shiftType,
             clientName:       bd.clientName,
             totalHours:       bd.totalHours,

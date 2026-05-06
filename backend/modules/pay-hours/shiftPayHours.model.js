@@ -22,6 +22,7 @@ const shiftPayHoursSchema = new mongoose.Schema(
     shiftDate: { type: Date, required: true },
     shiftStart: { type: Date, required: true },
     shiftEnd: { type: Date, required: true },
+    timezoneOffset: { type: String, default: '+10:00' },
     shiftType: { type: String, required: true },
     clientName: { type: String, default: null },
     totalHours: { type: Number, default: 0 },
