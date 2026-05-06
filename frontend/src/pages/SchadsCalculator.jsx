@@ -1054,6 +1054,30 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     };
   }, [displayRows, payrollData, getMergedRow, baseRates, defaultRate, getEmpType, resolvedStaffRatesMap, normName, alignGrossToPayroll]);
 
+  const payrollVarianceStats = useMemo(() => {
+    if (!payrollData) return null;
+    let matched = 0;
+    let zeroVariance = 0;
+    let withVariance = 0;
+    for (const row of displayRows) {
+      const match = payrollData.get(normName(row.staffName));
+      if (!match) continue;
+      matched++;
+      const mrow = getMergedRow(row);
+      const rateVal = baseRates[row.staffName] ?? defaultRate;
+      const empT = getEmpType(row.staffName);
+      const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
+      const modeled = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
+      if (modeled === null) continue;
+      const addAl = r2(Number(mrow.additionalAllowance) || 0);
+      const modeledWithAdd = r2(modeled + addAl);
+      const diff = Math.abs(r2(modeledWithAdd - match.earnings));
+      if (diff <= 0.01) zeroVariance++;
+      else withVariance++;
+    }
+    return { matched, zeroVariance, withVariance };
+  }, [payrollData, displayRows, normName, getMergedRow, baseRates, defaultRate, getEmpType, resolvedStaffRatesMap]);
+
   // Count staff with any exception (OT, OT>76, broken shifts, or short PC minimum-engagement flags)
   const exceptionCount = useMemo(() =>
     displayRows.filter(row => {
@@ -1660,8 +1684,10 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       <FileSpreadsheet className="h-4 w-4 text-green-600" />
                       {payrollData ? 'Replace payroll file' : 'Upload payroll file'}
                     </button>
-                    {payrollData && (
-                      <span className="text-xs text-muted-foreground">{payrollData.size} matched</span>
+                    {payrollData && payrollVarianceStats && (
+                      <span className="text-xs text-muted-foreground">
+                        {payrollVarianceStats.matched} matched · {payrollVarianceStats.zeroVariance} zero variance · {payrollVarianceStats.withVariance} variance
+                      </span>
                     )}
                     {payrollData && (
                       <label className="inline-flex items-center gap-1.5 text-xs text-foreground cursor-pointer select-none" title="Sets Gross Pay to the imported Earnings for each name that exists in both lists. Diff becomes $0 for those rows. Expand a row to see the modeled SCHADS breakdown (unchanged).">
