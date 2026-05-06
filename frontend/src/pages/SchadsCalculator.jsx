@@ -430,7 +430,10 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow }) =
   const formatDate = (dt, tzOffset) => {
     if (!dt) return '—';
     const d = new Date(dt);
-    if (!tzOffset) return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (!tzOffset) {
+      return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+    }
     // Apply timezone offset to show original shift date
     const sign = tzOffset[0] === '+' ? 1 : -1;
     const clean = tzOffset.slice(1).replace(':', '');
@@ -438,7 +441,7 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow }) =
     const m = parseInt(clean.slice(2, 4), 10);
     const adjustedMs = d.getTime() + sign * (h * 60 + m) * 60000;
     const adjusted = new Date(adjustedMs);
-    return adjusted.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    return `${adjusted.getUTCDate()} ${months[adjusted.getUTCMonth()]} ${adjusted.getUTCFullYear()}`;
   };
   const h = (v) => (v != null && v > 0 ? v.toFixed(2) : '—');
 

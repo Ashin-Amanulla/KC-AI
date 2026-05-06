@@ -445,27 +445,16 @@ function splitShiftAtMidnight(startUtc, endUtc, hours, shiftType, offsetStr, hol
 
   const segments = [];
 
-  // ── NEW: "Overflow" logic ──────────────────────────────────────────────
-  // If day2 is a holiday, treat hours after 6PM on day1 as holiday (not night).
-  // This matches Excel's behavior where shifts "overflowing" to a holiday get more holiday hours.
+  // Strict midnight boundary for cross-day classification:
+  // day1 gets pre-midnight hours; day2 gets post-midnight hours.
   if (day2Type === 'holiday' && day1Type === 'weekday') {
-    // Hours after 6PM on day1 → holiday
-    const sixPmDay1 = localHourBoundary(startUtc, 18, offsetStr, 0); // 18:00 exactly
-    const holidayStartUtc = startUtc > sixPmDay1 ? startUtc : sixPmDay1;
-    const before6pmHours = r2(Math.max(0, (holidayStartUtc - startUtc) / 3600000));
-    const after6pmHours = r2(Math.max(0, (midnightUtc - holidayStartUtc) / 3600000));
-
-    if (before6pmHours > 0) {
-      // Before 6PM: 5:30PM-6PM is night (to match Excel's Night:2)
-      segments.push({ startUtc, endUtc: holidayStartUtc, hours: before6pmHours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
+    // Pre-midnight weekday portion is night for cross-midnight weekday shifts.
+    if (day1Hours > 0) {
+      segments.push({ startUtc, endUtc: midnightUtc, hours: day1Hours, dayType: day1Type, timeCategory: 'night', isSleepoverExcess: false });
     }
-    if (after6pmHours > 0) {
-      // After 6PM on day1 that overlaps the actual shift range → holiday
-      segments.push({ startUtc: holidayStartUtc, endUtc: midnightUtc, hours: after6pmHours, dayType: 'holiday', timeCategory: null, isSleepoverExcess: false });
-    }
-    // Day2 (holiday overflow) → night (not holiday, to match Excel's Night:2)
+    // Post-midnight portion belongs to holiday day type.
     if (day2Hours > 0) {
-      segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: 'weekday', timeCategory: 'night', isSleepoverExcess: false });
+      segments.push({ startUtc: midnightUtc, endUtc, hours: day2Hours, dayType: 'holiday', timeCategory: null, isSleepoverExcess: false });
     }
   } else {
     // Original logic for non-holiday overflow
