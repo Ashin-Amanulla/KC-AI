@@ -60,6 +60,12 @@ export function loadStaffRatesMap(buf, { normName, r2, VEHICLE_RATE }) {
     const row = {
       name,
       daytime: g('daytime'),
+      nursingDaytime: g('daytime'),
+      nursingAfternoon: g('afternoon'),
+      nursingNight: g('night'),
+      nursingSaturday: g('saturday'),
+      nursingSunday: g('sunday'),
+      nursingPh: g('ph'),
       afternoon: g('afternoon'),
       night: g('night'),
       otUpto2: g('otUpto2'),

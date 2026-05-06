@@ -554,6 +554,11 @@ export function newPayHoursData() {
     sundayHours: 0, sundayOtUpto2: 0, sundayOtAfter2: 0,
     holidayHours: 0, holidayOtUpto2: 0, holidayOtAfter2: 0,
     nursingCareHours: 0,
+    nursingAfternoonHours: 0,
+    nursingNightHours: 0,
+    nursingSaturdayHours: 0,
+    nursingSundayHours: 0,
+    nursingHolidayHours: 0,
     otAfter76Hours: 0,
     otAfter76Weekday: 0, otAfter76Saturday: 0,
     otAfter76Sunday: 0, otAfter76Holiday: 0,
@@ -698,6 +703,46 @@ function handleBrokenShift(shift, processedShift, processedShifts, data, ctx) {
     }
   }
 
+  // Retroactive loading across broken-shift span:
+  // if final segment runs past evening boundary, apply the final penalty category
+  // (evening/night) to all weekday segments in that day's broken span.
+  if (shift.isBrokenShift && previousInSpan.length) {
+    const endDateStr = localDateStr(processedShift.endUtc, offsetStr);
+    const endHour = localHour(processedShift.endUtc, offsetStr);
+    const targetCategory =
+      endDateStr !== shiftStartDateStr ? 'night' : endHour > AFTERNOON_START ? 'afternoon' : null;
+    if (targetCategory) {
+      const spanShifts = [...previousInSpan, processedShift];
+      const targetField = targetCategory === 'night' ? 'nightHours' : 'afternoonHours';
+      const targetNursingField = targetCategory === 'night' ? 'nursingNightHours' : 'nursingAfternoonHours';
+      for (const s of spanShifts) {
+        if (s.shiftType === 'nursing_support') {
+          const nursingWeekdayHours = r2(
+            (s.segments || [])
+              .filter((seg) => seg && seg.hours > 0 && seg.dayType === 'weekday' && !seg.isSleepoverExcess)
+              .reduce((sum, seg) => sum + seg.hours, 0)
+          );
+          if (nursingWeekdayHours > 0) {
+            data.nursingCareHours = r2(Math.max(0, data.nursingCareHours - nursingWeekdayHours));
+            data[targetField] = r2((data[targetField] || 0) + nursingWeekdayHours);
+            data[targetNursingField] = r2((data[targetNursingField] || 0) + nursingWeekdayHours);
+            for (const e of ctx.nursingWeekdayLedger || []) {
+              if (e.shiftId === s.shiftId && e.fieldName === 'nursingCareHours') {
+                e.fieldName = targetField;
+              }
+            }
+          }
+        }
+        for (const seg of s.segments || []) {
+          if (!seg || seg.hours <= 0) continue;
+          if (seg.dayType !== 'weekday') continue;
+          if (seg.isSleepoverExcess) continue;
+          seg.timeCategory = targetCategory;
+        }
+      }
+    }
+  }
+
   processBrokenShiftOvertime(processedShift, previousInSpan, data, ctx);
 }
 
@@ -733,7 +778,7 @@ function apply76HourCap(data, hourLedger) {
   const totalRegular = r2(
     data.morningHours + data.afternoonHours + data.nightHours +
     data.saturdayHours + data.sundayHours + data.holidayHours +
-    data.nursingCareHours
+    data.nursingCareHours + data.nursingAfternoonHours + data.nursingNightHours
   );
 
   if (totalRegular <= TOTAL_HOURS_CAP) return;
@@ -755,6 +800,17 @@ function apply76HourCap(data, hourLedger) {
 
     // Deduct from data field
     data[entry.fieldName] = r2((data[entry.fieldName] || 0) - deduct);
+    if (entry.isNursing && entry.dayType === 'saturday') {
+      data.nursingSaturdayHours = r2((data.nursingSaturdayHours || 0) - deduct);
+    } else if (entry.isNursing && entry.dayType === 'sunday') {
+      data.nursingSundayHours = r2((data.nursingSundayHours || 0) - deduct);
+    } else if (entry.isNursing && entry.dayType === 'holiday') {
+      data.nursingHolidayHours = r2((data.nursingHolidayHours || 0) - deduct);
+    } else if (entry.isNursing && entry.dayType === 'weekday' && entry.fieldName === 'afternoonHours') {
+      data.nursingAfternoonHours = r2((data.nursingAfternoonHours || 0) - deduct);
+    } else if (entry.isNursing && entry.dayType === 'weekday' && entry.fieldName === 'nightHours') {
+      data.nursingNightHours = r2((data.nursingNightHours || 0) - deduct);
+    }
     remaining = r2(remaining - deduct);
 
     // Accumulate by day type
@@ -850,6 +906,7 @@ function buildOrderedChainEntries(chain, ctx) {
       entries.push({
         _psRef: ps,
         shiftId: ps.shiftId,
+        isNursing: ps.shiftType === 'nursing_support',
         fieldName: `${tc}Hours`,
         dayType: 'weekday',
         hours: seg.hours,
@@ -858,6 +915,7 @@ function buildOrderedChainEntries(chain, ctx) {
     } else if (['saturday', 'sunday', 'holiday'].includes(seg.dayType)) {
       entries.push({
         shiftId: ps.shiftId,
+        isNursing: ps.shiftType === 'nursing_support',
         fieldName: `${seg.dayType}Hours`,
         dayType: seg.dayType,
         hours: seg.hours,
@@ -908,6 +966,13 @@ function processSingleChain(chain, data, ctx) {
   for (const entry of entries) {
     if (entry.hours > 0) {
       data[entry.fieldName] = r2((data[entry.fieldName] || 0) + entry.hours);
+      if (entry.isNursing && entry.dayType === 'saturday') {
+        data.nursingSaturdayHours = r2((data.nursingSaturdayHours || 0) + entry.hours);
+      } else if (entry.isNursing && entry.dayType === 'sunday') {
+        data.nursingSundayHours = r2((data.nursingSundayHours || 0) + entry.hours);
+      } else if (entry.isNursing && entry.dayType === 'holiday') {
+        data.nursingHolidayHours = r2((data.nursingHolidayHours || 0) + entry.hours);
+      }
     }
   }
 
@@ -1129,7 +1194,7 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
         const seg = nsSegments[i];
         if (seg.hours <= 0) continue;
         const segContinuous = i === 0 ? isContinuous : true;
-        ctx.pendingSegments.push({ segment: seg, shiftId: sid, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
+        ctx.pendingSegments.push({ segment: seg, shiftId: sid, shiftType: shift.shiftType, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
       }
       segments = nsSegments;
     } else {
@@ -1143,10 +1208,11 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
             dayType: 'weekday',
             hours: seg.hours,
             entryDate: seg.startUtc,
+            isNursing: true,
           });
         } else {
           const segContinuous = i === 0 ? isContinuous : true;
-          ctx.pendingSegments.push({ segment: seg, shiftId: sid, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
+          ctx.pendingSegments.push({ segment: seg, shiftId: sid, shiftType: shift.shiftType, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
         }
       }
       segments = nsSegments;
@@ -1162,7 +1228,7 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
     // Add segments to pending list
     for (let i = 0; i < segments.length; i++) {
       const segContinuous = i === 0 ? isContinuous : true;
-      ctx.pendingSegments.push({ segment: segments[i], shiftId: sid, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
+      ctx.pendingSegments.push({ segment: segments[i], shiftId: sid, shiftType: shift.shiftType, isContinuousWithPrevious: segContinuous, timeCategoryInfluence: null });
     }
   }
   // Sleepover with no excess: add placeholder for chain influence
@@ -1171,7 +1237,7 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
     if (wd < 5) { // weekday — sleepover hours are night band for SCHADS
       const timeCat = 'night';
       const placeholder = { startUtc, endUtc, hours: 0, dayType: 'weekday', timeCategory: timeCat, isSleepoverExcess: true };
-      ctx.pendingSegments.push({ segment: placeholder, shiftId: sid, isContinuousWithPrevious: isContinuous, timeCategoryInfluence: timeCat });
+      ctx.pendingSegments.push({ segment: placeholder, shiftId: sid, shiftType: shift.shiftType, isContinuousWithPrevious: isContinuous, timeCategoryInfluence: timeCat });
     }
   }
 

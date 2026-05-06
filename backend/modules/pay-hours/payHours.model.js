@@ -43,6 +43,11 @@ const payHoursSchema = new mongoose.Schema(
     holidayOtAfter2: { type: Number, default: 0 },
     // Nursing Care (flat rate)
     nursingCareHours: { type: Number, default: 0 },
+    nursingAfternoonHours: { type: Number, default: 0 },
+    nursingNightHours: { type: Number, default: 0 },
+    nursingSaturdayHours: { type: Number, default: 0 },
+    nursingSundayHours: { type: Number, default: 0 },
+    nursingHolidayHours: { type: Number, default: 0 },
     // 76-hour universal cap overflow — tracked by day type for correct rates
     otAfter76Hours: { type: Number, default: 0 },       // total (legacy compat)
     otAfter76Weekday: { type: Number, default: 0 },      // weekday OT rates (1.5×/2×)

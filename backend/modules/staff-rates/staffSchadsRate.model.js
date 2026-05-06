@@ -4,6 +4,12 @@ const ratesSchema = new mongoose.Schema(
   {
     name: { type: String, default: '' },
     daytime: { type: Number, default: 0 },
+    nursingDaytime: { type: Number, default: 0 },
+    nursingAfternoon: { type: Number, default: 0 },
+    nursingNight: { type: Number, default: 0 },
+    nursingSaturday: { type: Number, default: 0 },
+    nursingSunday: { type: Number, default: 0 },
+    nursingPh: { type: Number, default: 0 },
     afternoon: { type: Number, default: 0 },
     night: { type: Number, default: 0 },
     otUpto2: { type: Number, default: 0 },

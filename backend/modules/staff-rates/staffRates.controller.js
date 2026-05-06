@@ -19,6 +19,12 @@ function r2(n) {
 
 const RATE_NUM_KEYS = new Set([
   'daytime',
+  'nursingDaytime',
+  'nursingAfternoon',
+  'nursingNight',
+  'nursingSaturday',
+  'nursingSunday',
+  'nursingPh',
   'afternoon',
   'night',
   'otUpto2',

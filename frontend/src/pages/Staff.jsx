@@ -27,6 +27,12 @@ function defaultRatesRow(displayName) {
   return {
     name: displayName.trim(),
     daytime: v,
+    nursingDaytime: v,
+    nursingAfternoon: v,
+    nursingNight: v,
+    nursingSaturday: v,
+    nursingSunday: v,
+    nursingPh: v,
     afternoon: v,
     night: v,
     otUpto2: v,

@@ -1,6 +1,12 @@
 /** Shared SCHADS $/h column metadata for award calculator + Staff page editor. */
 export const STAFF_RATES_TABLE_FIELDS = [
   ['daytime', 'Day'],
+  ['nursingDaytime', 'Nursing Day'],
+  ['nursingAfternoon', 'Nursing Eve'],
+  ['nursingNight', 'Nursing Night'],
+  ['nursingSaturday', 'Nursing Sat'],
+  ['nursingSunday', 'Nursing Sun'],
+  ['nursingPh', 'Nursing PH'],
   ['afternoon', 'Aft'],
   ['night', 'Night'],
   ['otUpto2', 'WD OT≤2'],
