@@ -653,6 +653,10 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
     }
   }
 
+  // If this shift is already fully reclassified by short-turnaround logic,
+  // do not stack broken-shift overtime on the same hours.
+  if ((ctx?.shortTurnaroundByShift?.[currentShift.shiftId] || 0) > 0) return;
+
   if (!previousShifts.length || !currentShift.segments.length) return;
 
   const spanStart = previousShifts[0].startUtc;
@@ -776,7 +780,10 @@ function isMinimumEngagementException(shiftType, hours) {
  * must be assessed independently.
  */
 function shouldLinkShiftsForMinimumEngagement(prev, cur, gapMs) {
-  return gapMs === 0;
+  if (gapMs !== 0) return false;
+  // Minimum engagement applies to personal care attendance only.
+  // Sleepovers (and other non-PC types) must not bridge PC segments into one engagement.
+  return prev?.shiftType === 'personal_care' && cur?.shiftType === 'personal_care';
 }
 
 /**
@@ -819,6 +826,32 @@ function resolveMinimumEngagementChains(shifts, ctx) {
     }
   }
   flushGroup(group);
+
+  // SCHADS 25.7(f): if a sleepover has immediately-adjacent pre/post personal care
+  // periods and at least one side is rostered/paid at >=4h, the other side does not
+  // require a 2h minimum-engagement review flag.
+  for (let i = 1; i < ordered.length - 1; i++) {
+    const mid = ordered[i];
+    if (mid.shiftType !== 'sleepover') continue;
+    const pre = ordered[i - 1];
+    const post = ordered[i + 1];
+    if (pre.shiftType !== 'personal_care' || post.shiftType !== 'personal_care') continue;
+
+    const preGap = new Date(mid.startDatetime) - new Date(pre.endDatetime);
+    const postGap = new Date(post.startDatetime) - new Date(mid.endDatetime);
+    const isImmediatePre = Math.abs(preGap) <= GAP_CONTIGUOUS_TOLERANCE_MS;
+    const isImmediatePost = Math.abs(postGap) <= GAP_CONTIGUOUS_TOLERANCE_MS;
+    if (!isImmediatePre || !isImmediatePost) continue;
+
+    const preHours = normalizeShiftHours(pre, new Date(pre.startDatetime), new Date(pre.endDatetime));
+    const postHours = normalizeShiftHours(post, new Date(post.startDatetime), new Date(post.endDatetime));
+    if (preHours >= 4 && postHours > 0 && postHours < 2) {
+      ctx.shiftMinimumEngagementException.set(String(post._id), false);
+    }
+    if (postHours >= 4 && preHours > 0 && preHours < 2) {
+      ctx.shiftMinimumEngagementException.set(String(pre._id), false);
+    }
+  }
 }
 
 function computeShiftDurationHours(shift) {
@@ -1249,7 +1282,10 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
   let gapMs = null;
   if (ctx.previousEndUtc !== null) {
     gapMs = startUtc - ctx.previousEndUtc;
-    isContinuous = gapMs === 0;
+    isContinuous =
+      gapMs === 0 &&
+      ctx.previousShiftType !== 'sleepover' &&
+      shift.shiftType !== 'sleepover';
   }
   const requiredBreakMs = ctx.previousTurnaroundBreakMs ?? MIN_BREAK_BETWEEN_SHIFTS_MS;
   const shortTurnaround =
@@ -1382,8 +1418,12 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
   ctx.processedShifts.push(processedShift);
   ctx.previousEndUtc = endUtc;
   ctx.previousShiftType = shift.shiftType;
+  const isSleepoverLinkedShift =
+    shift.shiftType === 'sleepover' ||
+    isPreSleepover ||
+    isPostSleepover;
   ctx.previousTurnaroundBreakMs =
-    (shift.shiftType === 'sleepover' || isPostSleepover)
+    isSleepoverLinkedShift
       ? MIN_BREAK_AFTER_SLEEPOVER_MS
       : MIN_BREAK_BETWEEN_SHIFTS_MS;
 }

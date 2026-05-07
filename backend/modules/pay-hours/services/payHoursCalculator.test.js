@@ -87,8 +87,12 @@ test('long-span broken shift: no double-count ordinary + 2× OT for last shift',
   const { data } = computePayHoursForStaff([s1, s2], new Set());
   const ordinary = r2(data.morningHours + data.afternoonHours + data.nightHours);
   const otAfter = data.weekdayOtAfter2 || 0;
+  const noBreakDoubleTime = data.shortTurnaroundHours || 0;
   assert.strictEqual(ordinary, 4, 'only first shift should count as ordinary hours');
-  assert.ok(otAfter >= 4, 'last broken shift should be 2× OT hours');
+  assert.ok(
+    otAfter >= 4 || noBreakDoubleTime >= 4,
+    'last shift should be fully reclassified to a 2x bucket without double-counting'
+  );
 });
 
 test('weekday chain: preserves separate time bands (not one lump at highest penalty)', () => {
@@ -293,10 +297,11 @@ describe('midnight crossings', () => {
     const end = brisbaneLocal('2026-04-25', 6, 0);
     const s = shift({ _id: 'mc03', start: start.toISOString(), end: end.toISOString(), hours: 8 });
     const { data } = computePayHoursForStaff([s], new Set(['2026-04-25']));
-    // New overflow logic: hours after 6PM on day1 → holiday (6PM-midnight = 2h holiday)
-    // Day2 (holiday) → holiday (midnight-6AM = 6h holiday)
-    assert.strictEqual(data.nightHours, 0); // No night hours (overflow to holiday)
-    assert.strictEqual(data.holidayHours, 8); // All 8h → holiday (overflow logic)
+    // SCHADS cross-midnight split:
+    // - pre-midnight weekday portion remains weekday-night
+    // - post-midnight portion on PH date is holiday
+    assert.strictEqual(data.nightHours, 2);
+    assert.strictEqual(data.holidayHours, 6);
   });
 
   test('public holiday → sunday: split into holiday + sunday hours', () => {
@@ -448,6 +453,46 @@ describe('sleepover', () => {
     assert.strictEqual(data.morningHours, 4);
   });
 
+  test('sleepover-linked post shift keeps 8h turnaround for the following shift', () => {
+    const pre = shiftBrisbane(
+      { _id: 'st04a', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-12',
+      18,
+      0,
+      22,
+      0
+    );
+    const sleepoverStart = brisbaneLocal('2026-06-12', 22, 0);
+    const sleepoverEnd = brisbaneLocal('2026-06-13', 6, 0);
+    const sleepover = shift({
+      _id: 'st04b',
+      shiftType: 'sleepover',
+      timezoneOffset: '+10:00',
+      start: sleepoverStart.toISOString(),
+      end: sleepoverEnd.toISOString(),
+      hours: 8,
+    });
+    const post = shiftBrisbane(
+      { _id: 'st04c', shiftType: 'personal_care', timezoneOffset: '+10:00', isBrokenShift: true },
+      '2026-06-13',
+      6,
+      0,
+      6,
+      30
+    );
+    const following = shiftBrisbane(
+      { _id: 'st04d', shiftType: 'personal_care', timezoneOffset: '+10:00', isBrokenShift: true },
+      '2026-06-13',
+      15,
+      0,
+      20,
+      0
+    );
+    const { data, shiftBreakdowns } = computePayHoursForStaff([pre, sleepover, post, following], new Set());
+    assert.strictEqual(shiftBreakdowns.get('st04d')?.shortTurnaroundHours || 0, 0);
+    assert.strictEqual(data.shortTurnaroundHours || 0, 0);
+  });
+
   test('short turnaround: shift after sleepover under 8h gap is penalized', () => {
     const sleepoverStart = brisbaneLocal('2026-06-01', 22, 0);
     const sleepoverEnd = brisbaneLocal('2026-06-02', 6, 0);
@@ -470,6 +515,48 @@ describe('sleepover', () => {
     const { data, shiftBreakdowns } = computePayHoursForStaff([sleepover, nextShift], new Set());
     assert.strictEqual(data.shortTurnaroundHours, 4);
     assert.strictEqual(shiftBreakdowns.get('st02b')?.shortTurnaroundHours || 0, 4);
+  });
+
+  test('sleepover must not bridge daily OT chains', () => {
+    const pcBefore = shiftBrisbane(
+      { _id: 'soot01', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-05',
+      18,
+      0,
+      22,
+      0
+    );
+    const sleepoverStart = brisbaneLocal('2026-06-05', 22, 0);
+    const sleepoverEnd = brisbaneLocal('2026-06-06', 6, 0);
+    const sleepover = shift({
+      _id: 'soot02',
+      shiftType: 'sleepover',
+      timezoneOffset: '+10:00',
+      start: sleepoverStart.toISOString(),
+      end: sleepoverEnd.toISOString(),
+      hours: 8,
+    });
+    const pcAfter = shiftBrisbane(
+      { _id: 'soot03', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-06',
+      6,
+      0,
+      12,
+      0
+    );
+    const { data } = computePayHoursForStaff([pcBefore, sleepover, pcAfter], new Set());
+    assert.strictEqual(data.weekdayOtUpto2 || 0, 0);
+    assert.strictEqual(data.weekdayOtAfter2 || 0, 0);
+    assert.strictEqual(data.shortTurnaroundHours || 0, 0);
+    const ordinaryTotal = r2(
+      (data.morningHours || 0) +
+      (data.afternoonHours || 0) +
+      (data.nightHours || 0) +
+      (data.saturdayHours || 0) +
+      (data.sundayHours || 0) +
+      (data.holidayHours || 0)
+    );
+    assert.strictEqual(ordinaryTotal, 10);
   });
 });
 
@@ -494,6 +581,29 @@ describe('short turnaround thresholds', () => {
     const { data, shiftBreakdowns } = computePayHoursForStaff([first, second], new Set());
     assert.strictEqual(data.shortTurnaroundHours, 4);
     assert.strictEqual(shiftBreakdowns.get('st03b')?.shortTurnaroundHours || 0, 4);
+  });
+
+  test('short turnaround hours are not double-bucketed into weekday OT', () => {
+    const first = shiftBrisbane(
+      { _id: 'st05a', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-14',
+      6,
+      0,
+      6,
+      30
+    );
+    const second = shiftBrisbane(
+      { _id: 'st05b', shiftType: 'personal_care', timezoneOffset: '+10:00', isBrokenShift: true },
+      '2026-06-14',
+      15,
+      0,
+      20,
+      0
+    );
+    const { data, shiftBreakdowns } = computePayHoursForStaff([first, second], new Set());
+    assert.strictEqual(shiftBreakdowns.get('st05b')?.shortTurnaroundHours || 0, 5);
+    assert.strictEqual(data.shortTurnaroundHours || 0, 5);
+    assert.strictEqual(data.weekdayOtAfter2 || 0, 0);
   });
 });
 
@@ -675,6 +785,69 @@ describe('hours normalization from timestamps', () => {
     const { shiftBreakdowns } = computePayHoursForStaff([a, b], new Set());
     assert.strictEqual(shiftBreakdowns.get('me02a')?.minimumEngagementException, true);
     assert.strictEqual(shiftBreakdowns.get('me02b')?.minimumEngagementException, false);
+  });
+
+  test('minimum engagement: sleepover cannot bridge two personal care segments', () => {
+    const pcBefore = shiftBrisbane(
+      { _id: 'me04a', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-07',
+      20,
+      0,
+      21,
+      0
+    );
+    const sleepoverStart = brisbaneLocal('2026-06-07', 21, 0);
+    const sleepoverEnd = brisbaneLocal('2026-06-08', 6, 0);
+    const sleepover = shift({
+      _id: 'me04b',
+      shiftType: 'sleepover',
+      timezoneOffset: '+10:00',
+      start: sleepoverStart.toISOString(),
+      end: sleepoverEnd.toISOString(),
+      hours: 9,
+    });
+    const pcAfter = shiftBrisbane(
+      { _id: 'me04c', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-08',
+      6,
+      0,
+      6,
+      30
+    );
+    const { shiftBreakdowns } = computePayHoursForStaff([pcBefore, sleepover, pcAfter], new Set());
+    assert.strictEqual(shiftBreakdowns.get('me04a')?.minimumEngagementException, true);
+    assert.strictEqual(shiftBreakdowns.get('me04c')?.minimumEngagementException, true);
+  });
+
+  test('minimum engagement: post-sleepover under 2h is allowed when pre-sleepover is >=4h', () => {
+    const pre = shiftBrisbane(
+      { _id: 'me05a', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-09',
+      18,
+      0,
+      22,
+      0
+    );
+    const sleepoverStart = brisbaneLocal('2026-06-09', 22, 0);
+    const sleepoverEnd = brisbaneLocal('2026-06-10', 6, 0);
+    const sleepover = shift({
+      _id: 'me05b',
+      shiftType: 'sleepover',
+      timezoneOffset: '+10:00',
+      start: sleepoverStart.toISOString(),
+      end: sleepoverEnd.toISOString(),
+      hours: 8,
+    });
+    const post = shiftBrisbane(
+      { _id: 'me05c', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-10',
+      6,
+      0,
+      6,
+      30
+    );
+    const { shiftBreakdowns } = computePayHoursForStaff([pre, sleepover, post], new Set());
+    assert.strictEqual(shiftBreakdowns.get('me05c')?.minimumEngagementException, false);
   });
 
   test('minimum engagement: unrelated PC same day (no link) keeps short shift flagged', () => {

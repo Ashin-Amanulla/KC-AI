@@ -36,15 +36,47 @@ export function casualEff(rate, mult) {
   return rate * (mult / 1.25 + 0.2);
 }
 
+function normalizeRateCard(rawRates) {
+  if (!rawRates) return rawRates;
+  const rates = { ...rawRates };
+  const base = Number(rates.daytime || 0);
+  if (base <= 0) return rates;
+
+  // Some imported sheets carry loading deltas (e.g. 3.30) instead of total hourly rates.
+  // If a non-base category is below daytime, treat it as a loading increment over base.
+  const additiveKeys = [
+    'afternoon',
+    'night',
+    'otUpto2',
+    'otAfter2',
+    'saturday',
+    'satOtAfter2',
+    'sunday',
+    'ph',
+    'nursingDaytime',
+    'nursingAfternoon',
+    'nursingNight',
+    'nursingSaturday',
+    'nursingSunday',
+    'nursingPh',
+  ];
+  for (const key of additiveKeys) {
+    const v = Number(rates[key] || 0);
+    if (v > 0 && v < base) rates[key] = r2(base + v);
+  }
+  return rates;
+}
+
 export function calcGrossFromRates(ph, rates) {
   if (!rates) return null;
-  const nursingDay = Math.max(rates.nursingDaytime || 0, rates.daytime || 0);
-  const nursingFactor = rates.daytime > 0 ? nursingDay / rates.daytime : 1;
-  const nursingAfternoon = rates.nursingAfternoon > 0 ? rates.nursingAfternoon : r2((rates.afternoon || 0) * nursingFactor);
-  const nursingNight = rates.nursingNight > 0 ? rates.nursingNight : r2((rates.night || 0) * nursingFactor);
-  const nursingSatRate = rates.nursingSaturday > 0 ? rates.nursingSaturday : r2((rates.saturday || 0) * nursingFactor);
-  const nursingSunRate = rates.nursingSunday > 0 ? rates.nursingSunday : r2((rates.sunday || 0) * nursingFactor);
-  const nursingPhRate = rates.nursingPh > 0 ? rates.nursingPh : r2((rates.ph || 0) * nursingFactor);
+  const normalizedRates = normalizeRateCard(rates);
+  const nursingDay = Math.max(normalizedRates.nursingDaytime || 0, normalizedRates.daytime || 0);
+  const nursingFactor = normalizedRates.daytime > 0 ? nursingDay / normalizedRates.daytime : 1;
+  const nursingAfternoon = normalizedRates.nursingAfternoon > 0 ? normalizedRates.nursingAfternoon : r2((normalizedRates.afternoon || 0) * nursingFactor);
+  const nursingNight = normalizedRates.nursingNight > 0 ? normalizedRates.nursingNight : r2((normalizedRates.night || 0) * nursingFactor);
+  const nursingSatRate = normalizedRates.nursingSaturday > 0 ? normalizedRates.nursingSaturday : r2((normalizedRates.saturday || 0) * nursingFactor);
+  const nursingSunRate = normalizedRates.nursingSunday > 0 ? normalizedRates.nursingSunday : r2((normalizedRates.sunday || 0) * nursingFactor);
+  const nursingPhRate = normalizedRates.nursingPh > 0 ? normalizedRates.nursingPh : r2((normalizedRates.ph || 0) * nursingFactor);
 
   const nursingAft = r2(ph.nursingAfternoonHours || 0);
   const nursingNgt = r2(ph.nursingNightHours || 0);
@@ -66,56 +98,58 @@ export function calcGrossFromRates(ph, rates) {
   const ot76SatT1 = r2(Math.min(ot76Sat, 2));
   const ot76SatT2 = r2(Math.max(0, ot76Sat - 2));
 
-  const mealAllow = r2((ph.mealAllowanceCount || 0) * rates.mealAllow);
-  const mileageAllow = r2((ph.totalKm || 0) * (rates.kmRate || VEHICLE_RATE));
+  const brokenShiftRate = normalizedRates.brokenShift > 0 ? normalizedRates.brokenShift : BROKEN_ALLOWANCE_1;
+  const mealAllow = r2((ph.mealAllowanceCount || 0) * normalizedRates.mealAllow);
+  const mileageAllow = r2((ph.totalKm || 0) * (normalizedRates.kmRate || VEHICLE_RATE));
 
   const pay = r2(
-    (ph.morningHours || 0) * rates.daytime +
-    aftBaseOnly * rates.afternoon +
+    (ph.morningHours || 0) * normalizedRates.daytime +
+    aftBaseOnly * normalizedRates.afternoon +
     nursingAft * nursingAfternoon +
-    ngtBaseOnly * rates.night +
+    ngtBaseOnly * normalizedRates.night +
     nursingNgt * nursingNight +
-    (ph.weekdayOtUpto2 || 0) * rates.otUpto2 +
-    (ph.weekdayOtAfter2 || 0) * rates.otAfter2 +
-    satBaseOnly * rates.saturday +
+    (ph.weekdayOtUpto2 || 0) * normalizedRates.otUpto2 +
+    (ph.weekdayOtAfter2 || 0) * normalizedRates.otAfter2 +
+    satBaseOnly * normalizedRates.saturday +
     nursingSat * nursingSatRate +
-    (ph.saturdayOtUpto2 || 0) * rates.otUpto2 +
-    (ph.saturdayOtAfter2 || 0) * rates.satOtAfter2 +
-    sunAll * rates.sunday +
+    (ph.saturdayOtUpto2 || 0) * normalizedRates.otUpto2 +
+    (ph.saturdayOtAfter2 || 0) * normalizedRates.satOtAfter2 +
+    sunAll * normalizedRates.sunday +
     nursingSun * nursingSunRate +
-    holAll * rates.ph +
+    holAll * normalizedRates.ph +
     nursingHol * nursingPhRate +
     (ph.nursingCareHours || 0) * nursingDay +
-    (ph.shortTurnaroundHours || 0) * rates.otAfter2 +
-    ot76WdT1 * rates.otUpto2 +
-    ot76WdT2 * rates.otAfter2 +
-    ot76SatT1 * rates.otUpto2 +
-    ot76SatT2 * rates.satOtAfter2 +
-    (ph.otAfter76Sunday || 0) * rates.sunday +
-    (ph.otAfter76Holiday || 0) * rates.ph +
-    (ph.brokenShiftCount || 0) * rates.brokenShift +
+    (ph.shortTurnaroundHours || 0) * normalizedRates.otAfter2 +
+    ot76WdT1 * normalizedRates.otUpto2 +
+    ot76WdT2 * normalizedRates.otAfter2 +
+    ot76SatT1 * normalizedRates.otUpto2 +
+    ot76SatT2 * normalizedRates.satOtAfter2 +
+    (ph.otAfter76Sunday || 0) * normalizedRates.sunday +
+    (ph.otAfter76Holiday || 0) * normalizedRates.ph +
+    (ph.brokenShiftCount || 0) * brokenShiftRate +
     (ph.brokenShift2BreakCount || 0) * BROKEN_ALLOWANCE_2 +
-    (ph.sleepoversCount || 0) * effectiveSleepoverRate(rates) +
+    (ph.sleepoversCount || 0) * effectiveSleepoverRate(normalizedRates) +
     mealAllow +
     mileageAllow +
-    r2(rates.allowance || 0)
+    r2(normalizedRates.allowance || 0)
   );
   return pay;
 }
 
 export function calcBreakdownFromRates(ph, rates) {
   if (!rates) return null;
-  const nursingDay = Math.max(rates.nursingDaytime || 0, rates.daytime || 0);
-  const nursingFactor = rates.daytime > 0 ? nursingDay / rates.daytime : 1;
-  const nursingAfternoon = rates.nursingAfternoon > 0 ? rates.nursingAfternoon : r2((rates.afternoon || 0) * nursingFactor);
-  const nursingNight = rates.nursingNight > 0 ? rates.nursingNight : r2((rates.night || 0) * nursingFactor);
+  const normalizedRates = normalizeRateCard(rates);
+  const nursingDay = Math.max(normalizedRates.nursingDaytime || 0, normalizedRates.daytime || 0);
+  const nursingFactor = normalizedRates.daytime > 0 ? nursingDay / normalizedRates.daytime : 1;
+  const nursingAfternoon = normalizedRates.nursingAfternoon > 0 ? normalizedRates.nursingAfternoon : r2((normalizedRates.afternoon || 0) * nursingFactor);
+  const nursingNight = normalizedRates.nursingNight > 0 ? normalizedRates.nursingNight : r2((normalizedRates.night || 0) * nursingFactor);
   const nursingAft = r2(ph.nursingAfternoonHours || 0);
   const nursingNgt = r2(ph.nursingNightHours || 0);
   const aftBaseOnly = r2(Math.max(0, (ph.afternoonHours || 0) - nursingAft));
   const ngtBaseOnly = r2(Math.max(0, (ph.nightHours || 0) - nursingNgt));
-  const nursingSatRate = rates.nursingSaturday > 0 ? rates.nursingSaturday : r2((rates.saturday || 0) * nursingFactor);
-  const nursingSunRate = rates.nursingSunday > 0 ? rates.nursingSunday : r2((rates.sunday || 0) * nursingFactor);
-  const nursingPhRate = rates.nursingPh > 0 ? rates.nursingPh : r2((rates.ph || 0) * nursingFactor);
+  const nursingSatRate = normalizedRates.nursingSaturday > 0 ? normalizedRates.nursingSaturday : r2((normalizedRates.saturday || 0) * nursingFactor);
+  const nursingSunRate = normalizedRates.nursingSunday > 0 ? normalizedRates.nursingSunday : r2((normalizedRates.sunday || 0) * nursingFactor);
+  const nursingPhRate = normalizedRates.nursingPh > 0 ? normalizedRates.nursingPh : r2((normalizedRates.ph || 0) * nursingFactor);
   const nursingSat = r2(ph.nursingSaturdayHours || 0);
   const nursingSun = r2(ph.nursingSundayHours || 0);
   const nursingHol = r2(ph.nursingHolidayHours || 0);
@@ -132,29 +166,29 @@ export function calcBreakdownFromRates(ph, rates) {
   const ot76SatT2 = r2(Math.max(0, ot76Sat - 2));
 
   const defs = [
-    ['Daytime (≤8pm)', ph.morningHours || 0, rates.daytime, 'ord'],
-    ['Evening (>8pm)', aftBaseOnly, rates.afternoon, 'penalty'],
+    ['Daytime (≤8pm)', ph.morningHours || 0, normalizedRates.daytime, 'ord'],
+    ['Evening (>8pm)', aftBaseOnly, normalizedRates.afternoon, 'penalty'],
     ['Nursing Evening', nursingAft, nursingAfternoon, 'penalty'],
-    ['Night', ngtBaseOnly, rates.night, 'penalty'],
+    ['Night', ngtBaseOnly, normalizedRates.night, 'penalty'],
     ['Nursing Night', nursingNgt, nursingNight, 'penalty'],
-    ['WD OT ≤2h', ph.weekdayOtUpto2 || 0, rates.otUpto2, 'ot'],
-    ['WD OT >2h', ph.weekdayOtAfter2 || 0, rates.otAfter2, 'ot'],
-    ['Saturday', satBaseOnly, rates.saturday, 'penalty'],
+    ['WD OT ≤2h', ph.weekdayOtUpto2 || 0, normalizedRates.otUpto2, 'ot'],
+    ['WD OT >2h', ph.weekdayOtAfter2 || 0, normalizedRates.otAfter2, 'ot'],
+    ['Saturday', satBaseOnly, normalizedRates.saturday, 'penalty'],
     ['Nursing Saturday', nursingSat, nursingSatRate, 'penalty'],
-    ['Sat OT ≤2h', ph.saturdayOtUpto2 || 0, rates.otUpto2, 'ot'],
-    ['Sat OT >2h', ph.saturdayOtAfter2 || 0, rates.satOtAfter2, 'ot'],
-    ['Sunday', sunAll, rates.sunday, 'penalty'],
+    ['Sat OT ≤2h', ph.saturdayOtUpto2 || 0, normalizedRates.otUpto2, 'ot'],
+    ['Sat OT >2h', ph.saturdayOtAfter2 || 0, normalizedRates.satOtAfter2, 'ot'],
+    ['Sunday', sunAll, normalizedRates.sunday, 'penalty'],
     ['Nursing Sunday', nursingSun, nursingSunRate, 'penalty'],
-    ['Public Holiday', holAll, rates.ph, 'penalty'],
+    ['Public Holiday', holAll, normalizedRates.ph, 'penalty'],
     ['Nursing Holiday', nursingHol, nursingPhRate, 'penalty'],
     ['Nursing Care', ph.nursingCareHours || 0, nursingDay, 'ord'],
-    ['Double Time (No Break)', ph.shortTurnaroundHours || 0, rates.otAfter2, 'penalty'],
-    ['OT >76h WD ≤2h', ot76WdT1, rates.otUpto2, 'ot76'],
-    ['OT >76h WD >2h', ot76WdT2, rates.otAfter2, 'ot76'],
-    ['OT >76h Sat ≤2h', ot76SatT1, rates.otUpto2, 'ot76'],
-    ['OT >76h Sat >2h', ot76SatT2, rates.satOtAfter2, 'ot76'],
-    ['OT >76h Sun', ph.otAfter76Sunday || 0, rates.sunday, 'ot76'],
-    ['OT >76h PH', ph.otAfter76Holiday || 0, rates.ph, 'ot76'],
+    ['Double Time (No Break)', ph.shortTurnaroundHours || 0, normalizedRates.otAfter2, 'penalty'],
+    ['OT >76h WD ≤2h', ot76WdT1, normalizedRates.otUpto2, 'ot76'],
+    ['OT >76h WD >2h', ot76WdT2, normalizedRates.otAfter2, 'ot76'],
+    ['OT >76h Sat ≤2h', ot76SatT1, normalizedRates.otUpto2, 'ot76'],
+    ['OT >76h Sat >2h', ot76SatT2, normalizedRates.satOtAfter2, 'ot76'],
+    ['OT >76h Sun', ph.otAfter76Sunday || 0, normalizedRates.sunday, 'ot76'],
+    ['OT >76h PH', ph.otAfter76Holiday || 0, normalizedRates.ph, 'ot76'],
   ];
 
   const lines = [];
@@ -172,7 +206,7 @@ export function calcBreakdownFromRates(ph, rates) {
       basePay += pay;
       ordHours += hours;
     } else if (cat === 'penalty') {
-      const penaltyBaseRate = label.startsWith('Nursing') ? nursingDay : rates.daytime;
+      const penaltyBaseRate = label.startsWith('Nursing') ? nursingDay : normalizedRates.daytime;
       basePay += r2(hours * penaltyBaseRate);
       penaltyExtra += r2(pay - hours * penaltyBaseRate);
       ordHours += hours;
@@ -182,14 +216,15 @@ export function calcBreakdownFromRates(ph, rates) {
     }
   }
 
-  const mealAllow = r2((ph.mealAllowanceCount || 0) * rates.mealAllow);
-  const broken1Allow = r2((ph.brokenShiftCount || 0) * rates.brokenShift);
+  const brokenShiftRate = normalizedRates.brokenShift > 0 ? normalizedRates.brokenShift : BROKEN_ALLOWANCE_1;
+  const mealAllow = r2((ph.mealAllowanceCount || 0) * normalizedRates.mealAllow);
+  const broken1Allow = r2((ph.brokenShiftCount || 0) * brokenShiftRate);
   const broken2Allow = r2((ph.brokenShift2BreakCount || 0) * BROKEN_ALLOWANCE_2);
   const brokenAllow = r2(broken1Allow + broken2Allow);
-  const sleepRate = effectiveSleepoverRate(rates);
+  const sleepRate = effectiveSleepoverRate(normalizedRates);
   const sleepAllow = r2((ph.sleepoversCount || 0) * sleepRate);
-  const mileageAllow = r2((ph.totalKm || 0) * (rates.kmRate || VEHICLE_RATE));
-  const otherAllow = r2(rates.allowance || 0);
+  const mileageAllow = r2((ph.totalKm || 0) * (normalizedRates.kmRate || VEHICLE_RATE));
+  const otherAllow = r2(normalizedRates.allowance || 0);
   const allow = {
     brokenAllow,
     broken1Allow,
@@ -215,7 +250,7 @@ export function calcBreakdownFromRates(ph, rates) {
     otHours: r2(otHours),
     gross,
     isCasual: true,
-    base: rates.daytime,
+    base: normalizedRates.daytime,
     load: null,
     fromRates: true,
   };

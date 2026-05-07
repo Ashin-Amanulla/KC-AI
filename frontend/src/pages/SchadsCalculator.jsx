@@ -74,12 +74,12 @@ function schadsFlatRatesRow(displayName, baseHourly) {
   return {
     name: displayName.trim(),
     daytime: v,
-    nursingDaytime: v,
-    nursingAfternoon: r2(v * 1.1),
-    nursingNight: r2(v * 1.12),
-    nursingSaturday: r2(v * 1.4),
-    nursingSunday: r2(v * 1.8),
-    nursingPh: r2(v * 2.2),
+    nursingDaytime: 0,
+    nursingAfternoon: 0,
+    nursingNight: 0,
+    nursingSaturday: 0,
+    nursingSunday: 0,
+    nursingPh: 0,
     afternoon: r2(v * 1.1),
     night: r2(v * 1.12),
     otUpto2: r2(v * 1.4),
@@ -96,16 +96,12 @@ function schadsFlatRatesRow(displayName, baseHourly) {
   };
 }
 
-function isRateMissing(v) {
-  return v === null || v === undefined || v === '' || Number(v) <= 0;
-}
-
-function autofillRatesFromBaseIfMissing(row, baseVal) {
+function autofillNonNursingRatesFromBase(row, baseVal) {
   const defaults = schadsFlatRatesRow(row?.name || '', baseVal);
-  const next = { ...(row || {}), daytime: defaults.daytime };
+  const next = { ...(row || {}) };
   for (const [field] of STAFF_RATES_TABLE_FIELDS) {
-    if (field === 'daytime') continue;
-    if (isRateMissing(next[field])) next[field] = defaults[field];
+    if (field.startsWith('nursing')) continue;
+    next[field] = defaults[field];
   }
   return next;
 }
@@ -303,7 +299,11 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
             {(mrow.brokenShiftCount || 0) > 0 && (
               <tr className="border-t border-border/30 bg-amber-50/30">
                 <td className="px-3 py-2 text-amber-700">
-                  Broken shift — 1 break ({mrow.brokenShiftCount} × ${staffRates ? staffRates.brokenShift.toFixed(2) : BROKEN_ALLOWANCE_1})
+                  Broken shift — 1 break ({mrow.brokenShiftCount} × ${
+                    (staffRates && Number(staffRates.brokenShift) > 0)
+                      ? Number(staffRates.brokenShift).toFixed(2)
+                      : BROKEN_ALLOWANCE_1
+                  })
                   <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.brokenShiftCount}</td>
@@ -784,14 +784,13 @@ const CellContextMenu = ({ menu, overrides, onSave, onClear, onClose }) => {
         >
           Save
         </button>
-        {isOverridden && (
-          <button
-            onClick={() => { onClear(menu.staffName, menu.field); onClose(); }}
-            className="flex-1 h-7 rounded border border-input text-xs text-muted-foreground hover:bg-muted"
-          >
-            Clear override
-          </button>
-        )}
+        <button
+          onClick={() => { onClear(menu.staffName, menu.field); onClose(); }}
+          disabled={!isOverridden}
+          className="flex-1 h-7 rounded border border-input text-xs text-muted-foreground enabled:hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Clear
+        </button>
         <button
           onClick={onClose}
           className="h-7 px-2 rounded border border-input text-xs text-muted-foreground hover:bg-muted"
@@ -829,7 +828,7 @@ const StaffRatesEditModal = ({ edit, displayNameForRateKey, onSave, onClose }) =
   const patch = (field, raw) => {
     const num = r2(parseFloat(String(raw).replace(',', '')) || 0);
     setDraft((d) => {
-      if (field === 'daytime') return autofillRatesFromBaseIfMissing(d, num);
+      if (field === 'daytime') return autofillNonNursingRatesFromBase(d, num);
       return { ...d, [field]: num };
     });
   };
@@ -838,6 +837,13 @@ const StaffRatesEditModal = ({ edit, displayNameForRateKey, onSave, onClose }) =
     const parsedAliases = aliasesStr.split(',').map(a => a.trim()).filter(Boolean);
     onSave(edit.key, draft, parsedAliases);
     onClose();
+  };
+  const handleClearAll = () => {
+    setDraft((prev) => {
+      const next = { ...prev };
+      for (const [field] of STAFF_RATES_TABLE_FIELDS) next[field] = 0;
+      return next;
+    });
   };
 
   return (
@@ -885,6 +891,7 @@ const StaffRatesEditModal = ({ edit, displayNameForRateKey, onSave, onClose }) =
           </div>
           <div className="flex gap-2 pt-2">
             <Button type="button" onClick={handleSaveAll}>Save All</Button>
+            <Button type="button" variant="outline" onClick={handleClearAll}>Clear</Button>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
           </div>
         </CardContent>
@@ -987,6 +994,23 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     () => staffRows.filter((r) => !hiddenNormNames.includes(normName(r.staffName))),
     [staffRows, hiddenNormNames, normName]
   );
+  const payHoursRowsSignature = useMemo(
+    () => apiRows
+      .map((r) => ([
+        String(r._id || ''),
+        String(r.computedAt || ''),
+        Number(r.morningHours || 0),
+        Number(r.afternoonHours || 0),
+        Number(r.nightHours || 0),
+        Number(r.weekdayOtUpto2 || 0),
+        Number(r.weekdayOtAfter2 || 0),
+        Number(r.shortTurnaroundHours || 0),
+        Number(r.brokenShiftCount || 0),
+      ].join(':')))
+      .sort()
+      .join('|'),
+    [apiRows]
+  );
 
   const storageKey = useMemo(() => schadsStorageKey(locationIdProp), [locationIdProp]);
 
@@ -1001,6 +1025,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   const [staffRatesMap, setStaffRatesMap] = useState(null); // Map: normName → rates object (XLSX/session overrides; wins over DB for same key)
   const [ratesFileName, setRatesFileName] = useState(null);
   const [schadsHydrated, setSchadsHydrated] = useState(false);
+  const [overrideResetNotice, setOverrideResetNotice] = useState('');
+  const lastAppliedRowsSigRef = useRef(null);
 
   const { data: staffRatesApiData } = useStaffRates(locationIdProp || undefined);
   const { mutate: upsertStaffRate } = useUpsertStaffRate();
@@ -1187,11 +1213,24 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           if (s.ratesFileName) onStaffRatesMapChange?.(m, s.ratesFileName);
         }
         if (s.ratesFileName) setRatesFileName(s.ratesFileName);
-        if (s.overrides && typeof s.overrides === 'object') setOverrides(s.overrides);
+        if (s.overrides && typeof s.overrides === 'object') {
+          // Prevent stale cached overrides from being applied to newly computed pay-hours rows.
+          if (!s.payHoursRowsSignature || s.payHoursRowsSignature === payHoursRowsSignature) {
+            setOverrides(s.overrides);
+          } else {
+            setOverrides({});
+            const count = Object.keys(s.overrides).length;
+            if (count > 0) {
+              setOverrideResetNotice(
+                `Shift results changed since last session. Cleared ${count} saved manual overrides to prevent stale payroll values.`
+              );
+            }
+          }
+        }
       }
     } catch (_) { /* ignore */ }
     setSchadsHydrated(true);
-  }, [storageKey, onStaffRatesMapChange]);
+  }, [storageKey, onStaffRatesMapChange, payHoursRowsSignature]);
 
   useEffect(() => {
     if (!schadsHydrated) return;
@@ -1211,10 +1250,32 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           staffRatesEntries,
           ratesFileName,
           overrides,
+          payHoursRowsSignature,
         })
       );
     } catch (_) { /* ignore */ }
-  }, [schadsHydrated, storageKey, baseRates, empTypes, defaultRate, defaultEmpType, manualStaffNames, hiddenNormNames, staffRatesMap, ratesFileName, overrides]);
+  }, [schadsHydrated, storageKey, baseRates, empTypes, defaultRate, defaultEmpType, manualStaffNames, hiddenNormNames, staffRatesMap, ratesFileName, overrides, payHoursRowsSignature]);
+
+  // Hard-stop stale manual overrides whenever upstream pay-hours payload changes.
+  useEffect(() => {
+    if (!schadsHydrated) return;
+    if (!payHoursRowsSignature) return;
+    if (lastAppliedRowsSigRef.current === null) {
+      lastAppliedRowsSigRef.current = payHoursRowsSignature;
+      return;
+    }
+    if (lastAppliedRowsSigRef.current === payHoursRowsSignature) return;
+    lastAppliedRowsSigRef.current = payHoursRowsSignature;
+    setOverrides((prev) => {
+      const count = Object.keys(prev || {}).length;
+      if (count > 0) {
+        setOverrideResetNotice(
+          `Roster data changed. Cleared ${count} manual overrides to prevent stale OT/allowance carryover.`
+        );
+      }
+      return {};
+    });
+  }, [schadsHydrated, payHoursRowsSignature]);
 
   const ingestRatesWorkbook = useCallback((wb, fileLabel) => {
     const ws = wb.Sheets[wb.SheetNames[0]];
@@ -2151,17 +2212,30 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
 
           {/* Override hint */}
           {displayRows.length > 0 && (
-            <p className="text-[11px] text-muted-foreground/70 text-center -mt-2">
-              Right-click any hour cell or the <strong>Add’l $</strong> allowance column to override. Overridden cells are highlighted in blue and recalculate gross pay instantly.
-              {Object.keys(overrides).length > 0 && (
-                <button
-                  onClick={() => setOverrides({})}
-                  className="ml-2 underline text-blue-600 hover:text-blue-800"
-                >
-                  Clear all {Object.keys(overrides).length} overrides
-                </button>
+            <div className="-mt-2 space-y-2">
+              {overrideResetNotice && (
+                <div className="mx-auto max-w-3xl rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  <span>{overrideResetNotice}</span>
+                  <button
+                    onClick={() => setOverrideResetNotice('')}
+                    className="ml-2 underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
               )}
-            </p>
+              <p className="text-[11px] text-muted-foreground/70 text-center">
+                Right-click any hour cell or the <strong>Add’l $</strong> allowance column to override. Overridden cells are highlighted in blue and recalculate gross pay instantly.
+                {Object.keys(overrides).length > 0 && (
+                  <button
+                    onClick={() => setOverrides({})}
+                    className="ml-2 underline text-blue-600 hover:text-blue-800"
+                  >
+                    Clear all {Object.keys(overrides).length} overrides
+                  </button>
+                )}
+              </p>
+            </div>
           )}
 
           {/* Legend & Disclaimer */}
