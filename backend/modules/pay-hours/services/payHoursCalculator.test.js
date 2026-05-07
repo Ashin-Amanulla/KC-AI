@@ -712,6 +712,30 @@ describe('daily ordinary cap (10h) & OT tiers', () => {
     assert.strictEqual(data.holidayOtUpto2, 2);
     assert.strictEqual(data.holidayOtAfter2, 1);
   });
+
+  test('continuous overnight chain locks first 10h to night before OT extraction', () => {
+    const s1 = shift({
+      _id: 'ot07a',
+      start: brisbaneLocal('2026-04-28', 22, 0).toISOString(),
+      end: brisbaneLocal('2026-04-29', 6, 0).toISOString(),
+      hours: 8,
+      shiftType: 'personal_care',
+      timezoneOffset: '+10:00',
+    });
+    const s2 = shift({
+      _id: 'ot07b',
+      start: brisbaneLocal('2026-04-29', 6, 0).toISOString(),
+      end: brisbaneLocal('2026-04-29', 12, 30).toISOString(),
+      hours: 6.5,
+      shiftType: 'personal_care',
+      timezoneOffset: '+10:00',
+    });
+    const { data } = computePayHoursForStaff([s1, s2], new Set());
+    assert.strictEqual(data.nightHours, 10);
+    assert.strictEqual(data.morningHours, 0);
+    assert.strictEqual(data.weekdayOtUpto2, 2);
+    assert.strictEqual(data.weekdayOtAfter2, 2.5);
+  });
 });
 
 

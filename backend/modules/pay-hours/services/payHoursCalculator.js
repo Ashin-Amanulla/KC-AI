@@ -1033,6 +1033,7 @@ function processSingleChain(chain, data, ctx) {
   const hasBroken = uniqueShiftIds.some(sid => ctx.shiftIsBroken.get(sid) === true);
 
   let perShiftOt = {};
+  let calcEntries = [...entries];
 
   if (!hasBroken) {
     const activeSegs = chain.filter(
@@ -1047,9 +1048,38 @@ function processSingleChain(chain, data, ctx) {
     const allWeekday =
       activeSegs.length > 0 && activeSegs.every((ps) => ps.segment.dayType === 'weekday');
     const threshold = allWeekday ? MAX_REGULAR_HOURS_WEEKDAY : MAX_REGULAR_HOURS;
+
+    // SCHADS overnight continuity: when a continuous weekday chain originates as night,
+    // keep the first ordinary-cap window on night loading before extracting overtime.
+    if (
+      allWeekday &&
+      calcEntries.length > 0 &&
+      calcEntries[0].fieldName === 'nightHours' &&
+      threshold > 0
+    ) {
+      const locked = [];
+      let ordinaryRemaining = threshold;
+      for (const entry of calcEntries) {
+        if (ordinaryRemaining <= 0) {
+          locked.push(entry);
+          continue;
+        }
+        const ordinaryPart = r2(Math.min(entry.hours, ordinaryRemaining));
+        const remainderPart = r2(Math.max(0, entry.hours - ordinaryPart));
+        if (ordinaryPart > 0) {
+          locked.push({ ...entry, hours: ordinaryPart, fieldName: 'nightHours' });
+          ordinaryRemaining = r2(Math.max(0, ordinaryRemaining - ordinaryPart));
+        }
+        if (remainderPart > 0) {
+          locked.push({ ...entry, hours: remainderPart });
+        }
+      }
+      calcEntries = locked;
+    }
+
     if (combinedActive > threshold) {
       const otTotal = r2(combinedActive - threshold);
-      const { otByDayType, otByShiftId } = deductOtFromEnd(entries, otTotal);
+      const { otByDayType, otByShiftId } = deductOtFromEnd(calcEntries, otTotal);
       applyOtByDayType(otByDayType, data);
       perShiftOt = otByShiftId;
       // Meal allowance: 1 per shift where OT > 1h; additional 1 where OT > 4h
@@ -1058,7 +1088,7 @@ function processSingleChain(chain, data, ctx) {
     }
   }
 
-  for (const entry of entries) {
+  for (const entry of calcEntries) {
     if (entry.hours > 0) {
       data[entry.fieldName] = r2((data[entry.fieldName] || 0) + entry.hours);
       if (entry.isNursing && entry.dayType === 'saturday') {
@@ -1071,7 +1101,7 @@ function processSingleChain(chain, data, ctx) {
     }
   }
 
-  return { entries: entries.filter(e => e.hours > 0), perShiftOt };
+  return { entries: calcEntries.filter(e => e.hours > 0), perShiftOt };
 }
 
 function processContinuousChains(pendingSegments, data, ctx) {
