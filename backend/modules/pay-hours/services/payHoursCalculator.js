@@ -202,15 +202,19 @@ function getTimeCategory(startUtc, endUtc, offsetStr) {
 
   const startDate = localDateStr(startUtc, offsetStr);
   const endDate = localDateStr(endUtc, offsetStr);
+  const crossesMidnight = startDate !== endDate;
+  const endsExactlyAtMidnight = endHour === 0 && endMin === 0;
 
-  // Night: starts before 06:00 OR crosses midnight
+  // Night: starts before 06:00 OR crosses midnight past midnight.
+  // A shift that ends exactly at 00:00 is still treated as "at/before midnight".
   if (startFloat < MORNING_START) return 'night';
-  if (startDate !== endDate) return 'night';
+  if (crossesMidnight && !endsExactlyAtMidnight) return 'night';
 
   // Same-day weekday shifts:
   // - Afternoon if finish after 20:00
   // - Otherwise Daytime (ordinary)
-  if (endFloat > AFTERNOON_START) return 'afternoon';
+  const effectiveEndFloat = endsExactlyAtMidnight ? 24 : endFloat;
+  if (effectiveEndFloat > AFTERNOON_START) return 'afternoon';
   return 'morning';
 }
 

@@ -228,6 +228,16 @@ describe('weekday time bands (6am / 8pm local)', () => {
     assert.strictEqual(data.morningHours, 0);
     assert.strictEqual(data.nightHours, 0);
   });
+
+  test('3:30pm–12:00am: exact midnight finish remains evening', () => {
+    const start = brisbaneLocal('2026-04-07', 15, 30);
+    const end = brisbaneLocal('2026-04-08', 0, 0);
+    const s = shift({ _id: 'tb05', start: start.toISOString(), end: end.toISOString(), hours: 8.5 });
+    const { data } = computePayHoursForStaff([s], new Set());
+    assert.strictEqual(data.afternoonHours, 8.5);
+    assert.strictEqual(data.nightHours, 0);
+    assert.strictEqual(data.morningHours, 0);
+  });
 });
 
 describe('day types (Sat / Sun / public holiday)', () => {
