@@ -767,6 +767,58 @@ function isMinimumEngagementException(shiftType, hours) {
   return shiftType === 'personal_care' && hours > 0 && hours < 2;
 }
 
+/**
+ * Consecutive shifts that count as one engagement for SCHADS minimum-hours review:
+ * - Back-to-back (zero gap) only.
+ * Any unpaid break starts a new engagement and minimum engagement
+ * must be assessed independently.
+ */
+function shouldLinkShiftsForMinimumEngagement(prev, cur, gapMs) {
+  return gapMs === 0;
+}
+
+/**
+ * Clear per-shift minimum-engagement flags when personal care time in a linked chain sums to ≥2h.
+ */
+function resolveMinimumEngagementChains(shifts, ctx) {
+  if (!shifts.length) return;
+  const ordered = [...shifts].sort(
+    (a, b) => new Date(a.startDatetime) - new Date(b.startDatetime)
+  );
+
+  const flushGroup = (group) => {
+    let pcSum = 0;
+    for (const sh of group) {
+      if (sh.shiftType !== 'personal_care') continue;
+      const su = new Date(sh.startDatetime);
+      const eu = new Date(sh.endDatetime);
+      pcSum = r2(pcSum + normalizeShiftHours(sh, su, eu));
+    }
+    if (pcSum < 2) return;
+    for (const sh of group) {
+      if (sh.shiftType === 'personal_care') {
+        ctx.shiftMinimumEngagementException.set(String(sh._id), false);
+      }
+    }
+  };
+
+  let group = [ordered[0]];
+  for (let i = 1; i < ordered.length; i++) {
+    const prev = ordered[i - 1];
+    const cur = ordered[i];
+    const pe = new Date(prev.endDatetime);
+    const cs = new Date(cur.startDatetime);
+    const gapMs = cs - pe;
+    if (shouldLinkShiftsForMinimumEngagement(prev, cur, gapMs)) {
+      group.push(cur);
+    } else {
+      flushGroup(group);
+      group = [cur];
+    }
+  }
+  flushGroup(group);
+}
+
 function computeShiftDurationHours(shift) {
   if (!shift?.startDatetime || !shift?.endDatetime) return r2(Number(shift?.hours) || 0);
   const start = new Date(shift.startDatetime);
@@ -1366,6 +1418,8 @@ export function computePayHoursForStaff(shifts, holidaySet) {
   for (let i = 0; i < shifts.length; i++) {
     processShiftForPayHours(shifts[i], ctx, sleepovernAttachedNight[i], isPreSleepover[i], isPostSleepover[i]);
   }
+
+  resolveMinimumEngagementChains(shifts, ctx);
 
   // Apply continuous chain logic first (OT deduction mutates entries)
   const { hourLedger, perShiftOt } = processContinuousChains(ctx.pendingSegments, data, ctx);

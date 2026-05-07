@@ -30,6 +30,12 @@ function shift(overrides) {
   };
 }
 
+function shiftBrisbaneTwoParts(overrides1, overrides2, ymd, h1, m1, h2, m2, h3, m3, h4, m4) {
+  const s1 = shiftBrisbane(overrides1, ymd, h1, m1, h2, m2);
+  const s2 = shiftBrisbane(overrides2, ymd, h3, m3, h4, m4);
+  return [s1, s2];
+}
+
 function shiftBrisbane(overrides, ymd, h1, m1, h2, m2) {
   const start = brisbaneLocal(ymd, h1, m1);
   const end = brisbaneLocal(ymd, h2, m2);
@@ -558,6 +564,59 @@ describe('hours normalization from timestamps', () => {
     const { data, shiftBreakdowns } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.morningHours, 1);
     assert.strictEqual(shiftBreakdowns.get('hn00')?.minimumEngagementException, true);
+  });
+
+  test('minimum engagement: two 1h PC back-to-back clear exception (linked chain)', () => {
+    const [a, b] = shiftBrisbaneTwoParts(
+      { _id: 'me01a' },
+      { _id: 'me01b' },
+      '2026-04-07',
+      9,
+      0,
+      10,
+      0,
+      10,
+      0,
+      11,
+      0
+    );
+    const { shiftBreakdowns } = computePayHoursForStaff([a, b], new Set());
+    assert.strictEqual(shiftBreakdowns.get('me01a')?.minimumEngagementException, false);
+    assert.strictEqual(shiftBreakdowns.get('me01b')?.minimumEngagementException, false);
+  });
+
+  test('minimum engagement: 0.5h + 7.5h PC broken gap keeps first segment flagged', () => {
+    const [a, b] = shiftBrisbaneTwoParts(
+      { _id: 'me02a', clientName: 'Client A' },
+      { _id: 'me02b', clientName: 'Client A', isBrokenShift: true },
+      '2026-04-07',
+      6,
+      0,
+      6,
+      30,
+      7,
+      0,
+      14,
+      30
+    );
+    const { shiftBreakdowns } = computePayHoursForStaff([a, b], new Set());
+    assert.strictEqual(shiftBreakdowns.get('me02a')?.minimumEngagementException, true);
+    assert.strictEqual(shiftBreakdowns.get('me02b')?.minimumEngagementException, false);
+  });
+
+  test('minimum engagement: unrelated PC same day (no link) keeps short shift flagged', () => {
+    const a = shiftBrisbane({ _id: 'me03a', clientName: 'Client A' }, '2026-04-07', 9, 0, 10, 0);
+    const b = shiftBrisbane(
+      { _id: 'me03b', clientName: 'Client B', isBrokenShift: true },
+      '2026-04-07',
+      14,
+      0,
+      15,
+      0
+    );
+    const { shiftBreakdowns } = computePayHoursForStaff([a, b], new Set());
+    assert.strictEqual(shiftBreakdowns.get('me03a')?.minimumEngagementException, true);
+    assert.strictEqual(shiftBreakdowns.get('me03b')?.minimumEngagementException, true);
   });
 
   test('weekday overnight with negative imported hours uses derived duration', () => {
