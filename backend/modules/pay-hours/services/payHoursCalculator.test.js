@@ -422,6 +422,79 @@ describe('sleepover', () => {
     assert.strictEqual(data.morningHours, 0.66);
     assert.strictEqual(data.afternoonHours, 4.01);
   });
+
+  test('short turnaround: shift after sleepover uses 8h minimum break', () => {
+    const sleepoverStart = brisbaneLocal('2026-06-01', 22, 0);
+    const sleepoverEnd = brisbaneLocal('2026-06-02', 6, 0);
+    const sleepover = shift({
+      _id: 'st01a',
+      shiftType: 'sleepover',
+      timezoneOffset: '+10:00',
+      start: sleepoverStart.toISOString(),
+      end: sleepoverEnd.toISOString(),
+      hours: 8,
+    });
+    const nextShift = shiftBrisbane(
+      { _id: 'st01b', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-02',
+      14,
+      0,
+      18,
+      0
+    );
+    const { data, shiftBreakdowns } = computePayHoursForStaff([sleepover, nextShift], new Set());
+    assert.strictEqual(data.shortTurnaroundHours, 0);
+    assert.strictEqual(shiftBreakdowns.get('st01b')?.shortTurnaroundHours || 0, 0);
+    assert.strictEqual(data.morningHours, 4);
+  });
+
+  test('short turnaround: shift after sleepover under 8h gap is penalized', () => {
+    const sleepoverStart = brisbaneLocal('2026-06-01', 22, 0);
+    const sleepoverEnd = brisbaneLocal('2026-06-02', 6, 0);
+    const sleepover = shift({
+      _id: 'st02a',
+      shiftType: 'sleepover',
+      timezoneOffset: '+10:00',
+      start: sleepoverStart.toISOString(),
+      end: sleepoverEnd.toISOString(),
+      hours: 8,
+    });
+    const nextShift = shiftBrisbane(
+      { _id: 'st02b', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-02',
+      13,
+      0,
+      17,
+      0
+    );
+    const { data, shiftBreakdowns } = computePayHoursForStaff([sleepover, nextShift], new Set());
+    assert.strictEqual(data.shortTurnaroundHours, 4);
+    assert.strictEqual(shiftBreakdowns.get('st02b')?.shortTurnaroundHours || 0, 4);
+  });
+});
+
+describe('short turnaround thresholds', () => {
+  test('non-sleepover previous shift still requires 10h break', () => {
+    const first = shiftBrisbane(
+      { _id: 'st03a', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-03',
+      6,
+      0,
+      10,
+      0
+    );
+    const second = shiftBrisbane(
+      { _id: 'st03b', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-03',
+      19,
+      0,
+      23,
+      0
+    );
+    const { data, shiftBreakdowns } = computePayHoursForStaff([first, second], new Set());
+    assert.strictEqual(data.shortTurnaroundHours, 4);
+    assert.strictEqual(shiftBreakdowns.get('st03b')?.shortTurnaroundHours || 0, 4);
+  });
 });
 
 describe('nursing_support', () => {

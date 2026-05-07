@@ -22,8 +22,10 @@ const MAX_REGULAR_HOURS_WEEKDAY = 10;
 const SLEEPOVER_DEDUCTION = 8;
 /** Max ms gap after a sleepover that still "attaches" the next PC/nursing shift (same as shift CSV broken rule). */
 const SLEEPOVER_FOLLOWON_GAP_MS = 8 * 60 * 60 * 1000;
-/** Minimum unpaid break between consecutive shifts before short-turnaround penalty applies. */
+/** Standard minimum unpaid break between consecutive shifts before short-turnaround penalty applies. */
 const MIN_BREAK_BETWEEN_SHIFTS_MS = 10 * 60 * 60 * 1000;
+/** SCHADS 2026 exception: shifts that are sleepover-linked only require an 8h following break. */
+const MIN_BREAK_AFTER_SLEEPOVER_MS = 8 * 60 * 60 * 1000;
 const OT_TIER_1_MAX = 2;
 const TOTAL_HOURS_CAP = 76;
 const BROKEN_SHIFT_SHORT_SPAN = 12;
@@ -1249,10 +1251,11 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
     gapMs = startUtc - ctx.previousEndUtc;
     isContinuous = gapMs === 0;
   }
+  const requiredBreakMs = ctx.previousTurnaroundBreakMs ?? MIN_BREAK_BETWEEN_SHIFTS_MS;
   const shortTurnaround =
     gapMs !== null &&
     gapMs > 0 &&
-    gapMs < MIN_BREAK_BETWEEN_SHIFTS_MS;
+    gapMs < requiredBreakMs;
 
   const sid = String(shift._id);
   const activeHours = calculateActiveHours(normalizedHours, shift.shiftType);
@@ -1379,6 +1382,10 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
   ctx.processedShifts.push(processedShift);
   ctx.previousEndUtc = endUtc;
   ctx.previousShiftType = shift.shiftType;
+  ctx.previousTurnaroundBreakMs =
+    (shift.shiftType === 'sleepover' || isPostSleepover)
+      ? MIN_BREAK_AFTER_SLEEPOVER_MS
+      : MIN_BREAK_BETWEEN_SHIFTS_MS;
 }
 
 // ─── MAIN ENTRY POINT ─────────────────────────────────────────────────────────
@@ -1408,6 +1415,7 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     processedShifts: [],
     previousEndUtc: null,
     previousShiftType: null,
+    previousTurnaroundBreakMs: MIN_BREAK_BETWEEN_SHIFTS_MS,
     shiftActiveHours: new Map(),
     shiftIsBroken: new Map(),
     shiftMinimumEngagementException: new Map(),
