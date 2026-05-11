@@ -14,8 +14,8 @@ export const NAV_ITEMS = [
   { path: '/staff', label: 'Staff', icon: 'Users', roles: [ROLES.SUPER_ADMIN, ROLES.VIEWER] },
   { path: '/clients', label: 'Clients', icon: 'UserCheck', roles: [ROLES.SUPER_ADMIN, ROLES.VIEWER] },
   { path: '/timesheets', label: 'Timesheets', icon: 'Clock', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
-  { path: '/workforce', label: 'Workforce', icon: 'Layers', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER] },
-  { path: '/pay-hours-tests', label: 'Pay Hours Tests', icon: 'Calculator', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER] },
+  { path: '/workforce', label: 'Workforce', icon: 'Layers', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
+  { path: '/pay-hours-tests', label: 'Pay Hours Tests', icon: 'Calculator', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
   { path: '/shift-analysis', label: 'Shift Analysis', icon: 'FileBarChart', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
   {
     path: '/forecast-actuals',
@@ -27,10 +27,24 @@ export const NAV_ITEMS = [
     path: '/roster-coverage',
     label: 'Roster coverage',
     icon: 'CalendarDays',
-    roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.VIEWER, ROLES.SHIFTS_VIEWER],
+    roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.VIEWER],
+  },
+  {
+    path: '/roster-coverage/shift-log',
+    label: 'Shift log',
+    icon: 'CalendarDays',
+    roles: [ROLES.SHIFTS_VIEWER],
   },
   { path: '/users', label: 'User Management', icon: 'Shield', roles: [ROLES.SUPER_ADMIN] },
 ];
+
+/** Post-login / unauthorized-route fallback */
+export const defaultLandingByRole = {
+  [ROLES.SUPER_ADMIN]: '/',
+  [ROLES.FINANCE]: '/timesheets',
+  [ROLES.VIEWER]: '/',
+  [ROLES.SHIFTS_VIEWER]: '/roster-coverage/shift-log',
+};
 
 export const getNavItemsForRole = (role) => {
   if (!role) return [];
@@ -40,6 +54,9 @@ export const getNavItemsForRole = (role) => {
 const WORKFORCE_LEGACY_PATHS = ['/shifts', '/pay-hours', '/cost-analysis'];
 
 export const canAccessPath = (role, path) => {
+  if (role === ROLES.SHIFTS_VIEWER) {
+    return path === '/roster-coverage/shift-log';
+  }
   if (path === '/workforce' || WORKFORCE_LEGACY_PATHS.includes(path)) {
     const wf = NAV_ITEMS.find((i) => i.path === '/workforce');
     return wf ? wf.roles.includes(role) : false;

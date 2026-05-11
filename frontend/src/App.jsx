@@ -23,7 +23,7 @@ import { RosterStaffProfile } from './pages/roster-coverage/RosterStaffProfile';
 import { RosterTimesheetUpload } from './pages/roster-coverage/RosterTimesheetUpload';
 import { RosterReports } from './pages/roster-coverage/RosterReports';
 import { RosterShiftLog } from './pages/roster-coverage/RosterShiftLog';
-import { canAccessPath } from './config/nav';
+import { canAccessPath, defaultLandingByRole } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
 const queryClient = new QueryClient({
@@ -34,13 +34,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-const defaultLandingByRole = {
-  super_admin: '/',
-  finance: '/timesheets',
-  viewer: '/',
-  shifts_viewer: '/workforce',
-};
 
 const ProtectedRoute = ({ children }) => {
   const location = useLocation();

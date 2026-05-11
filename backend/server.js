@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
 import { config } from './config/index.js';
-import { connectDB } from './config/db.js';
+import { connectDB, markMongoShutdown } from './config/db.js';
 import authRoutes from './modules/auth/auth.route.js';
 import shiftcareRoutes from './modules/shiftcare/shiftcare.route.js';
 import userRoutes from './modules/user/user.route.js';
@@ -128,3 +128,11 @@ const startServer = async () => {
 };
 
 startServer();
+
+const shutdown = (signal) => {
+  console.log(`${signal} received, shutting down`);
+  markMongoShutdown();
+  process.exit(0);
+};
+process.once('SIGINT', () => shutdown('SIGINT'));
+process.once('SIGTERM', () => shutdown('SIGTERM'));

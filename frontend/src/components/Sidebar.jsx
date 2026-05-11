@@ -81,7 +81,9 @@ export function Sidebar() {
           const Icon = iconMap[item.icon];
           const isActive =
             location.pathname === item.path ||
-            (item.path === '/roster-coverage' && location.pathname.startsWith('/roster-coverage'));
+            (item.path === '/roster-coverage' &&
+              location.pathname.startsWith('/roster-coverage') &&
+              role !== 'shifts_viewer');
           const link = (
             <Link
               key={item.path}
