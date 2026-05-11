@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { ChevronDown, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useFindCover,
@@ -26,9 +27,14 @@ function toIsoLocal(dateStr, timeStr) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+function participantSearchHaystack(p) {
+  const locName = p.location && typeof p.location === 'object' ? p.location.name : '';
+  return [p.name, p.locationLabel, locName].filter(Boolean).join(' ').toLowerCase();
+}
+
 export function RosterFindCover() {
   const { data: partData } = useRosterParticipants();
-  const participants = partData?.participants ?? [];
+  const participants = useMemo(() => partData?.participants ?? [], [partData]);
   const findCover = useFindCover();
   const contactMut = usePatchContactStatus();
 
@@ -41,6 +47,35 @@ export function RosterFindCover() {
   const [reason, setReason] = useState('vacancy');
   const [persistVacant, setPersistVacant] = useState(false);
   const [result, setResult] = useState(null);
+  const [participantPickerOpen, setParticipantPickerOpen] = useState(false);
+  const [participantSearch, setParticipantSearch] = useState('');
+  const participantPickerRef = useRef(null);
+
+  const filteredParticipants = useMemo(() => {
+    const q = participantSearch.trim().toLowerCase();
+    if (!q) return participants;
+    return participants.filter((p) => participantSearchHaystack(p).includes(q));
+  }, [participants, participantSearch]);
+
+  const selectedParticipant = useMemo(
+    () => participants.find((p) => p._id === participantId),
+    [participants, participantId]
+  );
+
+  useEffect(() => {
+    if (!participantPickerOpen) return;
+    function handlePointerDown(e) {
+      if (participantPickerRef.current && !participantPickerRef.current.contains(e.target)) {
+        setParticipantPickerOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [participantPickerOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -107,20 +142,97 @@ export function RosterFindCover() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="sm:col-span-2 lg:col-span-3">
-              <label className="text-sm font-medium">Participant</label>
-              <select
-                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={participantId}
-                onChange={(e) => setParticipantId(e.target.value)}
-              >
-                <option value="">Select…</option>
-                {participants.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+            <div className="relative sm:col-span-2 lg:col-span-3" ref={participantPickerRef}>
+              <label className="text-sm font-medium" id="participant-combobox-label">
+                Participant
+              </label>
+              <div className="mt-1 flex gap-1">
+                <button
+                  type="button"
+                  id="participant-combobox-trigger"
+                  aria-labelledby="participant-combobox-label participant-combobox-trigger"
+                  aria-expanded={participantPickerOpen}
+                  aria-haspopup="listbox"
+                  onClick={() => {
+                    setParticipantPickerOpen((o) => !o);
+                    if (!participantPickerOpen) setParticipantSearch('');
+                  }}
+                  className="flex h-10 min-w-0 flex-1 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-left text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className={selectedParticipant ? 'truncate text-foreground' : 'text-muted-foreground'}>
+                    {selectedParticipant
+                      ? [selectedParticipant.name, selectedParticipant.locationLabel].filter(Boolean).join(' · ') ||
+                        selectedParticipant.name
+                      : 'Select participant…'}
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${participantPickerOpen ? 'rotate-180' : ''}`}
+                    aria-hidden
+                  />
+                </button>
+                {participantId ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParticipantId('');
+                      setParticipantSearch('');
+                      setParticipantPickerOpen(false);
+                    }}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+                    aria-label="Clear participant"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
+              {participantPickerOpen && (
+                <div
+                  className="absolute left-0 right-0 z-50 mt-1 rounded-md border border-input bg-background shadow-md"
+                  role="listbox"
+                  aria-labelledby="participant-combobox-label"
+                >
+                  <div className="border-b border-input p-2">
+                    <Input
+                      type="search"
+                      autoComplete="off"
+                      placeholder="Search by name or location…"
+                      value={participantSearch}
+                      onChange={(e) => setParticipantSearch(e.target.value)}
+                      className="h-9"
+                      aria-label="Filter participants"
+                    />
+                  </div>
+                  <div className="max-h-60 overflow-y-auto py-1">
+                    {participants.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No participants</div>
+                    ) : filteredParticipants.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
+                    ) : (
+                      filteredParticipants.map((p) => (
+                        <button
+                          key={p._id}
+                          type="button"
+                          role="option"
+                          aria-selected={p._id === participantId}
+                          className={`flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-accent ${p._id === participantId ? 'bg-accent/60' : ''}`}
+                          onClick={() => {
+                            setParticipantId(p._id);
+                            setParticipantPickerOpen(false);
+                            setParticipantSearch('');
+                          }}
+                        >
+                          <span className="font-medium">{p.name}</span>
+                          {(p.locationLabel || (p.location && p.location.name)) && (
+                            <span className="text-xs text-muted-foreground">
+                              {[p.locationLabel, p.location && p.location.name].filter(Boolean).join(' · ')}
+                            </span>
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium">Date</label>
