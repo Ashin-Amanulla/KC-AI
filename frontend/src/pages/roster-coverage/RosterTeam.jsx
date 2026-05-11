@@ -32,6 +32,7 @@ export function RosterTeam() {
   const locations = locData?.locations ?? [];
 
   const [fullName, setFullName] = useState('');
+  const [shiftcareStaffId, setShiftcareStaffId] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Support Worker');
@@ -42,6 +43,7 @@ export function RosterTeam() {
 
   const reset = () => {
     setFullName('');
+    setShiftcareStaffId('');
     setPhone('');
     setEmail('');
     setRole('Support Worker');
@@ -54,6 +56,7 @@ export function RosterTeam() {
   const startEdit = (s) => {
     setEditingId(s._id);
     setFullName(s.fullName);
+    setShiftcareStaffId(s.shiftcareStaffId || '');
     setPhone(s.phone || '');
     setEmail(s.email || '');
     setRole(s.role || 'Support Worker');
@@ -70,6 +73,7 @@ export function RosterTeam() {
     }
     const body = {
       fullName: fullName.trim(),
+      shiftcareStaffId: shiftcareStaffId.trim() || null,
       phone,
       email,
       role,
@@ -113,6 +117,15 @@ export function RosterTeam() {
             <div>
               <label className="text-sm font-medium">Full name</label>
               <Input value={fullName} onChange={(e) => setFullName(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">ShiftCare staff ID (optional)</label>
+              <Input
+                value={shiftcareStaffId}
+                onChange={(e) => setShiftcareStaffId(e.target.value)}
+                className="mt-1"
+                placeholder="Matches CSV Staff ID column for imports"
+              />
             </div>
             <div>
               <label className="text-sm font-medium">Phone</label>
@@ -175,6 +188,7 @@ export function RosterTeam() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>SC ID</TableHead>
                   <TableHead>Hrs / fn</TableHead>
                   <TableHead />
                 </TableRow>
@@ -187,6 +201,7 @@ export function RosterTeam() {
                         {s.fullName}
                       </Link>
                     </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{s.shiftcareStaffId || '—'}</TableCell>
                     <TableCell>{s.contractedFortnightlyHours}</TableCell>
                     <TableCell className="space-x-2 text-right">
                       <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(s)}>

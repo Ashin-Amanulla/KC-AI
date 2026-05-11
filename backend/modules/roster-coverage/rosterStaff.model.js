@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 const rosterStaffSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true, trim: true, index: true },
+    /** ShiftCare "Staff ID" — optional; timesheet import matches this before fuzzy name. */
+    shiftcareStaffId: { type: String, trim: true, default: null, index: true },
     phone: { type: String, trim: true, default: '' },
     email: { type: String, trim: true, default: '' },
     role: { type: String, trim: true, default: 'Support Worker' },

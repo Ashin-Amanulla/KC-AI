@@ -139,10 +139,9 @@ export function useFindCover() {
 export function useUploadRosterTimesheet() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ file, columnMap }) => {
+    mutationFn: async ({ file }) => {
       const fd = new FormData();
       fd.append('file', file);
-      if (columnMap) fd.append('columnMap', JSON.stringify(columnMap));
       return (
         await api.post('/api/roster-coverage/timesheet-upload', fd, {
           transformRequest: (data, headers) => {

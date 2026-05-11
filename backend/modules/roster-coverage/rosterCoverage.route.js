@@ -43,9 +43,11 @@ const storage = multer.diskStorage({
 });
 
 const timesheetFilter = (req, file, cb) => {
-  const ok = /\.(csv|xlsx)$/i.test(file.originalname || '');
-  if (ok) cb(null, true);
-  else cb(new Error('Only CSV or XLSX files are allowed'), false);
+  const allowedMimes = ['text/csv', 'application/csv', 'text/plain'];
+  const hasValidMime = allowedMimes.includes(file.mimetype);
+  const hasValidExt = /\.csv$/i.test(file.originalname || '');
+  if (hasValidMime || hasValidExt) cb(null, true);
+  else cb(new Error('Only CSV files are allowed (ShiftCare export)'), false);
 };
 
 const upload = multer({

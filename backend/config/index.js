@@ -41,5 +41,7 @@ export const config = {
     /** First day of first fortnight (local date in defaultTimezone). */
     fortnightAnchorISO: process.env.ROSTER_FORTNIGHT_ANCHOR || '2025-01-06',
     defaultTimezone: process.env.ROSTER_DEFAULT_TZ || 'Australia/Brisbane',
+    /** Hours / fortnight when timesheet import creates a staff row from ShiftCare Staff ID. */
+    defaultContractedFortnightlyHours: parseInt(process.env.ROSTER_DEFAULT_FN_HOURS || '76', 10),
   },
 };

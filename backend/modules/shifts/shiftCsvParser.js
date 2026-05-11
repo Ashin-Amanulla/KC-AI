@@ -262,6 +262,7 @@ function processCsvRow(row, rowNum, normalizedColumns, uploadedBy) {
   const clockinStr = get('clockin datetime');
   const clockoutStr = get('clockout datetime');
   const shiftcareId = get('shiftcare id') || null;
+  const shiftcareStaffIdRaw = get('staff id');
   const shiftStatus = get('shift status') || null;
   const absentStr = get('absent');
 
@@ -327,6 +328,10 @@ function processCsvRow(row, rowNum, normalizedColumns, uploadedBy) {
     address: address || '',
     shiftcareUrl: shiftcareUrl || '',
     shiftcareId,
+    shiftcareStaffId:
+      shiftcareStaffIdRaw != null && String(shiftcareStaffIdRaw).trim() !== ''
+        ? String(shiftcareStaffIdRaw).trim()
+        : null,
     clockinDatetime: clockin,
     clockoutDatetime: clockout,
     uploadedBy,

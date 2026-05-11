@@ -1,6 +1,5 @@
 import fs from 'fs';
 import mongoose from 'mongoose';
-import { parse } from 'csv-parse/sync';
 import * as XLSX from 'xlsx';
 import { config } from '../../config/index.js';
 import { Location } from '../locations/location.model.js';
@@ -17,6 +16,8 @@ import {
   formatLocalDate,
 } from './services/fortnight.js';
 import { buildSummaryPdf } from '../forecast-actuals/summaryPdf.js';
+import { parseShiftCsvBuffer } from '../shifts/shiftCsvParser.js';
+import { normStaffNameForMatch } from '../../utils/staffNameNorm.js';
 
 const MS_PER_DAY = 86400000;
 const PAD_MS = 10 * 24 * 3600000;
@@ -54,6 +55,10 @@ export async function createRosterStaff(req, res, next) {
     const body = req.body || {};
     const doc = await RosterStaff.create({
       fullName: body.fullName,
+      shiftcareStaffId:
+        body.shiftcareStaffId != null && String(body.shiftcareStaffId).trim() !== ''
+          ? String(body.shiftcareStaffId).trim()
+          : null,
       phone: body.phone ?? '',
       email: body.email ?? '',
       role: body.role ?? 'Support Worker',
@@ -77,6 +82,12 @@ export async function patchRosterStaff(req, res, next) {
       {
         $set: {
           ...(body.fullName != null && { fullName: body.fullName }),
+          ...(body.shiftcareStaffId !== undefined && {
+            shiftcareStaffId:
+              body.shiftcareStaffId != null && String(body.shiftcareStaffId).trim() !== ''
+                ? String(body.shiftcareStaffId).trim()
+                : null,
+          }),
           ...(body.phone != null && { phone: body.phone }),
           ...(body.email != null && { email: body.email }),
           ...(body.role != null && { role: body.role }),
@@ -482,170 +493,250 @@ export async function getStaffProfile(req, res, next) {
   }
 }
 
-// ─── Timesheet upload ────────────────────────────────────────────────────────
+// ─── Timesheet upload (ShiftCare CSV — same as workforce /api/shifts/upload) ─
 
-function normalizeHeader(h) {
-  return String(h || '')
+function rosterShiftStatusFromParsed(shift) {
+  if (shift.absent) return 'cancelled';
+  const s = String(shift.shiftStatus ?? '').toLowerCase();
+  if (s.includes('cancel')) return 'cancelled';
+  if (s.includes('active')) return 'active';
+  return 'completed';
+}
+
+/** Exact key: trimmed lower, collapsed internal spaces */
+function rosterExactNameKey(displayName) {
+  return String(displayName || '')
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ');
 }
 
-function defaultColumnMap() {
-  return {
-    staffName: ['staff name', 'staff', 'name'],
-    participantName: ['participant name', 'participant', 'client name', 'client'],
-    date: ['shift date', 'date'],
-    start: ['start time', 'start'],
-    end: ['end time', 'end'],
-    sleepover: ['sleepover', 'sleep over'],
-    sleepoverStart: ['sleepover start', 'sleepover begins'],
-    status: ['shift status', 'status'],
-  };
+function buildRosterNameLookup(records, nameField) {
+  const byExact = new Map();
+  const normToRecords = new Map();
+  for (const r of records) {
+    const raw = r[nameField];
+    if (raw == null) continue;
+    const ex = rosterExactNameKey(raw);
+    if (ex) byExact.set(ex, r);
+    const rn = normStaffNameForMatch(raw);
+    if (!rn) continue;
+    if (!normToRecords.has(rn)) normToRecords.set(rn, []);
+    normToRecords.get(rn).push(r);
+  }
+  const byNormUnique = new Map();
+  const ambiguousNorms = new Set();
+  for (const [norm, arr] of normToRecords) {
+    if (arr.length === 1) byNormUnique.set(norm, arr[0]);
+    else ambiguousNorms.add(norm);
+  }
+  return { byExact, byNormUnique, ambiguousNorms };
 }
 
-function pickColumn(headers, aliases) {
-  const norm = new Map(headers.map((h, i) => [normalizeHeader(h), i]));
-  for (const a of aliases) {
-    const i = norm.get(normalizeHeader(a));
-    if (i !== undefined) return i;
-  }
+function resolveByDisplayName(csvName, lookup) {
+  const ex = rosterExactNameKey(csvName);
+  if (ex && lookup.byExact.has(ex)) return lookup.byExact.get(ex);
+  const rn = normStaffNameForMatch(csvName);
+  if (!rn) return null;
+  if (lookup.ambiguousNorms.has(rn)) return null;
+  if (lookup.byNormUnique.has(rn)) return lookup.byNormUnique.get(rn);
   return null;
 }
 
-function sheetRowsToObjects(buffer, ext) {
-  if (ext === '.csv') {
-    const text = buffer.toString('utf8');
-    const records = parse(text, { columns: true, skip_empty_lines: true, trim: true });
-    return { rows: records, headers: records.length ? Object.keys(records[0]) : [] };
+function mergeStaffIntoLookup(lookup, doc) {
+  if (!doc?.fullName) return;
+  const ex = rosterExactNameKey(doc.fullName);
+  if (ex) lookup.byExact.set(ex, doc);
+  const rn = normStaffNameForMatch(doc.fullName);
+  if (!rn) return;
+  if (lookup.ambiguousNorms.has(rn)) return;
+  const prev = lookup.byNormUnique.get(rn);
+  if (!prev || String(prev._id) === String(doc._id)) lookup.byNormUnique.set(rn, doc);
+  else {
+    lookup.ambiguousNorms.add(rn);
+    lookup.byNormUnique.delete(rn);
   }
-  const wb = XLSX.read(buffer, { type: 'buffer' });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-  return { rows, headers: rows.length ? Object.keys(rows[0]) : [] };
+}
+
+function mergeParticipantIntoLookup(lookup, doc) {
+  if (!doc?.name) return;
+  const ex = rosterExactNameKey(doc.name);
+  if (ex) lookup.byExact.set(ex, doc);
+  const rn = normStaffNameForMatch(doc.name);
+  if (!rn) return;
+  if (lookup.ambiguousNorms.has(rn)) return;
+  const prev = lookup.byNormUnique.get(rn);
+  if (!prev || String(prev._id) === String(doc._id)) lookup.byNormUnique.set(rn, doc);
+  else {
+    lookup.ambiguousNorms.add(rn);
+    lookup.byNormUnique.delete(rn);
+  }
+}
+
+/** Create participant from Scheduler client Name when not already in roster. */
+async function ensureParticipantForTimesheetRow(clientName, partLookup) {
+  let pt = resolveByDisplayName(clientName, partLookup);
+  if (pt) return pt;
+  if (lookupParticipantIsAmbiguous(clientName, partLookup)) return null;
+  const doc = await RosterParticipant.create({
+    name: clientName,
+    locationLabel: '',
+    approvedStaffIds: [],
+  });
+  mergeParticipantIntoLookup(partLookup, doc);
+  return doc;
+}
+
+function lookupParticipantIsAmbiguous(clientName, lookup) {
+  const rn = normStaffNameForMatch(clientName);
+  return rn ? lookup.ambiguousNorms.has(rn) : false;
+}
+
+/**
+ * Resolve or create RosterStaff from ShiftCare CSV row (Staff + Staff ID).
+ * When roster has no row for that Staff ID, upserts from the file so Scheduler exports work without pre-seeding team.
+ */
+async function ensureRosterStaffForTimesheetRow({
+  staffName,
+  scStaffId,
+  staffByShiftcareId,
+  staffLookup,
+}) {
+  const defaultH = config.rosterCoverage.defaultContractedFortnightlyHours ?? 76;
+
+  let st = null;
+  if (scStaffId && staffByShiftcareId.has(scStaffId)) {
+    st = staffByShiftcareId.get(scStaffId);
+  } else {
+    st = resolveByDisplayName(staffName, staffLookup);
+    if (st && scStaffId) {
+      const existingById = staffByShiftcareId.get(scStaffId);
+      if (existingById && String(existingById._id) !== String(st._id)) {
+        st = existingById;
+      } else if (!existingById) {
+        const hasId = st.shiftcareStaffId != null && String(st.shiftcareStaffId).trim() !== '';
+        if (!hasId) {
+          await RosterStaff.findByIdAndUpdate(st._id, { $set: { shiftcareStaffId: scStaffId } });
+          st = { ...st, shiftcareStaffId: scStaffId };
+          staffByShiftcareId.set(scStaffId, st);
+        }
+      }
+    }
+  }
+
+  if (!st && scStaffId) {
+    const doc = await RosterStaff.findOneAndUpdate(
+      { shiftcareStaffId: scStaffId },
+      {
+        $set: {
+          fullName: staffName,
+          shiftcareStaffId: scStaffId,
+        },
+        $setOnInsert: {
+          contractedFortnightlyHours: defaultH,
+          phone: '',
+          email: '',
+          role: 'Support Worker',
+        },
+      },
+      { upsert: true, new: true, lean: true }
+    );
+    staffByShiftcareId.set(scStaffId, doc);
+    mergeStaffIntoLookup(staffLookup, doc);
+    st = doc;
+  }
+
+  return st;
 }
 
 export async function uploadTimesheet(req, res, next) {
   let filePath = null;
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    filePath = req.file.path;
-    const buffer = fs.readFileSync(filePath);
-    const ext = (req.file.originalname || '').toLowerCase().endsWith('.csv') ? '.csv' : '.xlsx';
-
-    let columnMap = defaultColumnMap();
-    if (req.body.columnMap) {
-      try {
-        columnMap = { ...columnMap, ...JSON.parse(req.body.columnMap) };
-      } catch {
-        /* use default */
-      }
+    const name = (req.file.originalname || '').toLowerCase();
+    if (!name.endsWith('.csv')) {
+      return res.status(400).json({ error: 'Only CSV files are allowed (ShiftCare export, same as Workforce).' });
     }
 
-    const { rows, headers } = sheetRowsToObjects(buffer, ext);
-    const idx = {
-      staff: pickColumn(headers, columnMap.staffName),
-      participant: pickColumn(headers, columnMap.participantName),
-      date: pickColumn(headers, columnMap.date),
-      start: pickColumn(headers, columnMap.start),
-      end: pickColumn(headers, columnMap.end),
-      sleepover: pickColumn(headers, columnMap.sleepover),
-      sleepoverStart: pickColumn(headers, columnMap.sleepoverStart),
-      status: pickColumn(headers, columnMap.status),
-    };
+    filePath = req.file.path;
+    const buffer = fs.readFileSync(filePath);
+    const parseResult = parseShiftCsvBuffer(buffer, req.user?.userId);
 
-    if (idx.staff == null || idx.date == null || idx.start == null || idx.end == null || idx.participant == null) {
+    if (parseResult.errors.length > 0 && parseResult.shifts.length === 0) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch {}
       return res.status(400).json({
-        error:
-          'Could not detect required columns (staff name, participant name, date, start, end). Pass columnMap JSON if headers differ.',
-        headers,
+        success: false,
+        errors: parseResult.errors,
+        rowsProcessed: parseResult.rowsProcessed,
+        shiftsCreated: 0,
+        shiftsSkipped: parseResult.rowsSkipped,
       });
     }
 
-    const staffByName = new Map((await RosterStaff.find().lean()).map((s) => [s.fullName.trim().toLowerCase(), s]));
-    const partByName = new Map((await RosterParticipant.find().lean()).map((p) => [p.name.trim().toLowerCase(), p]));
+    const staffRows = await RosterStaff.find().lean();
+    const staffByShiftcareId = new Map();
+    for (const s of staffRows) {
+      if (s.shiftcareStaffId != null && String(s.shiftcareStaffId).trim() !== '') {
+        staffByShiftcareId.set(String(s.shiftcareStaffId).trim(), s);
+      }
+    }
+    const staffLookup = buildRosterNameLookup(staffRows, 'fullName');
+    const partLookup = buildRosterNameLookup(await RosterParticipant.find().lean(), 'name');
 
-    const errors = [];
-    let created = 0;
+    const errors = [...parseResult.errors];
+    let resolutionSkipped = 0;
     const toCreate = [];
 
-    for (let r = 0; r < rows.length; r++) {
-      const row = rows[r];
-      const vals = Array.isArray(row) ? row : headers.map((h) => row[h]);
-      const staffName = String(vals[idx.staff] ?? '').trim();
-      const partName = idx.participant != null ? String(vals[idx.participant] ?? '').trim() : '';
-      const dateStr = String(vals[idx.date] ?? '').trim();
-      const startRaw = vals[idx.start];
-      const endRaw = vals[idx.end];
+    for (const shift of parseResult.shifts) {
+      const staffName = String(shift.staffName || '').trim();
+      const clientName = shift.clientName ? String(shift.clientName).trim() : '';
+      const scStaffId = shift.shiftcareStaffId != null ? String(shift.shiftcareStaffId).trim() : '';
 
-      const st = staffByName.get(staffName.toLowerCase());
+      const st = await ensureRosterStaffForTimesheetRow({
+        staffName,
+        scStaffId,
+        staffByShiftcareId,
+        staffLookup,
+      });
       if (!st) {
-        errors.push({ row: r + 2, message: `Unknown staff: ${staffName}` });
+        resolutionSkipped += 1;
+        const hint = scStaffId ? ` (Staff ID ${scStaffId})` : '';
+        errors.push(
+          `Unknown roster staff "${staffName}"${hint} — add them under Team or use a CSV row with Staff ID (shift ${shift.startDatetime instanceof Date ? shift.startDatetime.toISOString() : ''})`
+        );
         continue;
       }
-      const pt = partByName.get(partName.toLowerCase());
-      if (!partName || !pt) {
-        errors.push({ row: r + 2, message: partName ? `Unknown participant: ${partName}` : 'Participant name required' });
+      if (!clientName) {
+        resolutionSkipped += 1;
+        errors.push(
+          `Missing client name for shift (${staffName}, ${shift.startDatetime instanceof Date ? shift.startDatetime.toISOString() : ''})`
+        );
         continue;
       }
-
-      let shiftStatus = 'completed';
-      if (idx.status != null) {
-        const s = String(vals[idx.status] ?? '').toLowerCase();
-        if (s.includes('cancel')) shiftStatus = 'cancelled';
-        else if (s.includes('active')) shiftStatus = 'active';
-      }
-
-      let sleepover = false;
-      if (idx.sleepover != null) {
-        const sy = String(vals[idx.sleepover] ?? '').toLowerCase();
-        sleepover = sy === 'yes' || sy === 'y' || sy === 'true' || sy === '1';
-      }
-
-      let startDatetime;
-      let endDatetime;
-      try {
-        if (startRaw instanceof Date) {
-          startDatetime = startRaw;
-        } else if (typeof startRaw === 'number') {
-          const base = XLSX.SSF.parse_date_code(startRaw);
-          startDatetime = new Date(Date.UTC(base.y, base.m - 1, base.d, base.H || 0, base.M || 0));
-        } else {
-          startDatetime = new Date(`${dateStr}T${String(startRaw).trim()}`);
-        }
-        if (endRaw instanceof Date) {
-          endDatetime = endRaw;
-        } else if (typeof endRaw === 'number') {
-          const base = XLSX.SSF.parse_date_code(endRaw);
-          endDatetime = new Date(Date.UTC(base.y, base.m - 1, base.d, base.H || 0, base.M || 0));
-        } else {
-          endDatetime = new Date(`${dateStr}T${String(endRaw).trim()}`);
-        }
-      } catch {
-        errors.push({ row: r + 2, message: 'Invalid date/time' });
+      const pt = await ensureParticipantForTimesheetRow(clientName, partLookup);
+      if (!pt) {
+        resolutionSkipped += 1;
+        errors.push(
+          `Unknown or ambiguous roster participant "${clientName}" — resolve duplicate names in Participants or add the participant`
+        );
         continue;
       }
 
-      let sleepoverStart = null;
-      if (sleepover && idx.sleepoverStart != null && vals[idx.sleepoverStart]) {
-        try {
-          sleepoverStart = new Date(`${dateStr}T${String(vals[idx.sleepoverStart]).trim()}`);
-        } catch {
-          sleepoverStart = null;
-        }
-      }
-
+      const sleepover = shift.shiftType === 'sleepover';
       toCreate.push({
         rosterStaffId: st._id,
         rosterParticipantId: pt._id,
-        startDatetime,
-        endDatetime,
+        startDatetime: shift.startDatetime,
+        endDatetime: shift.endDatetime,
         sleepover,
-        sleepoverStart,
-        shiftStatus,
+        sleepoverStart: null,
+        shiftStatus: rosterShiftStatusFromParsed(shift),
       });
     }
 
+    let created = 0;
     if (toCreate.length) {
       const inserted = await RosterWorkedShift.insertMany(toCreate);
       created = inserted.length;
@@ -654,14 +745,25 @@ export async function uploadTimesheet(req, res, next) {
     await RosterCoverageAudit.create({
       action: 'timesheet_upload',
       userId: req.user?.userId || null,
-      payload: { rows: rows.length, created, errors: errors.length },
+      payload: {
+        rows: parseResult.rowsProcessed,
+        created,
+        errors: errors.length,
+        shiftsSkipped: parseResult.rowsSkipped + resolutionSkipped,
+      },
     });
 
     try {
       fs.unlinkSync(filePath);
     } catch {}
 
-    res.json({ success: true, rowsProcessed: rows.length, shiftsCreated: created, errors });
+    res.json({
+      success: true,
+      rowsProcessed: parseResult.rowsProcessed,
+      shiftsCreated: created,
+      shiftsSkipped: parseResult.rowsSkipped + resolutionSkipped,
+      errors,
+    });
   } catch (e) {
     if (filePath) {
       try {
