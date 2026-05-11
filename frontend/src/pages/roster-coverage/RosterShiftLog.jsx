@@ -357,6 +357,7 @@ export function RosterShiftLog() {
   const lastRefresh = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
 
   const visible = shifts.filter((s) => {
+    if (statusF === 'all' && s.status === 'filled') return false;
     if (statusF !== 'all' && s.status !== statusF) return false;
     if (priF !== 'all' && s.priority !== priF) return false;
     if (search) {
