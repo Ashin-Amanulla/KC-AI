@@ -9,6 +9,7 @@ import { RosterWorkedShift } from './rosterWorkedShift.model.js';
 import { RosterVacantShift } from './rosterVacantShift.model.js';
 import { RosterCoverageAudit } from './rosterCoverageAudit.model.js';
 import { RosterContactStatus } from './rosterContactStatus.model.js';
+import { Shift } from '../shifts/shift.model.js';
 import { findCover, toMs } from './services/eligibilityEngine.js';
 import {
   getFortnightContaining,
@@ -21,6 +22,49 @@ import { normStaffNameForMatch } from '../../utils/staffNameNorm.js';
 
 const MS_PER_DAY = 86400000;
 const PAD_MS = 10 * 24 * 3600000;
+
+function rosterShiftStatusFromWorkforceShift(shift) {
+  if (shift?.absent) return 'cancelled';
+  const status = String(shift?.shiftStatus || '').toLowerCase();
+  if (status.includes('cancel')) return 'cancelled';
+  if (status.includes('active')) return 'active';
+  return 'completed';
+}
+
+function buildWorkforceShiftsByStaffId(allStaff, workforceShifts) {
+  const out = new Map();
+  for (const s of allStaff) out.set(String(s._id), []);
+
+  const staffIdsByNormName = new Map();
+  for (const s of allStaff) {
+    const norm = normStaffNameForMatch(s.fullName);
+    if (!norm) continue;
+    if (!staffIdsByNormName.has(norm)) staffIdsByNormName.set(norm, []);
+    staffIdsByNormName.get(norm).push(String(s._id));
+  }
+
+  for (const ws of workforceShifts) {
+    const norm = normStaffNameForMatch(ws.staffName);
+    if (!norm) continue;
+    const matchedStaffIds = staffIdsByNormName.get(norm) || [];
+    if (!matchedStaffIds.length) continue;
+
+    const mapped = {
+      startDatetime: ws.startDatetime,
+      endDatetime: ws.endDatetime,
+      sleepover: ws.shiftType === 'sleepover',
+      sleepoverStart: null,
+      shiftStatus: rosterShiftStatusFromWorkforceShift(ws),
+    };
+
+    for (const sid of matchedStaffIds) {
+      if (!out.has(sid)) out.set(sid, []);
+      out.get(sid).push(mapped);
+    }
+  }
+
+  return out;
+}
 
 async function resolveParticipantTimezone(participantDoc) {
   if (participantDoc?.timezone) return participantDoc.timezone;
@@ -338,9 +382,7 @@ export async function postFindCover(req, res, next) {
 
     const vStart = toMs(vacant.startDatetime);
     const vEnd = toMs(vacant.endDatetime);
-    const shifts = await RosterWorkedShift.find({
-      rosterStaffId: { $in: staffIds },
-      shiftStatus: { $ne: 'cancelled' },
+    const workforceShifts = await Shift.find({
       $or: [
         {
           startDatetime: { $lt: new Date(fort.endUtc) },
@@ -351,15 +393,11 @@ export async function postFindCover(req, res, next) {
           endDatetime: { $gt: new Date(vStart - PAD_MS) },
         },
       ],
-    }).lean();
+    })
+      .select('staffName startDatetime endDatetime shiftType shiftStatus absent')
+      .lean();
 
-    const shiftsByStaffId = new Map();
-    for (const sid of staffIds) shiftsByStaffId.set(String(sid), []);
-    for (const sh of shifts) {
-      const k = String(sh.rosterStaffId);
-      if (!shiftsByStaffId.has(k)) shiftsByStaffId.set(k, []);
-      shiftsByStaffId.get(k).push(sh);
-    }
+    const shiftsByStaffId = buildWorkforceShiftsByStaffId(allStaff, workforceShifts);
 
     const pForEngine = {
       name: participant.name,
