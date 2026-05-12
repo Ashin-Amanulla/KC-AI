@@ -30,7 +30,7 @@ export function RosterParticipants() {
   const deleteP = useDeleteParticipant();
 
   const participants = data?.participants ?? [];
-  const staff = staffData?.staff ?? [];
+  const staff = useMemo(() => staffData?.staff ?? [], [staffData]);
   const locations = locData?.locations ?? [];
 
   const [name, setName] = useState('');
