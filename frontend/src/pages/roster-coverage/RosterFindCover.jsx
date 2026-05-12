@@ -8,7 +8,7 @@ import {
   downloadIneligibilityXlsx,
   usePatchContactStatus,
 } from '../../api/rosterCoverage';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { getErrorMessage } from '../../utils/api';
@@ -30,6 +30,95 @@ function toIsoLocal(dateStr, timeStr) {
 function participantSearchHaystack(p) {
   const locName = p.location && typeof p.location === 'object' ? p.location.name : '';
   return [p.name, p.locationLabel, locName].filter(Boolean).join(' ').toLowerCase();
+}
+
+function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Phone</TableHead>
+          <TableHead className="text-right">Hours left (fn)</TableHead>
+          <TableHead className="w-[140px]">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows?.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={4} className="text-muted-foreground">
+              {emptyLabel}
+            </TableCell>
+          </TableRow>
+        )}
+        {rows?.map((row) => {
+          const s = row.staff;
+          const tel = (s?.phone || '').replace(/\s/g, '');
+          return (
+            <TableRow key={s._id}>
+              <TableCell className="font-medium">{s.fullName}</TableCell>
+              <TableCell>{s.phone || '—'}</TableCell>
+              <TableCell className="text-right">{row.hoursRemaining?.toFixed?.(1)}</TableCell>
+              <TableCell>
+                <div className="flex flex-wrap gap-1">
+                  {tel && (
+                    <>
+                      <a className="text-primary text-xs underline" href={`tel:${tel}`}>
+                        Call
+                      </a>
+                      <a className="text-primary text-xs underline" href={`sms:${tel}`}>
+                        SMS
+                      </a>
+                    </>
+                  )}
+                  {vacantId && (
+                    <>
+                      <button
+                        type="button"
+                        className="text-xs text-primary underline"
+                        onClick={async () => {
+                          try {
+                            await contactMut.mutateAsync({
+                              vacantId,
+                              staffId: s._id,
+                              contacted: true,
+                            });
+                            toast.success('Marked contacted');
+                          } catch (err) {
+                            toast.error(getErrorMessage(err));
+                          }
+                        }}
+                      >
+                        Contacted
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-primary underline"
+                        onClick={async () => {
+                          try {
+                            await contactMut.mutateAsync({
+                              vacantId,
+                              staffId: s._id,
+                              confirmed: true,
+                            });
+                            toast.success('Marked confirmed');
+                          } catch (err) {
+                            toast.error(getErrorMessage(err));
+                          }
+                        }}
+                      >
+                        Confirmed
+                      </button>
+                    </>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
 }
 
 export function RosterFindCover() {
@@ -96,14 +185,17 @@ export function RosterFindCover() {
         persistVacant,
       });
       setResult(data);
-      toast.success(`Eligible: ${data.eligible?.length ?? 0} · Ineligible: ${data.ineligible?.length ?? 0}`);
+      const et = data.eligibleTeam?.length ?? 0;
+      const it = data.ineligibleTeam?.length ?? 0;
+      const op = data.openPoolEligible?.length ?? 0;
+      toast.success(`Eligible team: ${et} · Ineligible team: ${it} · Open pool: ${op}`);
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
   };
 
   const ineligibleRows =
-    result?.ineligible?.map((r) => ({
+    result?.ineligibleTeam?.map((r) => ({
       fullName: r.staff?.fullName,
       reasons: r.reasons,
     })) ?? [];
@@ -112,7 +204,7 @@ export function RosterFindCover() {
 
   const exportPdf = async () => {
     if (!ineligibleRows.length) {
-      toast.message('No ineligible rows to export');
+      toast.message('No ineligible team rows to export');
       return;
     }
     try {
@@ -124,7 +216,7 @@ export function RosterFindCover() {
 
   const exportXlsx = async () => {
     if (!ineligibleRows.length) {
-      toast.message('No ineligible rows to export');
+      toast.message('No ineligible team rows to export');
       return;
     }
     try {
@@ -304,10 +396,10 @@ export function RosterFindCover() {
         <>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" size="sm" onClick={exportPdf}>
-              Export ineligible PDF
+              Export ineligible team PDF
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={exportXlsx}>
-              Export ineligible Excel
+              Export ineligible team Excel
             </Button>
           </div>
           {result.fortnight && (
@@ -322,105 +414,24 @@ export function RosterFindCover() {
               <CardTitle className="text-base">Eligible staff</CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead className="text-right">Hours left (fn)</TableHead>
-                    <TableHead className="w-[140px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {result.eligible?.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-muted-foreground">
-                        No eligible staff.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {result.eligible?.map((row) => {
-                    const s = row.staff;
-                    const tel = (s?.phone || '').replace(/\s/g, '');
-                    return (
-                      <TableRow key={s._id}>
-                        <TableCell className="font-medium">{s.fullName}</TableCell>
-                        <TableCell>{s.phone || '—'}</TableCell>
-                        <TableCell className="text-right">{row.hoursRemaining?.toFixed?.(1)}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {tel && (
-                              <>
-                                <a
-                                  className="text-primary text-xs underline"
-                                  href={`tel:${tel}`}
-                                >
-                                  Call
-                                </a>
-                                <a
-                                  className="text-primary text-xs underline"
-                                  href={`sms:${tel}`}
-                                >
-                                  SMS
-                                </a>
-                              </>
-                            )}
-                            {vacantId && (
-                              <>
-                                <button
-                                  type="button"
-                                  className="text-xs text-primary underline"
-                                  onClick={async () => {
-                                    try {
-                                      await contactMut.mutateAsync({
-                                        vacantId,
-                                        staffId: s._id,
-                                        contacted: true,
-                                      });
-                                      toast.success('Marked contacted');
-                                    } catch (err) {
-                                      toast.error(getErrorMessage(err));
-                                    }
-                                  }}
-                                >
-                                  Contacted
-                                </button>
-                                <button
-                                  type="button"
-                                  className="text-xs text-primary underline"
-                                  onClick={async () => {
-                                    try {
-                                      await contactMut.mutateAsync({
-                                        vacantId,
-                                        staffId: s._id,
-                                        confirmed: true,
-                                      });
-                                      toast.success('Marked confirmed');
-                                    } catch (err) {
-                                      toast.error(getErrorMessage(err));
-                                    }
-                                  }}
-                                >
-                                  Confirmed
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <EligibleStaffTable
+                rows={result.eligibleTeam}
+                vacantId={vacantId}
+                emptyLabel="No eligible staff on this participant’s approved team."
+                contactMut={contactMut}
+              />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Ineligible report</CardTitle>
+              <CardTitle className="text-base">Ineligible team members</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {result.ineligible?.map((row) => (
+              {result.ineligibleTeam?.length === 0 && (
+                <p className="text-sm text-muted-foreground">No ineligible team members.</p>
+              )}
+              {result.ineligibleTeam?.map((row) => (
                 <div key={row.staff._id} className="rounded-md border p-3 text-sm">
                   <div className="font-medium">{row.staff.fullName}</div>
                   <ul className="mt-2 list-disc pl-5 text-muted-foreground">
@@ -430,6 +441,23 @@ export function RosterFindCover() {
                   </ul>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Open pool staff</CardTitle>
+              <CardDescription>
+                Not on this participant’s approved team, but available on hours, overlap, and rest rules.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <EligibleStaffTable
+                rows={result.openPoolEligible}
+                vacantId={vacantId}
+                emptyLabel="No open-pool staff pass logistics for this shift."
+                contactMut={contactMut}
+              />
             </CardContent>
           </Card>
         </>

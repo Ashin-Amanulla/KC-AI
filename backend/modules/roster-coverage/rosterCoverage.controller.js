@@ -454,7 +454,13 @@ export async function postFindCover(req, res, next) {
       approvedStaffIds: (participant.approvedStaffIds || []).map((x) => String(x)),
     };
 
-    const { eligible, ineligible } = findCover(vacant, pForEngine, allStaff, shiftsByStaffId, fortnight);
+    const { eligibleTeam, ineligibleTeam, openPoolEligible } = findCover(
+      vacant,
+      pForEngine,
+      allStaff,
+      shiftsByStaffId,
+      fortnight
+    );
 
     let vacantShiftId = null;
     if (body.persistVacant) {
@@ -477,8 +483,9 @@ export async function postFindCover(req, res, next) {
       vacantShiftId,
       payload: {
         rosterParticipantId: participantId,
-        eligibleCount: eligible.length,
-        ineligibleCount: ineligible.length,
+        eligibleTeamCount: eligibleTeam.length,
+        ineligibleTeamCount: ineligibleTeam.length,
+        openPoolEligibleCount: openPoolEligible.length,
       },
     });
 
@@ -488,8 +495,9 @@ export async function postFindCover(req, res, next) {
         end: new Date(fortnight.endUtc).toISOString(),
         timezone: tz,
       },
-      eligible,
-      ineligible,
+      eligibleTeam,
+      ineligibleTeam,
+      openPoolEligible,
       vacantShiftId,
     });
   } catch (e) {

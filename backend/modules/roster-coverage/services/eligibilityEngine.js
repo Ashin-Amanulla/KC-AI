@@ -46,22 +46,14 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
 }
 
 /**
- * @param {object} vacant - { startDatetime, endDatetime, sleepover?, sleepoverStart? }
- * @param {object} participant - { _id, name, approvedStaffIds }
- * @param {object[]} staffList - roster staff docs
- * @param {object[]} workedShifts - all worked shifts for period (filtered per staff in caller)
- * @param {{ startUtc: number, endUtc: number }} fortnight - for hours worked sum
- * @param {object} participant - { name, approvedStaffIds }
+ * Hours, overlap, and rest rules only (no participant assignment check).
+ * @param {object} vacant
+ * @param {object} staff
+ * @param {object[]} workedShiftsForStaff
+ * @param {{ startUtc: number, endUtc: number }} fortnight
  */
-export function evaluateStaffForVacant(vacant, staff, workedShiftsForStaff, fortnight, participant) {
+export function evaluateStaffLogistics(vacant, staff, workedShiftsForStaff, fortnight) {
   const reasons = [];
-  const vid = String(staff._id ?? staff.id);
-  const participantName = participant.name ?? 'participant';
-
-  const approved = (participant.approvedStaffIds ?? []).map((x) => String(x));
-  if (!approved.includes(vid)) {
-    reasons.push(`Not assigned to support ${participantName}`);
-  }
 
   const vStart = toMs(vacant.startDatetime);
   const vEnd = toMs(vacant.endDatetime);
@@ -124,6 +116,33 @@ export function evaluateStaffForVacant(vacant, staff, workedShiftsForStaff, fort
 }
 
 /**
+ * @param {object} vacant - { startDatetime, endDatetime, sleepover?, sleepoverStart? }
+ * @param {object} staff
+ * @param {object[]} workedShiftsForStaff
+ * @param {{ startUtc: number, endUtc: number}} fortnight
+ * @param {object} participant - { name, approvedStaffIds }
+ */
+export function evaluateStaffForVacant(vacant, staff, workedShiftsForStaff, fortnight, participant) {
+  const logistics = evaluateStaffLogistics(vacant, staff, workedShiftsForStaff, fortnight);
+  const reasons = [...logistics.reasons];
+
+  const vid = String(staff._id ?? staff.id);
+  const participantName = participant.name ?? 'participant';
+  const approved = (participant.approvedStaffIds ?? []).map((x) => String(x));
+  if (!approved.includes(vid)) {
+    reasons.unshift(`Not assigned to support ${participantName}`);
+  }
+
+  return {
+    staff,
+    reasons,
+    workedHours: logistics.workedHours,
+    remaining: logistics.remaining,
+    logisticsReasons: logistics.reasons,
+  };
+}
+
+/**
  * @param {object} vacant
  * @param {object} participant
  * @param {object[]} allStaff
@@ -131,13 +150,15 @@ export function evaluateStaffForVacant(vacant, staff, workedShiftsForStaff, fort
  * @param {{ startUtc: number, endUtc: number }} fortnight
  */
 export function findCover(vacant, participant, allStaff, shiftsByStaffId, fortnight) {
-  const eligible = [];
-  const ineligible = [];
+  const eligibleTeam = [];
+  const ineligibleTeam = [];
+  const openPoolEligible = [];
+  const approvedSet = new Set((participant.approvedStaffIds ?? []).map((x) => String(x)));
 
   for (const staff of allStaff) {
     const sid = String(staff._id ?? staff.id);
     const list = shiftsByStaffId.get(sid) ?? [];
-    const { reasons, workedHours, remaining } = evaluateStaffForVacant(
+    const { reasons, workedHours, remaining, logisticsReasons } = evaluateStaffForVacant(
       vacant,
       staff,
       list,
@@ -151,11 +172,21 @@ export function findCover(vacant, participant, allStaff, shiftsByStaffId, fortni
       hoursRemaining: Math.max(0, remaining),
       reasons: [...reasons],
     };
-    if (reasons.length === 0) eligible.push(row);
-    else ineligible.push(row);
+
+    const onTeam = approvedSet.has(sid);
+    if (onTeam) {
+      if (reasons.length === 0) eligibleTeam.push(row);
+      else ineligibleTeam.push(row);
+    } else if (logisticsReasons.length === 0) {
+      openPoolEligible.push({
+        ...row,
+        reasons: [],
+      });
+    }
   }
 
-  eligible.sort((a, b) => b.hoursRemaining - a.hoursRemaining);
+  eligibleTeam.sort((a, b) => b.hoursRemaining - a.hoursRemaining);
+  openPoolEligible.sort((a, b) => b.hoursRemaining - a.hoursRemaining);
 
-  return { eligible, ineligible };
+  return { eligibleTeam, ineligibleTeam, openPoolEligible };
 }

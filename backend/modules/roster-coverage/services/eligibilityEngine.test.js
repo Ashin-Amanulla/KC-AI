@@ -119,9 +119,32 @@ describe('eligibilityEngine', () => {
       ],
       ['b', []],
     ]);
-    const { eligible } = findCover(vacant, p, [sa, sb], shiftsByStaffId, fn);
-    assert.strictEqual(eligible.length, 2);
-    assert.strictEqual(String(eligible[0].staff._id), 'b');
+    const { eligibleTeam } = findCover(vacant, p, [sa, sb], shiftsByStaffId, fn);
+    assert.strictEqual(eligibleTeam.length, 2);
+    assert.strictEqual(String(eligibleTeam[0].staff._id), 'b');
+  });
+
+  it('findCover: open pool lists non-team staff who pass logistics only', () => {
+    const p = { name: 'House', approvedStaffIds: ['a'] };
+    const sa = { _id: 'a', contractedFortnightlyHours: 76, phone: '' };
+    const sb = { _id: 'b', contractedFortnightlyHours: 76, phone: '' };
+    const vacant = {
+      startDatetime: d('2025-06-10T08:00:00Z'),
+      endDatetime: d('2025-06-10T10:00:00Z'),
+      sleepover: false,
+    };
+    const fn = { startUtc: d('2025-06-01').getTime(), endUtc: d('2025-06-20').getTime() };
+    const shiftsByStaffId = new Map([
+      ['a', []],
+      ['b', []],
+    ]);
+    const { eligibleTeam, ineligibleTeam, openPoolEligible } = findCover(vacant, p, [sa, sb], shiftsByStaffId, fn);
+    assert.strictEqual(eligibleTeam.length, 1);
+    assert.strictEqual(String(eligibleTeam[0].staff._id), 'a');
+    assert.strictEqual(ineligibleTeam.length, 0);
+    assert.strictEqual(openPoolEligible.length, 1);
+    assert.strictEqual(String(openPoolEligible[0].staff._id), 'b');
+    assert.strictEqual(openPoolEligible[0].reasons.length, 0);
   });
 
   it('shiftDurationHours', () => {

@@ -22,7 +22,7 @@ export function RosterReports() {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           <p>
-            PDF and Excel exports for ineligible staff run from{' '}
+            PDF and Excel exports for ineligible team members run from{' '}
             <Link className="text-primary underline" to="/roster-coverage/find-cover">
               Find cover
             </Link>{' '}
