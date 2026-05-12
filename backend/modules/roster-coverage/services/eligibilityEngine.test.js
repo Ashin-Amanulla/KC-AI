@@ -6,6 +6,8 @@ import {
   shiftStartsWithSleepover,
   shiftDurationHours,
   evaluateStaffForVacant,
+  evaluateStaffLogistics,
+  hoursOfShiftOverlappingFortnight,
   findCover,
 } from './eligibilityEngine.js';
 
@@ -153,5 +155,35 @@ describe('eligibilityEngine', () => {
       endDatetime: d('2025-06-01T16:00:00Z'),
     });
     assert.strictEqual(h, 8);
+  });
+
+  it('hoursOfShiftOverlappingFortnight counts only overlap', () => {
+    const fn = { startUtc: d('2025-06-10T00:00:00Z').getTime(), endUtc: d('2025-06-24T00:00:00Z').getTime() };
+    const w = {
+      startDatetime: d('2025-06-09T18:00:00Z'),
+      endDatetime: d('2025-06-10T04:00:00Z'),
+      shiftStatus: 'completed',
+    };
+    assert.strictEqual(hoursOfShiftOverlappingFortnight(w, fn), 4);
+  });
+
+  it('evaluateStaffLogistics uses overlapping fortnight hours', () => {
+    const staff = { _id: 'x', contractedFortnightlyHours: 76 };
+    const vacant = {
+      startDatetime: d('2025-06-12T08:00:00Z'),
+      endDatetime: d('2025-06-12T16:00:00Z'),
+      sleepover: false,
+    };
+    const fn = { startUtc: d('2025-06-10T00:00:00Z').getTime(), endUtc: d('2025-06-24T00:00:00Z').getTime() };
+    const worked = [
+      {
+        startDatetime: d('2025-06-09T18:00:00Z'),
+        endDatetime: d('2025-06-10T04:00:00Z'),
+        shiftStatus: 'completed',
+      },
+    ];
+    const { workedHours, remaining } = evaluateStaffLogistics(vacant, staff, worked, fn);
+    assert.strictEqual(workedHours, 4);
+    assert.strictEqual(remaining, 72);
   });
 });

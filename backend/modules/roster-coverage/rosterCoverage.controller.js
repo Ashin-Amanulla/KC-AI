@@ -10,7 +10,7 @@ import { RosterVacantShift } from './rosterVacantShift.model.js';
 import { RosterCoverageAudit } from './rosterCoverageAudit.model.js';
 import { RosterContactStatus } from './rosterContactStatus.model.js';
 import { Shift } from '../shifts/shift.model.js';
-import { findCover, toMs } from './services/eligibilityEngine.js';
+import { findCover, hoursOfShiftOverlappingFortnight, r2, toMs } from './services/eligibilityEngine.js';
 import {
   getFortnightContaining,
   startOfLocalDayUtc,
@@ -18,7 +18,7 @@ import {
 } from './services/fortnight.js';
 import { buildSummaryPdf } from '../forecast-actuals/summaryPdf.js';
 import { parseShiftCsvBuffer } from '../shifts/shiftCsvParser.js';
-import { normStaffNameForMatch } from '../../utils/staffNameNorm.js';
+import { nameMatchKeys, normStaffNameForMatch } from '../../utils/staffNameNorm.js';
 
 const MS_PER_DAY = 86400000;
 const PAD_MS = 10 * 24 * 3600000;
@@ -35,18 +35,47 @@ function buildWorkforceShiftsByStaffId(allStaff, workforceShifts) {
   const out = new Map();
   for (const s of allStaff) out.set(String(s._id), []);
 
+  /** @type {Map<string, string>} ShiftCare staff id → roster staff id (first roster wins) */
+  const rosterIdByShiftcareStaffId = new Map();
+  /** @type {Map<string, string[]>} */
   const staffIdsByNormName = new Map();
+  /** @type {Set<string>} */
+  const ambiguousNorms = new Set();
+
   for (const s of allStaff) {
-    const norm = normStaffNameForMatch(s.fullName);
-    if (!norm) continue;
-    if (!staffIdsByNormName.has(norm)) staffIdsByNormName.set(norm, []);
-    staffIdsByNormName.get(norm).push(String(s._id));
+    const sid = String(s._id);
+    const sc = s.shiftcareStaffId != null ? String(s.shiftcareStaffId).trim() : '';
+    if (sc && !rosterIdByShiftcareStaffId.has(sc)) rosterIdByShiftcareStaffId.set(sc, sid);
+
+    for (const key of nameMatchKeys(s.fullName)) {
+      if (!staffIdsByNormName.has(key)) staffIdsByNormName.set(key, []);
+      staffIdsByNormName.get(key).push(sid);
+    }
+  }
+
+  for (const [key, arr] of staffIdsByNormName) {
+    const uniq = [...new Set(arr)];
+    if (uniq.length > 1) ambiguousNorms.add(key);
+  }
+
+  function matchedRosterStaffIdsForWorkforceShift(ws) {
+    const scRaw = ws.shiftcareStaffId != null ? String(ws.shiftcareStaffId).trim() : '';
+    if (scRaw) {
+      const byId = rosterIdByShiftcareStaffId.get(scRaw);
+      if (byId) return [byId];
+    }
+
+    const ids = new Set();
+    for (const key of nameMatchKeys(ws.staffName)) {
+      if (ambiguousNorms.has(key)) continue;
+      const arr = staffIdsByNormName.get(key);
+      if (arr?.length === 1) ids.add(arr[0]);
+    }
+    return [...ids];
   }
 
   for (const ws of workforceShifts) {
-    const norm = normStaffNameForMatch(ws.staffName);
-    if (!norm) continue;
-    const matchedStaffIds = staffIdsByNormName.get(norm) || [];
+    const matchedStaffIds = matchedRosterStaffIdsForWorkforceShift(ws);
     if (!matchedStaffIds.length) continue;
 
     const mapped = {
@@ -427,7 +456,7 @@ export async function postFindCover(req, res, next) {
         },
       ],
     })
-      .select('staffName startDatetime endDatetime shiftType shiftStatus absent')
+      .select('staffName shiftcareStaffId startDatetime endDatetime shiftType shiftStatus absent')
       .lean();
 
     const shiftsByStaffId = buildWorkforceShiftsByStaffId(allStaff, workforceShifts);
@@ -564,14 +593,10 @@ export async function getStaffProfile(req, res, next) {
         .lean(),
     ]);
 
-    const inFortnight = workedShifts.filter((w) => {
-      const ws = toMs(w.startDatetime);
-      return ws >= fort.startUtc && ws < fort.endUtc;
-    });
-    const workedHours = inFortnight.reduce((sum, w) => {
-      const h = (toMs(w.endDatetime) - toMs(w.startDatetime)) / 3600000;
-      return sum + Math.round(h * 100) / 100;
-    }, 0);
+    const fortnight = { startUtc: fort.startUtc, endUtc: fort.endUtc };
+    const workedHours = r2(
+      workedShifts.reduce((sum, w) => sum + hoursOfShiftOverlappingFortnight(w, fortnight), 0)
+    );
 
     res.json({
       staff,

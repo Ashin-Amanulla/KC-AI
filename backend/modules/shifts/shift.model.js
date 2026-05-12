@@ -78,6 +78,13 @@ const shiftSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    /** ShiftCare Staff ID from CSV — used to join workforce shifts to roster staff. */
+    shiftcareStaffId: {
+      type: String,
+      default: null,
+      trim: true,
+      index: true,
+    },
     clockinDatetime: {
       type: Date,
       default: null,

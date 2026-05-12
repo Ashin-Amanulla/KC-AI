@@ -45,6 +45,16 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && aEnd > bStart;
 }
 
+/** Portion of shift duration that falls inside [fortnight.startUtc, fortnight.endUtc). */
+export function hoursOfShiftOverlappingFortnight(w, fortnight) {
+  const ws = toMs(w.startDatetime ?? w.start);
+  const we = toMs(w.endDatetime ?? w.end);
+  if (!Number.isFinite(ws) || !Number.isFinite(we)) return 0;
+  const a = Math.max(ws, fortnight.startUtc);
+  const b = Math.min(we, fortnight.endUtc);
+  return r2(Math.max(0, (b - a) / HOUR_MS));
+}
+
 /**
  * Hours, overlap, and rest rules only (no participant assignment check).
  * @param {object} vacant
@@ -60,11 +70,9 @@ export function evaluateStaffLogistics(vacant, staff, workedShiftsForStaff, fort
   const vacantDuration = r2((vEnd - vStart) / HOUR_MS);
 
   const nonCancelled = workedShiftsForStaff.filter((w) => w.shiftStatus !== 'cancelled');
-  const inFortnight = nonCancelled.filter((w) => {
-    const ws = toMs(w.startDatetime);
-    return ws >= fortnight.startUtc && ws < fortnight.endUtc;
-  });
-  const workedHours = r2(inFortnight.reduce((sum, w) => sum + shiftDurationHours(w), 0));
+  const workedHours = r2(
+    nonCancelled.reduce((sum, w) => sum + hoursOfShiftOverlappingFortnight(w, fortnight), 0)
+  );
   const cap = staff.contractedFortnightlyHours ?? 0;
   const remaining = r2(cap - workedHours);
   if (remaining < vacantDuration - 1e-6) {
