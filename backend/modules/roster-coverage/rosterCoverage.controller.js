@@ -66,6 +66,39 @@ function buildWorkforceShiftsByStaffId(allStaff, workforceShifts) {
   return out;
 }
 
+/** Same start+end → one shift (roster + workforce imports often duplicate). */
+function dedupeShiftsByStartEnd(shifts) {
+  const seen = new Set();
+  const out = [];
+  for (const s of shifts) {
+    const k = `${toMs(s.startDatetime)}_${toMs(s.endDatetime)}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(s);
+  }
+  return out;
+}
+
+/**
+ * Append roster-coverage worked shifts (timesheet / manual) per staffId, then dedupe.
+ */
+function mergeRosterWorkedIntoShiftsByStaffId(shiftsByStaffId, rosterWorkedRows) {
+  for (const w of rosterWorkedRows) {
+    const sid = String(w.rosterStaffId);
+    if (!shiftsByStaffId.has(sid)) shiftsByStaffId.set(sid, []);
+    shiftsByStaffId.get(sid).push({
+      startDatetime: w.startDatetime,
+      endDatetime: w.endDatetime,
+      sleepover: !!w.sleepover,
+      sleepoverStart: w.sleepoverStart ?? null,
+      shiftStatus: w.shiftStatus === 'cancelled' ? 'cancelled' : w.shiftStatus || 'completed',
+    });
+  }
+  for (const sid of shiftsByStaffId.keys()) {
+    shiftsByStaffId.set(sid, dedupeShiftsByStartEnd(shiftsByStaffId.get(sid)));
+  }
+}
+
 async function resolveParticipantTimezone(participantDoc) {
   if (participantDoc?.timezone) return participantDoc.timezone;
   if (participantDoc?.location) {
@@ -398,6 +431,23 @@ export async function postFindCover(req, res, next) {
       .lean();
 
     const shiftsByStaffId = buildWorkforceShiftsByStaffId(allStaff, workforceShifts);
+
+    const rosterWorkedShifts = await RosterWorkedShift.find({
+      rosterStaffId: { $in: staffIds },
+      shiftStatus: { $ne: 'cancelled' },
+      $or: [
+        {
+          startDatetime: { $lt: new Date(fort.endUtc) },
+          endDatetime: { $gt: new Date(fort.startUtc) },
+        },
+        {
+          startDatetime: { $lt: new Date(vEnd + PAD_MS) },
+          endDatetime: { $gt: new Date(vStart - PAD_MS) },
+        },
+      ],
+    }).lean();
+
+    mergeRosterWorkedIntoShiftsByStaffId(shiftsByStaffId, rosterWorkedShifts);
 
     const pForEngine = {
       name: participant.name,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import {
   useRosterParticipants,
@@ -39,6 +39,13 @@ export function RosterParticipants() {
   const [timezone, setTimezone] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState([]);
+  const [approvedStaffSearch, setApprovedStaffSearch] = useState('');
+
+  const filteredStaff = useMemo(() => {
+    const q = approvedStaffSearch.trim().toLowerCase();
+    if (!q) return staff;
+    return staff.filter((s) => (s.fullName || '').toLowerCase().includes(q));
+  }, [staff, approvedStaffSearch]);
 
   const resetForm = () => {
     setName('');
@@ -47,6 +54,7 @@ export function RosterParticipants() {
     setTimezone('');
     setEditingId(null);
     setSelectedStaff([]);
+    setApprovedStaffSearch('');
   };
 
   const startEdit = (p) => {
@@ -56,6 +64,7 @@ export function RosterParticipants() {
     setLocationId(String(p.location?._id || p.location || ''));
     setTimezone(p.timezone || '');
     setSelectedStaff((p.approvedStaffIds || []).map(String));
+    setApprovedStaffSearch('');
   };
 
   const submit = async (e) => {
@@ -143,25 +152,44 @@ export function RosterParticipants() {
             </div>
             <div>
               <label className="text-sm font-medium">Approved staff</label>
-              <div className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
-                {staff.map((s) => {
-                  const id = String(s._id);
-                  const on = selectedStaff.includes(id);
-                  return (
-                    <label key={id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={() => {
-                          setSelectedStaff((prev) =>
-                            on ? prev.filter((x) => x !== id) : [...prev, id]
-                          );
-                        }}
-                      />
-                      {s.fullName}
-                    </label>
-                  );
-                })}
+              <div className="mt-2 overflow-hidden rounded-md border">
+                <div className="border-b border-input p-2">
+                  <Input
+                    type="search"
+                    autoComplete="off"
+                    placeholder="Search by name…"
+                    value={approvedStaffSearch}
+                    onChange={(e) => setApprovedStaffSearch(e.target.value)}
+                    className="h-9"
+                    aria-label="Filter approved staff"
+                  />
+                </div>
+                <div className="max-h-40 space-y-1 overflow-y-auto p-2">
+                  {staff.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No staff</p>
+                  ) : filteredStaff.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No matches</p>
+                  ) : (
+                    filteredStaff.map((s) => {
+                      const id = String(s._id);
+                      const on = selectedStaff.includes(id);
+                      return (
+                        <label key={id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => {
+                              setSelectedStaff((prev) =>
+                                on ? prev.filter((x) => x !== id) : [...prev, id]
+                              );
+                            }}
+                          />
+                          {s.fullName}
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">

@@ -327,15 +327,14 @@ export function RosterFindCover() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Phone</TableHead>
-                    <TableHead className="text-right">Worked (fn)</TableHead>
-                    <TableHead className="text-right">Remaining</TableHead>
+                    <TableHead className="text-right">Hours left (fn)</TableHead>
                     <TableHead className="w-[140px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {result.eligible?.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-muted-foreground">
+                      <TableCell colSpan={4} className="text-muted-foreground">
                         No eligible staff.
                       </TableCell>
                     </TableRow>
@@ -347,7 +346,6 @@ export function RosterFindCover() {
                       <TableRow key={s._id}>
                         <TableCell className="font-medium">{s.fullName}</TableCell>
                         <TableCell>{s.phone || '—'}</TableCell>
-                        <TableCell className="text-right">{row.workedHoursThisFortnight?.toFixed?.(1)}</TableCell>
                         <TableCell className="text-right">{row.hoursRemaining?.toFixed?.(1)}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
