@@ -39,6 +39,7 @@ function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut }) {
         <TableRow>
           <TableHead>Name</TableHead>
           <TableHead>Phone</TableHead>
+          <TableHead className="text-right">Worked (fn)</TableHead>
           <TableHead className="text-right">Hours left (fn)</TableHead>
           <TableHead className="w-[140px]">Actions</TableHead>
         </TableRow>
@@ -46,7 +47,7 @@ function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut }) {
       <TableBody>
         {rows?.length === 0 && (
           <TableRow>
-            <TableCell colSpan={4} className="text-muted-foreground">
+            <TableCell colSpan={5} className="text-muted-foreground">
               {emptyLabel}
             </TableCell>
           </TableRow>
@@ -58,6 +59,9 @@ function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut }) {
             <TableRow key={s._id}>
               <TableCell className="font-medium">{s.fullName}</TableCell>
               <TableCell>{s.phone || '—'}</TableCell>
+              <TableCell className="text-right text-muted-foreground">
+                {row.workedHoursThisFortnight != null ? row.workedHoursThisFortnight.toFixed(1) : '—'}
+              </TableCell>
               <TableCell className="text-right">{row.hoursRemaining?.toFixed?.(1)}</TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
@@ -406,6 +410,11 @@ export function RosterFindCover() {
             <p className="text-xs text-muted-foreground">
               Fortnight window (engine): {new Date(result.fortnight.start).toLocaleString()} —{' '}
               {new Date(result.fortnight.end).toLocaleString()} · {result.fortnight.timezone}
+              <span className="mt-1 block">
+                Worked (fn) and hours left count only shifts overlapping this window—the same pay
+                fortnight as the cover shift you entered (timesheet rows in other periods do not
+                reduce hours here).
+              </span>
             </p>
           )}
 
