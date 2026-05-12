@@ -6,9 +6,15 @@ import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { getErrorMessage } from '../../utils/api';
 
+function formatUploadInstant(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
 export function RosterTimesheetUpload() {
   const upload = useUploadRosterTimesheet();
   const [file, setFile] = useState(null);
+  const [lastUpload, setLastUpload] = useState(null);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -18,7 +24,18 @@ export function RosterTimesheetUpload() {
     }
     try {
       const res = await upload.mutateAsync({ file });
-      toast.success(`Imported ${res.shiftsCreated} shifts (${res.rowsProcessed} rows)`);
+      setLastUpload({
+        shiftsCreated: res.shiftsCreated ?? 0,
+        rowsProcessed: res.rowsProcessed ?? 0,
+        timesheetSpan: res.timesheetSpan ?? null,
+        totalHoursImported: res.totalHoursImported ?? 0,
+      });
+      const hrs = Number(res.totalHoursImported ?? 0);
+      toast.success(
+        res.shiftsCreated
+          ? `Imported ${res.shiftsCreated} shifts · ${hrs.toFixed(1)} h total (${res.rowsProcessed} rows)`
+          : `No shifts imported (${res.rowsProcessed} rows)`
+      );
       if (res.errors?.length) {
         toast.message(`${res.errors.length} row errors — check response in network tab`);
       }
@@ -66,6 +83,34 @@ export function RosterTimesheetUpload() {
             <Button type="submit" disabled={upload.isPending}>
               {upload.isPending ? 'Uploading…' : 'Upload'}
             </Button>
+            {lastUpload && (
+              <div className="rounded-md border border-input bg-muted/30 p-3 text-sm">
+                <p className="font-medium text-foreground">Last upload</p>
+                {lastUpload.shiftsCreated > 0 ? (
+                  <ul className="mt-2 space-y-1 text-muted-foreground">
+                    {lastUpload.timesheetSpan ? (
+                      <li>
+                        <span className="text-foreground">Date range (imported shifts): </span>
+                        {formatUploadInstant(lastUpload.timesheetSpan.start)} —{' '}
+                        {formatUploadInstant(lastUpload.timesheetSpan.end)}
+                      </li>
+                    ) : null}
+                    <li>
+                      <span className="text-foreground">Total shift hours: </span>
+                      {Number(lastUpload.totalHoursImported).toFixed(1)} h
+                    </li>
+                    <li className="text-xs">
+                      {lastUpload.shiftsCreated} shift{lastUpload.shiftsCreated === 1 ? '' : 's'} ·{' '}
+                      {lastUpload.rowsProcessed} CSV row{lastUpload.rowsProcessed === 1 ? '' : 's'}
+                    </li>
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-muted-foreground">
+                    No shifts were imported, so there is no duration to show. Fix row errors and try again.
+                  </p>
+                )}
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>

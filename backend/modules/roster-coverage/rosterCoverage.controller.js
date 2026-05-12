@@ -599,6 +599,31 @@ function rosterShiftStatusFromParsed(shift) {
   return 'completed';
 }
 
+/** Min/max datetime and sum of durations for shifts about to be inserted (roster timesheet import). */
+function summarizeImportedTimesheetRows(rows) {
+  if (!rows?.length) {
+    return { timesheetSpan: null, totalHoursImported: 0 };
+  }
+  let minStart = Infinity;
+  let maxEnd = -Infinity;
+  let totalMs = 0;
+  for (const row of rows) {
+    const sm = toMs(row.startDatetime);
+    const em = toMs(row.endDatetime);
+    if (Number.isFinite(sm) && sm < minStart) minStart = sm;
+    if (Number.isFinite(em) && em > maxEnd) maxEnd = em;
+    totalMs += Math.max(0, em - sm);
+  }
+  const span =
+    Number.isFinite(minStart) && Number.isFinite(maxEnd)
+      ? { start: new Date(minStart).toISOString(), end: new Date(maxEnd).toISOString() }
+      : null;
+  return {
+    timesheetSpan: span,
+    totalHoursImported: Math.round((totalMs / 3600000) * 100) / 100,
+  };
+}
+
 /** Exact key: trimmed lower, collapsed internal spaces */
 function rosterExactNameKey(displayName) {
   return String(displayName || '')
@@ -832,6 +857,8 @@ export async function uploadTimesheet(req, res, next) {
       });
     }
 
+    const { timesheetSpan, totalHoursImported } = summarizeImportedTimesheetRows(toCreate);
+
     let created = 0;
     if (toCreate.length) {
       const inserted = await RosterWorkedShift.insertMany(toCreate);
@@ -846,6 +873,8 @@ export async function uploadTimesheet(req, res, next) {
         created,
         errors: errors.length,
         shiftsSkipped: parseResult.rowsSkipped + resolutionSkipped,
+        timesheetSpan,
+        totalHoursImported,
       },
     });
 
@@ -859,6 +888,8 @@ export async function uploadTimesheet(req, res, next) {
       shiftsCreated: created,
       shiftsSkipped: parseResult.rowsSkipped + resolutionSkipped,
       errors,
+      timesheetSpan,
+      totalHoursImported,
     });
   } catch (e) {
     if (filePath) {
