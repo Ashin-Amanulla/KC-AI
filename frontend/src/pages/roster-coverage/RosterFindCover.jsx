@@ -411,9 +411,12 @@ export function RosterFindCover() {
               Fortnight window (engine): {new Date(result.fortnight.start).toLocaleString()} —{' '}
               {new Date(result.fortnight.end).toLocaleString()} · {result.fortnight.timezone}
               <span className="mt-1 block">
-                Worked (fn) and hours left count only shifts overlapping this window—the same pay
-                fortnight as the cover shift you entered (timesheet rows in other periods do not
-                reduce hours here).
+                <strong className="font-medium text-foreground">Worked (fn)</strong> sums{' '}
+                <em>every</em> non-cancelled shift we have for that worker (roster timesheet imports and
+                workforce imports), but only the portion of each shift that falls inside this pay
+                fortnight. If your CSV spans two fortnights, each row still counts—all of its hours
+                go into whichever fortnight(s) the shift times overlap. Rows entirely outside this
+                window count toward a different fortnight’s cap, not this search.
               </span>
             </p>
           )}
