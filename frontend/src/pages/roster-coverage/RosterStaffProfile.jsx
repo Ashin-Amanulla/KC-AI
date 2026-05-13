@@ -24,8 +24,16 @@ export function RosterStaffProfile() {
     );
   }
 
-  const { staff, approvedParticipants, fortnight, workedHoursThisFortnight, hoursRemaining, recentWorkedShifts } =
-    data;
+  const {
+    staff,
+    approvedParticipants,
+    fortnight,
+    payPeriodAnchor,
+    usedTimesheetWindow,
+    workedHoursThisFortnight,
+    hoursRemaining,
+    recentWorkedShifts,
+  } = data;
 
   return (
     <div className="space-y-6">
@@ -38,6 +46,23 @@ export function RosterStaffProfile() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{staff.fullName}</CardTitle>
+          {fortnight ? (
+            <p className="text-xs font-normal text-muted-foreground">
+              {usedTimesheetWindow ? (
+                <>
+                  Totals window from last timesheet upload: {new Date(fortnight.start).toLocaleString()} —{' '}
+                  {new Date(fortnight.end).toLocaleString()} (every imported shift between those bounds).
+                </>
+              ) : (
+                <>
+                  Pay fortnight: {new Date(fortnight.start).toLocaleString()} — {new Date(fortnight.end).toLocaleString()}
+                  {payPeriodAnchor
+                    ? ` · Midpoint reference ${new Date(payPeriodAnchor).toLocaleString()} (today’s fortnight if no upload window is set).`
+                    : null}
+                </>
+              )}
+            </p>
+          ) : null}
         </CardHeader>
         <CardContent className="grid gap-2 text-sm sm:grid-cols-2">
           <div>
@@ -57,12 +82,18 @@ export function RosterStaffProfile() {
             <div>{staff.contractedFortnightlyHours} h</div>
           </div>
           <div>
-            <span className="text-muted-foreground">Worked this fortnight</span>
+            <span className="text-muted-foreground">Worked (window)</span>
             <div>{workedHoursThisFortnight?.toFixed?.(1)} h</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Hours from shifts overlapping the date range above — same rule as the Team page.
+            </p>
           </div>
           <div>
-            <span className="text-muted-foreground">Remaining</span>
+            <span className="text-muted-foreground">Cap headroom (fn)</span>
             <div>{hoursRemaining?.toFixed?.(1)} h</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Contracted cap minus worked in the window above (upload span or current fortnight).
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -90,7 +121,7 @@ export function RosterStaffProfile() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Shifts overlapping current fortnight
+            Shifts overlapping totals window
             {fortnight && (
               <span className="block text-xs font-normal text-muted-foreground">
                 {new Date(fortnight.start).toLocaleDateString()} — {new Date(fortnight.end).toLocaleDateString()}
@@ -112,7 +143,8 @@ export function RosterStaffProfile() {
               {recentWorkedShifts?.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={4} className="text-muted-foreground">
-                    No shifts in range.
+                    No shifts in this fortnight window (see dates under the title). Imports attach by ShiftCare staff ID
+                    or name; shifts from other pay fortnights are stored but not listed here.
                   </TableCell>
                 </TableRow>
               )}

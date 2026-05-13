@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { useUploadRosterTimesheet } from '../../api/rosterCoverage';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUploadRosterTimesheet, useRosterPayPeriodTag } from '../../api/rosterCoverage';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { getErrorMessage } from '../../utils/api';
+import { setRosterTimesheetWindow } from '../../utils/rosterCoveragePayPeriod';
 
 function formatUploadInstant(iso) {
   if (!iso) return '';
@@ -12,9 +14,26 @@ function formatUploadInstant(iso) {
 }
 
 export function RosterTimesheetUpload() {
+  const qc = useQueryClient();
   const upload = useUploadRosterTimesheet();
+  const payTag = useRosterPayPeriodTag();
+  const activeWindow = useMemo(() => {
+    if (!payTag) return null;
+    try {
+      const [start, end] = JSON.parse(payTag);
+      return start && end ? { start, end } : null;
+    } catch {
+      return null;
+    }
+  }, [payTag]);
   const [file, setFile] = useState(null);
   const [lastUpload, setLastUpload] = useState(null);
+
+  const clearTimesheetWindow = () => {
+    setRosterTimesheetWindow(null);
+    qc.invalidateQueries({ queryKey: ['roster-coverage'] });
+    toast.message('Timesheet window cleared — Team and profiles use today’s fortnight again.');
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -50,6 +69,12 @@ export function RosterTimesheetUpload() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Fortnightly timesheet</CardTitle>
+          <CardDescription>
+            After a successful import, Team, staff profiles, and Find cover (when you run a search) total worked hours
+            over the <strong className="text-foreground">full date span of every shift in that file</strong> (earliest
+            start through latest end). The contracted cap column is still the per-fortnight cap from each person’s
+            roster record.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <p>
@@ -71,6 +96,19 @@ export function RosterTimesheetUpload() {
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4 max-w-xl">
+            {activeWindow ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-input bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                <span>
+                  Active totals window:{' '}
+                  <span className="font-medium text-foreground">
+                    {formatUploadInstant(activeWindow.start)} — {formatUploadInstant(activeWindow.end)}
+                  </span>
+                </span>
+                <Button type="button" variant="outline" size="sm" onClick={clearTimesheetWindow}>
+                  Clear window
+                </Button>
+              </div>
+            ) : null}
             <div>
               <label className="text-sm font-medium">File</label>
               <Input

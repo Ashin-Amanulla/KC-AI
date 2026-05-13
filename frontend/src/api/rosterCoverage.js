@@ -1,5 +1,12 @@
+import { useSyncExternalStore } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../utils/api';
+import {
+  getRosterPayPeriodSnapshot,
+  getRosterTimesheetWindow,
+  setRosterTimesheetWindow,
+  subscribeRosterPayPeriod,
+} from '../utils/rosterCoveragePayPeriod';
 
 const Q = {
   dashboard: ['roster-coverage', 'dashboard'],
@@ -12,6 +19,10 @@ const Q = {
   profile: (id) => ['roster-coverage', 'profile', id],
 };
 
+export function useRosterPayPeriodTag() {
+  return useSyncExternalStore(subscribeRosterPayPeriod, getRosterPayPeriodSnapshot, getRosterPayPeriodSnapshot);
+}
+
 export function useRosterDashboard() {
   return useQuery({
     queryKey: Q.dashboard,
@@ -20,9 +31,15 @@ export function useRosterDashboard() {
 }
 
 export function useRosterStaffList() {
+  const payTag = useRosterPayPeriodTag();
   return useQuery({
-    queryKey: Q.staff,
-    queryFn: async () => (await api.get('/api/roster-coverage/staff')).data,
+    queryKey: [...Q.staff, payTag],
+    queryFn: async () => {
+      const w = getRosterTimesheetWindow();
+      const params =
+        w?.start && w?.end ? { timesheetFrom: w.start, timesheetTo: w.end } : {};
+      return (await api.get('/api/roster-coverage/staff', { params })).data;
+    },
   });
 }
 
@@ -57,9 +74,15 @@ export function useRosterAudit(limit = 50) {
 }
 
 export function useRosterStaffProfile(staffId) {
+  const payTag = useRosterPayPeriodTag();
   return useQuery({
-    queryKey: Q.profile(staffId),
-    queryFn: async () => (await api.get(`/api/roster-coverage/staff/${staffId}/profile`)).data,
+    queryKey: [...Q.profile(staffId), payTag],
+    queryFn: async () => {
+      const w = getRosterTimesheetWindow();
+      const params =
+        w?.start && w?.end ? { timesheetFrom: w.start, timesheetTo: w.end } : {};
+      return (await api.get(`/api/roster-coverage/staff/${staffId}/profile`, { params })).data;
+    },
     enabled: !!staffId,
   });
 }
@@ -151,10 +174,13 @@ export function useUploadRosterTimesheet() {
         })
       ).data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['roster-coverage', 'worked-shifts'] });
-      qc.invalidateQueries({ queryKey: Q.dashboard });
-      qc.invalidateQueries({ queryKey: Q.audit });
+    onSuccess: (data) => {
+      if (data.timesheetSpan?.start && data.timesheetSpan?.end) {
+        setRosterTimesheetWindow({ start: data.timesheetSpan.start, end: data.timesheetSpan.end });
+      } else {
+        setRosterTimesheetWindow(null);
+      }
+      qc.invalidateQueries({ queryKey: ['roster-coverage'] });
     },
   });
 }

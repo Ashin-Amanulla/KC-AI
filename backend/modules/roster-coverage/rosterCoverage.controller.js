@@ -23,6 +23,22 @@ import { nameMatchKeys, normStaffNameForMatch } from '../../utils/staffNameNorm.
 const MS_PER_DAY = 86400000;
 const PAD_MS = 10 * 24 * 3600000;
 
+/** ISO / date string → UTC ms, or null if invalid */
+function parsePayPeriodInstantMs(raw) {
+  if (raw == null || raw === '') return null;
+  const t = new Date(String(raw).trim()).getTime();
+  return Number.isFinite(t) ? t : null;
+}
+
+/** @returns {{ startUtc: number, endUtc: number } | null} */
+function parseTimesheetWindowParams(obj) {
+  if (!obj) return null;
+  const a = parsePayPeriodInstantMs(obj.timesheetFrom);
+  const b = parsePayPeriodInstantMs(obj.timesheetTo);
+  if (a == null || b == null || !(a < b)) return null;
+  return { startUtc: a, endUtc: b };
+}
+
 function rosterShiftStatusFromWorkforceShift(shift) {
   if (shift?.absent) return 'cancelled';
   const status = String(shift?.shiftStatus || '').toLowerCase();
@@ -150,7 +166,76 @@ function badId(res, id) {
 export async function listRosterStaff(req, res, next) {
   try {
     const rows = await RosterStaff.find().sort({ fullName: 1 }).lean();
-    res.json({ staff: rows });
+    if (rows.length === 0) {
+      return res.json({ staff: [] });
+    }
+
+    const ids = rows.map((r) => r._id);
+    const win = parseTimesheetWindowParams(req.query);
+
+    if (win) {
+      const workedShifts = await RosterWorkedShift.find({
+        rosterStaffId: { $in: ids },
+        shiftStatus: { $ne: 'cancelled' },
+        startDatetime: { $lt: new Date(win.endUtc) },
+        endDatetime: { $gt: new Date(win.startUtc) },
+      }).lean();
+
+      const byStaff = new Map();
+      for (const w of workedShifts) {
+        const k = String(w.rosterStaffId);
+        if (!byStaff.has(k)) byStaff.set(k, []);
+        byStaff.get(k).push(w);
+      }
+
+      const staff = rows.map((s) => {
+        const list = byStaff.get(String(s._id)) || [];
+        const workedHoursThisFortnight = r2(
+          list.reduce((sum, w) => sum + hoursOfShiftOverlappingFortnight(w, win), 0)
+        );
+        return { ...s, workedHoursThisFortnight };
+      });
+      return res.json({ staff });
+    }
+
+    const atMs = parsePayPeriodInstantMs(req.query.payPeriodAt) ?? Date.now();
+    const staffMeta = rows.map((s) => {
+      const tz = s.timezone || config.rosterCoverage.defaultTimezone;
+      const anchorMs = startOfLocalDayUtc(config.rosterCoverage.fortnightAnchorISO, tz);
+      const fort = getFortnightContaining(anchorMs, atMs);
+      return { s, fortnight: { startUtc: fort.startUtc, endUtc: fort.endUtc } };
+    });
+
+    let minStart = Infinity;
+    let maxEnd = -Infinity;
+    for (const m of staffMeta) {
+      if (m.fortnight.startUtc < minStart) minStart = m.fortnight.startUtc;
+      if (m.fortnight.endUtc > maxEnd) maxEnd = m.fortnight.endUtc;
+    }
+
+    const workedShifts = await RosterWorkedShift.find({
+      rosterStaffId: { $in: ids },
+      shiftStatus: { $ne: 'cancelled' },
+      startDatetime: { $lt: new Date(maxEnd) },
+      endDatetime: { $gt: new Date(minStart) },
+    }).lean();
+
+    const byStaff = new Map();
+    for (const w of workedShifts) {
+      const k = String(w.rosterStaffId);
+      if (!byStaff.has(k)) byStaff.set(k, []);
+      byStaff.get(k).push(w);
+    }
+
+    const staff = staffMeta.map(({ s, fortnight }) => {
+      const list = byStaff.get(String(s._id)) || [];
+      const workedHoursThisFortnight = r2(
+        list.reduce((sum, w) => sum + hoursOfShiftOverlappingFortnight(w, fortnight), 0)
+      );
+      return { ...s, workedHoursThisFortnight };
+    });
+
+    res.json({ staff });
   } catch (e) {
     next(e);
   }
@@ -434,10 +519,23 @@ export async function postFindCover(req, res, next) {
     }
 
     const tz = await resolveParticipantTimezone(participant);
-    const anchorMs = startOfLocalDayUtc(config.rosterCoverage.fortnightAnchorISO, tz);
-    const atMs = toMs(vacant.startDatetime);
-    const fort = getFortnightContaining(anchorMs, atMs);
-    const fortnight = { startUtc: fort.startUtc, endUtc: fort.endUtc };
+    const win = parseTimesheetWindowParams(body);
+    let fortnight;
+    let payPeriodAnchorMs;
+    let usedTimesheetWindow = false;
+
+    if (win) {
+      fortnight = win;
+      payPeriodAnchorMs = Math.floor((win.startUtc + win.endUtc) / 2);
+      usedTimesheetWindow = true;
+    } else {
+      const anchorMs = startOfLocalDayUtc(config.rosterCoverage.fortnightAnchorISO, tz);
+      const refMs = parsePayPeriodInstantMs(body.payPeriodAt);
+      const atMs = refMs != null ? refMs : toMs(vacant.startDatetime);
+      const fort = getFortnightContaining(anchorMs, atMs);
+      fortnight = { startUtc: fort.startUtc, endUtc: fort.endUtc };
+      payPeriodAnchorMs = atMs;
+    }
 
     const allStaff = await RosterStaff.find().lean();
     const staffIds = allStaff.map((s) => s._id);
@@ -447,8 +545,8 @@ export async function postFindCover(req, res, next) {
     const workforceShifts = await Shift.find({
       $or: [
         {
-          startDatetime: { $lt: new Date(fort.endUtc) },
-          endDatetime: { $gt: new Date(fort.startUtc) },
+          startDatetime: { $lt: new Date(fortnight.endUtc) },
+          endDatetime: { $gt: new Date(fortnight.startUtc) },
         },
         {
           startDatetime: { $lt: new Date(vEnd + PAD_MS) },
@@ -466,8 +564,8 @@ export async function postFindCover(req, res, next) {
       shiftStatus: { $ne: 'cancelled' },
       $or: [
         {
-          startDatetime: { $lt: new Date(fort.endUtc) },
-          endDatetime: { $gt: new Date(fort.startUtc) },
+          startDatetime: { $lt: new Date(fortnight.endUtc) },
+          endDatetime: { $gt: new Date(fortnight.startUtc) },
         },
         {
           startDatetime: { $lt: new Date(vEnd + PAD_MS) },
@@ -524,6 +622,9 @@ export async function postFindCover(req, res, next) {
         end: new Date(fortnight.endUtc).toISOString(),
         timezone: tz,
       },
+      payPeriodAnchor: new Date(payPeriodAnchorMs).toISOString(),
+      usedUploadedPayReference: usedTimesheetWindow,
+      usedTimesheetWindow,
       eligibleTeam,
       ineligibleTeam,
       openPoolEligible,
@@ -577,33 +678,46 @@ export async function getStaffProfile(req, res, next) {
     if (!staff) return res.status(404).json({ error: 'Not found' });
 
     const tz = staff.timezone || config.rosterCoverage.defaultTimezone;
-    const anchorMs = startOfLocalDayUtc(config.rosterCoverage.fortnightAnchorISO, tz);
-    const fort = getFortnightContaining(anchorMs, Date.now());
+    const win = parseTimesheetWindowParams(req.query);
+
+    let capWindow;
+    let payPeriodAnchorMs;
+    if (win) {
+      capWindow = win;
+      payPeriodAnchorMs = Math.floor((win.startUtc + win.endUtc) / 2);
+    } else {
+      const anchorMs = startOfLocalDayUtc(config.rosterCoverage.fortnightAnchorISO, tz);
+      const atMs = parsePayPeriodInstantMs(req.query.payPeriodAt) ?? Date.now();
+      const fort = getFortnightContaining(anchorMs, atMs);
+      capWindow = { startUtc: fort.startUtc, endUtc: fort.endUtc };
+      payPeriodAnchorMs = atMs;
+    }
 
     const [participants, workedShifts] = await Promise.all([
       RosterParticipant.find({ approvedStaffIds: id }).select('name locationLabel').lean(),
       RosterWorkedShift.find({
         rosterStaffId: id,
         shiftStatus: { $ne: 'cancelled' },
-        startDatetime: { $lt: new Date(fort.endUtc) },
-        endDatetime: { $gt: new Date(fort.startUtc) },
+        startDatetime: { $lt: new Date(capWindow.endUtc) },
+        endDatetime: { $gt: new Date(capWindow.startUtc) },
       })
         .populate('rosterParticipantId', 'name')
         .sort({ startDatetime: 1 })
         .lean(),
     ]);
 
-    const fortnight = { startUtc: fort.startUtc, endUtc: fort.endUtc };
     const workedHours = r2(
-      workedShifts.reduce((sum, w) => sum + hoursOfShiftOverlappingFortnight(w, fortnight), 0)
+      workedShifts.reduce((sum, w) => sum + hoursOfShiftOverlappingFortnight(w, capWindow), 0)
     );
 
     res.json({
       staff,
       approvedParticipants: participants,
+      usedTimesheetWindow: !!win,
+      payPeriodAnchor: new Date(payPeriodAnchorMs).toISOString(),
       fortnight: {
-        start: new Date(fort.startUtc).toISOString(),
-        end: new Date(fort.endUtc).toISOString(),
+        start: new Date(capWindow.startUtc).toISOString(),
+        end: new Date(capWindow.endUtc).toISOString(),
       },
       workedHoursThisFortnight: workedHours,
       hoursRemaining: Math.max(0, Math.round((staff.contractedFortnightlyHours - workedHours) * 100) / 100),

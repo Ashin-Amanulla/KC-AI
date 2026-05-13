@@ -8,7 +8,7 @@ import {
   useDeleteRosterStaff,
 } from '../../api/rosterCoverage';
 import { useLocations } from '../../api/locations';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { getErrorMessage } from '../../utils/api';
@@ -179,6 +179,12 @@ export function RosterTeam() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Team</CardTitle>
+          <CardDescription>
+            Worked (fn) sums hours from every shift that overlaps the <strong className="text-foreground">saved
+            timesheet window</strong> (earliest to latest shift time from your last successful Timesheet upload). Cap is
+            contracted hours per fortnight from each roster record. Clear the window on Timesheet upload to fall back to
+            today’s pay fortnight.
+          </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {isLoading ? (
@@ -189,7 +195,8 @@ export function RosterTeam() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>SC ID</TableHead>
-                  <TableHead>Hrs / fn</TableHead>
+                  <TableHead className="text-right">Worked</TableHead>
+                  <TableHead className="text-right">Cap</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -202,7 +209,10 @@ export function RosterTeam() {
                       </Link>
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">{s.shiftcareStaffId || '—'}</TableCell>
-                    <TableCell>{s.contractedFortnightlyHours}</TableCell>
+                    <TableCell className="text-right">
+                      {s.workedHoursThisFortnight != null ? Number(s.workedHoursThisFortnight).toFixed(1) : '—'}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">{s.contractedFortnightlyHours}</TableCell>
                     <TableCell className="space-x-2 text-right">
                       <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(s)}>
                         Edit

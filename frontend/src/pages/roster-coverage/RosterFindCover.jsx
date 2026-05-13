@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { getErrorMessage } from '../../utils/api';
+import { getRosterTimesheetWindow } from '../../utils/rosterCoveragePayPeriod';
 import {
   Table,
   TableBody,
@@ -39,15 +40,16 @@ function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut }) {
         <TableRow>
           <TableHead>Name</TableHead>
           <TableHead>Phone</TableHead>
-          <TableHead className="text-right">Worked (fn)</TableHead>
-          <TableHead className="text-right">Hours left (fn)</TableHead>
+          <TableHead className="text-right">Worked</TableHead>
+          <TableHead className="text-right">Cap</TableHead>
+          <TableHead className="text-right">Cap headroom (fn)</TableHead>
           <TableHead className="w-[140px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {rows?.length === 0 && (
           <TableRow>
-            <TableCell colSpan={5} className="text-muted-foreground">
+            <TableCell colSpan={6} className="text-muted-foreground">
               {emptyLabel}
             </TableCell>
           </TableRow>
@@ -61,6 +63,9 @@ function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut }) {
               <TableCell>{s.phone || '—'}</TableCell>
               <TableCell className="text-right text-muted-foreground">
                 {row.workedHoursThisFortnight != null ? row.workedHoursThisFortnight.toFixed(1) : '—'}
+              </TableCell>
+              <TableCell className="text-right text-muted-foreground">
+                {s?.contractedFortnightlyHours != null ? s.contractedFortnightlyHours : '—'}
               </TableCell>
               <TableCell className="text-right">{row.hoursRemaining?.toFixed?.(1)}</TableCell>
               <TableCell>
@@ -179,6 +184,7 @@ export function RosterFindCover() {
       return;
     }
     try {
+      const w = getRosterTimesheetWindow();
       const data = await findCover.mutateAsync({
         rosterParticipantId: participantId,
         startDatetime,
@@ -187,6 +193,7 @@ export function RosterFindCover() {
         sleepoverStart: sleepover && sleepoverStart ? toIsoLocal(dateStr, sleepoverStart) : null,
         reason,
         persistVacant,
+        ...(w?.start && w?.end ? { timesheetFrom: w.start, timesheetTo: w.end } : {}),
       });
       setResult(data);
       const et = data.eligibleTeam?.length ?? 0;
@@ -235,6 +242,13 @@ export function RosterFindCover() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Vacant shift</CardTitle>
+          <CardDescription>
+            Eligible tables match the Team page: <strong className="text-foreground">Worked</strong>,{' '}
+            <strong className="text-foreground">Cap</strong> (contracted hours), and{' '}
+            <strong className="text-foreground">Cap headroom</strong>. If a timesheet window is set from Timesheet upload,
+            worked and headroom use the <strong className="text-foreground">full span of that file’s shifts</strong>;
+            otherwise the fortnight containing this vacant shift’s start is used.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -408,15 +422,25 @@ export function RosterFindCover() {
           </div>
           {result.fortnight && (
             <p className="text-xs text-muted-foreground">
-              Fortnight window (engine): {new Date(result.fortnight.start).toLocaleString()} —{' '}
-              {new Date(result.fortnight.end).toLocaleString()} · {result.fortnight.timezone}
+              <span className="font-medium text-foreground">Date range for worked totals:</span>{' '}
+              {new Date(result.fortnight.start).toLocaleString()} — {new Date(result.fortnight.end).toLocaleString()} ·{' '}
+              {result.fortnight.timezone}
+              {result.payPeriodAnchor ? (
+                <span className="mt-1 block">
+                  Midpoint reference: {new Date(result.payPeriodAnchor).toLocaleString()}
+                  {result.usedTimesheetWindow || result.usedUploadedPayReference
+                    ? ' (totals window = imported timesheet date span — same as Team page).'
+                    : ' (from vacant shift start — clear timesheet window on Timesheet upload to use this default).'}
+                </span>
+              ) : null}
               <span className="mt-1 block">
-                <strong className="font-medium text-foreground">Worked (fn)</strong> sums{' '}
-                <em>every</em> non-cancelled shift we have for that worker (roster timesheet imports and
-                workforce imports), but only the portion of each shift that falls inside this pay
-                fortnight. If your CSV spans two fortnights, each row still counts—all of its hours
-                go into whichever fortnight(s) the shift times overlap. Rows entirely outside this
-                window count toward a different fortnight’s cap, not this search.
+                <strong className="font-medium text-foreground">Worked</strong> sums{' '}
+                <em>every</em> non-cancelled shift we have for that worker (roster timesheet imports and workforce
+                imports), counting only the portion of each shift that overlaps the range above. Shifts entirely outside
+                that range do not add to this search.{' '}
+                <strong className="font-medium text-foreground">Cap</strong> is contracted hours per fortnight from the
+                roster. <strong className="font-medium text-foreground">Cap headroom (fn)</strong> is cap minus worked
+                (same range).
               </span>
             </p>
           )}
