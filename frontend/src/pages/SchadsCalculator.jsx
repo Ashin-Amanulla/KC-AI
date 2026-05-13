@@ -620,11 +620,28 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow }) =
                   {(mrow.totalKm || 0) > 0 ? mrow.totalKm : '—'}
                 </td>
                 <td className="px-3 py-2 text-[10px] text-muted-foreground">
-                  {(mrow.weekdayOtUpto2 || 0) + (mrow.weekdayOtAfter2 || 0) > 0 && (
-                    <span className="inline-block px-1 py-0.5 rounded bg-rose-100 text-rose-800 whitespace-nowrap">
-                      WD OT {h(r2((mrow.weekdayOtUpto2 || 0) + (mrow.weekdayOtAfter2 || 0)))}
-                    </span>
-                  )}
+                  <div className="flex flex-wrap gap-1">
+                    {(mrow.weekdayOtUpto2 || 0) + (mrow.weekdayOtAfter2 || 0) > 0 && (
+                      <span className="inline-block px-1 py-0.5 rounded bg-rose-100 text-rose-800 whitespace-nowrap">
+                        WD OT {h(r2((mrow.weekdayOtUpto2 || 0) + (mrow.weekdayOtAfter2 || 0)))}
+                      </span>
+                    )}
+                    {(mrow.saturdayOtUpto2 || 0) + (mrow.saturdayOtAfter2 || 0) > 0 && (
+                      <span className="inline-block px-1 py-0.5 rounded bg-rose-100 text-rose-800 whitespace-nowrap">
+                        Sat OT {h(r2((mrow.saturdayOtUpto2 || 0) + (mrow.saturdayOtAfter2 || 0)))}
+                      </span>
+                    )}
+                    {(mrow.sundayOtUpto2 || 0) + (mrow.sundayOtAfter2 || 0) > 0 && (
+                      <span className="inline-block px-1 py-0.5 rounded bg-rose-100 text-rose-800 whitespace-nowrap">
+                        Sun OT {h(r2((mrow.sundayOtUpto2 || 0) + (mrow.sundayOtAfter2 || 0)))}
+                      </span>
+                    )}
+                    {(mrow.holidayOtUpto2 || 0) + (mrow.holidayOtAfter2 || 0) > 0 && (
+                      <span className="inline-block px-1 py-0.5 rounded bg-rose-100 text-rose-800 whitespace-nowrap">
+                        Hol OT {h(r2((mrow.holidayOtUpto2 || 0) + (mrow.holidayOtAfter2 || 0)))}
+                      </span>
+                    )}
+                  </div>
                 </td>
               </tr>
             </tfoot>
