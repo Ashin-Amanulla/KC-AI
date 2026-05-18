@@ -16,7 +16,10 @@ export function RosterCoverageLayout() {
   const role = useAuthStore((s) => s.user?.role);
   const links =
     role === 'shifts_viewer'
-      ? ALL_LINKS.filter((l) => l.to === '/roster-coverage/shift-log')
+      ? ALL_LINKS.filter(
+          (l) =>
+            l.to === '/roster-coverage/shift-log' || l.to === '/roster-coverage/find-cover'
+        )
       : ALL_LINKS;
 
   return (

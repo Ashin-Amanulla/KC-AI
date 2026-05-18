@@ -154,6 +154,7 @@ export function useFindCover() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: Q.vacant('open') });
       qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: Q.shiftDashboard });
       qc.invalidateQueries({ queryKey: Q.audit });
     },
   });

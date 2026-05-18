@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   useShiftDashboard,
   useCreateVacantShift,
@@ -6,6 +7,23 @@ import {
   useAddVacantShiftUpdate,
   useRosterParticipants,
 } from '../../api/rosterCoverage';
+
+function shiftToFindCoverSearchParams(shift) {
+  const start = new Date(shift.startDatetime);
+  const end = new Date(shift.endDatetime);
+  const pad = (n) => String(n).padStart(2, '0');
+  const participantId =
+    shift.rosterParticipantId?._id ?? shift.rosterParticipantId ?? '';
+  return new URLSearchParams({
+    participant: participantId,
+    date: `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`,
+    start: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
+    end: `${pad(end.getHours())}:${pad(end.getMinutes())}`,
+    reason: shift.reason || 'vacancy',
+    vacant: shift._id,
+    auto: '1',
+  });
+}
 
 const C = {
   bg: '#F9F8F6',
@@ -130,7 +148,7 @@ function NoteThread({ notes = [], shiftId, onAdd }) {
   );
 }
 
-function ShiftCard({ shift, idx, onStatus, onNote }) {
+function ShiftCard({ shift, idx, onStatus, onNote, onFindCover }) {
   const rc = REASON_CFG[shift.reason] ?? { dot: '#94A3B8', bg: C.faint, label: shift.reason };
   const sc = STATUS_CFG[shift.status] ?? STATUS_CFG.open;
   const pc = PRI_CFG[shift.priority] ?? PRI_CFG.medium;
@@ -144,6 +162,7 @@ function ShiftCard({ shift, idx, onStatus, onNote }) {
 
   const nextStatus = shift.status === 'open' ? 'in_progress' : shift.status === 'in_progress' ? 'filled' : null;
   const nextLabel = shift.status === 'open' ? 'Start →' : shift.status === 'in_progress' ? '✓ Filled' : null;
+  const showFindCover = shift.status === 'open' || shift.status === 'in_progress';
 
   return (
     <div
@@ -202,16 +221,46 @@ function ShiftCard({ shift, idx, onStatus, onNote }) {
           <span style={{ fontSize: 11, color: C.muted, fontStyle: 'italic' }}>Unassigned</span>
         )}
 
-        {nextStatus && (
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {showFindCover && (
+            <button
+              type="button"
+              onClick={() => onFindCover(shift)}
+              style={{
+                background: C.accentBg,
+                color: C.accent,
+                border: `1.5px solid ${C.accent}44`,
+                borderRadius: 8,
+                padding: '5px 13px',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all .15s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = C.accent;
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = C.accentBg;
+                e.currentTarget.style.color = C.accent;
+              }}
+            >
+              Find Cover
+            </button>
+          )}
+          {nextStatus && (
           <button
+            type="button"
             onClick={() => onStatus({ id: shift._id, status: nextStatus })}
-            style={{ marginLeft: 'auto', background: C.faint, color: '#555', border: `1.5px solid ${C.border}`, borderRadius: 8, padding: '5px 13px', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }}
+            style={{ background: C.faint, color: '#555', border: `1.5px solid ${C.border}`, borderRadius: 8, padding: '5px 13px', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = nextStatus === 'in_progress' ? '#FFF7ED' : '#F0FDF4'; e.currentTarget.style.borderColor = nextStatus === 'in_progress' ? '#F97316' : '#22C55E'; e.currentTarget.style.color = nextStatus === 'in_progress' ? '#F97316' : '#22C55E'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = C.faint; e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = '#555'; }}
           >
             {nextLabel}
           </button>
-        )}
+          )}
+        </div>
       </div>
 
       <NoteThread notes={shift.updateLogs ?? []} shiftId={shift._id} onAdd={onNote} />
@@ -339,6 +388,7 @@ function LogShiftModal({ onClose, onSubmit, participants = [] }) {
 }
 
 export function RosterShiftLog() {
+  const navigate = useNavigate();
   const { data, isLoading, dataUpdatedAt } = useShiftDashboard(15000);
   const { data: participantData } = useRosterParticipants();
   const createShift = useCreateVacantShift();
@@ -389,6 +439,10 @@ export function RosterShiftLog() {
 
   function handleNote({ id, authorName, text }) {
     addUpdate.mutate({ id, authorName, text });
+  }
+
+  function handleFindCover(shift) {
+    navigate(`/roster-coverage/find-cover?${shiftToFindCoverSearchParams(shift)}`);
   }
 
   const filterBtn = (active, onClick, label, color) => (
@@ -527,6 +581,7 @@ export function RosterShiftLog() {
                     idx={idx + ci * 9}
                     onStatus={handleStatus}
                     onNote={handleNote}
+                    onFindCover={handleFindCover}
                   />
                 ))}
               </div>

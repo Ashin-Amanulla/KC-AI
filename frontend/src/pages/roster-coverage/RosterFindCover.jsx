@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -131,6 +132,7 @@ function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut }) {
 }
 
 export function RosterFindCover() {
+  const [searchParams] = useSearchParams();
   const { data: partData } = useRosterParticipants();
   const participants = useMemo(() => partData?.participants ?? [], [partData]);
   const findCover = useFindCover();
@@ -144,10 +146,12 @@ export function RosterFindCover() {
   const [sleepoverStart, setSleepoverStart] = useState('');
   const [reason, setReason] = useState('vacancy');
   const [persistVacant, setPersistVacant] = useState(false);
+  const [linkedVacantId, setLinkedVacantId] = useState(null);
   const [result, setResult] = useState(null);
   const [participantPickerOpen, setParticipantPickerOpen] = useState(false);
   const [participantSearch, setParticipantSearch] = useState('');
   const participantPickerRef = useRef(null);
+  const autoRanRef = useRef(false);
 
   const filteredParticipants = useMemo(() => {
     const q = participantSearch.trim().toLowerCase();
@@ -175,8 +179,7 @@ export function RosterFindCover() {
     };
   }, [participantPickerOpen]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const runFindCover = useCallback(async () => {
     const startDatetime = toIsoLocal(dateStr, startTime);
     const endDatetime = toIsoLocal(dateStr, endTime);
     if (!participantId || !startDatetime || !endDatetime) {
@@ -192,7 +195,8 @@ export function RosterFindCover() {
         sleepover,
         sleepoverStart: sleepover && sleepoverStart ? toIsoLocal(dateStr, sleepoverStart) : null,
         reason,
-        persistVacant,
+        vacantShiftId: linkedVacantId || undefined,
+        persistVacant: linkedVacantId ? false : persistVacant,
         ...(w?.start && w?.end ? { timesheetFrom: w.start, timesheetTo: w.end } : {}),
       });
       setResult(data);
@@ -203,7 +207,45 @@ export function RosterFindCover() {
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
+  }, [
+    dateStr,
+    endTime,
+    findCover,
+    linkedVacantId,
+    participantId,
+    persistVacant,
+    reason,
+    sleepover,
+    sleepoverStart,
+    startTime,
+  ]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await runFindCover();
   };
+
+  useEffect(() => {
+    const participant = searchParams.get('participant');
+    const date = searchParams.get('date');
+    const start = searchParams.get('start');
+    const end = searchParams.get('end');
+    const reasonParam = searchParams.get('reason');
+    const vacant = searchParams.get('vacant');
+    if (participant) setParticipantId(participant);
+    if (date) setDateStr(date);
+    if (start) setStartTime(start);
+    if (end) setEndTime(end);
+    if (reasonParam) setReason(reasonParam);
+    if (vacant) setLinkedVacantId(vacant);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (searchParams.get('auto') !== '1' || autoRanRef.current) return;
+    if (!participantId || !dateStr || !startTime || !endTime) return;
+    autoRanRef.current = true;
+    runFindCover();
+  }, [searchParams, participantId, dateStr, startTime, endTime, runFindCover]);
 
   const ineligibleRows =
     result?.ineligibleTeam?.map((r) => ({
@@ -211,7 +253,7 @@ export function RosterFindCover() {
       reasons: r.reasons,
     })) ?? [];
 
-  const vacantId = result?.vacantShiftId;
+  const vacantId = linkedVacantId || result?.vacantShiftId;
 
   const exportPdf = async () => {
     if (!ineligibleRows.length) {

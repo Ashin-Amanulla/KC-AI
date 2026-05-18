@@ -589,8 +589,12 @@ export async function postFindCover(req, res, next) {
       fortnight
     );
 
-    let vacantShiftId = null;
-    if (body.persistVacant) {
+    let vacantShiftId = body.vacantShiftId || null;
+    if (vacantShiftId) {
+      if (badId(res, vacantShiftId)) return;
+      const existing = await RosterVacantShift.findById(vacantShiftId).lean();
+      if (!existing) return res.status(404).json({ error: 'Vacant shift not found' });
+    } else if (body.persistVacant) {
       const vs = await RosterVacantShift.create({
         rosterParticipantId: participantId,
         startDatetime: body.startDatetime,

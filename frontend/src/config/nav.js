@@ -55,7 +55,7 @@ const WORKFORCE_LEGACY_PATHS = ['/shifts', '/pay-hours', '/cost-analysis'];
 
 export const canAccessPath = (role, path) => {
   if (role === ROLES.SHIFTS_VIEWER) {
-    return path === '/roster-coverage/shift-log';
+    return path === '/roster-coverage/shift-log' || path === '/roster-coverage/find-cover';
   }
   if (path === '/workforce' || WORKFORCE_LEGACY_PATHS.includes(path)) {
     const wf = NAV_ITEMS.find((i) => i.path === '/workforce');
