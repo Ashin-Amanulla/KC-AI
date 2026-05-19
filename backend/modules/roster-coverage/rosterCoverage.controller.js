@@ -111,14 +111,35 @@ function buildWorkforceShiftsByStaffId(allStaff, workforceShifts) {
   return out;
 }
 
-/** Same start+end → one shift (roster + workforce imports often duplicate). */
-function dedupeShiftsByStartEnd(shifts) {
-  const seen = new Set();
+/** Minute-rounded key so sub-second DB differences still dedupe. */
+function workedShiftTimeKey(s) {
+  const startMin = Math.round(toMs(s.startDatetime) / 60000);
+  const endMin = Math.round(toMs(s.endDatetime) / 60000);
+  return `${startMin}_${endMin}`;
+}
+
+/** True when two shifts are the same worked block (exact or near-identical times). */
+function workedShiftsDuplicate(a, b) {
+  if (workedShiftTimeKey(a) === workedShiftTimeKey(b)) return true;
+  const aStart = toMs(a.startDatetime);
+  const aEnd = toMs(a.endDatetime);
+  const bStart = toMs(b.startDatetime);
+  const bEnd = toMs(b.endDatetime);
+  const overlapStart = Math.max(aStart, bStart);
+  const overlapEnd = Math.min(aEnd, bEnd);
+  if (overlapEnd <= overlapStart) return false;
+  const overlapH = (overlapEnd - overlapStart) / 3600000;
+  const aH = (aEnd - aStart) / 3600000;
+  const bH = (bEnd - bStart) / 3600000;
+  const shorter = Math.min(aH, bH);
+  return shorter > 0 && overlapH >= shorter * 0.9;
+}
+
+/** Collapse duplicate / overlapping worked shifts (roster + workforce imports). */
+function dedupeWorkedShifts(shifts) {
   const out = [];
   for (const s of shifts) {
-    const k = `${toMs(s.startDatetime)}_${toMs(s.endDatetime)}`;
-    if (seen.has(k)) continue;
-    seen.add(k);
+    if (out.some((existing) => workedShiftsDuplicate(existing, s))) continue;
     out.push(s);
   }
   return out;
@@ -126,21 +147,25 @@ function dedupeShiftsByStartEnd(shifts) {
 
 /**
  * Append roster-coverage worked shifts (timesheet / manual) per staffId, then dedupe.
+ * Skips roster rows that duplicate workforce shifts already in the map.
  */
 function mergeRosterWorkedIntoShiftsByStaffId(shiftsByStaffId, rosterWorkedRows) {
   for (const w of rosterWorkedRows) {
     const sid = String(w.rosterStaffId);
     if (!shiftsByStaffId.has(sid)) shiftsByStaffId.set(sid, []);
-    shiftsByStaffId.get(sid).push({
+    const candidate = {
       startDatetime: w.startDatetime,
       endDatetime: w.endDatetime,
       sleepover: !!w.sleepover,
       sleepoverStart: w.sleepoverStart ?? null,
       shiftStatus: w.shiftStatus === 'cancelled' ? 'cancelled' : w.shiftStatus || 'completed',
-    });
+    };
+    const existing = shiftsByStaffId.get(sid);
+    if (existing.some((e) => workedShiftsDuplicate(e, candidate))) continue;
+    existing.push(candidate);
   }
   for (const sid of shiftsByStaffId.keys()) {
-    shiftsByStaffId.set(sid, dedupeShiftsByStartEnd(shiftsByStaffId.get(sid)));
+    shiftsByStaffId.set(sid, dedupeWorkedShifts(shiftsByStaffId.get(sid)));
   }
 }
 
@@ -1004,6 +1029,17 @@ export async function uploadTimesheet(req, res, next) {
 
     let created = 0;
     if (toCreate.length) {
+      // Replace prior timesheet rows for these staff in this import span (workforce upload replaces; roster used to append).
+      if (timesheetSpan?.start && timesheetSpan?.end) {
+        const spanStart = new Date(timesheetSpan.start);
+        const spanEnd = new Date(timesheetSpan.end);
+        const staffIdsInFile = [...new Set(toCreate.map((r) => r.rosterStaffId))];
+        await RosterWorkedShift.deleteMany({
+          rosterStaffId: { $in: staffIdsInFile },
+          startDatetime: { $lt: spanEnd },
+          endDatetime: { $gt: spanStart },
+        });
+      }
       const inserted = await RosterWorkedShift.insertMany(toCreate);
       created = inserted.length;
     }
