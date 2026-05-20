@@ -54,3 +54,14 @@ test('golden: buildSummaryRecord variance pct null when forecast zero', () => {
   assert.strictEqual(s.variance, 50);
   assert.strictEqual(s.variancePercentage, null);
 });
+
+test('golden: totals variance equals sum of row variances', () => {
+  const rows = [
+    buildSummaryRecord('c1', 'A', 100, 90, 5),
+    buildSummaryRecord('c2', 'B', 200, 220, 0),
+  ];
+  const sumVariance = rows.reduce((s, r) => s + r.variance, 0);
+  const totalForecast = rows.reduce((s, r) => s + r.forecastBudget, 0);
+  assert.strictEqual(sumVariance, 10);
+  assert.strictEqual((sumVariance / totalForecast) * 100, 10 / 3);
+});

@@ -479,13 +479,20 @@ export async function getSummary({ locationId, staffId, clientId, credentials })
   }
   records.sort((a, b) => a.clientName.localeCompare(b.clientName, undefined, { sensitivity: 'base' }));
 
-  const totals = buildSummaryRecord(
-    null,
-    'TOTAL',
-    records.reduce((s, r) => s + r.forecastBudget, 0),
-    records.reduce((s, r) => s + r.netActuals, 0),
-    records.reduce((s, r) => s + r.mileage, 0)
-  );
+  // Totals: sum per-row values (matches KC Studio — not recomputed from aggregate sums)
+  const totals = {
+    clientId: null,
+    clientName: 'TOTAL',
+    forecastBudget: roundMoney(records.reduce((s, r) => s + r.forecastBudget, 0)),
+    netActuals: roundMoney(records.reduce((s, r) => s + r.netActuals, 0)),
+    mileage: roundMoney(records.reduce((s, r) => s + r.mileage, 0)),
+    grossActuals: roundMoney(records.reduce((s, r) => s + r.grossActuals, 0)),
+    variance: roundMoney(records.reduce((s, r) => s + r.variance, 0)),
+    variancePercentage: null,
+  };
+  if (totals.forecastBudget > 0) {
+    totals.variancePercentage = roundMoney((totals.variance / totals.forecastBudget) * 100);
+  }
 
   const fDr = await ForecastRecord.aggregate([
     { $match: { location: locObjectId(locationId) } },

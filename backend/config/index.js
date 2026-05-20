@@ -34,6 +34,9 @@ export const config = {
   forecastActuals: {
     pageSize: parseInt(process.env.FORECAST_PAGE_SIZE || '15', 10),
   },
+  standardForecast: {
+    pageSize: parseInt(process.env.STANDARD_FORECAST_PAGE_SIZE || '25', 10),
+  },
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
   },

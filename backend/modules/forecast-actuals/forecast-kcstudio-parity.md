@@ -3,7 +3,7 @@
 ## KC Studio source location
 
 - **This workspace:** drop the Python tree under `tmp/kcstudio/` (see `tmp/kcstudio/PLACE_FORECAST_ACTUALS_SERVICE_HERE.txt`).
-- **Searched (Apr 2026):** no `forecast_actuals_service.py` under `~/Code` or this repo; line-by-line Python diff is **blocked** until that tree is present.
+- **Audited (May 2026):** Python source at `tmp/kcstudio/kc_studio/app/forecast_actuals/services/forecast_actuals_service.py`. kcai matches columns, upload replace-all, summary formulas, variance tabs, and aggregation. Totals row uses sum of per-client variances (aligned with Python).
 
 ## kcai module map (for side-by-side review)
 

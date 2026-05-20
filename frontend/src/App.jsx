@@ -11,6 +11,8 @@ import { Clients } from './pages/Clients';
 import { Timesheets } from './pages/Timesheets';
 import { ShiftAnalysis } from './pages/ShiftAnalysis';
 import { ForecastActuals } from './pages/ForecastActuals';
+import { StandardForecast } from './pages/StandardForecast';
+import { StandardVsForecast } from './pages/StandardVsForecast';
 import { UserManagement } from './pages/UserManagement';
 import { WorkforceHub } from './pages/WorkforceHub';
 import { PayHoursTests } from './pages/PayHoursTests';
@@ -116,6 +118,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <ForecastActuals />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/standard-forecast"
+            element={
+              <ProtectedRoute>
+                <StandardForecast />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/standard-vs-forecast"
+            element={
+              <ProtectedRoute>
+                <StandardVsForecast />
               </ProtectedRoute>
             }
           />

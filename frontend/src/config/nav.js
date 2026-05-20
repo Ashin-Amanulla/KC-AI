@@ -24,6 +24,18 @@ export const NAV_ITEMS = [
     roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE],
   },
   {
+    path: '/standard-forecast',
+    label: 'Standard',
+    icon: 'Calendar',
+    roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE],
+  },
+  {
+    path: '/standard-vs-forecast',
+    label: 'Standard vs forecast',
+    icon: 'GitCompare',
+    roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE],
+  },
+  {
     path: '/roster-coverage',
     label: 'Roster coverage',
     icon: 'CalendarDays',

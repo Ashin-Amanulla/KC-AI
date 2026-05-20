@@ -13,7 +13,9 @@ import {
   LogOut,
   Calculator,
   CalendarDays,
+  Calendar,
   TrendingDown,
+  GitCompare,
   Layers,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
@@ -32,7 +34,9 @@ const iconMap = {
   Shield,
   Calculator,
   CalendarDays,
+  Calendar,
   TrendingDown,
+  GitCompare,
   Layers,
 };
 

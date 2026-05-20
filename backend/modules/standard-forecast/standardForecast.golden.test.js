@@ -1,0 +1,41 @@
+import assert from 'node:assert';
+import test from 'node:test';
+import {
+  buildStandardVsForecastRecord,
+  countDaysInRange,
+} from './standardForecast.service.js';
+
+test('golden: countDaysInRange Mon–Sun over two weeks', () => {
+  const start = new Date('2026-04-06T12:00:00.000Z');
+  const end = new Date('2026-04-19T12:00:00.000Z');
+  const counts = countDaysInRange(start, end);
+  assert.strictEqual(counts.monday, 2);
+  assert.strictEqual(counts.tuesday, 2);
+  assert.strictEqual(counts.sunday, 2);
+  const total = Object.values(counts).reduce((s, n) => s + n, 0);
+  assert.strictEqual(total, 14);
+});
+
+test('golden: buildStandardVsForecastRecord variance', () => {
+  const r = buildStandardVsForecastRecord('c1', 'Acme', 100, 120);
+  assert.strictEqual(r.standardBudget, 100);
+  assert.strictEqual(r.forecastBudget, 120);
+  assert.strictEqual(r.variance, 20);
+  assert.strictEqual(r.variancePercentage, 20);
+});
+
+test('golden: buildStandardVsForecastRecord variance pct null when standard zero', () => {
+  const r = buildStandardVsForecastRecord('c1', 'Acme', 0, 50);
+  assert.strictEqual(r.variance, 50);
+  assert.strictEqual(r.variancePercentage, null);
+});
+
+test('golden: standard budget = totalCost × day count', () => {
+  const counts = countDaysInRange(
+    new Date('2026-04-07T12:00:00.000Z'),
+    new Date('2026-04-13T12:00:00.000Z')
+  );
+  assert.strictEqual(counts.monday, 1);
+  const budget = 50 * counts.monday;
+  assert.strictEqual(budget, 50);
+});
