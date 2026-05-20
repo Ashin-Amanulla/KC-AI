@@ -593,7 +593,7 @@ describe('short turnaround thresholds', () => {
     assert.strictEqual(shiftBreakdowns.get('st03b')?.shortTurnaroundHours || 0, 4);
   });
 
-  test('short turnaround hours are not double-bucketed into weekday OT', () => {
+  test('broken-shift split: prefer broken OT over short-turnaround 2× bucket (no double penalty)', () => {
     const first = shiftBrisbane(
       { _id: 'st05a', shiftType: 'personal_care', timezoneOffset: '+10:00' },
       '2026-06-14',
@@ -611,8 +611,11 @@ describe('short turnaround thresholds', () => {
       0
     );
     const { data, shiftBreakdowns } = computePayHoursForStaff([first, second], new Set());
-    assert.strictEqual(shiftBreakdowns.get('st05b')?.shortTurnaroundHours || 0, 5);
-    assert.strictEqual(data.shortTurnaroundHours || 0, 5);
+    assert.strictEqual(shiftBreakdowns.get('st05b')?.shortTurnaroundHours || 0, 0);
+    assert.strictEqual(data.shortTurnaroundHours || 0, 0);
+    assert.strictEqual(data.brokenShiftCount, 1);
+    // 2026-06-14 is Sunday (AU): broken double-time for the last shift lands in Sunday tier-2 OT.
+    assert.strictEqual(data.sundayOtAfter2 || 0, 5);
     assert.strictEqual(data.weekdayOtAfter2 || 0, 0);
   });
 });

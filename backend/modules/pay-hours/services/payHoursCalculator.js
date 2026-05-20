@@ -927,7 +927,19 @@ function groupSegmentsIntoChains(pendingSegments) {
   let currentChain = [];
 
   for (const seg of pendingSegments) {
-    if (!seg.isContinuousWithPrevious || !currentChain.length) {
+    const prev = currentChain.length ? currentChain[currentChain.length - 1] : null;
+    // SCHADS 2026+: loadings before and after a sleepover are decoupled — never treat
+    // pre-sleepover night/evening as the "originating band" for OT + cap logic that
+    // includes post-sleepover ordinary hours (chain must snap at SO boundary).
+    const sleepoverAttendanceBoundary =
+      prev &&
+      (prev.shiftType === 'sleepover') !== (seg.shiftType === 'sleepover');
+
+    if (
+      !seg.isContinuousWithPrevious ||
+      !currentChain.length ||
+      sleepoverAttendanceBoundary
+    ) {
       if (currentChain.length) chains.push(currentChain);
       currentChain = [seg];
     } else {
@@ -1049,9 +1061,14 @@ function processSingleChain(chain, data, ctx) {
       activeSegs.length > 0 && activeSegs.every((ps) => ps.segment.dayType === 'weekday');
     const threshold = allWeekday ? MAX_REGULAR_HOURS_WEEKDAY : MAX_REGULAR_HOURS;
 
+    // Do not treat post-sleepover ordinary hours as part of a pre-sleepover "night chain"
+    // for daily-cap / OT spill (SCHADS 2026 sleepover loading decoupling).
+    const chainHasSleepoverShift = activeSegs.some((ps) => ps.shiftType === 'sleepover');
+
     // SCHADS overnight continuity: when a continuous weekday chain originates as night,
     // keep the first ordinary-cap window on night loading before extracting overtime.
     if (
+      !chainHasSleepoverShift &&
       allWeekday &&
       calcEntries.length > 0 &&
       calcEntries[0].fieldName === 'nightHours' &&
@@ -1322,10 +1339,13 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
       shift.shiftType !== 'sleepover';
   }
   const requiredBreakMs = ctx.previousTurnaroundBreakMs ?? MIN_BREAK_BETWEEN_SHIFTS_MS;
+  // Broken-shift marker (ShiftCare inadequate-rest split): use broken-shift OT + allowance rules,
+  // not the separate short-turnaround 2× bucket (would suppress processBrokenShiftOvertime).
   const shortTurnaround =
     gapMs !== null &&
     gapMs > 0 &&
-    gapMs < requiredBreakMs;
+    gapMs < requiredBreakMs &&
+    !shift.isBrokenShift;
 
   const sid = String(shift._id);
   const activeHours = calculateActiveHours(normalizedHours, shift.shiftType);
