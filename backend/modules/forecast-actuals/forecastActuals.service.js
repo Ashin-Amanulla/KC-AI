@@ -83,6 +83,7 @@ export function processRowCommon(row, normalizedColumns, staffMap, clientMap, ro
   const shiftType = getVal('shift type');
   const additionalShiftType = getVal('additional shift type');
   const clientType = getVal('client type');
+  const ratio = getVal('ratio');
 
   let staffEntry = null;
   if (staffName) {
@@ -144,8 +145,146 @@ export function processRowCommon(row, normalizedColumns, staffMap, clientMap, ro
       shiftType,
       additionalShiftType,
       clientType,
+      ratio,
     },
   };
+}
+
+/** Build forecast/actuals doc from API body (single-row CRUD) */
+export async function buildForecastActualsDocFromBody(body, credentials, errorPrefix = '') {
+  const prefix = errorPrefix ? `${errorPrefix}: ` : '';
+  const [clients, staff] = await Promise.all([
+    fetchAllClients(credentials),
+    fetchAllStaff(credentials),
+  ]);
+  const { clientMap, staffMap } = buildLookupMaps(clients, staff);
+
+  let clientEntry = null;
+  if (body.clientDirectoryId) {
+    clientEntry = clients.find((c) => c.id === body.clientDirectoryId) || null;
+  } else if (body.clientName) {
+    clientEntry = clientMap.get(String(body.clientName).toLowerCase()) || null;
+  }
+  if (!clientEntry) return { error: `${prefix}Client not found` };
+
+  let staffEntry = null;
+  if (body.staffDirectoryId) {
+    staffEntry = staff.find((s) => s.id === body.staffDirectoryId) || null;
+  } else if (body.staffName) {
+    staffEntry = staffMap.get(String(body.staffName).toLowerCase()) || null;
+  }
+
+  const shiftDate = body.shiftDate ? parseDate(body.shiftDate) : parseDate(body.date);
+  if (!shiftDate) return { error: `${prefix}Invalid date` };
+
+  const startDatetime = parseDateTime(body.startDatetime || body.startTime);
+  if (!startDatetime) return { error: `${prefix}Invalid start time` };
+
+  const endDatetime = parseDateTime(body.endDatetime || body.endTime);
+  if (!endDatetime) return { error: `${prefix}Invalid end time` };
+
+  if (endDatetime <= startDatetime) return { error: `${prefix}End time must be after start time` };
+
+  const duration = parseDecimal(body.duration);
+  if (duration == null) return { error: `${prefix}Invalid duration` };
+
+  const cost = parseDecimal(body.cost);
+  if (cost == null) return { error: `${prefix}Invalid cost` };
+
+  const totalCost = parseDecimal(body.totalCost);
+  if (totalCost == null) return { error: `${prefix}Invalid total cost` };
+
+  const additionalCost = parseDecimal(body.additionalCost) ?? 0;
+  const kms = parseDecimal(body.kms) ?? 0;
+  const isAbsent =
+    body.isAbsent === true || body.isAbsent === 'true' || String(body.isAbsent).toLowerCase() === 'yes';
+
+  return {
+    doc: {
+      clientDirectoryId: clientEntry.id,
+      staffDirectoryId: staffEntry ? staffEntry.id : null,
+      clientName: body.clientName || clientEntry.displayName,
+      staffName: body.staffName || (staffEntry ? staffEntry.displayName : ''),
+      shiftDescription: body.shiftDescription || body.shift || '',
+      shiftcareId: body.shiftcareId || body.shiftId || '',
+      shiftDate,
+      startDatetime,
+      endDatetime,
+      duration: roundMoney(duration),
+      cost: roundMoney(cost),
+      additionalCost: roundMoney(additionalCost),
+      kms: roundMoney(kms),
+      totalCost: roundMoney(totalCost),
+      isAbsent,
+      status: body.status || '',
+      invoiceNumbers: body.invoiceNumbers || body.invoiceNos || '',
+      rateGroups: body.rateGroups || '',
+      referenceNo: body.referenceNo || '',
+      shiftType: body.shiftType || '',
+      additionalShiftType: body.additionalShiftType || '',
+      clientType: body.clientType || '',
+      ratio: String(body.ratio || '').trim(),
+    },
+  };
+}
+
+async function findScopedRecord(Model, id, locationId) {
+  if (!mongoose.Types.ObjectId.isValid(id)) return null;
+  return Model.findOne({ _id: id, location: locObjectId(locationId) });
+}
+
+export async function createForecastRecord({ locationId, body, credentials, uploadedBy }) {
+  const built = await buildForecastActualsDocFromBody(body, credentials);
+  if (built.error) return { success: false, errors: [built.error] };
+  const created = await ForecastRecord.create({
+    ...built.doc,
+    location: locObjectId(locationId),
+    uploadedBy: uploadedBy || null,
+  });
+  return { success: true, record: serializeDoc(created.toObject()) };
+}
+
+export async function updateForecastRecord({ id, locationId, body, credentials }) {
+  const existing = await findScopedRecord(ForecastRecord, id, locationId);
+  if (!existing) return { success: false, errors: ['Record not found'] };
+  const built = await buildForecastActualsDocFromBody(body, credentials);
+  if (built.error) return { success: false, errors: [built.error] };
+  Object.assign(existing, built.doc);
+  await existing.save();
+  return { success: true, record: serializeDoc(existing.toObject()) };
+}
+
+export async function deleteForecastRecord({ id, locationId }) {
+  const result = await ForecastRecord.deleteOne({ _id: id, location: locObjectId(locationId) });
+  if (result.deletedCount === 0) return { success: false, errors: ['Record not found'] };
+  return { success: true };
+}
+
+export async function createActualsRecord({ locationId, body, credentials, uploadedBy }) {
+  const built = await buildForecastActualsDocFromBody(body, credentials);
+  if (built.error) return { success: false, errors: [built.error] };
+  const created = await ActualsRecord.create({
+    ...built.doc,
+    location: locObjectId(locationId),
+    uploadedBy: uploadedBy || null,
+  });
+  return { success: true, record: serializeDoc(created.toObject()) };
+}
+
+export async function updateActualsRecord({ id, locationId, body, credentials }) {
+  const existing = await findScopedRecord(ActualsRecord, id, locationId);
+  if (!existing) return { success: false, errors: ['Record not found'] };
+  const built = await buildForecastActualsDocFromBody(body, credentials);
+  if (built.error) return { success: false, errors: [built.error] };
+  Object.assign(existing, built.doc);
+  await existing.save();
+  return { success: true, record: serializeDoc(existing.toObject()) };
+}
+
+export async function deleteActualsRecord({ id, locationId }) {
+  const result = await ActualsRecord.deleteOne({ _id: id, location: locObjectId(locationId) });
+  if (result.deletedCount === 0) return { success: false, errors: ['Record not found'] };
+  return { success: true };
 }
 
 export async function uploadForecastFromCsv({
@@ -535,6 +674,7 @@ const FORECAST_ACTUALS_CSV_HEADER = [
   'shift type',
   'additional shift type',
   'client type',
+  'ratio',
 ].join(',');
 
 function formatCsvShiftDate(d, tz) {
@@ -573,6 +713,7 @@ function forecastActualsRowToCsvLine(r, tz) {
     csvEscape(r.shiftType || ''),
     csvEscape(r.additionalShiftType || ''),
     csvEscape(r.clientType || ''),
+    csvEscape(r.ratio || ''),
   ].join(',');
 }
 

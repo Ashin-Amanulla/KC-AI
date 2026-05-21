@@ -76,6 +76,45 @@ export function useUploadStandard() {
   });
 }
 
+export function useCreateStandardRow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload) => {
+      const res = await api.post('/api/standard-forecast/standard', payload);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['standard-forecast'] });
+    },
+  });
+}
+
+export function useUpdateStandardRow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }) => {
+      const res = await api.put(`/api/standard-forecast/standard/${id}`, payload);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['standard-forecast'] });
+    },
+  });
+}
+
+export function useDeleteStandardRow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, locationId }) => {
+      const res = await api.delete(`/api/standard-forecast/standard/${id}`, { params: { locationId } });
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['standard-forecast'] });
+    },
+  });
+}
+
 export async function exportStandardCsv(params) {
   await downloadBlobGet('/api/standard-forecast/standard/export', params, 'standard.csv');
 }

@@ -8,7 +8,10 @@ import {
   exportStandardVsForecastPdf,
   getDirectoryOptions,
   getStandardVsForecastSummary,
+  createStandardForecastRecord,
+  deleteStandardForecastRecord,
   listStandardForecast,
+  updateStandardForecastRecord,
   uploadStandardForecastFromCsv,
 } from './standardForecast.service.js';
 
@@ -73,6 +76,112 @@ export const postStandardUpload = async (req, res, next) => {
     if (!result.success) {
       return res.status(400).json(result);
     }
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const postStandardCreate = async (req, res, next) => {
+  try {
+    const credentials = requireShiftCare(req, res);
+    if (!credentials) return;
+
+    const {
+      locationId,
+      clientDirectoryId,
+      day,
+      startTime,
+      endTime,
+      duration,
+      totalCost,
+      rateGroups,
+      referenceNo,
+      shiftType,
+      ratio,
+    } = req.body;
+
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ success: false, errors: [error] });
+
+    const result = await createStandardForecastRecord({
+      locationId,
+      clientDirectoryId,
+      day,
+      startTime,
+      endTime,
+      duration,
+      totalCost,
+      rateGroups,
+      referenceNo,
+      shiftType,
+      ratio,
+      credentials,
+      uploadedBy: req.user?.userId || null,
+    });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.status(201).json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const putStandardUpdate = async (req, res, next) => {
+  try {
+    const credentials = requireShiftCare(req, res);
+    if (!credentials) return;
+
+    const {
+      locationId,
+      clientDirectoryId,
+      day,
+      startTime,
+      endTime,
+      duration,
+      totalCost,
+      rateGroups,
+      referenceNo,
+      shiftType,
+      ratio,
+    } = req.body;
+
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ success: false, errors: [error] });
+
+    const result = await updateStandardForecastRecord({
+      id: req.params.id,
+      locationId,
+      clientDirectoryId,
+      day,
+      startTime,
+      endTime,
+      duration,
+      totalCost,
+      rateGroups,
+      referenceNo,
+      shiftType,
+      ratio,
+      credentials,
+    });
+
+    if (!result.success) return res.status(400).json(result);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const deleteStandardRow = async (req, res, next) => {
+  try {
+    const { locationId } = req.query;
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ success: false, errors: [error] });
+
+    const result = await deleteStandardForecastRecord({ id: req.params.id, locationId });
+    if (!result.success) return res.status(404).json(result);
     res.json(result);
   } catch (e) {
     next(e);

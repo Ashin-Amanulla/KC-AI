@@ -34,6 +34,7 @@ export const COLUMN_ALIASES = {
   'shift type': 'shift type',
   'additional shift type': 'additional shift type',
   'client type': 'client type',
+  ratio: 'ratio',
 };
 
 export function normalizeColumnName(name) {

@@ -5,6 +5,9 @@ import {
   useStandardDirectory,
   useStandardList,
   useUploadStandard,
+  useCreateStandardRow,
+  useUpdateStandardRow,
+  useDeleteStandardRow,
   exportStandardCsv,
 } from '../api/standardForecast';
 import { useLocations } from '../api/locations';
@@ -12,6 +15,7 @@ import { getErrorMessage } from '../utils/api';
 import { validateCsvFile, CSV_ACCEPT } from '../config/upload';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import {
   Table,
   TableBody,
@@ -22,7 +26,37 @@ import {
 } from '../ui/table';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import { cn } from '../lib/utils';
-import { Upload, Download } from 'lucide-react';
+import { Upload, Download, Plus, Pencil, Trash2 } from 'lucide-react';
+
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const EMPTY_ROW_FORM = {
+  clientDirectoryId: '',
+  day: 'Monday',
+  startTime: '',
+  endTime: '',
+  duration: '',
+  totalCost: '',
+  rateGroups: '',
+  referenceNo: '',
+  shiftType: '',
+  ratio: '',
+};
+
+function recordToStandardForm(r) {
+  return {
+    clientDirectoryId: r.clientDirectoryId || '',
+    day: r.day || 'Monday',
+    startTime: r.startTime || '',
+    endTime: r.endTime || '',
+    duration: r.duration != null ? String(r.duration) : '',
+    totalCost: r.totalCost != null ? String(r.totalCost) : '',
+    rateGroups: r.rateGroups || '',
+    referenceNo: r.referenceNo || '',
+    shiftType: r.shiftType || '',
+    ratio: r.ratio || '',
+  };
+}
 
 function formatMoney(v) {
   if (v == null || v === '') return '—';
@@ -36,12 +70,23 @@ export function StandardForecast() {
   const [locationId, setLocationId] = useState('');
   const [client, setClient] = useState('all');
   const [page, setPage] = useState(1);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [rowForm, setRowForm] = useState(EMPTY_ROW_FORM);
 
   const listParams = useMemo(() => ({ locationId, client, page }), [locationId, client, page]);
 
   const { data: directory, isLoading: dirLoading } = useStandardDirectory(Boolean(locationId));
   const listQ = useStandardList(listParams, Boolean(locationId));
   const uploadM = useUploadStandard();
+  const createM = useCreateStandardRow();
+  const updateM = useUpdateStandardRow();
+  const deleteM = useDeleteStandardRow();
+
+  const selectableClients = useMemo(
+    () => (directory?.clients ?? []).filter((c) => c.value !== 'all'),
+    [directory?.clients]
+  );
 
   const onDrop = async (files) => {
     const f = files?.[0];
@@ -70,6 +115,72 @@ export function StandardForecast() {
   const clientOptions = directory?.clients || [{ value: 'all', label: 'All Clients' }];
   const exportBase = { locationId, client };
 
+  const updateRowField = (field, value) => {
+    setRowForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const resetRowForm = () => {
+    setRowForm(EMPTY_ROW_FORM);
+    setEditingId(null);
+    setShowAddForm(false);
+  };
+
+  const rowPayload = () => ({
+    locationId,
+    clientDirectoryId: rowForm.clientDirectoryId,
+    day: rowForm.day,
+    startTime: rowForm.startTime,
+    endTime: rowForm.endTime,
+    duration: rowForm.duration,
+    totalCost: rowForm.totalCost,
+    rateGroups: rowForm.rateGroups,
+    referenceNo: rowForm.referenceNo,
+    shiftType: rowForm.shiftType,
+    ratio: rowForm.ratio,
+  });
+
+  const handleSaveRow = async (e) => {
+    e.preventDefault();
+    if (!locationId) return;
+    if (!rowForm.clientDirectoryId) {
+      toast.error('Select a client');
+      return;
+    }
+    try {
+      if (editingId) {
+        await updateM.mutateAsync({ id: editingId, ...rowPayload() });
+        toast.success('Row updated');
+      } else {
+        await createM.mutateAsync(rowPayload());
+        toast.success('Row added');
+      }
+      resetRowForm();
+      setPage(1);
+    } catch (err) {
+      const data = err.response?.data;
+      const msg = data?.errors?.join(', ') || getErrorMessage(err);
+      toast.error(msg);
+    }
+  };
+
+  const handleEditRow = (r) => {
+    setEditingId(r.id);
+    setRowForm(recordToStandardForm(r));
+    setShowAddForm(true);
+  };
+
+  const handleDeleteRow = async (r) => {
+    if (!locationId) return;
+    if (!window.confirm(`Delete this ${r.day} shift for ${r.clientName}?`)) return;
+    try {
+      await deleteM.mutateAsync({ id: r.id, locationId });
+      toast.success('Row deleted');
+      if (editingId === r.id) resetRowForm();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -94,6 +205,7 @@ export function StandardForecast() {
                   setLocationId(e.target.value);
                   setClient('all');
                   setPage(1);
+                  setShowAddForm(false);
                 }}
               >
                 <option value="">Select location…</option>
@@ -135,6 +247,19 @@ export function StandardForecast() {
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
+                variant={showAddForm ? 'secondary' : 'default'}
+                size="sm"
+                onClick={() => {
+                  if (showAddForm) resetRowForm();
+                  else setShowAddForm(true);
+                }}
+                disabled={dirLoading || selectableClients.length === 0}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                {showAddForm ? 'Cancel' : 'Add row'}
+              </Button>
+              <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => exportStandardCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))}
@@ -145,6 +270,128 @@ export function StandardForecast() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {showAddForm && (
+              <form
+                onSubmit={handleSaveRow}
+                className="rounded-lg border border-border bg-muted/30 p-4 space-y-4"
+              >
+                <p className="text-sm font-medium">{editingId ? 'Edit shift line' : 'Add a shift line'}</p>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="space-y-1 sm:col-span-2 lg:col-span-1">
+                    <label className="text-sm font-medium">Client</label>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={rowForm.clientDirectoryId}
+                      onChange={(e) => updateRowField('clientDirectoryId', e.target.value)}
+                      required
+                    >
+                      <option value="">Select client…</option>
+                      {selectableClients.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Day</label>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={rowForm.day}
+                      onChange={(e) => updateRowField('day', e.target.value)}
+                      required
+                    >
+                      {WEEKDAYS.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Start time</label>
+                    <Input
+                      placeholder="06:00 or 6:00 AM"
+                      value={rowForm.startTime}
+                      onChange={(e) => updateRowField('startTime', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">End time</label>
+                    <Input
+                      placeholder="10:00 or 10:00 AM"
+                      value={rowForm.endTime}
+                      onChange={(e) => updateRowField('endTime', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Duration (hours)</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="4"
+                      value={rowForm.duration}
+                      onChange={(e) => updateRowField('duration', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Total cost</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="151.96"
+                      value={rowForm.totalCost}
+                      onChange={(e) => updateRowField('totalCost', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-sm font-medium">Rate groups</label>
+                    <Input
+                      value={rowForm.rateGroups}
+                      onChange={(e) => updateRowField('rateGroups', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Reference no</label>
+                    <Input
+                      value={rowForm.referenceNo}
+                      onChange={(e) => updateRowField('referenceNo', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Shift type</label>
+                    <Input
+                      placeholder="Personal Care"
+                      value={rowForm.shiftType}
+                      onChange={(e) => updateRowField('shiftType', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Ratio</label>
+                    <Input
+                      placeholder="1:02"
+                      value={rowForm.ratio}
+                      onChange={(e) => updateRowField('ratio', e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" disabled={createM.isPending || updateM.isPending}>
+                    {createM.isPending || updateM.isPending ? 'Saving…' : editingId ? 'Update row' : 'Save row'}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={resetRowForm}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            )}
+
             <div
               {...dropzone.getRootProps()}
               className={cn(
@@ -156,7 +403,9 @@ export function StandardForecast() {
               <input {...dropzone.getInputProps()} />
               <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground">
-                {uploadM.isPending ? 'Uploading…' : 'Drop CSV here or click to upload standard templates'}
+                {uploadM.isPending
+                  ? 'Uploading…'
+                  : 'Drop CSV here or click to bulk-replace all standard rows for this location'}
               </p>
             </div>
 
@@ -175,13 +424,15 @@ export function StandardForecast() {
                         <TableHead className="text-right">Duration</TableHead>
                         <TableHead className="text-right">Cost</TableHead>
                         <TableHead>Shift type</TableHead>
+                        <TableHead>Ratio</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(listQ.data?.records ?? []).length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                            No standard records found. Upload a CSV file to get started.
+                          <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                            No standard records yet. Add a row or upload a CSV.
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -194,6 +445,32 @@ export function StandardForecast() {
                             <TableCell className="text-right">{r.duration}</TableCell>
                             <TableCell className="text-right">{formatMoney(r.totalCost)}</TableCell>
                             <TableCell>{r.shiftType || '—'}</TableCell>
+                            <TableCell>{r.ratio || '—'}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => handleEditRow(r)}
+                                  title="Edit"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive"
+                                  onClick={() => handleDeleteRow(r)}
+                                  disabled={deleteM.isPending}
+                                  title="Delete"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))
                       )}

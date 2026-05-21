@@ -23,6 +23,7 @@ export const COLUMN_ALIASES = {
   'rate groups': 'rate groups',
   'reference no': 'reference no',
   'shift type': 'shift type',
+  ratio: 'ratio',
 };
 
 export function normalizeColumnName(name) {

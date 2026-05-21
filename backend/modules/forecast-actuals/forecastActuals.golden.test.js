@@ -22,6 +22,7 @@ test('golden: processRowCommon happy path matches expected doc', () => {
     Cost: '100.00',
     'Total Cost': '100.00',
     'Shift ID': 'SHIFT-1',
+    Ratio: '1:02',
   };
   const norm = buildNormalizedColumns(Object.keys(row));
   const { clientMap, staffMap } = maps();
@@ -37,6 +38,7 @@ test('golden: processRowCommon happy path matches expected doc', () => {
   assert.strictEqual(doc.shiftDate.toISOString().slice(0, 10), '2026-04-15');
   assert.strictEqual(doc.startDatetime.toISOString(), '2026-04-15T09:00:00.000Z');
   assert.strictEqual(doc.endDatetime.toISOString(), '2026-04-15T17:00:00.000Z');
+  assert.strictEqual(doc.ratio, '1:02');
 });
 
 test('golden: buildSummaryRecord variance and gross', () => {

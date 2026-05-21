@@ -42,6 +42,7 @@ function serializeDoc(d) {
     rateGroups: d.rateGroups,
     referenceNo: d.referenceNo,
     shiftType: d.shiftType,
+    ratio: d.ratio,
   };
 }
 
@@ -54,51 +55,180 @@ export async function getDirectoryOptions(credentials) {
   };
 }
 
-function processStandardRow(row, normalizedColumns, clientMap, rowNum) {
-  const getVal = (col) => getRowValue(row, col, normalizedColumns);
+/** Shared validation for CSV rows and manual create */
+export function buildStandardDocFromFields(fields, errorPrefix = '') {
+  const prefix = errorPrefix ? `${errorPrefix}: ` : '';
+  const {
+    clientDirectoryId,
+    clientName,
+    day,
+    startTimeStr,
+    endTimeStr,
+    duration: durationRaw,
+    totalCost: totalCostRaw,
+    rateGroups = '',
+    referenceNo = '',
+    shiftType = '',
+    ratio = '',
+  } = fields;
 
-  const clientName = getVal('client name');
-  const day = getVal('day');
-  const startTimeStr = getVal('start date time');
-  const endTimeStr = getVal('end date time');
-  const durationStr = getVal('duration');
-  const totalCostStr = getVal('total cost');
-  const rateGroups = getVal('rate groups');
-  const referenceNo = getVal('reference no');
-  const shiftType = getVal('shift type');
-
-  if (!clientName) return { error: `Row ${rowNum}: Client name is required` };
-  const clientEntry = clientMap.get(clientName.toLowerCase());
-  if (!clientEntry) return { error: `Row ${rowNum}: Client '${clientName}' not found` };
-
-  if (!day) return { error: `Row ${rowNum}: Day is required` };
+  if (!clientDirectoryId) return { error: `${prefix}Client is required` };
+  if (!clientName) return { error: `${prefix}Client name is required` };
+  if (!String(day || '').trim()) return { error: `${prefix}Day is required` };
 
   const startTime = parseTime(startTimeStr);
-  if (!startTime) return { error: `Row ${rowNum}: Invalid start time format '${startTimeStr}'` };
+  if (!startTime) return { error: `${prefix}Invalid start time '${startTimeStr}'` };
 
   const endTime = parseTime(endTimeStr);
-  if (!endTime) return { error: `Row ${rowNum}: Invalid end time format '${endTimeStr}'` };
+  if (!endTime) return { error: `${prefix}Invalid end time '${endTimeStr}'` };
 
-  const duration = parseDecimal(durationStr);
-  if (duration == null) return { error: `Row ${rowNum}: Invalid duration '${durationStr}'` };
+  const duration = parseDecimal(durationRaw);
+  if (duration == null) return { error: `${prefix}Invalid duration '${durationRaw}'` };
 
-  const totalCost = parseDecimal(totalCostStr);
-  if (totalCost == null) return { error: `Row ${rowNum}: Invalid total cost '${totalCostStr}'` };
+  const totalCost = parseDecimal(totalCostRaw);
+  if (totalCost == null) return { error: `${prefix}Invalid total cost '${totalCostRaw}'` };
 
   return {
     doc: {
-      clientDirectoryId: clientEntry.id,
+      clientDirectoryId,
       clientName,
-      day,
+      day: String(day).trim(),
       startTime,
       endTime,
       duration: roundMoney(duration),
       totalCost: roundMoney(totalCost),
-      rateGroups,
-      referenceNo,
-      shiftType,
+      rateGroups: String(rateGroups || '').trim(),
+      referenceNo: String(referenceNo || '').trim(),
+      shiftType: String(shiftType || '').trim(),
+      ratio: String(ratio || '').trim(),
     },
   };
+}
+
+function processStandardRow(row, normalizedColumns, clientMap, rowNum) {
+  const getVal = (col) => getRowValue(row, col, normalizedColumns);
+  const clientName = getVal('client name');
+  if (!clientName) return { error: `Row ${rowNum}: Client name is required` };
+  const clientEntry = clientMap.get(clientName.toLowerCase());
+  if (!clientEntry) return { error: `Row ${rowNum}: Client '${clientName}' not found` };
+
+  return buildStandardDocFromFields(
+    {
+      clientDirectoryId: clientEntry.id,
+      clientName,
+      day: getVal('day'),
+      startTimeStr: getVal('start date time'),
+      endTimeStr: getVal('end date time'),
+      duration: getVal('duration'),
+      totalCost: getVal('total cost'),
+      rateGroups: getVal('rate groups'),
+      referenceNo: getVal('reference no'),
+      shiftType: getVal('shift type'),
+      ratio: getVal('ratio'),
+    },
+    `Row ${rowNum}`
+  );
+}
+
+export async function createStandardForecastRecord({
+  locationId,
+  clientDirectoryId,
+  day,
+  startTime,
+  endTime,
+  duration,
+  totalCost,
+  rateGroups,
+  referenceNo,
+  shiftType,
+  ratio,
+  credentials,
+  uploadedBy,
+}) {
+  const clients = await fetchAllClients(credentials);
+  const client = clients.find((c) => c.id === clientDirectoryId);
+  if (!client) {
+    return { success: false, errors: ['Client not found'] };
+  }
+
+  const built = buildStandardDocFromFields({
+    clientDirectoryId: client.id,
+    clientName: client.displayName,
+    day,
+    startTimeStr: startTime,
+    endTimeStr: endTime,
+    duration,
+    totalCost,
+    rateGroups,
+    referenceNo,
+    shiftType,
+    ratio,
+  });
+  if (built.error) {
+    return { success: false, errors: [built.error] };
+  }
+
+  const created = await StandardForecast.create({
+    ...built.doc,
+    location: locObjectId(locationId),
+    uploadedBy: uploadedBy || null,
+  });
+
+  return { success: true, record: serializeDoc(created.toObject()) };
+}
+
+export async function updateStandardForecastRecord({
+  id,
+  locationId,
+  clientDirectoryId,
+  day,
+  startTime,
+  endTime,
+  duration,
+  totalCost,
+  rateGroups,
+  referenceNo,
+  shiftType,
+  ratio,
+  credentials,
+}) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return { success: false, errors: ['Invalid record id'] };
+  }
+  const existing = await StandardForecast.findOne({ _id: id, location: locObjectId(locationId) });
+  if (!existing) return { success: false, errors: ['Record not found'] };
+
+  const clients = await fetchAllClients(credentials);
+  const client = clients.find((c) => c.id === clientDirectoryId);
+  if (!client) return { success: false, errors: ['Client not found'] };
+
+  const built = buildStandardDocFromFields({
+    clientDirectoryId: client.id,
+    clientName: client.displayName,
+    day,
+    startTimeStr: startTime,
+    endTimeStr: endTime,
+    duration,
+    totalCost,
+    rateGroups,
+    referenceNo,
+    shiftType,
+    ratio,
+  });
+  if (built.error) return { success: false, errors: [built.error] };
+
+  Object.assign(existing, built.doc);
+  await existing.save();
+  return { success: true, record: serializeDoc(existing.toObject()) };
+}
+
+export async function deleteStandardForecastRecord({ id, locationId }) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return { success: false, errors: ['Invalid record id'] };
+  }
+  const result = await StandardForecast.deleteOne({ _id: id, location: locObjectId(locationId) });
+  if (result.deletedCount === 0) return { success: false, errors: ['Record not found'] };
+  return { success: true };
 }
 
 export async function uploadStandardForecastFromCsv({ locationId, fileBuffer, credentials, uploadedBy }) {
@@ -224,6 +354,7 @@ const STANDARD_CSV_HEADER = [
   'Duration',
   'Cost',
   'Shift Type',
+  'Ratio',
 ];
 
 function standardRowToCsvLine(r) {
@@ -235,6 +366,7 @@ function standardRowToCsvLine(r) {
     r.duration,
     r.totalCost,
     r.shiftType || '',
+    r.ratio || '',
   ]
     .map((c) => {
       const s = String(c ?? '');

@@ -18,6 +18,7 @@ const standardForecastSchema = new mongoose.Schema(
     rateGroups: { type: String, default: '' },
     referenceNo: { type: String, default: '' },
     shiftType: { type: String, default: '' },
+    ratio: { type: String, default: '' },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

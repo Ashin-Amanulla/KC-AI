@@ -3,6 +3,10 @@ import fs from 'fs';
 import { getShiftCareCredentials } from '../../middlewares/auth.middleware.js';
 import { Location } from '../locations/location.model.js';
 import {
+  createActualsRecord,
+  createForecastRecord,
+  deleteActualsRecord,
+  deleteForecastRecord,
   exportActualsCsv,
   exportForecastCsv,
   exportSummaryCsv,
@@ -14,6 +18,8 @@ import {
   listActuals,
   listForecast,
   listVariance,
+  updateActualsRecord,
+  updateForecastRecord,
   uploadActualsFromCsv,
   uploadForecastFromCsv,
 } from './forecastActuals.service.js';
@@ -114,6 +120,112 @@ export const postActualsUpload = async (req, res, next) => {
     if (!result.success) {
       return res.status(400).json(result);
     }
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const postForecastCreate = async (req, res, next) => {
+  try {
+    const credentials = requireShiftCare(req, res);
+    if (!credentials) return;
+    const { locationId, ...body } = req.body;
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ success: false, errors: [error] });
+    const result = await createForecastRecord({
+      locationId,
+      body,
+      credentials,
+      uploadedBy: req.user?.userId || null,
+    });
+    if (!result.success) return res.status(400).json(result);
+    res.status(201).json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const putForecastUpdate = async (req, res, next) => {
+  try {
+    const credentials = requireShiftCare(req, res);
+    if (!credentials) return;
+    const { locationId, ...body } = req.body;
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ success: false, errors: [error] });
+    const result = await updateForecastRecord({
+      id: req.params.id,
+      locationId,
+      body,
+      credentials,
+    });
+    if (!result.success) return res.status(400).json(result);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const deleteForecastRow = async (req, res, next) => {
+  try {
+    const { locationId } = req.query;
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ success: false, errors: [error] });
+    const result = await deleteForecastRecord({ id: req.params.id, locationId });
+    if (!result.success) return res.status(404).json(result);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const postActualsCreate = async (req, res, next) => {
+  try {
+    const credentials = requireShiftCare(req, res);
+    if (!credentials) return;
+    const { locationId, ...body } = req.body;
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ success: false, errors: [error] });
+    const result = await createActualsRecord({
+      locationId,
+      body,
+      credentials,
+      uploadedBy: req.user?.userId || null,
+    });
+    if (!result.success) return res.status(400).json(result);
+    res.status(201).json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const putActualsUpdate = async (req, res, next) => {
+  try {
+    const credentials = requireShiftCare(req, res);
+    if (!credentials) return;
+    const { locationId, ...body } = req.body;
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ success: false, errors: [error] });
+    const result = await updateActualsRecord({
+      id: req.params.id,
+      locationId,
+      body,
+      credentials,
+    });
+    if (!result.success) return res.status(400).json(result);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const deleteActualsRow = async (req, res, next) => {
+  try {
+    const { locationId } = req.query;
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ success: false, errors: [error] });
+    const result = await deleteActualsRecord({ id: req.params.id, locationId });
+    if (!result.success) return res.status(404).json(result);
     res.json(result);
   } catch (e) {
     next(e);

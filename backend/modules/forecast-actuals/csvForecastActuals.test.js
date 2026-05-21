@@ -64,6 +64,10 @@ test('buildNormalizedColumns maps original headers', () => {
   assert.strictEqual(m.get('start date time'), 'Start Time');
 });
 
+test('normalizeColumnName maps Ratio header', () => {
+  assert.strictEqual(normalizeColumnName('Ratio'), 'ratio');
+});
+
 test('COLUMN_ALIASES keys are lowercase', () => {
   for (const k of Object.keys(COLUMN_ALIASES)) {
     assert.strictEqual(k, k.toLowerCase(), `alias key not lower: ${k}`);

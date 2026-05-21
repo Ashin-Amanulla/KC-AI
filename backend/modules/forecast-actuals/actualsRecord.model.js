@@ -30,6 +30,7 @@ const actualsRowSchema = new mongoose.Schema(
     shiftType: { type: String, default: '' },
     additionalShiftType: { type: String, default: '' },
     clientType: { type: String, default: '' },
+    ratio: { type: String, default: '' },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

@@ -31,7 +31,8 @@ import {
 } from '../ui/table';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import { cn } from '../lib/utils';
-import { ChevronDown, ChevronRight, Upload, Download, FileSpreadsheet } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, FileSpreadsheet } from 'lucide-react';
+import { ForecastActualsRowPanel } from './ForecastActualsRowPanel';
 
 const SECTIONS = [
   { id: 'forecast', label: 'Forecast' },
@@ -55,103 +56,6 @@ function formatDate(d) {
 function formatDt(d) {
   if (!d) return '—';
   return new Date(d).toLocaleString();
-}
-
-/** Columns aligned with import CSV (`csvForecastActuals.js` + `processRowCommon`) — same for forecast & actuals */
-const FORECAST_ACTUALS_COLUMNS = [
-  { key: 'shiftDate', label: 'Date', kind: 'date' },
-  { key: 'clientName', label: 'Client name', kind: 'text' },
-  { key: 'staffName', label: 'Staff', kind: 'text' },
-  { key: 'startDatetime', label: 'Start date time', kind: 'dt' },
-  { key: 'endDatetime', label: 'End date time', kind: 'dt' },
-  { key: 'duration', label: 'Duration', kind: 'num' },
-  { key: 'cost', label: 'Cost', kind: 'money' },
-  { key: 'totalCost', label: 'Total cost', kind: 'money' },
-  { key: 'shiftcareId', label: 'Shift id', kind: 'text' },
-  { key: 'shiftDescription', label: 'Shift', kind: 'text' },
-  { key: 'additionalCost', label: 'Additional cost', kind: 'money' },
-  { key: 'kms', label: 'Kms', kind: 'num' },
-  { key: 'isAbsent', label: 'Absent', kind: 'bool' },
-  { key: 'status', label: 'Status', kind: 'text' },
-  { key: 'invoiceNumbers', label: 'Invoice nos.', kind: 'text' },
-  { key: 'rateGroups', label: 'Rate groups', kind: 'text' },
-  { key: 'referenceNo', label: 'Reference no', kind: 'text' },
-  { key: 'shiftType', label: 'Shift type', kind: 'text' },
-  { key: 'additionalShiftType', label: 'Additional shift type', kind: 'text' },
-  { key: 'clientType', label: 'Client type', kind: 'text' },
-];
-
-function formatMoneyVal(v) {
-  if (v == null || v === '') return '—';
-  const n = typeof v === 'number' ? v : Number(v);
-  return Number.isFinite(n) ? n.toFixed(2) : '—';
-}
-
-function formatNumVal(v) {
-  if (v == null || v === '') return '—';
-  const n = typeof v === 'number' ? v : Number(v);
-  if (!Number.isFinite(n)) return '—';
-  return Number.isInteger(n) ? String(n) : n.toFixed(2);
-}
-
-function renderForecastActualsCell(r, col) {
-  const v = r[col.key];
-  switch (col.kind) {
-    case 'date':
-      return formatDate(v);
-    case 'dt':
-      return formatDt(v);
-    case 'money':
-      return formatMoneyVal(v);
-    case 'num':
-      return formatNumVal(v);
-    case 'bool':
-      return v === true ? 'Yes' : v === false ? 'No' : '—';
-    case 'text':
-    default:
-      return v != null && String(v).trim() !== '' ? String(v) : '—';
-  }
-}
-
-function ForecastActualsDataTable({ records }) {
-  return (
-    <div className="rounded-md border overflow-x-auto max-w-full">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {FORECAST_ACTUALS_COLUMNS.map((col) => (
-              <TableHead
-                key={col.key}
-                className={cn(
-                  (col.kind === 'money' || col.kind === 'num') && 'text-right whitespace-nowrap',
-                  'whitespace-nowrap text-xs font-medium min-w-[5rem]'
-                )}
-              >
-                {col.label}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {(records || []).map((r, ri) => (
-            <TableRow key={r.id ?? `fa-row-${ri}`}>
-              {FORECAST_ACTUALS_COLUMNS.map((col) => (
-                <TableCell
-                  key={col.key}
-                  className={cn(
-                    'text-xs p-2 align-top',
-                    (col.kind === 'money' || col.kind === 'num') && 'text-right tabular-nums whitespace-nowrap'
-                  )}
-                >
-                  {renderForecastActualsCell(r, col)}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
 }
 
 export function ForecastActuals() {
@@ -234,6 +138,14 @@ export function ForecastActuals() {
 
   const staffOptions = directory?.staff || [{ value: 'all', label: 'All Staff' }];
   const clientOptions = directory?.clients || [{ value: 'all', label: 'All Clients' }];
+  const selectableClients = useMemo(
+    () => (directory?.clients ?? []).filter((c) => c.value !== 'all'),
+    [directory?.clients]
+  );
+  const selectableStaff = useMemo(
+    () => (directory?.staff ?? []).filter((s) => s.value !== 'all'),
+    [directory?.staff]
+  );
 
   return (
     <div className="space-y-6">
@@ -336,146 +248,48 @@ export function ForecastActuals() {
 
           {section === 'forecast' && (
             <Card>
-              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+              <CardHeader>
                 <CardTitle>Forecast data</CardTitle>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => exportForecastCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Export CSV
-                  </Button>
-                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div
-                  {...fzForecast.getRootProps()}
-                  className={cn(
-                    'cursor-pointer rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground',
-                    fzForecast.isDragActive && 'border-primary bg-accent'
-                  )}
-                >
-                  <input {...fzForecast.getInputProps()} />
-                  <Upload className="mx-auto mb-2 h-8 w-8 opacity-50" />
-                  Drop forecast CSV here, or click to select (full replace for this location)
-                </div>
-                {forecastQ.isLoading ? (
-                  <LoadingScreen message="Loading forecast…" />
-                ) : forecastQ.error ? (
-                  <p className="text-destructive">{getErrorMessage(forecastQ.error)}</p>
-                ) : (
-                  <>
-                    <p className="text-xs text-muted-foreground">
-                      {forecastQ.data?.dateRangeStart && forecastQ.data?.dateRangeEnd
-                        ? `Date range: ${formatDate(forecastQ.data.dateRangeStart)} – ${formatDate(forecastQ.data.dateRangeEnd)}`
-                        : 'No forecast rows yet'}
-                      {forecastQ.data?.total != null ? ` · ${forecastQ.data.total} rows` : ''}
-                    </p>
-                    <ForecastActualsDataTable records={forecastQ.data?.records} />
-                    <div className="flex items-center justify-between text-sm">
-                      <span>
-                        {forecastQ.data?.startIndex != null && forecastQ.data?.endIndex != null
-                          ? `${forecastQ.data.startIndex}–${forecastQ.data.endIndex} of ${forecastQ.data.total}`
-                          : ''}
-                      </span>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={!forecastQ.data?.hasPrev}
-                          onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        >
-                          Previous
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={!forecastQ.data?.hasNext}
-                          onClick={() => setPage((p) => p + 1)}
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                )}
+              <CardContent>
+                <ForecastActualsRowPanel
+                  variant="forecast"
+                  title="Forecast"
+                  locationId={locationId}
+                  selectableClients={selectableClients}
+                  selectableStaff={selectableStaff}
+                  listData={forecastQ.data}
+                  listLoading={forecastQ.isLoading}
+                  listError={forecastQ.error}
+                  dropzone={fzForecast}
+                  onExport={() => exportForecastCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))}
+                  page={page}
+                  setPage={setPage}
+                />
               </CardContent>
             </Card>
           )}
 
           {section === 'actuals' && (
             <Card>
-              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+              <CardHeader>
                 <CardTitle>Actuals data</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => exportActualsCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
-                </Button>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div
-                  {...fzActuals.getRootProps()}
-                  className={cn(
-                    'cursor-pointer rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground',
-                    fzActuals.isDragActive && 'border-primary bg-accent'
-                  )}
-                >
-                  <input {...fzActuals.getInputProps()} />
-                  <Upload className="mx-auto mb-2 h-8 w-8 opacity-50" />
-                  Drop actuals CSV here, or click to select (full replace for this location)
-                </div>
-                {actualsQ.isLoading ? (
-                  <LoadingScreen message="Loading actuals…" />
-                ) : actualsQ.error ? (
-                  <p className="text-destructive">{getErrorMessage(actualsQ.error)}</p>
-                ) : (
-                  <>
-                    <p className="text-xs text-muted-foreground">
-                      {actualsQ.data?.dateRangeStart && actualsQ.data?.dateRangeEnd
-                        ? `Date range: ${formatDate(actualsQ.data.dateRangeStart)} – ${formatDate(actualsQ.data.dateRangeEnd)}`
-                        : 'No actuals rows yet'}
-                      {actualsQ.data?.total != null ? ` · ${actualsQ.data.total} rows` : ''}
-                    </p>
-                    <ForecastActualsDataTable records={actualsQ.data?.records} />
-                    <div className="flex items-center justify-between text-sm">
-                      <span>
-                        {actualsQ.data?.startIndex != null && actualsQ.data?.endIndex != null
-                          ? `${actualsQ.data.startIndex}–${actualsQ.data.endIndex} of ${actualsQ.data.total}`
-                          : ''}
-                      </span>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={!actualsQ.data?.hasPrev}
-                          onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        >
-                          Previous
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={!actualsQ.data?.hasNext}
-                          onClick={() => setPage((p) => p + 1)}
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                )}
+              <CardContent>
+                <ForecastActualsRowPanel
+                  variant="actuals"
+                  title="Actuals"
+                  locationId={locationId}
+                  selectableClients={selectableClients}
+                  selectableStaff={selectableStaff}
+                  listData={actualsQ.data}
+                  listLoading={actualsQ.isLoading}
+                  listError={actualsQ.error}
+                  dropzone={fzActuals}
+                  onExport={() => exportActualsCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))}
+                  page={page}
+                  setPage={setPage}
+                />
               </CardContent>
             </Card>
           )}

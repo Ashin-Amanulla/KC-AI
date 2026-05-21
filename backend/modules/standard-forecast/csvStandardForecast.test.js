@@ -56,6 +56,10 @@ test('parseTime 12-hour AM/PM with optional seconds', () => {
   assert.strictEqual(parseTime('12:00:00 PM'), '12:00');
 });
 
+test('normalizeColumnName maps Ratio header', () => {
+  assert.strictEqual(normalizeColumnName('Ratio'), 'ratio');
+});
+
 test('parseDecimal strips currency and hrs', () => {
   assert.strictEqual(parseDecimal('$120.50'), 120.5);
   assert.strictEqual(parseDecimal('4.0 hrs'), 4);

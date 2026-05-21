@@ -151,3 +151,73 @@ export async function exportSummaryPdf(params) {
 export async function exportVarianceCsv(params) {
   await downloadBlobGet('/api/forecast-actuals/variance/export.csv', params, 'variance.csv');
 }
+
+function invalidateForecastActuals(qc) {
+  qc.invalidateQueries({ queryKey: ['forecast-actuals'] });
+}
+
+export function useCreateForecast() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload) => {
+      const res = await api.post('/api/forecast-actuals/forecast', payload);
+      return res.data;
+    },
+    onSuccess: () => invalidateForecastActuals(qc),
+  });
+}
+
+export function useUpdateForecast() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }) => {
+      const res = await api.put(`/api/forecast-actuals/forecast/${id}`, payload);
+      return res.data;
+    },
+    onSuccess: () => invalidateForecastActuals(qc),
+  });
+}
+
+export function useDeleteForecast() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, locationId }) => {
+      const res = await api.delete(`/api/forecast-actuals/forecast/${id}`, { params: { locationId } });
+      return res.data;
+    },
+    onSuccess: () => invalidateForecastActuals(qc),
+  });
+}
+
+export function useCreateActuals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload) => {
+      const res = await api.post('/api/forecast-actuals/actuals', payload);
+      return res.data;
+    },
+    onSuccess: () => invalidateForecastActuals(qc),
+  });
+}
+
+export function useUpdateActuals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }) => {
+      const res = await api.put(`/api/forecast-actuals/actuals/${id}`, payload);
+      return res.data;
+    },
+    onSuccess: () => invalidateForecastActuals(qc),
+  });
+}
+
+export function useDeleteActuals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, locationId }) => {
+      const res = await api.delete(`/api/forecast-actuals/actuals/${id}`, { params: { locationId } });
+      return res.data;
+    },
+    onSuccess: () => invalidateForecastActuals(qc),
+  });
+}

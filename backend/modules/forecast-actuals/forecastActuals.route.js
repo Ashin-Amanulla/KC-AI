@@ -5,11 +5,17 @@ import { config } from '../../config/index.js';
 import { authenticateJWT, authorizeRoles } from '../../middlewares/auth.middleware.js';
 import {
   financeRoles,
+  deleteActualsRow,
+  deleteForecastRow,
   getActualsExport,
   getActualsList,
   getDirectory,
   getForecastExport,
   getForecastList,
+  postActualsCreate,
+  postForecastCreate,
+  putActualsUpdate,
+  putForecastUpdate,
   getSummaryExportCsv,
   getSummaryExportPdf,
   getSummaryHandler,
@@ -55,6 +61,12 @@ router.get('/forecast-actuals/directory', ...authFinance, getDirectory);
 
 router.post('/forecast-actuals/forecast/upload', ...authFinance, upload.single('file'), postForecastUpload);
 router.post('/forecast-actuals/actuals/upload', ...authFinance, upload.single('file'), postActualsUpload);
+router.post('/forecast-actuals/forecast', ...authFinance, postForecastCreate);
+router.put('/forecast-actuals/forecast/:id', ...authFinance, putForecastUpdate);
+router.delete('/forecast-actuals/forecast/:id', ...authFinance, deleteForecastRow);
+router.post('/forecast-actuals/actuals', ...authFinance, postActualsCreate);
+router.put('/forecast-actuals/actuals/:id', ...authFinance, putActualsUpdate);
+router.delete('/forecast-actuals/actuals/:id', ...authFinance, deleteActualsRow);
 
 router.get('/forecast-actuals/forecast', ...authFinance, getForecastList);
 router.get('/forecast-actuals/actuals', ...authFinance, getActualsList);

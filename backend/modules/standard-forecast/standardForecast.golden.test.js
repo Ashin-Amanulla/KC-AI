@@ -1,6 +1,7 @@
 import assert from 'node:assert';
 import test from 'node:test';
 import {
+  buildStandardDocFromFields,
   buildStandardVsForecastRecord,
   countDaysInRange,
 } from './standardForecast.service.js';
@@ -28,6 +29,25 @@ test('golden: buildStandardVsForecastRecord variance pct null when standard zero
   const r = buildStandardVsForecastRecord('c1', 'Acme', 0, 50);
   assert.strictEqual(r.variance, 50);
   assert.strictEqual(r.variancePercentage, null);
+});
+
+test('golden: buildStandardDocFromFields manual row', () => {
+  const r = buildStandardDocFromFields({
+    clientDirectoryId: 'c1',
+    clientName: 'Alexandre Noskoff',
+    day: 'Monday',
+    startTimeStr: '6:00 AM',
+    endTimeStr: '10:00 AM',
+    duration: '4',
+    totalCost: '151.96',
+    shiftType: 'Personal Care',
+    ratio: '1:01',
+  });
+  assert.ok(!r.error);
+  assert.strictEqual(r.doc.ratio, '1:01');
+  assert.strictEqual(r.doc.startTime, '06:00');
+  assert.strictEqual(r.doc.endTime, '10:00');
+  assert.strictEqual(r.doc.totalCost, 151.96);
 });
 
 test('golden: standard budget = totalCost × day count', () => {

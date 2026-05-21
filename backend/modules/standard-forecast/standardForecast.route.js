@@ -11,7 +11,10 @@ import {
   getSummary,
   getSummaryExportCsv,
   getSummaryExportPdf,
+  deleteStandardRow,
+  postStandardCreate,
   postStandardUpload,
+  putStandardUpdate,
 } from './standardForecast.controller.js';
 
 const router = express.Router();
@@ -48,6 +51,9 @@ const authFinance = [authenticateJWT, authorizeRoles(...financeRoles)];
 router.get('/standard-forecast/directory', ...authFinance, getDirectory);
 
 router.post('/standard-forecast/standard/upload', ...authFinance, upload.single('file'), postStandardUpload);
+router.post('/standard-forecast/standard', ...authFinance, postStandardCreate);
+router.put('/standard-forecast/standard/:id', ...authFinance, putStandardUpdate);
+router.delete('/standard-forecast/standard/:id', ...authFinance, deleteStandardRow);
 router.get('/standard-forecast/standard', ...authFinance, getStandardList);
 router.get('/standard-forecast/standard/export', ...authFinance, getStandardExport);
 
