@@ -19,13 +19,17 @@ export const COLUMN_ALIASES = {
   'end time': 'end date time',
   end: 'end date time',
   hours: 'duration',
+  cost: 'total cost',
   'rate groups': 'rate groups',
   'reference no': 'reference no',
   'shift type': 'shift type',
 };
 
 export function normalizeColumnName(name) {
-  const normalized = String(name || '').trim().toLowerCase();
+  const normalized = String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
   return COLUMN_ALIASES[normalized] ?? normalized;
 }
 
@@ -53,12 +57,28 @@ export function getRowValue(row, colName, normalizedColumns) {
   return v == null ? '' : String(v).trim();
 }
 
-/** Parse HH:MM or H:MM time strings */
+/** Parse time strings: HH:MM, H:MM, or 12h with optional seconds (e.g. 6:00:00 AM) */
 export function parseTime(timeStr) {
-  const s = String(timeStr || '').trim();
+  const s = String(timeStr || '')
+    .trim()
+    .replace(/\s+/g, ' ');
   if (!s) return null;
 
-  const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+  const m12 = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)$/i);
+  if (m12) {
+    let h = parseInt(m12[1], 10);
+    const min = parseInt(m12[2], 10);
+    const ampm = m12[3].toLowerCase();
+    if (h < 1 || h > 12 || min < 0 || min > 59) return null;
+    if (ampm === 'am') {
+      if (h === 12) h = 0;
+    } else if (h !== 12) {
+      h += 12;
+    }
+    return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  }
+
+  const m24 = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
   if (m24) {
     const h = parseInt(m24[1], 10);
     const min = parseInt(m24[2], 10);
