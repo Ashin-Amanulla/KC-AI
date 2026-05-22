@@ -17,6 +17,11 @@ import {
 
 const financeRoles = ['super_admin', 'finance'];
 
+function resolveClientFilter(query) {
+  const { clientId, client } = query;
+  return clientId ?? client ?? 'all';
+}
+
 function requireShiftCare(req, res) {
   const credentials = getShiftCareCredentials(req);
   if (!credentials?.accountId || !credentials?.apiKey) {
@@ -190,11 +195,11 @@ export const deleteStandardRow = async (req, res, next) => {
 
 export const getStandardList = async (req, res, next) => {
   try {
-    const { locationId, clientId, page } = req.query;
+    const { locationId } = req.query;
     const { error, status } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const data = await listStandardForecast({ locationId, clientId, page });
+    const data = await listStandardForecast({ locationId, clientId: resolveClientFilter(req.query) });
     res.json(data);
   } catch (e) {
     next(e);
@@ -203,11 +208,14 @@ export const getStandardList = async (req, res, next) => {
 
 export const getStandardExport = async (req, res, next) => {
   try {
-    const { locationId, clientId } = req.query;
+    const { locationId } = req.query;
     const { error, status } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const { filename, body } = await exportStandardForecastCsv({ locationId, clientId });
+    const { filename, body } = await exportStandardForecastCsv({
+      locationId,
+      clientId: resolveClientFilter(req.query),
+    });
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(body);
@@ -221,11 +229,15 @@ export const getSummary = async (req, res, next) => {
     const credentials = requireShiftCare(req, res);
     if (!credentials) return;
 
-    const { locationId, clientId } = req.query;
+    const { locationId } = req.query;
     const { error, status } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const data = await getStandardVsForecastSummary({ locationId, clientId, credentials });
+    const data = await getStandardVsForecastSummary({
+      locationId,
+      clientId: resolveClientFilter(req.query),
+      credentials,
+    });
     res.json(data);
   } catch (e) {
     next(e);
@@ -237,11 +249,15 @@ export const getSummaryExportCsv = async (req, res, next) => {
     const credentials = requireShiftCare(req, res);
     if (!credentials) return;
 
-    const { locationId, clientId } = req.query;
+    const { locationId } = req.query;
     const { error, status } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const { filename, body } = await exportStandardVsForecastCsv({ locationId, clientId, credentials });
+    const { filename, body } = await exportStandardVsForecastCsv({
+      locationId,
+      clientId: resolveClientFilter(req.query),
+      credentials,
+    });
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(body);
@@ -255,11 +271,15 @@ export const getSummaryExportPdf = async (req, res, next) => {
     const credentials = requireShiftCare(req, res);
     if (!credentials) return;
 
-    const { locationId, clientId } = req.query;
+    const { locationId } = req.query;
     const { error, status } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const { filename, body } = await exportStandardVsForecastPdf({ locationId, clientId, credentials });
+    const { filename, body } = await exportStandardVsForecastPdf({
+      locationId,
+      clientId: resolveClientFilter(req.query),
+      credentials,
+    });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(body);

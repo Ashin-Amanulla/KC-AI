@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import { parse } from 'csv-parse/sync';
-import { config } from '../../config/index.js';
 import { Location } from '../locations/location.model.js';
 import { ForecastRecord } from '../forecast-actuals/forecastRecord.model.js';
 import { buildLookupMaps, fetchAllClients } from '../forecast-actuals/directory.service.js';
@@ -15,9 +14,23 @@ import {
   validateHeaders,
 } from './csvStandardForecast.js';
 
-const PAGE_SIZE = () => config.standardForecast.pageSize;
-
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+const WEEKDAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+function weekdayIndex(day) {
+  const i = WEEKDAY_ORDER.findIndex((d) => d.toLowerCase() === String(day || '').trim().toLowerCase());
+  return i >= 0 ? i : WEEKDAY_ORDER.length;
+}
+
+/** Sort by calendar day (Mon→Sun), then start time ascending */
+export function sortStandardRecords(records) {
+  return [...records].sort((a, b) => {
+    const dayDiff = weekdayIndex(a.day) - weekdayIndex(b.day);
+    if (dayDiff !== 0) return dayDiff;
+    return String(a.startTime || '').localeCompare(String(b.startTime || ''));
+  });
+}
 
 function locObjectId(locationId) {
   return new mongoose.Types.ObjectId(locationId);
@@ -25,7 +38,7 @@ function locObjectId(locationId) {
 
 function listFilter(locationId, clientId) {
   const q = { location: locObjectId(locationId) };
-  if (clientId && clientId !== 'all') q.clientDirectoryId = clientId;
+  if (clientId && clientId !== 'all') q.clientDirectoryId = String(clientId);
   return q;
 }
 
@@ -318,31 +331,19 @@ export async function uploadStandardForecastFromCsv({ locationId, fileBuffer, cr
   };
 }
 
-export async function listStandardForecast({ locationId, clientId, page }) {
-  const pageSize = PAGE_SIZE();
-  const p = Math.max(1, parseInt(page, 10) || 1);
-  const skip = (p - 1) * pageSize;
+export async function listStandardForecast({ locationId, clientId }) {
   const filter = listFilter(locationId, clientId);
-
-  const [items, total] = await Promise.all([
-    StandardForecast.find(filter).sort({ day: 1, startTime: 1 }).skip(skip).limit(pageSize).lean(),
-    StandardForecast.countDocuments(filter),
-  ]);
-
-  const startIndex = total > 0 ? skip + 1 : 0;
-  const endIndex = Math.min(skip + pageSize, total);
-  const totalPages = total > 0 ? Math.ceil(total / pageSize) : 1;
+  const items = await StandardForecast.find(filter).lean();
+  const records = sortStandardRecords(items.map(serializeDoc));
+  const total = records.length;
 
   return {
-    records: items.map(serializeDoc),
+    records,
     total,
-    page: p,
-    pageSize,
-    totalPages,
-    startIndex,
-    endIndex,
-    hasNext: p < totalPages,
-    hasPrev: p > 1,
+    startIndex: total > 0 ? 1 : 0,
+    endIndex: total,
+    hasNext: false,
+    hasPrev: false,
   };
 }
 
@@ -377,7 +378,8 @@ function standardRowToCsvLine(r) {
 
 export async function exportStandardForecastCsv({ locationId, clientId }) {
   const filter = listFilter(locationId, clientId);
-  const rows = await StandardForecast.find(filter).sort({ day: 1, startTime: 1 }).lean();
+  const items = await StandardForecast.find(filter).lean();
+  const rows = sortStandardRecords(items.map(serializeDoc));
 
   const lines = [STANDARD_CSV_HEADER.join(','), ...rows.map(standardRowToCsvLine)];
   const body = Buffer.from(lines.join('\n'), 'utf-8');

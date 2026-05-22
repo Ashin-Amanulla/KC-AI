@@ -69,12 +69,11 @@ export function StandardForecast() {
   const locations = locData?.locations ?? [];
   const [locationId, setLocationId] = useState('');
   const [client, setClient] = useState('all');
-  const [page, setPage] = useState(1);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [rowForm, setRowForm] = useState(EMPTY_ROW_FORM);
 
-  const listParams = useMemo(() => ({ locationId, client, page }), [locationId, client, page]);
+  const listParams = useMemo(() => ({ locationId, clientId: client }), [locationId, client]);
 
   const { data: directory, isLoading: dirLoading } = useStandardDirectory(Boolean(locationId));
   const listQ = useStandardList(listParams, Boolean(locationId));
@@ -99,7 +98,6 @@ export function StandardForecast() {
     try {
       const res = await uploadM.mutateAsync({ locationId, file: f });
       toast.success(`Standard upload: ${res.recordsCreated} rows created`);
-      setPage(1);
     } catch (e) {
       toast.error(getErrorMessage(e));
     }
@@ -113,7 +111,18 @@ export function StandardForecast() {
   });
 
   const clientOptions = directory?.clients || [{ value: 'all', label: 'All Clients' }];
-  const exportBase = { locationId, client };
+  const exportBase = { locationId, clientId: client };
+
+  const selectedClientLabel = useMemo(
+    () => clientOptions.find((o) => o.value === client)?.label,
+    [clientOptions, client]
+  );
+
+  const tableRecords = useMemo(() => {
+    const rows = listQ.data?.records ?? [];
+    if (client === 'all') return rows;
+    return rows.filter((r) => String(r.clientDirectoryId) === String(client));
+  }, [listQ.data?.records, client]);
 
   const updateRowField = (field, value) => {
     setRowForm((prev) => ({ ...prev, [field]: value }));
@@ -155,7 +164,6 @@ export function StandardForecast() {
         toast.success('Row added');
       }
       resetRowForm();
-      setPage(1);
     } catch (err) {
       const data = err.response?.data;
       const msg = data?.errors?.join(', ') || getErrorMessage(err);
@@ -204,7 +212,6 @@ export function StandardForecast() {
                 onChange={(e) => {
                   setLocationId(e.target.value);
                   setClient('all');
-                  setPage(1);
                   setShowAddForm(false);
                 }}
               >
@@ -224,7 +231,7 @@ export function StandardForecast() {
               value={client}
               onChange={(e) => {
                 setClient(e.target.value);
-                setPage(1);
+                resetRowForm();
               }}
               disabled={!locationId || dirLoading}
             >
@@ -251,7 +258,12 @@ export function StandardForecast() {
                 size="sm"
                 onClick={() => {
                   if (showAddForm) resetRowForm();
-                  else setShowAddForm(true);
+                  else {
+                    setShowAddForm(true);
+                    if (client !== 'all') {
+                      setRowForm({ ...EMPTY_ROW_FORM, clientDirectoryId: client });
+                    }
+                  }
                 }}
                 disabled={dirLoading || selectableClients.length === 0}
               >
@@ -429,14 +441,16 @@ export function StandardForecast() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(listQ.data?.records ?? []).length === 0 ? (
+                      {tableRecords.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                            No standard records yet. Add a row or upload a CSV.
+                            {client === 'all'
+                              ? 'No standard records yet. Add a row or upload a CSV.'
+                              : `No standard records for ${selectedClientLabel || 'this client'}.`}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        listQ.data.records.map((r) => (
+                        tableRecords.map((r) => (
                           <TableRow key={r.id}>
                             <TableCell>{r.day}</TableCell>
                             <TableCell>{r.clientName}</TableCell>
@@ -477,32 +491,11 @@ export function StandardForecast() {
                     </TableBody>
                   </Table>
                 </div>
-                {listQ.data?.total > 0 && (
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>
-                      Showing {listQ.data.startIndex}–{listQ.data.endIndex} of {listQ.data.total}
-                    </span>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={!listQ.data.hasPrev}
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={!listQ.data.hasNext}
-                        onClick={() => setPage((p) => p + 1)}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
+                {tableRecords.length > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {tableRecords.length} standard row{tableRecords.length === 1 ? '' : 's'}
+                    {client !== 'all' && selectedClientLabel ? ` for ${selectedClientLabel}` : ''}
+                  </p>
                 )}
               </>
             )}

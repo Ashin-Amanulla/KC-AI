@@ -4,7 +4,29 @@ import {
   buildStandardDocFromFields,
   buildStandardVsForecastRecord,
   countDaysInRange,
+  sortStandardRecords,
 } from './standardForecast.service.js';
+
+test('golden: sortStandardRecords Mon→Sun then start time', () => {
+  const input = [
+    { day: 'Friday', startTime: '14:00' },
+    { day: 'Monday', startTime: '06:00' },
+    { day: 'Monday', startTime: '14:00' },
+    { day: 'Friday', startTime: '06:00' },
+    { day: 'Sunday', startTime: '08:00' },
+  ];
+  const sorted = sortStandardRecords(input);
+  assert.deepStrictEqual(
+    sorted.map((r) => `${r.day} ${r.startTime}`),
+    [
+      'Monday 06:00',
+      'Monday 14:00',
+      'Friday 06:00',
+      'Friday 14:00',
+      'Sunday 08:00',
+    ]
+  );
+});
 
 test('golden: countDaysInRange Mon–Sun over two weeks', () => {
   const start = new Date('2026-04-06T12:00:00.000Z');
