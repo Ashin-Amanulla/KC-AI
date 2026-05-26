@@ -5,6 +5,13 @@ const Q = {
   directory: ['standard-forecast', 'directory'],
   standard: (p) => ['standard-forecast', 'standard', p],
   summary: (p) => ['standard-forecast', 'summary', p],
+  variance: (p) => ['standard-forecast', 'variance', p],
+  varianceDetail: (locationId, templateKey) => [
+    'standard-forecast',
+    'variance-detail',
+    locationId,
+    templateKey,
+  ],
 };
 
 function parseFilenameFromDisposition(cd) {
@@ -55,6 +62,30 @@ export function useStandardVsForecastSummary(params, enabled) {
       return res.data;
     },
     enabled: Boolean(enabled && params?.locationId),
+  });
+}
+
+export function useStandardForecastVarianceList(params, enabled) {
+  return useQuery({
+    queryKey: Q.variance(params),
+    queryFn: async () => {
+      const res = await api.get('/api/standard-forecast/variance', { params });
+      return res.data;
+    },
+    enabled: Boolean(enabled && params?.locationId),
+  });
+}
+
+export function useStandardForecastVarianceDetail(locationId, templateKey, enabled) {
+  return useQuery({
+    queryKey: Q.varianceDetail(locationId, templateKey),
+    queryFn: async () => {
+      const res = await api.get('/api/standard-forecast/variance/detail', {
+        params: { locationId, templateKey },
+      });
+      return res.data;
+    },
+    enabled: Boolean(enabled && locationId && templateKey),
   });
 }
 

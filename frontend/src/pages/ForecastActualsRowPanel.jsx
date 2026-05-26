@@ -26,7 +26,6 @@ import {
 export const FORECAST_ACTUALS_COLUMNS = [
   { key: 'shiftDate', label: 'Date', kind: 'date' },
   { key: 'clientName', label: 'Client name', kind: 'text' },
-  { key: 'staffName', label: 'Staff', kind: 'text' },
   { key: 'startDatetime', label: 'Start date time', kind: 'dt' },
   { key: 'endDatetime', label: 'End date time', kind: 'dt' },
   { key: 'duration', label: 'Duration', kind: 'num' },

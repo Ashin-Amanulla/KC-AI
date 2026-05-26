@@ -3,7 +3,10 @@ import test from 'node:test';
 import {
   buildStandardDocFromFields,
   buildStandardVsForecastRecord,
+  buildTemplateKey,
+  computeStandardVarianceDiff,
   countDaysInRange,
+  parseTemplateKey,
   sortStandardRecords,
 } from './standardForecast.service.js';
 
@@ -80,4 +83,109 @@ test('golden: standard budget = totalCost × day count', () => {
   assert.strictEqual(counts.monday, 1);
   const budget = 50 * counts.monday;
   assert.strictEqual(budget, 50);
+});
+
+test('golden: buildTemplateKey round-trips through parseTemplateKey', () => {
+  const key = buildTemplateKey({
+    clientDirectoryId: 'c1',
+    day: 'Monday',
+    startTime: '06:00',
+  });
+  assert.strictEqual(key, 'c1|monday|06:00');
+  assert.deepStrictEqual(parseTemplateKey(key), {
+    clientDirectoryId: 'c1',
+    day: 'monday',
+    startTime: '06:00',
+  });
+});
+
+test('golden: buildTemplateKey normalizes day casing/whitespace', () => {
+  assert.strictEqual(
+    buildTemplateKey({ clientDirectoryId: 'c2', day: '  Friday ', startTime: '14:00' }),
+    'c2|friday|14:00'
+  );
+});
+
+test('golden: computeStandardVarianceDiff returns empty when buckets match', () => {
+  const std = {
+    endTime: '10:00',
+    duration: 4,
+    costPerOccurrence: 100,
+    totalCost: 400,
+    occurrences: 4,
+  };
+  const fcs = { ...std };
+  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), []);
+});
+
+test('golden: computeStandardVarianceDiff detects end_time only', () => {
+  const std = {
+    endTime: '10:00',
+    duration: 4,
+    costPerOccurrence: 100,
+    totalCost: 400,
+    occurrences: 4,
+  };
+  const fcs = { ...std, endTime: '10:30' };
+  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), ['end_time']);
+});
+
+test('golden: computeStandardVarianceDiff detects duration only', () => {
+  const std = {
+    endTime: '10:00',
+    duration: 4,
+    costPerOccurrence: 100,
+    totalCost: 400,
+    occurrences: 4,
+  };
+  const fcs = { ...std, duration: 4.5 };
+  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), ['duration']);
+});
+
+test('golden: computeStandardVarianceDiff detects cost only', () => {
+  const std = {
+    endTime: '10:00',
+    duration: 4,
+    costPerOccurrence: 100,
+    totalCost: 400,
+    occurrences: 4,
+  };
+  const fcs = { ...std, costPerOccurrence: 110 };
+  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), ['cost']);
+});
+
+test('golden: computeStandardVarianceDiff detects total_cost only', () => {
+  const std = {
+    endTime: '10:00',
+    duration: 4,
+    costPerOccurrence: 100,
+    totalCost: 400,
+    occurrences: 4,
+  };
+  const fcs = { ...std, totalCost: 420 };
+  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), ['total_cost']);
+});
+
+test('golden: computeStandardVarianceDiff detects occurrences only', () => {
+  const std = {
+    endTime: '10:00',
+    duration: 4,
+    costPerOccurrence: 100,
+    totalCost: 400,
+    occurrences: 4,
+  };
+  const fcs = { ...std, occurrences: 3 };
+  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), ['occurrences']);
+});
+
+test('golden: computeStandardVarianceDiff treats cent-level money diff as equal', () => {
+  const std = {
+    endTime: '10:00',
+    duration: 4,
+    costPerOccurrence: 100,
+    totalCost: 400,
+    occurrences: 4,
+  };
+  const fcs = { ...std, costPerOccurrence: 100.001, totalCost: 400.001 };
+  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), []);
 });

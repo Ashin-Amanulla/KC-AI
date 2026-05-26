@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { parse } from 'csv-parse/sync';
+import { config } from '../../config/index.js';
 import { Location } from '../locations/location.model.js';
 import { ForecastRecord } from '../forecast-actuals/forecastRecord.model.js';
 import { buildLookupMaps, fetchAllClients } from '../forecast-actuals/directory.service.js';
@@ -13,6 +14,7 @@ import {
   roundMoney,
   validateHeaders,
 } from './csvStandardForecast.js';
+import { moneyEqual } from '../forecast-actuals/csvForecastActuals.js';
 
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -602,4 +604,496 @@ export async function exportStandardVsForecastPdf({ locationId, clientId, creden
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
   const filename = `standard_vs_forecast_${code}_${ts}.pdf`;
   return { filename, body: pdfBuffer };
+}
+
+const PAGE_SIZE_VARIANCE = () => config.standardForecast.pageSize;
+
+/** Build a stable template key. */
+export function buildTemplateKey({ clientDirectoryId, day, startTime }) {
+  return `${clientDirectoryId}|${String(day || '').trim().toLowerCase()}|${startTime}`;
+}
+
+export function parseTemplateKey(key) {
+  const [clientDirectoryId, day, startTime] = String(key || '').split('|');
+  return { clientDirectoryId, day, startTime };
+}
+
+const DAY_LABEL = {
+  monday: 'Monday',
+  tuesday: 'Tuesday',
+  wednesday: 'Wednesday',
+  thursday: 'Thursday',
+  friday: 'Friday',
+  saturday: 'Saturday',
+  sunday: 'Sunday',
+};
+
+/** Diff between an aggregated standard bucket and an aggregated forecast bucket. */
+export function computeStandardVarianceDiff(std, fcs) {
+  const diff = [];
+  if (String(std.endTime || '') !== String(fcs.endTime || '')) diff.push('end_time');
+  if (!moneyEqual(std.duration, fcs.duration)) diff.push('duration');
+  if (!moneyEqual(std.costPerOccurrence, fcs.costPerOccurrence)) diff.push('cost');
+  if (!moneyEqual(std.totalCost, fcs.totalCost)) diff.push('total_cost');
+  if ((std.occurrences || 0) !== (fcs.occurrences || 0)) diff.push('occurrences');
+  return diff;
+}
+
+function serializeStandardTemplateRow(stdRow, dayCount) {
+  const totalCost = roundMoney((stdRow.totalCost || 0) * dayCount);
+  return {
+    templateKey: buildTemplateKey({
+      clientDirectoryId: stdRow.clientDirectoryId,
+      day: stdRow.day,
+      startTime: stdRow.startTime,
+    }),
+    source: 'standard',
+    recordType: '',
+    clientDirectoryId: stdRow.clientDirectoryId,
+    clientName: stdRow.clientName,
+    day: DAY_LABEL[String(stdRow.day || '').trim().toLowerCase()] || stdRow.day,
+    startTime: stdRow.startTime,
+    endTime: stdRow.endTime,
+    duration: roundMoney(stdRow.duration || 0),
+    costPerOccurrence: roundMoney(stdRow.totalCost || 0),
+    occurrences: dayCount,
+    totalCost,
+    diffFields: [],
+  };
+}
+
+function serializeForecastBucketRow(bucket, clientNameMap) {
+  const occurrences = bucket.occurrences || 0;
+  const costPerOccurrence = occurrences > 0 ? roundMoney(bucket.totalCost / occurrences) : 0;
+  const duration = occurrences > 0 ? roundMoney(bucket.sumDuration / occurrences) : 0;
+  return {
+    templateKey: buildTemplateKey({
+      clientDirectoryId: bucket.clientDirectoryId,
+      day: bucket.dayKey,
+      startTime: bucket.startTime,
+    }),
+    source: 'forecast',
+    recordType: '',
+    clientDirectoryId: bucket.clientDirectoryId,
+    clientName: clientNameMap.get(bucket.clientDirectoryId) || bucket.clientName || '',
+    day: DAY_LABEL[bucket.dayKey] || bucket.dayKey,
+    startTime: bucket.startTime,
+    endTime: bucket.endTime,
+    duration,
+    costPerOccurrence,
+    occurrences,
+    totalCost: roundMoney(bucket.totalCost || 0),
+    diffFields: [],
+  };
+}
+
+/** Sunday=1..Saturday=7 → monday/tuesday/.../sunday */
+const MONGO_DAY_TO_KEY = {
+  1: 'sunday',
+  2: 'monday',
+  3: 'tuesday',
+  4: 'wednesday',
+  5: 'thursday',
+  6: 'friday',
+  7: 'saturday',
+};
+
+async function getForecastTemplateBuckets(locationId, clientId, rangeStart, rangeEnd) {
+  const match = {
+    location: locObjectId(locationId),
+    shiftDate: { $gte: new Date(rangeStart), $lte: new Date(rangeEnd) },
+  };
+  if (clientId && clientId !== 'all') match.clientDirectoryId = String(clientId);
+
+  const pipeline = [
+    { $match: match },
+    {
+      $project: {
+        clientDirectoryId: 1,
+        totalCost: 1,
+        cost: 1,
+        duration: 1,
+        startDatetime: 1,
+        endDatetime: 1,
+        shiftDate: 1,
+        dayOfWeek: { $dayOfWeek: '$shiftDate' },
+        startTime: { $dateToString: { format: '%H:%M', date: '$startDatetime' } },
+        endTime: { $dateToString: { format: '%H:%M', date: '$endDatetime' } },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          clientDirectoryId: '$clientDirectoryId',
+          dayOfWeek: '$dayOfWeek',
+          startTime: '$startTime',
+        },
+        endTime: { $first: '$endTime' },
+        occurrences: { $sum: 1 },
+        totalCost: { $sum: '$totalCost' },
+        sumCost: { $sum: '$cost' },
+        sumDuration: { $sum: '$duration' },
+      },
+    },
+  ];
+
+  const agg = await ForecastRecord.aggregate(pipeline);
+  const buckets = [];
+  for (const item of agg) {
+    const dayKey = MONGO_DAY_TO_KEY[item._id.dayOfWeek];
+    if (!dayKey) continue;
+    buckets.push({
+      clientDirectoryId: item._id.clientDirectoryId,
+      dayKey,
+      startTime: item._id.startTime,
+      endTime: item.endTime || '',
+      occurrences: item.occurrences,
+      totalCost: item.totalCost,
+      sumCost: item.sumCost,
+      sumDuration: item.sumDuration,
+    });
+  }
+  return buckets;
+}
+
+async function getForecastRangeAndClients(locationId, clientId, credentials) {
+  const fDr = await ForecastRecord.aggregate([
+    { $match: { location: locObjectId(locationId) } },
+    { $group: { _id: null, minD: { $min: '$shiftDate' }, maxD: { $max: '$shiftDate' } } },
+  ]);
+  const forecastStart = fDr[0]?.minD ?? null;
+  const forecastEnd = fDr[0]?.maxD ?? null;
+
+  let clientNameMap = new Map();
+  if (credentials) {
+    const clients = await fetchAllClients(credentials);
+    clientNameMap = new Map(clients.map((c) => [c.id, c.displayName]));
+  }
+  if (!clientNameMap.size) {
+    const standardClients = await StandardForecast.aggregate([
+      { $match: { location: locObjectId(locationId) } },
+      { $group: { _id: '$clientDirectoryId', clientName: { $first: '$clientName' } } },
+    ]);
+    for (const c of standardClients) {
+      if (c._id && !clientNameMap.has(c._id)) clientNameMap.set(c._id, c.clientName || '');
+    }
+  }
+
+  return { forecastStart, forecastEnd, clientNameMap };
+}
+
+export async function listStandardVsForecastVariance({
+  locationId,
+  clientId,
+  tab,
+  page,
+  credentials,
+}) {
+  const pageSize = PAGE_SIZE_VARIANCE();
+  const p = Math.max(1, parseInt(page, 10) || 1);
+  const t = ['all', 'deleted', 'additional', 'variance'].includes(tab) ? tab : 'all';
+
+  const empty = {
+    records: [],
+    total: 0,
+    page: p,
+    pageSize,
+    startIndex: 0,
+    endIndex: 0,
+    hasNext: false,
+    hasPrev: false,
+    allCount: 0,
+    deletedCount: 0,
+    additionalCount: 0,
+    varianceCount: 0,
+    forecastDateRangeStart: null,
+    forecastDateRangeEnd: null,
+  };
+
+  const { forecastStart, forecastEnd, clientNameMap } = await getForecastRangeAndClients(
+    locationId,
+    clientId,
+    credentials
+  );
+
+  if (!forecastStart || !forecastEnd) return empty;
+
+  const dayCounts = countDaysInRange(forecastStart, forecastEnd);
+
+  const stdFilter = listFilter(locationId, clientId);
+  const stdRows = await StandardForecast.find(stdFilter).lean();
+
+  const standardMap = new Map();
+  for (const r of stdRows) {
+    const dayKey = String(r.day || '').trim().toLowerCase();
+    const dayCount = dayCounts[dayKey] || 0;
+    if (dayCount <= 0) continue;
+    const tplKey = buildTemplateKey({
+      clientDirectoryId: r.clientDirectoryId,
+      day: r.day,
+      startTime: r.startTime,
+    });
+    if (!standardMap.has(tplKey)) {
+      standardMap.set(tplKey, serializeStandardTemplateRow(r, dayCount));
+    } else {
+      const cur = standardMap.get(tplKey);
+      cur.totalCost = roundMoney(cur.totalCost + roundMoney((r.totalCost || 0) * dayCount));
+    }
+  }
+
+  const fBuckets = await getForecastTemplateBuckets(locationId, clientId, forecastStart, forecastEnd);
+  const forecastMap = new Map();
+  for (const b of fBuckets) {
+    const row = serializeForecastBucketRow(b, clientNameMap);
+    forecastMap.set(row.templateKey, row);
+  }
+
+  const standardKeys = new Set(standardMap.keys());
+  const forecastKeys = new Set(forecastMap.keys());
+
+  const deletedKeys = [];
+  for (const k of standardKeys) if (!forecastKeys.has(k)) deletedKeys.push(k);
+  deletedKeys.sort();
+
+  const additionalKeys = [];
+  for (const k of forecastKeys) if (!standardKeys.has(k)) additionalKeys.push(k);
+  additionalKeys.sort();
+
+  const varianceKeys = [];
+  for (const k of standardKeys) {
+    if (!forecastKeys.has(k)) continue;
+    const s = standardMap.get(k);
+    const f = forecastMap.get(k);
+    const diff = computeStandardVarianceDiff(s, f);
+    if (diff.length > 0) {
+      f.diffFields = diff;
+      varianceKeys.push(k);
+    }
+  }
+  varianceKeys.sort();
+
+  const deletedCount = deletedKeys.length;
+  const additionalCount = additionalKeys.length;
+  const varianceCount = varianceKeys.length;
+  const allCount = deletedCount + additionalCount + varianceCount;
+
+  let total;
+  let pageRecords = [];
+  if (t === 'deleted') {
+    total = deletedCount;
+    const slice = deletedKeys.slice((p - 1) * pageSize, (p - 1) * pageSize + pageSize);
+    pageRecords = slice.map((k) => {
+      const row = { ...standardMap.get(k) };
+      row.recordType = 'deleted';
+      return row;
+    });
+  } else if (t === 'additional') {
+    total = additionalCount;
+    const slice = additionalKeys.slice((p - 1) * pageSize, (p - 1) * pageSize + pageSize);
+    pageRecords = slice.map((k) => {
+      const row = { ...forecastMap.get(k) };
+      row.recordType = 'additional';
+      return row;
+    });
+  } else if (t === 'variance') {
+    total = varianceCount;
+    const slice = varianceKeys.slice((p - 1) * pageSize, (p - 1) * pageSize + pageSize);
+    for (const k of slice) {
+      const s = { ...standardMap.get(k) };
+      const f = { ...forecastMap.get(k) };
+      s.recordType = 'variance';
+      f.recordType = 'variance';
+      pageRecords.push(s);
+      pageRecords.push(f);
+    }
+  } else {
+    total = allCount;
+    const combined = [
+      ...deletedKeys.map((k) => ({ k, kind: 'deleted' })),
+      ...additionalKeys.map((k) => ({ k, kind: 'additional' })),
+      ...varianceKeys.map((k) => ({ k, kind: 'variance' })),
+    ];
+    const slice = combined.slice((p - 1) * pageSize, (p - 1) * pageSize + pageSize);
+    for (const { k, kind } of slice) {
+      if (kind === 'deleted') {
+        const row = { ...standardMap.get(k) };
+        row.recordType = 'deleted';
+        pageRecords.push(row);
+      } else if (kind === 'additional') {
+        const row = { ...forecastMap.get(k) };
+        row.recordType = 'additional';
+        pageRecords.push(row);
+      } else {
+        const s = { ...standardMap.get(k) };
+        const f = { ...forecastMap.get(k) };
+        s.recordType = 'variance';
+        f.recordType = 'variance';
+        pageRecords.push(s);
+        pageRecords.push(f);
+      }
+    }
+  }
+
+  const startIdx = (p - 1) * pageSize;
+  const endIdx = startIdx + pageSize;
+  const startIndex = total > 0 ? startIdx + 1 : 0;
+  const endIndex = Math.min(endIdx, total);
+
+  return {
+    records: pageRecords,
+    total,
+    page: p,
+    pageSize,
+    startIndex,
+    endIndex,
+    hasNext: p * pageSize < total,
+    hasPrev: p > 1,
+    allCount,
+    deletedCount,
+    additionalCount,
+    varianceCount,
+    forecastDateRangeStart: forecastStart,
+    forecastDateRangeEnd: forecastEnd,
+  };
+}
+
+export async function getStandardVsForecastVarianceDetail({
+  locationId,
+  templateKey,
+  credentials,
+}) {
+  const { clientDirectoryId, day, startTime } = parseTemplateKey(templateKey);
+  if (!clientDirectoryId || !day || !startTime) {
+    return {
+      templateKey,
+      diffFields: [],
+      standardRecords: [],
+      forecastRecords: [],
+      standardAggregated: null,
+      forecastAggregated: null,
+      dayCount: 0,
+    };
+  }
+
+  const { forecastStart, forecastEnd, clientNameMap } = await getForecastRangeAndClients(
+    locationId,
+    null,
+    credentials
+  );
+
+  const dayCounts = forecastStart && forecastEnd ? countDaysInRange(forecastStart, forecastEnd) : null;
+  const dayCount = dayCounts ? dayCounts[day] || 0 : 0;
+
+  const standardDocs = await StandardForecast.find({
+    location: locObjectId(locationId),
+    clientDirectoryId,
+    startTime,
+  })
+    .lean()
+    .then((rows) =>
+      rows.filter((r) => String(r.day || '').trim().toLowerCase() === day)
+    );
+
+  const standardRecords = standardDocs.map((r) => ({
+    id: String(r._id),
+    clientDirectoryId: r.clientDirectoryId,
+    clientName: r.clientName,
+    day: r.day,
+    startTime: r.startTime,
+    endTime: r.endTime,
+    duration: r.duration,
+    totalCost: r.totalCost,
+    rateGroups: r.rateGroups,
+    referenceNo: r.referenceNo,
+    shiftType: r.shiftType,
+    ratio: r.ratio,
+  }));
+
+  let forecastRecords = [];
+  let forecastAggregated = null;
+  if (forecastStart && forecastEnd) {
+    const fBuckets = await getForecastTemplateBuckets(
+      locationId,
+      clientDirectoryId,
+      forecastStart,
+      forecastEnd
+    );
+    const fBucket = fBuckets.find(
+      (b) => b.clientDirectoryId === clientDirectoryId && b.dayKey === day && b.startTime === startTime
+    );
+    if (fBucket) {
+      forecastAggregated = serializeForecastBucketRow(fBucket, clientNameMap);
+    }
+
+    const mongoDayOfWeek = Object.entries(MONGO_DAY_TO_KEY).find(([, v]) => v === day)?.[0];
+    if (mongoDayOfWeek) {
+      const docs = await ForecastRecord.aggregate([
+        {
+          $match: {
+            location: locObjectId(locationId),
+            clientDirectoryId,
+            shiftDate: { $gte: new Date(forecastStart), $lte: new Date(forecastEnd) },
+          },
+        },
+        {
+          $project: {
+            clientDirectoryId: 1,
+            clientName: 1,
+            staffName: 1,
+            staffDirectoryId: 1,
+            shiftDate: 1,
+            startDatetime: 1,
+            endDatetime: 1,
+            duration: 1,
+            cost: 1,
+            totalCost: 1,
+            dayOfWeek: { $dayOfWeek: '$shiftDate' },
+            startTimeStr: { $dateToString: { format: '%H:%M', date: '$startDatetime' } },
+          },
+        },
+        {
+          $match: {
+            dayOfWeek: Number(mongoDayOfWeek),
+            startTimeStr: startTime,
+          },
+        },
+        { $sort: { shiftDate: 1 } },
+      ]);
+
+      forecastRecords = docs.map((d) => ({
+        id: String(d._id),
+        clientDirectoryId: d.clientDirectoryId,
+        clientName: d.clientName,
+        staffName: d.staffName,
+        staffDirectoryId: d.staffDirectoryId,
+        shiftDate: d.shiftDate,
+        startDatetime: d.startDatetime,
+        endDatetime: d.endDatetime,
+        duration: d.duration,
+        cost: d.cost,
+        totalCost: d.totalCost,
+      }));
+    }
+  }
+
+  let standardAggregated = null;
+  if (standardDocs.length && dayCount > 0) {
+    const std = standardDocs[0];
+    standardAggregated = serializeStandardTemplateRow(std, dayCount);
+  }
+
+  let diffFields = [];
+  if (standardAggregated && forecastAggregated) {
+    diffFields = computeStandardVarianceDiff(standardAggregated, forecastAggregated);
+  }
+
+  return {
+    templateKey,
+    diffFields,
+    standardRecords,
+    forecastRecords,
+    standardAggregated,
+    forecastAggregated,
+    dayCount,
+  };
 }

@@ -8,6 +8,8 @@ import {
   exportStandardVsForecastPdf,
   getDirectoryOptions,
   getStandardVsForecastSummary,
+  getStandardVsForecastVarianceDetail,
+  listStandardVsForecastVariance,
   createStandardForecastRecord,
   deleteStandardForecastRecord,
   listStandardForecast,
@@ -283,6 +285,45 @@ export const getSummaryExportPdf = async (req, res, next) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(body);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const getVarianceList = async (req, res, next) => {
+  try {
+    const credentials = getShiftCareCredentials(req);
+    const { locationId, tab, page } = req.query;
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ error });
+
+    const data = await listStandardVsForecastVariance({
+      locationId,
+      clientId: resolveClientFilter(req.query),
+      tab,
+      page,
+      credentials,
+    });
+    res.json(data);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const getVarianceDetail = async (req, res, next) => {
+  try {
+    const credentials = getShiftCareCredentials(req);
+    const { locationId, templateKey } = req.query;
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ error });
+    if (!templateKey) return res.status(400).json({ error: 'templateKey is required' });
+
+    const data = await getStandardVsForecastVarianceDetail({
+      locationId,
+      templateKey,
+      credentials,
+    });
+    res.json(data);
   } catch (e) {
     next(e);
   }

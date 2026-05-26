@@ -11,6 +11,8 @@ import {
   getSummary,
   getSummaryExportCsv,
   getSummaryExportPdf,
+  getVarianceDetail,
+  getVarianceList,
   deleteStandardRow,
   postStandardCreate,
   postStandardUpload,
@@ -60,5 +62,8 @@ router.get('/standard-forecast/standard/export', ...authFinance, getStandardExpo
 router.get('/standard-forecast/summary', ...authFinance, getSummary);
 router.get('/standard-forecast/summary/export.csv', ...authFinance, getSummaryExportCsv);
 router.get('/standard-forecast/summary/export.pdf', ...authFinance, getSummaryExportPdf);
+
+router.get('/standard-forecast/variance', ...authFinance, getVarianceList);
+router.get('/standard-forecast/variance/detail', ...authFinance, getVarianceDetail);
 
 export default router;
