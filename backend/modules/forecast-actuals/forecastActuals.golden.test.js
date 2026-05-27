@@ -41,6 +41,71 @@ test('golden: processRowCommon happy path matches expected doc', () => {
   assert.strictEqual(doc.ratio, '1:02');
 });
 
+test('golden: processRowCommon Alex-style CSV (date + time columns, cost only)', () => {
+  const row = {
+    'Client Name': 'Alexandre Noskoff',
+    'Date ': '05/25/2026',
+    'Start  Time': ' 2:00:00 PM',
+    'End  Time': ' 4:00:00 PM',
+    Duration: '2.0 hrs',
+    Cost: '167.44',
+    'Rate Groups': '01 Assistance',
+    'Reference No': '01_812_0115_1_1',
+    'Shift Type': 'Personal Care',
+    'Client Type': 'Ndis Managed',
+    Ratio: '1:01',
+  };
+  const norm = buildNormalizedColumns(Object.keys(row));
+  const clientMap = new Map();
+  clientMap.set('alexandre noskoff', { id: 'c-alex', displayName: 'Alexandre Noskoff' });
+  const r = processRowCommon(row, norm, new Map(), clientMap, 2);
+  assert.ok(!r.error, r.error);
+  const { doc } = r;
+  assert.strictEqual(doc.clientDirectoryId, 'c-alex');
+  assert.strictEqual(doc.duration, 2);
+  assert.strictEqual(doc.cost, 167.44);
+  assert.strictEqual(doc.totalCost, 167.44);
+  assert.strictEqual(doc.shiftDate.toISOString().slice(0, 10), '2026-05-25');
+  assert.strictEqual(doc.startDatetime.toISOString(), '2026-05-25T14:00:00.000Z');
+  assert.strictEqual(doc.endDatetime.toISOString(), '2026-05-25T16:00:00.000Z');
+  assert.strictEqual(doc.shiftType, 'Personal Care');
+  assert.strictEqual(doc.ratio, '1:01');
+});
+
+test('golden: processRowCommon overnight sleepover shift', () => {
+  const row = {
+    'Client Name': 'Alexandre Noskoff',
+    Date: '05/27/2026',
+    'Start  Time': '10:00:00 PM',
+    'End  Time': '6:00:00 AM',
+    Duration: '8.0 hrs',
+    Cost: '148.8',
+    'Total Cost': '148.8',
+  };
+  const norm = buildNormalizedColumns(Object.keys(row));
+  const clientMap = new Map([['alexandre noskoff', { id: 'c-alex', displayName: 'Alexandre Noskoff' }]]);
+  const r = processRowCommon(row, norm, new Map(), clientMap, 3);
+  assert.ok(!r.error, r.error);
+  assert.strictEqual(r.doc.startDatetime.toISOString(), '2026-05-27T22:00:00.000Z');
+  assert.strictEqual(r.doc.endDatetime.toISOString(), '2026-05-28T06:00:00.000Z');
+});
+
+test('golden: processRowCommon forecast row with garbled end time', () => {
+  const row = {
+    'Client Name': 'Alexandre Noskoff',
+    Date: '05/25/2026',
+    'Start  Time': '  2:00:00 PM',
+    'End Date Time': '6  4:00:00 PM',
+    Duration: '2.0 hrs',
+    Cost: '167.44',
+  };
+  const norm = buildNormalizedColumns(Object.keys(row));
+  const clientMap = new Map([['alexandre noskoff', { id: 'c-alex', displayName: 'Alexandre Noskoff' }]]);
+  const r = processRowCommon(row, norm, new Map(), clientMap, 29);
+  assert.ok(!r.error, r.error);
+  assert.strictEqual(r.doc.endDatetime.toISOString(), '2026-05-25T16:00:00.000Z');
+});
+
 test('golden: buildSummaryRecord variance and gross', () => {
   const s = buildSummaryRecord('c1', 'Acme', 200, 150, 10);
   assert.strictEqual(s.forecastBudget, 200);

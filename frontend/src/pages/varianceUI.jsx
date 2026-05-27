@@ -3,6 +3,129 @@
  * Standard vs Forecast variance views.
  */
 
+import { TableCell, TableHead } from '../ui/table';
+import { cn } from '../lib/utils';
+
+/** Main variance table columns (both Forecast vs Actuals and Standard vs Forecast). */
+export const VARIANCE_COLUMNS = [
+  { key: 'shiftDate', label: 'Date', align: 'left' },
+  { key: 'clientName', label: 'Client name', align: 'left' },
+  { key: 'startDatetime', label: 'Start date time', align: 'left' },
+  { key: 'endDatetime', label: 'End date time', align: 'left' },
+  { key: 'duration', label: 'Duration', align: 'right' },
+  { key: 'totalCost', label: 'Total cost', align: 'right' },
+  { key: 'shiftcareId', label: 'Shift id', align: 'left' },
+  { key: 'rateGroups', label: 'Rate groups', align: 'left' },
+  { key: 'shiftType', label: 'Shift type', align: 'left' },
+  { key: 'ratio', label: 'Ratio', align: 'left' },
+];
+
+export const VARIANCE_DIFF_KEYS = {
+  shiftDate: 'shift_date',
+  clientName: 'client_name',
+  startDatetime: 'start_datetime',
+  endDatetime: 'end_datetime',
+  duration: 'duration',
+  totalCost: 'total_cost',
+  shiftcareId: 'shift_id',
+  rateGroups: 'rate_groups',
+  shiftType: 'shift_type',
+  ratio: 'ratio',
+};
+
+export const VARIANCE_DIFF_LABELS = {
+  shift_date: 'Date',
+  client_name: 'Client name',
+  start_datetime: 'Start date time',
+  end_datetime: 'End date time',
+  duration: 'Duration',
+  total_cost: 'Total cost',
+  shift_id: 'Shift id',
+  rate_groups: 'Rate groups',
+  shift_type: 'Shift type',
+  ratio: 'Ratio',
+};
+
+export function varianceColSpan(showType) {
+  return VARIANCE_COLUMNS.length + (showType ? 1 : 0);
+}
+
+export function VarianceColumnHeaders({ showType = false }) {
+  return (
+    <>
+      {showType && <TableHead className="w-[110px]">Type</TableHead>}
+      {VARIANCE_COLUMNS.map((col) => (
+        <TableHead
+          key={col.key}
+          className={col.align === 'right' ? 'text-right' : undefined}
+        >
+          {col.label}
+        </TableHead>
+      ))}
+    </>
+  );
+}
+
+export function varianceCellValue(r, key) {
+  switch (key) {
+    case 'shiftDate':
+      if (r.shiftDate) return formatDate(r.shiftDate);
+      if (r.day) return String(r.day);
+      return '—';
+    case 'clientName':
+      return r.clientName || '—';
+    case 'startDatetime':
+      if (r.startDatetime) return formatDt(r.startDatetime);
+      if (r.startTime) return String(r.startTime);
+      return '—';
+    case 'endDatetime':
+      if (r.endDatetime) return formatDt(r.endDatetime);
+      if (r.endTime) return String(r.endTime);
+      return '—';
+    case 'duration':
+      return fmtNum(r.duration);
+    case 'totalCost':
+      return fmtMoney(r.totalCost);
+    case 'shiftcareId':
+      return r.shiftcareId || r.templateKey || '—';
+    case 'rateGroups':
+      return r.rateGroups || '—';
+    case 'shiftType':
+      return r.shiftType || '—';
+    case 'ratio':
+      return r.ratio || '—';
+    default:
+      return '—';
+  }
+}
+
+export function VarianceDataCells({ row, diffCell, shiftIdPrefix = null }) {
+  return (
+    <>
+      {VARIANCE_COLUMNS.map((col) => (
+        <TableCell
+          key={col.key}
+          className={cn(
+            col.align === 'right' ? 'text-right whitespace-nowrap' : 'whitespace-nowrap',
+            col.key === 'shiftcareId' && 'font-mono text-xs',
+            col.key === 'clientName' && 'max-w-[200px] truncate',
+            diffCell(row, col.key)
+          )}
+        >
+          {col.key === 'shiftcareId' && shiftIdPrefix ? (
+            <span className="flex items-center gap-1.5">
+              {shiftIdPrefix}
+              {varianceCellValue(row, col.key)}
+            </span>
+          ) : (
+            varianceCellValue(row, col.key)
+          )}
+        </TableCell>
+      ))}
+    </>
+  );
+}
+
 export function formatDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString();

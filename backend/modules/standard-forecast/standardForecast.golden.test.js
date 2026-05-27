@@ -106,86 +106,54 @@ test('golden: buildTemplateKey normalizes day casing/whitespace', () => {
   );
 });
 
+const baseStd = {
+  clientName: 'Acme',
+  startTime: '06:00',
+  endTime: '10:00',
+  duration: 4,
+  totalCost: 400,
+  rateGroups: 'RG1',
+  shiftType: 'Personal Care',
+  ratio: '1:01',
+  templateKey: 'c1|monday|06:00',
+};
+
 test('golden: computeStandardVarianceDiff returns empty when buckets match', () => {
-  const std = {
-    endTime: '10:00',
-    duration: 4,
-    costPerOccurrence: 100,
-    totalCost: 400,
-    occurrences: 4,
-  };
-  const fcs = { ...std };
-  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), []);
+  const fcs = { ...baseStd, startTime: '06:00' };
+  assert.deepStrictEqual(computeStandardVarianceDiff(baseStd, fcs), []);
 });
 
-test('golden: computeStandardVarianceDiff detects end_time only', () => {
-  const std = {
-    endTime: '10:00',
-    duration: 4,
-    costPerOccurrence: 100,
-    totalCost: 400,
-    occurrences: 4,
-  };
-  const fcs = { ...std, endTime: '10:30' };
-  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), ['end_time']);
+test('golden: computeStandardVarianceDiff detects end_datetime only', () => {
+  const fcs = { ...baseStd, endTime: '10:30' };
+  assert.deepStrictEqual(computeStandardVarianceDiff(baseStd, fcs), ['end_datetime']);
 });
 
 test('golden: computeStandardVarianceDiff detects duration only', () => {
-  const std = {
-    endTime: '10:00',
-    duration: 4,
-    costPerOccurrence: 100,
-    totalCost: 400,
-    occurrences: 4,
-  };
-  const fcs = { ...std, duration: 4.5 };
-  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), ['duration']);
-});
-
-test('golden: computeStandardVarianceDiff detects cost only', () => {
-  const std = {
-    endTime: '10:00',
-    duration: 4,
-    costPerOccurrence: 100,
-    totalCost: 400,
-    occurrences: 4,
-  };
-  const fcs = { ...std, costPerOccurrence: 110 };
-  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), ['cost']);
+  const fcs = { ...baseStd, duration: 4.5 };
+  assert.deepStrictEqual(computeStandardVarianceDiff(baseStd, fcs), ['duration']);
 });
 
 test('golden: computeStandardVarianceDiff detects total_cost only', () => {
-  const std = {
-    endTime: '10:00',
-    duration: 4,
-    costPerOccurrence: 100,
-    totalCost: 400,
-    occurrences: 4,
-  };
-  const fcs = { ...std, totalCost: 420 };
-  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), ['total_cost']);
+  const fcs = { ...baseStd, totalCost: 420 };
+  assert.deepStrictEqual(computeStandardVarianceDiff(baseStd, fcs), ['total_cost']);
 });
 
-test('golden: computeStandardVarianceDiff detects occurrences only', () => {
-  const std = {
-    endTime: '10:00',
-    duration: 4,
-    costPerOccurrence: 100,
-    totalCost: 400,
-    occurrences: 4,
-  };
-  const fcs = { ...std, occurrences: 3 };
-  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), ['occurrences']);
+test('golden: computeStandardVarianceDiff detects rate_groups only', () => {
+  const fcs = { ...baseStd, rateGroups: 'RG2' };
+  assert.deepStrictEqual(computeStandardVarianceDiff(baseStd, fcs), ['rate_groups']);
+});
+
+test('golden: computeStandardVarianceDiff detects shift_type only', () => {
+  const fcs = { ...baseStd, shiftType: 'Respite' };
+  assert.deepStrictEqual(computeStandardVarianceDiff(baseStd, fcs), ['shift_type']);
+});
+
+test('golden: computeStandardVarianceDiff detects ratio only', () => {
+  const fcs = { ...baseStd, ratio: '1:02' };
+  assert.deepStrictEqual(computeStandardVarianceDiff(baseStd, fcs), ['ratio']);
 });
 
 test('golden: computeStandardVarianceDiff treats cent-level money diff as equal', () => {
-  const std = {
-    endTime: '10:00',
-    duration: 4,
-    costPerOccurrence: 100,
-    totalCost: 400,
-    occurrences: 4,
-  };
-  const fcs = { ...std, costPerOccurrence: 100.001, totalCost: 400.001 };
-  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), []);
+  const fcs = { ...baseStd, totalCost: 400.001 };
+  assert.deepStrictEqual(computeStandardVarianceDiff(baseStd, fcs), []);
 });

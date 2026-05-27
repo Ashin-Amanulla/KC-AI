@@ -9,7 +9,9 @@ import {
 } from './directory.service.js';
 import {
   buildNormalizedColumns,
+  combineDateAndTime,
   getRowValue,
+  isBlankCsvRow,
   moneyEqual,
   parseBoolean,
   parseDate,
@@ -98,14 +100,18 @@ export function processRowCommon(row, normalizedColumns, staffMap, clientMap, ro
   const shiftDate = parseDate(dateStr);
   if (!shiftDate) return { error: `Row ${rowNum}: Invalid date format '${dateStr}'` };
 
-  const startDatetime = parseDateTime(startTimeStr);
-  if (!startDatetime) return { error: `Row ${rowNum}: Invalid start time format '${startTimeStr}'` };
+  const startDatetime = combineDateAndTime(shiftDate, startTimeStr);
+  if (!startDatetime) {
+    return { error: `Row ${rowNum}: Invalid start time format '${startTimeStr}'` };
+  }
 
-  const endDatetime = parseDateTime(endTimeStr);
-  if (!endDatetime) return { error: `Row ${rowNum}: Invalid end time format '${endTimeStr}'` };
+  let endDatetime = combineDateAndTime(shiftDate, endTimeStr);
+  if (!endDatetime) {
+    return { error: `Row ${rowNum}: Invalid end time format '${endTimeStr}'` };
+  }
 
   if (endDatetime <= startDatetime) {
-    return { error: `Row ${rowNum}: End time must be after start time` };
+    endDatetime = new Date(endDatetime.getTime() + 24 * 60 * 60 * 1000);
   }
 
   const duration = parseDecimal(durationStr);
@@ -114,8 +120,8 @@ export function processRowCommon(row, normalizedColumns, staffMap, clientMap, ro
   const cost = parseDecimal(costStr);
   if (cost == null) return { error: `Row ${rowNum}: Invalid cost '${costStr}'` };
 
-  const totalCost = parseDecimal(totalCostStr);
-  if (totalCost == null) return { error: `Row ${rowNum}: Invalid total cost '${totalCostStr}'` };
+  const totalCostParsed = parseDecimal(totalCostStr);
+  const totalCost = totalCostParsed != null ? totalCostParsed : cost;
 
   const additionalCost = parseDecimal(additionalCostStr) ?? 0;
   const kms = parseDecimal(kmsStr) ?? 0;
@@ -347,6 +353,7 @@ export async function uploadForecastFromCsv({
   let rowNum = 1;
 
   for (const row of records) {
+    if (isBlankCsvRow(row)) continue;
     rowNum += 1;
     rowsProcessed += 1;
     const r = processRowCommon(row, normalizedColumns, staffMap, clientMap, rowNum);
@@ -368,7 +375,7 @@ export async function uploadForecastFromCsv({
   }
 
   return {
-    success: true,
+    success: toInsert.length > 0,
     rowsProcessed,
     recordsCreated: toInsert.length,
     recordsSkipped,
@@ -436,6 +443,7 @@ export async function uploadActualsFromCsv({
   let rowNum = 1;
 
   for (const row of records) {
+    if (isBlankCsvRow(row)) continue;
     rowNum += 1;
     rowsProcessed += 1;
     const r = processRowCommon(row, normalizedColumns, staffMap, clientMap, rowNum);
@@ -457,7 +465,7 @@ export async function uploadActualsFromCsv({
   }
 
   return {
-    success: true,
+    success: toInsert.length > 0,
     rowsProcessed,
     recordsCreated: toInsert.length,
     recordsSkipped,
@@ -843,13 +851,16 @@ async function getShiftcareIdSets(locationId, staffId, clientId) {
 function computeDiffFields(fRec, aRec) {
   const diff = [];
   const t = (d) => (d ? new Date(d).getTime() : 0);
+  if (t(fRec.shiftDate) !== t(aRec.shiftDate)) diff.push('shift_date');
+  if (String(fRec.clientName || '') !== String(aRec.clientName || '')) diff.push('client_name');
   if (t(fRec.startDatetime) !== t(aRec.startDatetime)) diff.push('start_datetime');
   if (t(fRec.endDatetime) !== t(aRec.endDatetime)) diff.push('end_datetime');
   if (!moneyEqual(fRec.duration, aRec.duration)) diff.push('duration');
-  if (!moneyEqual(fRec.cost, aRec.cost)) diff.push('cost');
   if (!moneyEqual(fRec.totalCost, aRec.totalCost)) diff.push('total_cost');
+  if (String(fRec.shiftcareId || '') !== String(aRec.shiftcareId || '')) diff.push('shift_id');
   if (String(fRec.rateGroups || '') !== String(aRec.rateGroups || '')) diff.push('rate_groups');
-  if (String(fRec.referenceNo || '') !== String(aRec.referenceNo || '')) diff.push('reference_no');
+  if (String(fRec.shiftType || '') !== String(aRec.shiftType || '')) diff.push('shift_type');
+  if (String(fRec.ratio || '') !== String(aRec.ratio || '')) diff.push('ratio');
   return diff;
 }
 
@@ -868,14 +879,16 @@ async function aggregateByShiftcareId(Model, locationId, shiftcareIds, staffId, 
     {
       $group: {
         _id: '$shiftcareId',
+        minShiftDate: { $min: '$shiftDate' },
         minStart: { $min: '$startDatetime' },
         maxEnd: { $max: '$endDatetime' },
         sumDuration: { $sum: '$duration' },
         sumCost: { $sum: '$cost' },
         sumTotalCost: { $sum: '$totalCost' },
-        shiftDescription: { $first: '$shiftDescription' },
+        clientName: { $first: '$clientName' },
         rateGroups: { $first: '$rateGroups' },
-        referenceNo: { $first: '$referenceNo' },
+        shiftType: { $first: '$shiftType' },
+        ratio: { $first: '$ratio' },
       },
     },
   ];
@@ -885,14 +898,16 @@ async function aggregateByShiftcareId(Model, locationId, shiftcareIds, staffId, 
   for (const item of agg) {
     map.set(item._id, {
       shiftcareId: item._id,
-      shiftDescription: item.shiftDescription || '',
+      shiftDate: item.minShiftDate,
+      clientName: item.clientName || '',
       startDatetime: item.minStart,
       endDatetime: item.maxEnd,
       duration: roundMoney(item.sumDuration || 0),
       cost: roundMoney(item.sumCost || 0),
       totalCost: roundMoney(item.sumTotalCost || 0),
       rateGroups: item.rateGroups || '',
-      referenceNo: item.referenceNo || '',
+      shiftType: item.shiftType || '',
+      ratio: item.ratio || '',
       source,
       diffFields: [],
       recordType: '',
@@ -932,7 +947,7 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
     for (const sid of commonIds) {
       const f = fAgg.get(sid);
       const a = aAgg.get(sid);
-      if (f && a && (!moneyEqual(f.cost, a.cost) || !moneyEqual(f.totalCost, a.totalCost))) {
+      if (f && a && computeDiffFields(f, a).length > 0) {
         varianceIds.add(sid);
       }
     }
@@ -1133,14 +1148,15 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
 function serializeVarianceRow(r) {
   return {
     shiftcareId: r.shiftcareId,
-    shiftDescription: r.shiftDescription,
+    shiftDate: r.shiftDate,
+    clientName: r.clientName,
     startDatetime: r.startDatetime,
     endDatetime: r.endDatetime,
     duration: r.duration,
-    cost: r.cost,
     totalCost: r.totalCost,
     rateGroups: r.rateGroups,
-    referenceNo: r.referenceNo,
+    shiftType: r.shiftType,
+    ratio: r.ratio,
     source: r.source,
     diffFields: r.diffFields || [],
     recordType: r.recordType || '',
@@ -1211,21 +1227,47 @@ export async function exportVarianceCsv({ locationId, staffId, clientId, timezon
     });
   }
 
-  const lines = [['Type', 'Shift ID', 'Shift', 'Start', 'End', 'Duration', 'Cost', 'Total Cost', 'Rate Group', 'Ref No'].join(',')];
+  const lines = [
+    [
+      'Type',
+      'Date',
+      'Client name',
+      'Start date time',
+      'End date time',
+      'Duration',
+      'Total cost',
+      'Shift id',
+      'Rate groups',
+      'Shift type',
+      'Ratio',
+    ].join(','),
+  ];
+
+  function formatDateCsv(dt) {
+    if (!dt) return '';
+    const d = new Date(dt);
+    return d.toLocaleDateString('en-AU', {
+      timeZone: tz,
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
 
   function writeRecord(record, typeLabel) {
     lines.push(
       [
         csvEscape(typeLabel),
-        csvEscape(record.shiftcareId),
-        csvEscape(record.shiftDescription || ''),
+        csvEscape(formatDateCsv(record.shiftDate)),
+        csvEscape(record.clientName || ''),
         csvEscape(formatDt(record.startDatetime)),
         csvEscape(formatDt(record.endDatetime)),
         record.duration,
-        record.cost,
         record.totalCost,
+        csvEscape(record.shiftcareId),
         csvEscape(record.rateGroups || ''),
-        csvEscape(record.referenceNo || ''),
+        csvEscape(record.shiftType || ''),
+        csvEscape(record.ratio || ''),
       ].join(',')
     );
   }

@@ -3,12 +3,14 @@ import test from 'node:test';
 import {
   buildNormalizedColumns,
   COLUMN_ALIASES,
+  combineDateAndTime,
   moneyEqual,
   normalizeColumnName,
   parseBoolean,
   parseDate,
   parseDateTime,
   parseDecimal,
+  parseTime,
   REQUIRED_CSV_COLUMNS,
   roundMoney,
   validateHeaders,
@@ -25,6 +27,45 @@ test('validateHeaders requires all REQUIRED_CSV_COLUMNS', () => {
   const missing = new Set(keys);
   missing.delete('cost');
   assert.ok(validateHeaders(missing)[0].includes('cost'));
+});
+
+test('validateHeaders accepts cost without total cost column', () => {
+  const keys = new Set([...REQUIRED_CSV_COLUMNS]);
+  assert.deepStrictEqual(validateHeaders(keys), []);
+});
+
+test('parseTime handles seconds and AM/PM', () => {
+  assert.strictEqual(parseTime('  2:00:00 PM'), '14:00');
+  assert.strictEqual(parseTime('6:00:00 AM'), '06:00');
+});
+
+test('combineDateAndTime merges US date with time-only', () => {
+  const shiftDate = parseDate('05/25/2026');
+  const start = combineDateAndTime(shiftDate, ' 2:00:00 PM');
+  assert.strictEqual(start.toISOString(), '2026-05-25T14:00:00.000Z');
+  const end = combineDateAndTime(shiftDate, ' 4:00:00 PM');
+  assert.strictEqual(end.toISOString(), '2026-05-25T16:00:00.000Z');
+});
+
+test('combineDateAndTime supports overnight end on next calendar day', () => {
+  const shiftDate = parseDate('05/25/2026');
+  const start = combineDateAndTime(shiftDate, '10:00:00 PM');
+  let end = combineDateAndTime(shiftDate, '6:00:00 AM');
+  assert.ok(end <= start);
+  end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  assert.strictEqual(end.toISOString(), '2026-05-26T06:00:00.000Z');
+});
+
+test('normalizeColumnName collapses extra spaces in headers', () => {
+  assert.strictEqual(normalizeColumnName('Date '), 'date');
+  assert.strictEqual(normalizeColumnName('Start  Time'), 'start date time');
+  assert.strictEqual(normalizeColumnName('End  Time'), 'end date time');
+});
+
+test('normalizeTimeInput fixes stray leading digit before time', () => {
+  const shiftDate = parseDate('05/25/2026');
+  const end = combineDateAndTime(shiftDate, '6  4:00:00 PM');
+  assert.strictEqual(end.toISOString(), '2026-05-25T16:00:00.000Z');
 });
 
 test('parseDate: ISO and AU slash', () => {

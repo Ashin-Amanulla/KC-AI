@@ -42,6 +42,13 @@ import {
   makeDiffCell,
   diffPanelCell,
   TypePill,
+  VARIANCE_COLUMNS,
+  VARIANCE_DIFF_KEYS,
+  VARIANCE_DIFF_LABELS,
+  VarianceColumnHeaders,
+  VarianceDataCells,
+  varianceColSpan,
+  varianceCellValue,
 } from './varianceUI';
 
 const SECTIONS = [
@@ -58,29 +65,9 @@ const VARIANCE_TABS = [
   { id: 'variance', label: 'Variance', countKey: 'varianceCount' },
 ];
 
-const DIFF_KEYS = {
-  startDatetime: 'start_datetime',
-  endDatetime: 'end_datetime',
-  duration: 'duration',
-  cost: 'cost',
-  totalCost: 'total_cost',
-  rateGroups: 'rate_groups',
-  referenceNo: 'reference_no',
-};
-
 const varianceRowClass = makeVarianceRowClass('forecast');
-const diffCell = makeDiffCell('actuals', DIFF_KEYS);
+const diffCell = makeDiffCell('actuals', VARIANCE_DIFF_KEYS);
 const diffActualCell = diffPanelCell;
-
-const DIFF_LABEL = {
-  start_datetime: 'Start',
-  end_datetime: 'End',
-  duration: 'Duration',
-  cost: 'Cost',
-  total_cost: 'Total Cost',
-  rate_groups: 'Rate Group',
-  reference_no: 'Ref No',
-};
 
 function VarianceDetailPanel({ data }) {
   const diff = data.diffFields || [];
@@ -99,35 +86,46 @@ function VarianceDetailPanel({ data }) {
               <table className="w-full text-xs">
                 <thead className="bg-blue-50 text-blue-700">
                   <tr>
-                    <th className="px-2 py-1.5 text-left font-medium">Staff</th>
-                    <th className="px-2 py-1.5 text-left font-medium">Client</th>
-                    <th className="px-2 py-1.5 text-left font-medium">Start</th>
-                    <th className="px-2 py-1.5 text-left font-medium">End</th>
-                    <th className="px-2 py-1.5 text-right font-medium">Duration</th>
-                    <th className="px-2 py-1.5 text-right font-medium">Cost</th>
-                    <th className="px-2 py-1.5 text-right font-medium">Total</th>
+                    {VARIANCE_COLUMNS.map((col) => (
+                      <th
+                        key={col.key}
+                        className={cn(
+                          'px-2 py-1.5 font-medium',
+                          col.align === 'right' ? 'text-right' : 'text-left'
+                        )}
+                      >
+                        {col.label}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="bg-background divide-y divide-blue-100">
                   {data.forecastRecords.map((fr) => (
                     <tr key={fr.id}>
-                      <td className="px-2 py-1.5">{fr.staffName || '—'}</td>
-                      <td className="px-2 py-1.5">{fr.clientName || '—'}</td>
-                      <td className="px-2 py-1.5 whitespace-nowrap">{formatDt(fr.startDatetime)}</td>
-                      <td className="px-2 py-1.5 whitespace-nowrap">{formatDt(fr.endDatetime)}</td>
-                      <td className="px-2 py-1.5 text-right">{fmtNum(fr.duration)}</td>
-                      <td className="px-2 py-1.5 text-right">{fmtMoney(fr.cost)}</td>
-                      <td className="px-2 py-1.5 text-right">{fmtMoney(fr.totalCost)}</td>
+                      {VARIANCE_COLUMNS.map((col) => (
+                        <td
+                          key={col.key}
+                          className={cn(
+                            'px-2 py-1.5',
+                            col.align === 'right' ? 'text-right' : '',
+                            col.key === 'shiftcareId' && 'font-mono'
+                          )}
+                        >
+                          {varianceCellValue(fr, col.key)}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
                 {fAgg && (
                   <tfoot className="bg-blue-100 font-medium text-blue-800">
                     <tr>
-                      <td colSpan={4} className="px-2 py-1.5">Aggregated Total</td>
+                      <td colSpan={4} className="px-2 py-1.5">
+                        Aggregated total
+                      </td>
                       <td className="px-2 py-1.5 text-right">{fmtNum(fAgg.duration)}</td>
-                      <td className="px-2 py-1.5 text-right">{fmtMoney(fAgg.cost)}</td>
                       <td className="px-2 py-1.5 text-right">{fmtMoney(fAgg.totalCost)}</td>
+                      <td colSpan={4} />
                     </tr>
                   </tfoot>
                 )}
@@ -147,51 +145,54 @@ function VarianceDetailPanel({ data }) {
               <table className="w-full text-xs">
                 <thead className="bg-green-50 text-green-700">
                   <tr>
-                    <th className="px-2 py-1.5 text-left font-medium">Staff</th>
-                    <th className="px-2 py-1.5 text-left font-medium">Client</th>
-                    <th className="px-2 py-1.5 text-left font-medium">Start</th>
-                    <th className="px-2 py-1.5 text-left font-medium">End</th>
-                    <th className="px-2 py-1.5 text-right font-medium">Duration</th>
-                    <th className="px-2 py-1.5 text-right font-medium">Cost</th>
-                    <th className="px-2 py-1.5 text-right font-medium">Total</th>
+                    {VARIANCE_COLUMNS.map((col) => (
+                      <th
+                        key={col.key}
+                        className={cn(
+                          'px-2 py-1.5 font-medium',
+                          col.align === 'right' ? 'text-right' : 'text-left'
+                        )}
+                      >
+                        {col.label}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="bg-background divide-y divide-green-100">
                   {data.actualsRecords.map((ar) => (
                     <tr key={ar.id}>
-                      <td className="px-2 py-1.5">{ar.staffName || '—'}</td>
-                      <td className="px-2 py-1.5">{ar.clientName || '—'}</td>
-                      <td className={cn('px-2 py-1.5 whitespace-nowrap', diffActualCell(diff, 'start_datetime'))}>
-                        {formatDt(ar.startDatetime)}
-                      </td>
-                      <td className={cn('px-2 py-1.5 whitespace-nowrap', diffActualCell(diff, 'end_datetime'))}>
-                        {formatDt(ar.endDatetime)}
-                      </td>
-                      <td className={cn('px-2 py-1.5 text-right', diffActualCell(diff, 'duration'))}>
-                        {fmtNum(ar.duration)}
-                      </td>
-                      <td className={cn('px-2 py-1.5 text-right', diffActualCell(diff, 'cost'))}>
-                        {fmtMoney(ar.cost)}
-                      </td>
-                      <td className={cn('px-2 py-1.5 text-right', diffActualCell(diff, 'total_cost'))}>
-                        {fmtMoney(ar.totalCost)}
-                      </td>
+                      {VARIANCE_COLUMNS.map((col) => {
+                        const diffKey = VARIANCE_DIFF_KEYS[col.key];
+                        return (
+                          <td
+                            key={col.key}
+                            className={cn(
+                              'px-2 py-1.5',
+                              col.align === 'right' ? 'text-right' : '',
+                              col.key === 'shiftcareId' && 'font-mono',
+                              diffActualCell(diff, diffKey)
+                            )}
+                          >
+                            {varianceCellValue(ar, col.key)}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
                 {aAgg && (
                   <tfoot className="bg-green-100 font-medium text-green-800">
                     <tr>
-                      <td colSpan={4} className="px-2 py-1.5">Aggregated Total</td>
+                      <td colSpan={4} className="px-2 py-1.5">
+                        Aggregated total
+                      </td>
                       <td className={cn('px-2 py-1.5 text-right', diff.includes('duration') && 'bg-yellow-200')}>
                         {fmtNum(aAgg.duration)}
-                      </td>
-                      <td className={cn('px-2 py-1.5 text-right', diff.includes('cost') && 'bg-yellow-200')}>
-                        {fmtMoney(aAgg.cost)}
                       </td>
                       <td className={cn('px-2 py-1.5 text-right', diff.includes('total_cost') && 'bg-yellow-200')}>
                         {fmtMoney(aAgg.totalCost)}
                       </td>
+                      <td colSpan={4} />
                     </tr>
                   </tfoot>
                 )}
@@ -206,7 +207,7 @@ function VarianceDetailPanel({ data }) {
         <div className="rounded border border-yellow-200 bg-yellow-50 p-2 text-xs">
           <span className="font-medium text-yellow-800">Differences found in:</span>{' '}
           <span className="text-yellow-700">
-            {diff.map((f) => DIFF_LABEL[f] || f).join(', ')}
+            {diff.map((f) => VARIANCE_DIFF_LABELS[f] || f).join(', ')}
           </span>
         </div>
       )}
@@ -653,23 +654,14 @@ export function ForecastActuals() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            {varianceTab === 'all' && <TableHead className="w-[100px]">Type</TableHead>}
-                            <TableHead>Shift ID</TableHead>
-                            <TableHead>Shift</TableHead>
-                            <TableHead>Start</TableHead>
-                            <TableHead>End</TableHead>
-                            <TableHead className="text-right">Duration</TableHead>
-                            <TableHead className="text-right">Cost</TableHead>
-                            <TableHead className="text-right">Total Cost</TableHead>
-                            <TableHead>Rate Group</TableHead>
-                            <TableHead>Ref No</TableHead>
+                            <VarianceColumnHeaders showType={varianceTab === 'all'} />
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {(varianceQ.data?.records || []).length === 0 ? (
                             <TableRow>
                               <TableCell
-                                colSpan={varianceTab === 'all' ? 10 : 9}
+                                colSpan={varianceColSpan(varianceTab === 'all')}
                                 className="text-center text-muted-foreground py-8"
                               >
                                 {varianceTab === 'deleted'
@@ -709,48 +701,25 @@ export function ForecastActuals() {
                                         ) : null}
                                       </TableCell>
                                     )}
-                                    <TableCell className="whitespace-nowrap font-mono text-xs">
-                                      <span className="flex items-center gap-1.5">
-                                        {r.recordType === 'variance' && r.source === 'forecast' && (
+                                    <VarianceDataCells
+                                      row={r}
+                                      diffCell={diffCell}
+                                      shiftIdPrefix={
+                                        r.recordType === 'variance' && r.source === 'forecast' ? (
                                           <ChevronRight
                                             className={cn(
-                                              'h-4 w-4 text-muted-foreground transition-transform',
+                                              'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
                                               open && 'rotate-90'
                                             )}
                                           />
-                                        )}
-                                        {r.shiftcareId}
-                                      </span>
-                                    </TableCell>
-                                    <TableCell className="max-w-[220px] truncate">
-                                      {r.shiftDescription || '—'}
-                                    </TableCell>
-                                    <TableCell className={cn('whitespace-nowrap', diffCell(r, 'startDatetime'))}>
-                                      {formatDt(r.startDatetime)}
-                                    </TableCell>
-                                    <TableCell className={cn('whitespace-nowrap', diffCell(r, 'endDatetime'))}>
-                                      {formatDt(r.endDatetime)}
-                                    </TableCell>
-                                    <TableCell className={cn('text-right whitespace-nowrap', diffCell(r, 'duration'))}>
-                                      {r.duration?.toFixed?.(2) ?? r.duration}
-                                    </TableCell>
-                                    <TableCell className={cn('text-right whitespace-nowrap', diffCell(r, 'cost'))}>
-                                      ${r.cost?.toFixed?.(2) ?? r.cost}
-                                    </TableCell>
-                                    <TableCell className={cn('text-right whitespace-nowrap', diffCell(r, 'totalCost'))}>
-                                      ${r.totalCost?.toFixed?.(2) ?? r.totalCost}
-                                    </TableCell>
-                                    <TableCell className={cn('whitespace-nowrap', diffCell(r, 'rateGroups'))}>
-                                      {r.rateGroups || '—'}
-                                    </TableCell>
-                                    <TableCell className={cn('whitespace-nowrap', diffCell(r, 'referenceNo'))}>
-                                      {r.referenceNo || '—'}
-                                    </TableCell>
+                                        ) : null
+                                      }
+                                    />
                                   </TableRow>
                                   {isLastOfPair && (
                                     <TableRow>
                                       <TableCell
-                                        colSpan={varianceTab === 'all' ? 10 : 9}
+                                        colSpan={varianceColSpan(varianceTab === 'all')}
                                         className="bg-muted/10 p-4 align-top"
                                       >
                                         {detailQ.isLoading ? (

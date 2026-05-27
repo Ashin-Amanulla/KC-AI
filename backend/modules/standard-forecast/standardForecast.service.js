@@ -631,58 +631,80 @@ const DAY_LABEL = {
 /** Diff between an aggregated standard bucket and an aggregated forecast bucket. */
 export function computeStandardVarianceDiff(std, fcs) {
   const diff = [];
-  if (String(std.endTime || '') !== String(fcs.endTime || '')) diff.push('end_time');
+  const t = (d) => (d ? new Date(d).getTime() : 0);
+  if (std.shiftDate || fcs.shiftDate) {
+    if (t(std.shiftDate) !== t(fcs.shiftDate)) diff.push('shift_date');
+  }
+  if (String(std.clientName || '') !== String(fcs.clientName || '')) diff.push('client_name');
+  if (String(std.startTime || '') !== String(fcs.startTime || '')) diff.push('start_datetime');
+  if (String(std.endTime || '') !== String(fcs.endTime || '')) diff.push('end_datetime');
   if (!moneyEqual(std.duration, fcs.duration)) diff.push('duration');
-  if (!moneyEqual(std.costPerOccurrence, fcs.costPerOccurrence)) diff.push('cost');
   if (!moneyEqual(std.totalCost, fcs.totalCost)) diff.push('total_cost');
-  if ((std.occurrences || 0) !== (fcs.occurrences || 0)) diff.push('occurrences');
+  if (String(std.shiftcareId || std.templateKey || '') !== String(fcs.shiftcareId || fcs.templateKey || '')) {
+    diff.push('shift_id');
+  }
+  if (String(std.rateGroups || '') !== String(fcs.rateGroups || '')) diff.push('rate_groups');
+  if (String(std.shiftType || '') !== String(fcs.shiftType || '')) diff.push('shift_type');
+  if (String(std.ratio || '') !== String(fcs.ratio || '')) diff.push('ratio');
   return diff;
 }
 
 function serializeStandardTemplateRow(stdRow, dayCount) {
   const totalCost = roundMoney((stdRow.totalCost || 0) * dayCount);
+  const templateKey = buildTemplateKey({
+    clientDirectoryId: stdRow.clientDirectoryId,
+    day: stdRow.day,
+    startTime: stdRow.startTime,
+  });
+  const dayLabel = DAY_LABEL[String(stdRow.day || '').trim().toLowerCase()] || stdRow.day;
   return {
-    templateKey: buildTemplateKey({
-      clientDirectoryId: stdRow.clientDirectoryId,
-      day: stdRow.day,
-      startTime: stdRow.startTime,
-    }),
+    templateKey,
+    shiftcareId: templateKey,
     source: 'standard',
     recordType: '',
     clientDirectoryId: stdRow.clientDirectoryId,
     clientName: stdRow.clientName,
-    day: DAY_LABEL[String(stdRow.day || '').trim().toLowerCase()] || stdRow.day,
+    day: dayLabel,
+    shiftDate: null,
+    startDatetime: null,
+    endDatetime: null,
     startTime: stdRow.startTime,
     endTime: stdRow.endTime,
     duration: roundMoney(stdRow.duration || 0),
-    costPerOccurrence: roundMoney(stdRow.totalCost || 0),
-    occurrences: dayCount,
     totalCost,
+    rateGroups: stdRow.rateGroups || '',
+    shiftType: stdRow.shiftType || '',
+    ratio: stdRow.ratio || '',
     diffFields: [],
   };
 }
 
 function serializeForecastBucketRow(bucket, clientNameMap) {
   const occurrences = bucket.occurrences || 0;
-  const costPerOccurrence = occurrences > 0 ? roundMoney(bucket.totalCost / occurrences) : 0;
   const duration = occurrences > 0 ? roundMoney(bucket.sumDuration / occurrences) : 0;
+  const templateKey = buildTemplateKey({
+    clientDirectoryId: bucket.clientDirectoryId,
+    day: bucket.dayKey,
+    startTime: bucket.startTime,
+  });
   return {
-    templateKey: buildTemplateKey({
-      clientDirectoryId: bucket.clientDirectoryId,
-      day: bucket.dayKey,
-      startTime: bucket.startTime,
-    }),
+    templateKey,
+    shiftcareId: templateKey,
     source: 'forecast',
     recordType: '',
     clientDirectoryId: bucket.clientDirectoryId,
     clientName: clientNameMap.get(bucket.clientDirectoryId) || bucket.clientName || '',
     day: DAY_LABEL[bucket.dayKey] || bucket.dayKey,
+    shiftDate: bucket.minShiftDate ?? null,
+    startDatetime: bucket.minStart ?? null,
+    endDatetime: bucket.maxEnd ?? null,
     startTime: bucket.startTime,
     endTime: bucket.endTime,
     duration,
-    costPerOccurrence,
-    occurrences,
     totalCost: roundMoney(bucket.totalCost || 0),
+    rateGroups: bucket.rateGroups || '',
+    shiftType: bucket.shiftType || '',
+    ratio: bucket.ratio || '',
     diffFields: [],
   };
 }
@@ -716,6 +738,9 @@ async function getForecastTemplateBuckets(locationId, clientId, rangeStart, rang
         startDatetime: 1,
         endDatetime: 1,
         shiftDate: 1,
+        rateGroups: 1,
+        shiftType: 1,
+        ratio: 1,
         dayOfWeek: { $dayOfWeek: '$shiftDate' },
         startTime: { $dateToString: { format: '%H:%M', date: '$startDatetime' } },
         endTime: { $dateToString: { format: '%H:%M', date: '$endDatetime' } },
@@ -729,10 +754,16 @@ async function getForecastTemplateBuckets(locationId, clientId, rangeStart, rang
           startTime: '$startTime',
         },
         endTime: { $first: '$endTime' },
+        minShiftDate: { $min: '$shiftDate' },
+        minStart: { $min: '$startDatetime' },
+        maxEnd: { $max: '$endDatetime' },
         occurrences: { $sum: 1 },
         totalCost: { $sum: '$totalCost' },
         sumCost: { $sum: '$cost' },
         sumDuration: { $sum: '$duration' },
+        rateGroups: { $first: '$rateGroups' },
+        shiftType: { $first: '$shiftType' },
+        ratio: { $first: '$ratio' },
       },
     },
   ];
@@ -747,10 +778,16 @@ async function getForecastTemplateBuckets(locationId, clientId, rangeStart, rang
       dayKey,
       startTime: item._id.startTime,
       endTime: item.endTime || '',
+      minShiftDate: item.minShiftDate,
+      minStart: item.minStart,
+      maxEnd: item.maxEnd,
       occurrences: item.occurrences,
       totalCost: item.totalCost,
       sumCost: item.sumCost,
       sumDuration: item.sumDuration,
+      rateGroups: item.rateGroups,
+      shiftType: item.shiftType,
+      ratio: item.ratio,
     });
   }
   return buckets;
@@ -996,6 +1033,7 @@ export async function getStandardVsForecastVarianceDetail({
 
   const standardRecords = standardDocs.map((r) => ({
     id: String(r._id),
+    shiftcareId: templateKey,
     clientDirectoryId: r.clientDirectoryId,
     clientName: r.clientName,
     day: r.day,
@@ -1004,7 +1042,6 @@ export async function getStandardVsForecastVarianceDetail({
     duration: r.duration,
     totalCost: r.totalCost,
     rateGroups: r.rateGroups,
-    referenceNo: r.referenceNo,
     shiftType: r.shiftType,
     ratio: r.ratio,
   }));
@@ -1047,6 +1084,10 @@ export async function getStandardVsForecastVarianceDetail({
             duration: 1,
             cost: 1,
             totalCost: 1,
+            shiftcareId: 1,
+            rateGroups: 1,
+            shiftType: 1,
+            ratio: 1,
             dayOfWeek: { $dayOfWeek: '$shiftDate' },
             startTimeStr: { $dateToString: { format: '%H:%M', date: '$startDatetime' } },
           },
@@ -1062,16 +1103,17 @@ export async function getStandardVsForecastVarianceDetail({
 
       forecastRecords = docs.map((d) => ({
         id: String(d._id),
+        shiftcareId: d.shiftcareId || templateKey,
         clientDirectoryId: d.clientDirectoryId,
         clientName: d.clientName,
-        staffName: d.staffName,
-        staffDirectoryId: d.staffDirectoryId,
         shiftDate: d.shiftDate,
         startDatetime: d.startDatetime,
         endDatetime: d.endDatetime,
         duration: d.duration,
-        cost: d.cost,
         totalCost: d.totalCost,
+        rateGroups: d.rateGroups,
+        shiftType: d.shiftType,
+        ratio: d.ratio,
       }));
     }
   }

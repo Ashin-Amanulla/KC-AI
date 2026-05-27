@@ -2,6 +2,7 @@
  * Forecast / Actuals CSV parsing — ported from KC Studio forecast_actuals_service.py
  */
 
+/** Required columns for forecast/actuals CSV (total cost may be omitted if cost is present). */
 export const REQUIRED_CSV_COLUMNS = new Set([
   'client name',
   'date',
@@ -9,8 +10,9 @@ export const REQUIRED_CSV_COLUMNS = new Set([
   'end date time',
   'duration',
   'cost',
-  'total cost',
 ]);
+
+export const OPTIONAL_CSV_COLUMNS = new Set(['total cost']);
 
 export const COLUMN_ALIASES = {
   name: 'client name',
@@ -38,7 +40,10 @@ export const COLUMN_ALIASES = {
 };
 
 export function normalizeColumnName(name) {
-  const normalized = String(name || '').trim().toLowerCase();
+  const normalized = String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
   return COLUMN_ALIASES[normalized] ?? normalized;
 }
 
@@ -56,6 +61,9 @@ export function validateHeaders(normalizedKeys) {
   if (missing.length) {
     return [`Missing required columns: ${missing.join(', ')}`];
   }
+  if (!normalizedKeys.has('total cost') && !normalizedKeys.has('cost')) {
+    return ['Missing required columns: cost'];
+  }
   return [];
 }
 
@@ -64,6 +72,21 @@ export function getRowValue(row, colName, normalizedColumns) {
   if (!original) return '';
   const v = row[original];
   return v == null ? '' : String(v).trim();
+}
+
+/** True when the row has no non-whitespace values (trailing blank CSV lines). */
+export function isBlankCsvRow(row) {
+  return !Object.values(row).some((v) => String(v ?? '').trim() !== '');
+}
+
+/** Fix common export glitches like "6  4:00:00 PM" → "4:00:00 PM". */
+export function normalizeTimeInput(timeStr) {
+  let s = String(timeStr || '')
+    .trim()
+    .replace(/\s+/g, ' ');
+  const stray = s.match(/^(\d{1,2})\s+(\d{1,2}:\d{2}(?::\d{2})?\s*(?:am|pm)?)$/i);
+  if (stray) s = stray[2];
+  return s;
 }
 
 function utcDateValid(y, m0, d) {
@@ -109,6 +132,62 @@ export function parseDate(dateStr) {
   }
 
   return null;
+}
+
+/** Parse time-only strings: HH:MM, H:MM, or 12h with optional seconds (e.g. 6:00:00 AM). */
+export function parseTime(timeStr) {
+  const s = String(timeStr || '')
+    .trim()
+    .replace(/\s+/g, ' ');
+  if (!s) return null;
+
+  const m12 = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)$/i);
+  if (m12) {
+    let h = parseInt(m12[1], 10);
+    const min = parseInt(m12[2], 10);
+    const ampm = m12[3].toLowerCase();
+    if (h < 1 || h > 12 || min < 0 || min > 59) return null;
+    if (ampm === 'am') {
+      if (h === 12) h = 0;
+    } else if (h !== 12) {
+      h += 12;
+    }
+    return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  }
+
+  const m24 = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (m24) {
+    const h = parseInt(m24[1], 10);
+    const min = parseInt(m24[2], 10);
+    if (h >= 0 && h <= 23 && min >= 0 && min <= 59) {
+      return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Parse a datetime string, or combine shift date with a time-only value.
+ */
+export function combineDateAndTime(shiftDate, timeStr) {
+  const cleaned = normalizeTimeInput(timeStr);
+  const full = parseDateTime(cleaned);
+  if (full) return full;
+
+  const timeNorm = parseTime(cleaned);
+  if (!timeNorm || !shiftDate) return null;
+
+  const [hh, mm] = timeNorm.split(':').map((x) => parseInt(x, 10));
+  return new Date(
+    Date.UTC(
+      shiftDate.getUTCFullYear(),
+      shiftDate.getUTCMonth(),
+      shiftDate.getUTCDate(),
+      hh,
+      mm,
+      0
+    )
+  );
 }
 
 export function parseDateTime(dtStr) {
