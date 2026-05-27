@@ -18,21 +18,9 @@ export const NAV_ITEMS = [
   { path: '/pay-hours-tests', label: 'Pay Hours Tests', icon: 'Calculator', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
   { path: '/shift-analysis', label: 'Shift Analysis', icon: 'FileBarChart', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
   {
-    path: '/forecast-actuals',
-    label: 'Forecast vs actuals',
+    path: '/forecast-analysis',
+    label: 'Forecast analysis',
     icon: 'TrendingDown',
-    roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE],
-  },
-  {
-    path: '/standard-forecast',
-    label: 'Standard',
-    icon: 'Calendar',
-    roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE],
-  },
-  {
-    path: '/standard-vs-forecast',
-    label: 'Standard vs forecast',
-    icon: 'GitCompare',
     roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE],
   },
   {
@@ -64,6 +52,7 @@ export const getNavItemsForRole = (role) => {
 };
 
 const WORKFORCE_LEGACY_PATHS = ['/shifts', '/pay-hours', '/cost-analysis'];
+const FORECAST_LEGACY_PATHS = ['/forecast-actuals', '/standard-forecast', '/standard-vs-forecast'];
 
 export const canAccessPath = (role, path) => {
   if (role === ROLES.SHIFTS_VIEWER) {
@@ -72,6 +61,10 @@ export const canAccessPath = (role, path) => {
   if (path === '/workforce' || WORKFORCE_LEGACY_PATHS.includes(path)) {
     const wf = NAV_ITEMS.find((i) => i.path === '/workforce');
     return wf ? wf.roles.includes(role) : false;
+  }
+  if (path === '/forecast-analysis' || FORECAST_LEGACY_PATHS.includes(path)) {
+    const fa = NAV_ITEMS.find((i) => i.path === '/forecast-analysis');
+    return fa ? fa.roles.includes(role) : false;
   }
   if (path.startsWith('/roster-coverage')) {
     const rc = NAV_ITEMS.find((i) => i.path === '/roster-coverage');

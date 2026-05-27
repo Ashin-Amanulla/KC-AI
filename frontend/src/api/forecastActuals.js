@@ -110,6 +110,7 @@ export function useUploadForecast() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['forecast-actuals'] });
+      qc.invalidateQueries({ queryKey: ['standard-forecast'] });
     },
   });
 }
@@ -128,6 +129,7 @@ export function useUploadActuals() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['forecast-actuals'] });
+      qc.invalidateQueries({ queryKey: ['standard-forecast'] });
     },
   });
 }

@@ -103,6 +103,7 @@ export function useUploadStandard() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['standard-forecast'] });
+      qc.invalidateQueries({ queryKey: ['forecast-actuals'] });
     },
   });
 }

@@ -10,9 +10,7 @@ import { Staff } from './pages/Staff';
 import { Clients } from './pages/Clients';
 import { Timesheets } from './pages/Timesheets';
 import { ShiftAnalysis } from './pages/ShiftAnalysis';
-import { ForecastActuals } from './pages/ForecastActuals';
-import { StandardForecast } from './pages/StandardForecast';
-import { StandardVsForecast } from './pages/StandardVsForecast';
+import { ForecastAnalysis } from './pages/ForecastAnalysis';
 import { UserManagement } from './pages/UserManagement';
 import { WorkforceHub } from './pages/WorkforceHub';
 import { PayHoursTests } from './pages/PayHoursTests';
@@ -114,10 +112,18 @@ function App() {
             }
           />
           <Route
+            path="/forecast-analysis"
+            element={
+              <ProtectedRoute>
+                <ForecastAnalysis />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/forecast-actuals"
             element={
               <ProtectedRoute>
-                <ForecastActuals />
+                <Navigate to="/forecast-analysis?tab=forecast-vs-actuals" replace />
               </ProtectedRoute>
             }
           />
@@ -125,7 +131,7 @@ function App() {
             path="/standard-forecast"
             element={
               <ProtectedRoute>
-                <StandardForecast />
+                <Navigate to="/forecast-analysis?tab=templates" replace />
               </ProtectedRoute>
             }
           />
@@ -133,7 +139,7 @@ function App() {
             path="/standard-vs-forecast"
             element={
               <ProtectedRoute>
-                <StandardVsForecast />
+                <Navigate to="/forecast-analysis?tab=standard-vs-forecast" replace />
               </ProtectedRoute>
             }
           />
