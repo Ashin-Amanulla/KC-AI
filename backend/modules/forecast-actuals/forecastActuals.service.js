@@ -27,6 +27,7 @@ import { ForecastRecord } from './forecastRecord.model.js';
 import { ActualsRecord } from './actualsRecord.model.js';
 import { buildSummaryPdf } from './summaryPdf.js';
 import { normalizeRatio } from '../../utils/normalizeRatio.js';
+import { applyShiftDateRange } from './shiftDateRange.js';
 import { compareShiftDateRows } from '../../utils/weekdaySort.js';
 
 const PAGE_SIZE = () => config.forecastActuals.pageSize;
@@ -35,20 +36,22 @@ function locObjectId(locationId) {
   return new mongoose.Types.ObjectId(locationId);
 }
 
-function listFilter(locationId, staffId, clientId) {
+function listFilter(locationId, staffId, clientId, dateFrom, dateTo) {
   const q = { location: locObjectId(locationId) };
   if (staffId && staffId !== 'all') q.staffDirectoryId = staffId;
   if (clientId && clientId !== 'all') q.clientDirectoryId = clientId;
+  applyShiftDateRange(q, dateFrom, dateTo);
   return q;
 }
 
-function shiftcareMatchExtras(locationId, staffId, clientId) {
+function shiftcareMatchExtras(locationId, staffId, clientId, dateFrom, dateTo) {
   const m = {
     location: locObjectId(locationId),
     shiftcareId: { $nin: [null, ''] },
   };
   if (staffId && staffId !== 'all') m.staffDirectoryId = staffId;
   if (clientId && clientId !== 'all') m.clientDirectoryId = clientId;
+  applyShiftDateRange(m, dateFrom, dateTo);
   return m;
 }
 
@@ -545,8 +548,8 @@ function serializeDoc(d) {
   return o;
 }
 
-export async function listForecast({ locationId, staffId, clientId, page }) {
-  const filter = listFilter(locationId, staffId, clientId);
+export async function listForecast({ locationId, staffId, clientId, page, dateFrom, dateTo }) {
+  const filter = listFilter(locationId, staffId, clientId, dateFrom, dateTo);
   const sort = { shiftDate: 1, startDatetime: 1 };
   const total = await ForecastRecord.countDocuments(filter);
   const pageSize = PAGE_SIZE();
@@ -555,7 +558,7 @@ export async function listForecast({ locationId, staffId, clientId, page }) {
   const items = await ForecastRecord.find(filter).sort(sort).skip(skip).limit(pageSize).lean();
 
   const dr = await ForecastRecord.aggregate([
-    { $match: { location: locObjectId(locationId) } },
+    { $match: filter },
     { $group: { _id: null, minD: { $min: '$shiftDate' }, maxD: { $max: '$shiftDate' } } },
   ]);
 
@@ -578,8 +581,8 @@ export async function listForecast({ locationId, staffId, clientId, page }) {
   };
 }
 
-export async function listActuals({ locationId, staffId, clientId, page }) {
-  const filter = listFilter(locationId, staffId, clientId);
+export async function listActuals({ locationId, staffId, clientId, page, dateFrom, dateTo }) {
+  const filter = listFilter(locationId, staffId, clientId, dateFrom, dateTo);
   const sort = { shiftDate: 1, startDatetime: 1 };
   const total = await ActualsRecord.countDocuments(filter);
   const pageSize = PAGE_SIZE();
@@ -588,7 +591,7 @@ export async function listActuals({ locationId, staffId, clientId, page }) {
   const items = await ActualsRecord.find(filter).sort(sort).skip(skip).limit(pageSize).lean();
 
   const dr = await ActualsRecord.aggregate([
-    { $match: { location: locObjectId(locationId) } },
+    { $match: filter },
     { $group: { _id: null, minD: { $min: '$shiftDate' }, maxD: { $max: '$shiftDate' } } },
   ]);
 
@@ -633,7 +636,7 @@ export function buildSummaryRecord(clientId, clientName, forecastBudget, netActu
   };
 }
 
-export async function getSummary({ locationId, staffId, clientId, credentials }) {
+export async function getSummary({ locationId, staffId, clientId, credentials, dateFrom, dateTo }) {
   const clients = await fetchAllClients(credentials);
   let clientList = clients;
   if (clientId && clientId !== 'all') {
@@ -642,16 +645,8 @@ export async function getSummary({ locationId, staffId, clientId, credentials })
 
   const allClientsMap = new Map(clientList.map((c) => [c.id, c.displayName]));
 
-  const baseF = { location: locObjectId(locationId) };
-  const baseA = { location: locObjectId(locationId) };
-  if (staffId && staffId !== 'all') {
-    baseF.staffDirectoryId = staffId;
-    baseA.staffDirectoryId = staffId;
-  }
-  if (clientId && clientId !== 'all') {
-    baseF.clientDirectoryId = clientId;
-    baseA.clientDirectoryId = clientId;
-  }
+  const baseF = listFilter(locationId, staffId, clientId, dateFrom, dateTo);
+  const baseA = listFilter(locationId, staffId, clientId, dateFrom, dateTo);
 
   const fAgg = await ForecastRecord.aggregate([
     { $match: baseF },
@@ -705,11 +700,11 @@ export async function getSummary({ locationId, staffId, clientId, credentials })
   }
 
   const fDr = await ForecastRecord.aggregate([
-    { $match: { location: locObjectId(locationId) } },
+    { $match: baseF },
     { $group: { _id: null, minD: { $min: '$shiftDate' }, maxD: { $max: '$shiftDate' } } },
   ]);
   const aDr = await ActualsRecord.aggregate([
-    { $match: { location: locObjectId(locationId) } },
+    { $match: baseA },
     { $group: { _id: null, minD: { $min: '$shiftDate' }, maxD: { $max: '$shiftDate' } } },
   ]);
 
@@ -774,8 +769,8 @@ function forecastActualsRowToCsvLine(r) {
   ].join(',');
 }
 
-export async function exportForecastCsv({ locationId, staffId, clientId, timezone }) {
-  const filter = listFilter(locationId, staffId, clientId);
+export async function exportForecastCsv({ locationId, staffId, clientId, timezone, dateFrom, dateTo }) {
+  const filter = listFilter(locationId, staffId, clientId, dateFrom, dateTo);
   const rows = await ForecastRecord.find(filter).sort({ shiftDate: 1, startDatetime: 1 }).lean();
   const lines = [FORECAST_ACTUALS_CSV_HEADER, ...rows.map((r) => forecastActualsRowToCsvLine(r))];
   const loc = await Location.findById(locationId).select('code').lean();
@@ -785,8 +780,8 @@ export async function exportForecastCsv({ locationId, staffId, clientId, timezon
   return { filename, body: '\uFEFF' + lines.join('\n') };
 }
 
-export async function exportActualsCsv({ locationId, staffId, clientId, timezone }) {
-  const filter = listFilter(locationId, staffId, clientId);
+export async function exportActualsCsv({ locationId, staffId, clientId, timezone, dateFrom, dateTo }) {
+  const filter = listFilter(locationId, staffId, clientId, dateFrom, dateTo);
   const rows = await ActualsRecord.find(filter).sort({ shiftDate: 1, startDatetime: 1 }).lean();
   const lines = [FORECAST_ACTUALS_CSV_HEADER, ...rows.map((r) => forecastActualsRowToCsvLine(r))];
   const loc = await Location.findById(locationId).select('code').lean();
@@ -803,8 +798,8 @@ function csvEscape(s) {
   return s;
 }
 
-export async function exportSummaryCsv({ locationId, staffId, clientId, credentials }) {
-  const result = await getSummary({ locationId, staffId, clientId, credentials });
+export async function exportSummaryCsv({ locationId, staffId, clientId, credentials, dateFrom, dateTo }) {
+  const result = await getSummary({ locationId, staffId, clientId, credentials, dateFrom, dateTo });
   const lines = [
     ['Client Name', 'Forecast Budget', 'Net Actuals', 'Mileage', 'Gross Actuals', 'Variance', 'Variance %'].join(
       ','
@@ -845,9 +840,9 @@ export async function exportSummaryCsv({ locationId, staffId, clientId, credenti
   return { filename, body: '\uFEFF' + lines.join('\n') };
 }
 
-export async function exportSummaryPdf({ locationId, staffId, clientId, credentials }) {
+export async function exportSummaryPdf({ locationId, staffId, clientId, credentials, dateFrom, dateTo }) {
   const loc = await Location.findById(locationId).select('code timezone').lean();
-  const result = await getSummary({ locationId, staffId, clientId, credentials });
+  const result = await getSummary({ locationId, staffId, clientId, credentials, dateFrom, dateTo });
   const title = `Forecast vs Actuals Summary - ${loc?.code || ''}`;
 
   const headers = [
@@ -886,8 +881,8 @@ export async function exportSummaryPdf({ locationId, staffId, clientId, credenti
   return { filename, body: pdfBuffer };
 }
 
-async function getVariancePairKeySets(locationId, staffId, clientId) {
-  const m = shiftcareMatchExtras(locationId, staffId, clientId);
+async function getVariancePairKeySets(locationId, staffId, clientId, dateFrom, dateTo) {
+  const m = shiftcareMatchExtras(locationId, staffId, clientId, dateFrom, dateTo);
   const collect = async (Model) => {
     const rows = await Model.find(m)
       .select('shiftcareId clientDirectoryId clientName startDatetime')
@@ -927,11 +922,11 @@ function rowToVarianceView(row, source, variancePairKey) {
 }
 
 /** Load one row per variance pair key (no min/max merge across times). */
-async function buildVarianceRowMap(Model, locationId, pairKeys, staffId, clientId, source) {
+async function buildVarianceRowMap(Model, locationId, pairKeys, staffId, clientId, source, dateFrom, dateTo) {
   const keySet = new Set([...pairKeys].filter((k) => k != null && String(k).trim() !== ''));
   if (!keySet.size) return new Map();
 
-  const rows = await Model.find(shiftcareMatchExtras(locationId, staffId, clientId)).lean();
+  const rows = await Model.find(shiftcareMatchExtras(locationId, staffId, clientId, dateFrom, dateTo)).lean();
   const map = new Map();
   for (const row of rows) {
     const pk = buildVariancePairKey(
@@ -961,12 +956,18 @@ function computeDiffFields(fRec, aRec) {
 }
 
 
-export async function listVariance({ locationId, tab, staffId, clientId, page }) {
+export async function listVariance({ locationId, tab, staffId, clientId, page, dateFrom, dateTo }) {
   const pageSize = PAGE_SIZE();
   const p = Math.max(1, parseInt(page, 10) || 1);
   const t = ['all', 'deleted', 'additional', 'variance'].includes(tab) ? tab : 'all';
 
-  const { forecastKeys, actualsKeys } = await getVariancePairKeySets(locationId, staffId, clientId);
+  const { forecastKeys, actualsKeys } = await getVariancePairKeySets(
+    locationId,
+    staffId,
+    clientId,
+    dateFrom,
+    dateTo
+  );
   const deletedKeys = new Set([...forecastKeys].filter((k) => !actualsKeys.has(k)));
   const additionalKeys = new Set([...actualsKeys].filter((k) => !forecastKeys.has(k)));
   const commonKeys = new Set([...forecastKeys].filter((k) => actualsKeys.has(k)));
@@ -979,7 +980,9 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
       commonKeys,
       staffId,
       clientId,
-      'forecast'
+      'forecast',
+      dateFrom,
+      dateTo
     );
     const aAgg = await buildVarianceRowMap(
       ActualsRecord,
@@ -987,7 +990,9 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
       commonKeys,
       staffId,
       clientId,
-      'actuals'
+      'actuals',
+      dateFrom,
+      dateTo
     );
     for (const pairKey of commonKeys) {
       const f = fAgg.get(pairKey);
@@ -1012,7 +1017,9 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
       deletedKeys,
       staffId,
       clientId,
-      'forecast'
+      'forecast',
+      dateFrom,
+      dateTo
     );
     for (const pairKey of [...deletedKeys]) {
       const rec = deletedAgg.get(pairKey);
@@ -1027,7 +1034,9 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
       additionalKeys,
       staffId,
       clientId,
-      'actuals'
+      'actuals',
+      dateFrom,
+      dateTo
     );
     for (const pairKey of [...additionalKeys]) {
       const rec = additionalAgg.get(pairKey);
@@ -1043,7 +1052,9 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
       varianceKeys,
       staffId,
       clientId,
-      'forecast'
+      'forecast',
+      dateFrom,
+      dateTo
     );
     const vA = await buildVarianceRowMap(
       ActualsRecord,
@@ -1051,7 +1062,9 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
       varianceKeys,
       staffId,
       clientId,
-      'actuals'
+      'actuals',
+      dateFrom,
+      dateTo
     );
     for (const pairKey of sortedVarKeys) {
       const fRec = vF.get(pairKey);
@@ -1077,7 +1090,9 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
       deletedKeys,
       staffId,
       clientId,
-      'forecast'
+      'forecast',
+      dateFrom,
+      dateTo
     );
     records = [...agg.values()];
     records.sort(compareShiftDateRows);
@@ -1088,7 +1103,9 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
       additionalKeys,
       staffId,
       clientId,
-      'actuals'
+      'actuals',
+      dateFrom,
+      dateTo
     );
     records = [...agg.values()];
     records.sort(compareShiftDateRows);
@@ -1099,7 +1116,9 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
       varianceKeys,
       staffId,
       clientId,
-      'forecast'
+      'forecast',
+      dateFrom,
+      dateTo
     );
     const actualsAgg = await buildVarianceRowMap(
       ActualsRecord,
@@ -1107,7 +1126,9 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
       varianceKeys,
       staffId,
       clientId,
-      'actuals'
+      'actuals',
+      dateFrom,
+      dateTo
     );
     const sortedVarianceKeys = [...varianceKeys].sort((a, b) => {
       const ra = forecastAgg.get(a) || actualsAgg.get(a) || {};
@@ -1165,12 +1186,14 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
 
   const totalPages = total > 0 ? Math.ceil(total / pageSize) : 1;
 
+  const fMatch = listFilter(locationId, staffId, clientId, dateFrom, dateTo);
+  const aMatch = listFilter(locationId, staffId, clientId, dateFrom, dateTo);
   const fDr = await ForecastRecord.aggregate([
-    { $match: { location: locObjectId(locationId) } },
+    { $match: fMatch },
     { $group: { _id: null, minD: { $min: '$shiftDate' }, maxD: { $max: '$shiftDate' } } },
   ]);
   const aDr = await ActualsRecord.aggregate([
-    { $match: { location: locObjectId(locationId) } },
+    { $match: aMatch },
     { $group: { _id: null, minD: { $min: '$shiftDate' }, maxD: { $max: '$shiftDate' } } },
   ]);
 
@@ -1214,14 +1237,13 @@ function serializeVarianceRow(r) {
   };
 }
 
-export async function exportVarianceCsv({ locationId, staffId, clientId }) {
+export async function exportVarianceCsv({ locationId, staffId, clientId, dateFrom, dateTo }) {
   const loc = await Location.findById(locationId).select('code timezone').lean();
+  const varianceListArgs = { locationId, staffId, clientId, dateFrom, dateTo };
 
   const deletedResult = await listVariance({
-    locationId,
+    ...varianceListArgs,
     tab: 'deleted',
-    staffId,
-    clientId,
     page: 1,
   });
   let deletedRecords = deletedResult.records;
@@ -1229,10 +1251,8 @@ export async function exportVarianceCsv({ locationId, staffId, clientId }) {
     const all = [];
     for (let i = 1; i <= deletedResult.totalPages; i += 1) {
       const vr = await listVariance({
-        locationId,
+        ...varianceListArgs,
         tab: 'deleted',
-        staffId,
-        clientId,
         page: i,
       });
       all.push(...vr.records);
@@ -1241,10 +1261,8 @@ export async function exportVarianceCsv({ locationId, staffId, clientId }) {
   }
 
   const additionalResult = await listVariance({
-    locationId,
+    ...varianceListArgs,
     tab: 'additional',
-    staffId,
-    clientId,
     page: 1,
   });
   let additionalRecords = additionalResult.records;
@@ -1252,15 +1270,32 @@ export async function exportVarianceCsv({ locationId, staffId, clientId }) {
     const all = [];
     for (let i = 1; i <= additionalResult.totalPages; i += 1) {
       const vr = await listVariance({
-        locationId,
+        ...varianceListArgs,
         tab: 'additional',
-        staffId,
-        clientId,
         page: i,
       });
       all.push(...vr.records);
     }
     additionalRecords = all;
+  }
+
+  const varianceResult = await listVariance({
+    ...varianceListArgs,
+    tab: 'all',
+    page: 1,
+  });
+  let varianceRecords = varianceResult.records.filter((r) => r.recordType === 'variance');
+  if (varianceResult.totalPages > 1) {
+    const all = [];
+    for (let i = 1; i <= varianceResult.totalPages; i += 1) {
+      const vr = await listVariance({
+        ...varianceListArgs,
+        tab: 'all',
+        page: i,
+      });
+      all.push(...vr.records.filter((r) => r.recordType === 'variance'));
+    }
+    varianceRecords = all;
   }
 
   const lines = [

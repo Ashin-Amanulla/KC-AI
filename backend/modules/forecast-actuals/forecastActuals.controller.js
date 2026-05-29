@@ -26,6 +26,11 @@ import {
 
 const financeRoles = ['super_admin', 'finance'];
 
+function scopeDateRange(query) {
+  const { dateFrom, dateTo } = query;
+  return { dateFrom, dateTo };
+}
+
 function requireShiftCare(req, res) {
   const credentials = getShiftCareCredentials(req);
   if (!credentials?.accountId || !credentials?.apiKey) {
@@ -238,7 +243,13 @@ export const getForecastList = async (req, res, next) => {
     const { error, status } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const data = await listForecast({ locationId, staffId: staff, clientId: client, page });
+    const data = await listForecast({
+      locationId,
+      staffId: staff,
+      clientId: client,
+      page,
+      ...scopeDateRange(req.query),
+    });
     res.json(data);
   } catch (e) {
     next(e);
@@ -251,7 +262,13 @@ export const getActualsList = async (req, res, next) => {
     const { error, status } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const data = await listActuals({ locationId, staffId: staff, clientId: client, page });
+    const data = await listActuals({
+      locationId,
+      staffId: staff,
+      clientId: client,
+      page,
+      ...scopeDateRange(req.query),
+    });
     res.json(data);
   } catch (e) {
     next(e);
@@ -272,6 +289,7 @@ export const getSummaryHandler = async (req, res, next) => {
       staffId: staff,
       clientId: client,
       credentials,
+      ...scopeDateRange(req.query),
     });
     res.json(data);
   } catch (e) {
@@ -290,6 +308,7 @@ export const getForecastExport = async (req, res, next) => {
       staffId: staff,
       clientId: client,
       timezone: location.timezone,
+      ...scopeDateRange(req.query),
     });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -310,6 +329,7 @@ export const getActualsExport = async (req, res, next) => {
       staffId: staff,
       clientId: client,
       timezone: location.timezone,
+      ...scopeDateRange(req.query),
     });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -333,6 +353,7 @@ export const getSummaryExportCsv = async (req, res, next) => {
       staffId: staff,
       clientId: client,
       credentials,
+      ...scopeDateRange(req.query),
     });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -356,6 +377,7 @@ export const getSummaryExportPdf = async (req, res, next) => {
       staffId: staff,
       clientId: client,
       credentials,
+      ...scopeDateRange(req.query),
     });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -377,6 +399,7 @@ export const getVarianceList = async (req, res, next) => {
       staffId: staff,
       clientId: client,
       page,
+      ...scopeDateRange(req.query),
     });
     res.json(data);
   } catch (e) {
@@ -394,7 +417,7 @@ export const getVarianceExport = async (req, res, next) => {
       locationId,
       staffId: staff,
       clientId: client,
-      timezone: location.timezone,
+      ...scopeDateRange(req.query),
     });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

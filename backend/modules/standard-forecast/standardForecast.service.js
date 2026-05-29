@@ -21,6 +21,10 @@ import {
   sortTemplateKeys,
 } from '../../utils/weekdaySort.js';
 import { normalizeRatio } from '../../utils/normalizeRatio.js';
+import {
+  applyShiftDateRange,
+  resolveForecastRangeFromFilter,
+} from '../forecast-actuals/shiftDateRange.js';
 
 export { sortStandardRecords };
 
@@ -33,6 +37,12 @@ function locObjectId(locationId) {
 function listFilter(locationId, clientId) {
   const q = { location: locObjectId(locationId) };
   if (clientId && clientId !== 'all') q.clientDirectoryId = String(clientId);
+  return q;
+}
+
+function forecastListFilter(locationId, clientId, dateFrom, dateTo) {
+  const q = listFilter(locationId, clientId);
+  applyShiftDateRange(q, dateFrom, dateTo);
   return q;
 }
 
@@ -443,14 +453,27 @@ export function buildStandardVsForecastRecord(
   };
 }
 
-export async function getStandardVsForecastSummary({ locationId, clientId, credentials }) {
+export async function getStandardVsForecastSummary({
+  locationId,
+  clientId,
+  credentials,
+  dateFrom,
+  dateTo,
+}) {
+  const rangeMatch = forecastListFilter(locationId, clientId, dateFrom, dateTo);
   const fDr = await ForecastRecord.aggregate([
-    { $match: { location: locObjectId(locationId) } },
+    { $match: rangeMatch },
     { $group: { _id: null, minD: { $min: '$shiftDate' }, maxD: { $max: '$shiftDate' } } },
   ]);
 
-  const forecastStart = fDr[0]?.minD ?? null;
-  const forecastEnd = fDr[0]?.maxD ?? null;
+  const dataMin = fDr[0]?.minD ?? null;
+  const dataMax = fDr[0]?.maxD ?? null;
+  const { start: forecastStart, end: forecastEnd } = resolveForecastRangeFromFilter(
+    dateFrom,
+    dateTo,
+    dataMin,
+    dataMax
+  );
 
   if (!forecastStart || !forecastEnd) {
     const emptyTotals = buildStandardVsForecastRecord(null, 'TOTAL', 0, 0);
@@ -471,7 +494,7 @@ export async function getStandardVsForecastSummary({ locationId, clientId, crede
 
   const standardBudgets = await computeStandardBudgetForRange(locationId, forecastStart, forecastEnd);
 
-  const baseF = listFilter(locationId, clientId);
+  const baseF = forecastListFilter(locationId, clientId, dateFrom, dateTo);
   const fAgg = await ForecastRecord.aggregate([
     { $match: baseF },
     {
@@ -521,8 +544,20 @@ function csvEscape(s) {
   return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v;
 }
 
-export async function exportStandardVsForecastCsv({ locationId, clientId, credentials }) {
-  const result = await getStandardVsForecastSummary({ locationId, clientId, credentials });
+export async function exportStandardVsForecastCsv({
+  locationId,
+  clientId,
+  credentials,
+  dateFrom,
+  dateTo,
+}) {
+  const result = await getStandardVsForecastSummary({
+    locationId,
+    clientId,
+    credentials,
+    dateFrom,
+    dateTo,
+  });
   const header = ['Client Name', 'Standard Budget', 'Forecast Budget', 'Variance', 'Variance %'];
   const lines = [header.join(',')];
 
@@ -559,8 +594,20 @@ export async function exportStandardVsForecastCsv({ locationId, clientId, creden
   return { filename, body };
 }
 
-export async function exportStandardVsForecastPdf({ locationId, clientId, credentials }) {
-  const result = await getStandardVsForecastSummary({ locationId, clientId, credentials });
+export async function exportStandardVsForecastPdf({
+  locationId,
+  clientId,
+  credentials,
+  dateFrom,
+  dateTo,
+}) {
+  const result = await getStandardVsForecastSummary({
+    locationId,
+    clientId,
+    credentials,
+    dateFrom,
+    dateTo,
+  });
   const loc = await Location.findById(locationId).lean();
 
   const fmtDate = (d) =>
@@ -785,13 +832,20 @@ async function getForecastTemplateBuckets(locationId, clientId, rangeStart, rang
   return buckets;
 }
 
-async function getForecastRangeAndClients(locationId, clientId, credentials) {
+async function getForecastRangeAndClients(locationId, clientId, credentials, dateFrom, dateTo) {
+  const rangeMatch = forecastListFilter(locationId, clientId, dateFrom, dateTo);
   const fDr = await ForecastRecord.aggregate([
-    { $match: { location: locObjectId(locationId) } },
+    { $match: rangeMatch },
     { $group: { _id: null, minD: { $min: '$shiftDate' }, maxD: { $max: '$shiftDate' } } },
   ]);
-  const forecastStart = fDr[0]?.minD ?? null;
-  const forecastEnd = fDr[0]?.maxD ?? null;
+  const dataMin = fDr[0]?.minD ?? null;
+  const dataMax = fDr[0]?.maxD ?? null;
+  const { start: forecastStart, end: forecastEnd } = resolveForecastRangeFromFilter(
+    dateFrom,
+    dateTo,
+    dataMin,
+    dataMax
+  );
 
   let clientNameMap = new Map();
   if (credentials) {
@@ -817,6 +871,8 @@ export async function listStandardVsForecastVariance({
   tab,
   page,
   credentials,
+  dateFrom,
+  dateTo,
 }) {
   const pageSize = PAGE_SIZE_VARIANCE();
   const p = Math.max(1, parseInt(page, 10) || 1);
@@ -842,7 +898,9 @@ export async function listStandardVsForecastVariance({
   const { forecastStart, forecastEnd, clientNameMap } = await getForecastRangeAndClients(
     locationId,
     clientId,
-    credentials
+    credentials,
+    dateFrom,
+    dateTo
   );
 
   if (!forecastStart || !forecastEnd) return empty;

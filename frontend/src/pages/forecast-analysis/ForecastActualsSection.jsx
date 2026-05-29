@@ -217,10 +217,19 @@ function VarianceDetailPanel({ data }) {
   );
 }
 
+function scopeDateQuery(dateFrom, dateTo) {
+  const q = {};
+  if (dateFrom) q.dateFrom = dateFrom;
+  if (dateTo) q.dateTo = dateTo;
+  return q;
+}
+
 export function ForecastActualsSection({
   locationId,
   staff,
   client,
+  dateFrom = '',
+  dateTo = '',
   directory,
   section,
   onSectionChange,
@@ -233,13 +242,23 @@ export function ForecastActualsSection({
 }) {
 
   const listParams = useMemo(
-    () => ({ locationId, staff, client, page }),
-    [locationId, staff, client, page]
+    () => ({ locationId, staff, client, page, ...scopeDateQuery(dateFrom, dateTo) }),
+    [locationId, staff, client, page, dateFrom, dateTo]
   );
-  const summaryParams = useMemo(() => ({ locationId, staff, client }), [locationId, staff, client]);
+  const summaryParams = useMemo(
+    () => ({ locationId, staff, client, ...scopeDateQuery(dateFrom, dateTo) }),
+    [locationId, staff, client, dateFrom, dateTo]
+  );
   const varianceParams = useMemo(
-    () => ({ locationId, staff, client, tab: varianceTab, page }),
-    [locationId, staff, client, varianceTab, page]
+    () => ({
+      locationId,
+      staff,
+      client,
+      tab: varianceTab,
+      page,
+      ...scopeDateQuery(dateFrom, dateTo),
+    }),
+    [locationId, staff, client, varianceTab, page, dateFrom, dateTo]
   );
 
   const forecastQ = useForecastList(listParams, section === 'forecast');
@@ -296,7 +315,7 @@ export function ForecastActualsSection({
     disabled: !locationId || uploadActualsM.isPending,
   });
 
-  const exportBase = { locationId, staff, client };
+  const exportBase = { locationId, staff, client, ...scopeDateQuery(dateFrom, dateTo) };
 
   const selectableClients = useMemo(
     () => (directory?.clients ?? []).filter((c) => c.value !== 'all'),

@@ -38,6 +38,8 @@ export function ForecastAnalysis() {
   const [locationId, setLocationId] = useState('');
   const [staff, setStaff] = useState('all');
   const [client, setClient] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [svfUi, setSvfUi] = useState(INITIAL_SVF_UI);
   const [fvaUi, setFvaUi] = useState(INITIAL_FVA_UI);
 
@@ -59,8 +61,26 @@ export function ForecastAnalysis() {
     setLocationId(id);
     setStaff('all');
     setClient('all');
+    setDateFrom('');
+    setDateTo('');
     setSvfUi(INITIAL_SVF_UI);
     setFvaUi(INITIAL_FVA_UI);
+  };
+
+  const resetPages = () => {
+    setSvfUi((u) => ({ ...u, page: 1, expandedKey: null }));
+    setFvaUi((u) => ({ ...u, page: 1, expandedSid: null }));
+  };
+
+  const onDateFromChange = (value) => {
+    setDateFrom(value);
+    if (dateTo && value && dateTo < value) setDateTo(value);
+    resetPages();
+  };
+
+  const onDateToChange = (value) => {
+    setDateTo(value);
+    resetPages();
   };
 
   const onStaffChange = (value) => {
@@ -95,6 +115,11 @@ export function ForecastAnalysis() {
         onStaffChange={onStaffChange}
         client={client}
         onClientChange={onClientChange}
+        dateFrom={dateFrom}
+        onDateFromChange={onDateFromChange}
+        dateTo={dateTo}
+        onDateToChange={onDateToChange}
+        showDateFilter={primaryTab !== 'templates'}
         directory={directory}
         dirLoading={dirLoading}
         showStaff={showStaff}
@@ -135,6 +160,8 @@ export function ForecastAnalysis() {
             <StandardVsForecastSection
               locationId={locationId}
               client={client}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
               section={svfUi.section}
               onSectionChange={(section) => setSvfUi((u) => ({ ...u, section }))}
               page={svfUi.page}
@@ -150,6 +177,8 @@ export function ForecastAnalysis() {
               locationId={locationId}
               staff={staff}
               client={client}
+              dateFrom={dateFrom}
+              dateTo={dateTo}
               directory={directory}
               section={fvaUi.section}
               onSectionChange={(section) => setFvaUi((u) => ({ ...u, section }))}

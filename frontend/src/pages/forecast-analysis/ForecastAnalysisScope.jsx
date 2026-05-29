@@ -10,9 +10,14 @@ export function ForecastAnalysisScope({
   onStaffChange,
   client,
   onClientChange,
+  dateFrom,
+  onDateFromChange,
+  dateTo,
+  onDateToChange,
   directory,
   dirLoading,
   showStaff = true,
+  showDateFilter = true,
 }) {
   const staffOptions = directory?.staff || [{ value: 'all', label: 'All Staff' }];
   const clientOptions = directory?.clients || [{ value: 'all', label: 'All Clients' }];
@@ -74,6 +79,31 @@ export function ForecastAnalysisScope({
             ))}
           </select>
         </div>
+        {showDateFilter && (
+          <>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">From date</label>
+              <input
+                type="date"
+                className="flex h-10 w-full md:w-40 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={dateFrom}
+                onChange={(e) => onDateFromChange(e.target.value)}
+                disabled={!locationId}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">To date</label>
+              <input
+                type="date"
+                className="flex h-10 w-full md:w-40 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={dateTo}
+                onChange={(e) => onDateToChange(e.target.value)}
+                disabled={!locationId}
+                min={dateFrom || undefined}
+              />
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

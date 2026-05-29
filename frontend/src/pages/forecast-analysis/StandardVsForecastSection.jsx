@@ -239,9 +239,18 @@ function StandardVarianceDetailPanel({ data }) {
   );
 }
 
+function scopeDateQuery(dateFrom, dateTo) {
+  const q = {};
+  if (dateFrom) q.dateFrom = dateFrom;
+  if (dateTo) q.dateTo = dateTo;
+  return q;
+}
+
 export function StandardVsForecastSection({
   locationId,
   client,
+  dateFrom = '',
+  dateTo = '',
   section,
   onSectionChange,
   page,
@@ -252,10 +261,19 @@ export function StandardVsForecastSection({
   onExpandedKeyChange,
 }) {
 
-  const summaryParams = useMemo(() => ({ locationId, client }), [locationId, client]);
+  const summaryParams = useMemo(
+    () => ({ locationId, client, ...scopeDateQuery(dateFrom, dateTo) }),
+    [locationId, client, dateFrom, dateTo]
+  );
   const varianceParams = useMemo(
-    () => ({ locationId, client, tab: varianceTab, page }),
-    [locationId, client, varianceTab, page]
+    () => ({
+      locationId,
+      client,
+      tab: varianceTab,
+      page,
+      ...scopeDateQuery(dateFrom, dateTo),
+    }),
+    [locationId, client, varianceTab, page, dateFrom, dateTo]
   );
 
   const summaryQ = useStandardVsForecastSummary(summaryParams, Boolean(locationId) && section === 'summary');
@@ -266,7 +284,7 @@ export function StandardVsForecastSection({
     Boolean(expandedKey && section === 'variance')
   );
 
-  const exportBase = { locationId, client };
+  const exportBase = { locationId, client, ...scopeDateQuery(dateFrom, dateTo) };
 
   const periodSource = section === 'summary' ? summaryQ.data : varianceQ.data;
   const periodLabel =

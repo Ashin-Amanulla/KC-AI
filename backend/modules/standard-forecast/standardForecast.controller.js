@@ -24,6 +24,11 @@ function resolveClientFilter(query) {
   return clientId ?? client ?? 'all';
 }
 
+function scopeDateRange(query) {
+  const { dateFrom, dateTo } = query;
+  return { dateFrom, dateTo };
+}
+
 function requireShiftCare(req, res) {
   const credentials = getShiftCareCredentials(req);
   if (!credentials?.accountId || !credentials?.apiKey) {
@@ -239,6 +244,7 @@ export const getSummary = async (req, res, next) => {
       locationId,
       clientId: resolveClientFilter(req.query),
       credentials,
+      ...scopeDateRange(req.query),
     });
     res.json(data);
   } catch (e) {
@@ -259,6 +265,7 @@ export const getSummaryExportCsv = async (req, res, next) => {
       locationId,
       clientId: resolveClientFilter(req.query),
       credentials,
+      ...scopeDateRange(req.query),
     });
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -281,6 +288,7 @@ export const getSummaryExportPdf = async (req, res, next) => {
       locationId,
       clientId: resolveClientFilter(req.query),
       credentials,
+      ...scopeDateRange(req.query),
     });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -303,6 +311,7 @@ export const getVarianceList = async (req, res, next) => {
       tab,
       page,
       credentials,
+      ...scopeDateRange(req.query),
     });
     res.json(data);
   } catch (e) {
