@@ -156,15 +156,21 @@ test('golden: totals variance equals sum of row variances', () => {
   assert.strictEqual((sumVariance / totalForecast) * 100, 10 / 3);
 });
 
-test('golden: variance pair key is shift id + client', () => {
-  const k1 = buildVariancePairKey('SHIFT-1', 'client-a', 'Alice');
-  const k2 = buildVariancePairKey('SHIFT-1', 'client-b', 'Bob');
+test('golden: variance pair key is shift id + client + start time', () => {
+  const startA = new Date('2026-04-15T09:00:00.000Z');
+  const startB = new Date('2026-04-15T14:00:00.000Z');
+  const k1 = buildVariancePairKey('SHIFT-1', 'client-a', 'Alice', startA);
+  const k2 = buildVariancePairKey('SHIFT-1', 'client-a', 'Alice', startB);
+  const k3 = buildVariancePairKey('SHIFT-1', 'client-b', 'Bob', startA);
   assert.notStrictEqual(k1, k2);
+  assert.notStrictEqual(k1, k3);
   assert.ok(k1.includes('SHIFT-1'));
   assert.ok(k1.includes('id:client-a'));
+  assert.ok(k1.includes('start:'));
   const parsed = parseVariancePairKey(k1);
   assert.strictEqual(parsed.shiftcareId, 'SHIFT-1');
   assert.strictEqual(parsed.clientKey, 'id:client-a');
-  const nameKey = buildVariancePairKey('SHIFT-2', '', 'Charlie');
-  assert.ok(nameKey.endsWith('name:charlie'));
+  assert.strictEqual(parsed.startMs, startA.getTime());
+  const nameKey = buildVariancePairKey('SHIFT-2', '', 'Charlie', startA);
+  assert.ok(nameKey.includes('name:charlie'));
 });
