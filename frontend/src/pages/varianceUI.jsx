@@ -177,8 +177,8 @@ export function makeVarianceRowClass(blueSource) {
     if (r.recordType === 'additional') return 'bg-sky-50 hover:bg-sky-100';
     if (r.recordType === 'variance') {
       return r.source === blueSource
-        ? 'bg-blue-50 hover:bg-blue-100 cursor-pointer'
-        : 'bg-green-50 hover:bg-green-100 cursor-pointer';
+        ? 'bg-blue-50 hover:bg-blue-100'
+        : 'bg-green-50 hover:bg-green-100';
     }
     return 'hover:bg-muted/30';
   };

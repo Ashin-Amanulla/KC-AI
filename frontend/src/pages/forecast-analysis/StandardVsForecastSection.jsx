@@ -564,7 +564,7 @@ export function StandardVsForecastSection({
                               return (
                                 <Fragment key={`${rowKey}-${idx}-${r.source || ''}`}>
                                   <TableRow
-                                    className={varianceRowClass(r)}
+                                    className={cn(varianceRowClass(r), isClickable && 'cursor-pointer')}
                                     onClick={
                                       isClickable
                                         ? () =>

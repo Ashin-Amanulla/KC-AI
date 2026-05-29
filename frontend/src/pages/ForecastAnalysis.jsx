@@ -25,7 +25,6 @@ const INITIAL_FVA_UI = {
   section: 'forecast',
   page: 1,
   varianceTab: 'all',
-  expandedSid: null,
 };
 
 export function ForecastAnalysis() {
@@ -69,7 +68,7 @@ export function ForecastAnalysis() {
 
   const resetPages = () => {
     setSvfUi((u) => ({ ...u, page: 1, expandedKey: null }));
-    setFvaUi((u) => ({ ...u, page: 1, expandedSid: null }));
+    setFvaUi((u) => ({ ...u, page: 1 }));
   };
 
   const onDateFromChange = (value) => {
@@ -85,13 +84,13 @@ export function ForecastAnalysis() {
 
   const onStaffChange = (value) => {
     setStaff(value);
-    setFvaUi((u) => ({ ...u, page: 1, expandedSid: null }));
+    setFvaUi((u) => ({ ...u, page: 1 }));
   };
 
   const onClientChange = (value) => {
     setClient(value);
     setSvfUi((u) => ({ ...u, page: 1, expandedKey: null }));
-    setFvaUi((u) => ({ ...u, page: 1, expandedSid: null }));
+    setFvaUi((u) => ({ ...u, page: 1 }));
   };
 
   const activeTabMeta = PRIMARY_TABS.find((t) => t.id === primaryTab);
@@ -186,8 +185,6 @@ export function ForecastAnalysis() {
               onPageChange={(page) => setFvaUi((u) => ({ ...u, page }))}
               varianceTab={fvaUi.varianceTab}
               onVarianceTabChange={(varianceTab) => setFvaUi((u) => ({ ...u, varianceTab }))}
-              expandedSid={fvaUi.expandedSid}
-              onExpandedSidChange={(expandedSid) => setFvaUi((u) => ({ ...u, expandedSid }))}
             />
           )}
         </>
