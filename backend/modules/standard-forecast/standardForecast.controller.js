@@ -6,6 +6,7 @@ import {
   exportStandardForecastCsv,
   exportStandardVsForecastCsv,
   exportStandardVsForecastPdf,
+  exportStandardVsForecastVarianceCsv,
   getDirectoryOptions,
   getStandardVsForecastSummary,
   getStandardVsForecastVarianceDetail,
@@ -314,6 +315,27 @@ export const getVarianceList = async (req, res, next) => {
       ...scopeDateRange(req.query),
     });
     res.json(data);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const getVarianceExport = async (req, res, next) => {
+  try {
+    const credentials = getShiftCareCredentials(req);
+    const { locationId } = req.query;
+    const { error, status } = await resolveLocation(locationId);
+    if (error) return res.status(status).json({ error });
+
+    const { filename, body } = await exportStandardVsForecastVarianceCsv({
+      locationId,
+      clientId: resolveClientFilter(req.query),
+      credentials,
+      ...scopeDateRange(req.query),
+    });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(body);
   } catch (e) {
     next(e);
   }

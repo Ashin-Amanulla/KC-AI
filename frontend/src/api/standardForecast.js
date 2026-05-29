@@ -158,3 +158,11 @@ export async function exportStandardVsForecastCsv(params) {
 export async function exportStandardVsForecastPdf(params) {
   await downloadBlobGet('/api/standard-forecast/summary/export.pdf', params, 'standard_vs_forecast.pdf');
 }
+
+export async function exportStandardVsForecastVarianceCsv(params) {
+  await downloadBlobGet(
+    '/api/standard-forecast/variance/export.csv',
+    params,
+    'standard_vs_forecast_variance.csv'
+  );
+}

@@ -5,6 +5,7 @@ import {
   useStandardForecastVarianceList,
   exportStandardVsForecastCsv,
   exportStandardVsForecastPdf,
+  exportStandardVsForecastVarianceCsv,
 } from '../../api/standardForecast';
 import { getErrorMessage } from '../../utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
@@ -245,8 +246,21 @@ export function StandardVsForecastSection({
 
           {section === 'variance' && (
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
                 <CardTitle>Template-level variance</CardTitle>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    exportStandardVsForecastVarianceCsv(exportBase).catch((e) =>
+                      toast.error(getErrorMessage(e))
+                    )
+                  }
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="border-b border-border">

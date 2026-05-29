@@ -14,7 +14,10 @@ import {
   roundMoney,
   validateHeaders,
 } from './csvStandardForecast.js';
-import { moneyEqual } from '../forecast-actuals/csvForecastActuals.js';
+import {
+  formatUtcDateForCsv,
+  moneyEqual,
+} from '../forecast-actuals/csvForecastActuals.js';
 import {
   compareTemplateKeys,
   sortStandardRecords,
@@ -1060,6 +1063,104 @@ export async function listStandardVsForecastVariance({
     forecastDateRangeStart: forecastStart,
     forecastDateRangeEnd: forecastEnd,
   };
+}
+
+function formatUtcTimeForCsv(d) {
+  if (!d) return '';
+  const t = new Date(d);
+  if (Number.isNaN(t.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${pad(t.getUTCHours())}:${pad(t.getUTCMinutes())}`;
+}
+
+function formatStandardVarianceDateForCsv(record) {
+  if (record.shiftDate) return formatUtcDateForCsv(record.shiftDate);
+  if (record.day) return String(record.day);
+  return '';
+}
+
+function formatStandardVarianceStartForCsv(record) {
+  if (record.startTime) return String(record.startTime);
+  return formatUtcTimeForCsv(record.startDatetime);
+}
+
+function formatStandardVarianceEndForCsv(record) {
+  if (record.endTime) return String(record.endTime);
+  return formatUtcTimeForCsv(record.endDatetime);
+}
+
+async function fetchAllStandardVarianceTabRecords(args, tab) {
+  const first = await listStandardVsForecastVariance({ ...args, tab, page: 1 });
+  let records = [...first.records];
+  const totalPages = first.pageSize > 0 ? Math.ceil(first.total / first.pageSize) : 1;
+  for (let i = 2; i <= totalPages; i += 1) {
+    const page = await listStandardVsForecastVariance({ ...args, tab, page: i });
+    records.push(...page.records);
+  }
+  return records;
+}
+
+export async function exportStandardVsForecastVarianceCsv({
+  locationId,
+  clientId,
+  credentials,
+  dateFrom,
+  dateTo,
+}) {
+  const loc = await Location.findById(locationId).select('code').lean();
+  const listArgs = { locationId, clientId, credentials, dateFrom, dateTo };
+
+  const deletedRecords = await fetchAllStandardVarianceTabRecords(listArgs, 'deleted');
+  const additionalRecords = await fetchAllStandardVarianceTabRecords(listArgs, 'additional');
+  const varianceRecords = await fetchAllStandardVarianceTabRecords(listArgs, 'variance');
+
+  const lines = [
+    [
+      'Type',
+      'Date',
+      'Client name',
+      'Start time',
+      'End time',
+      'Duration',
+      'Total cost',
+      'Rate groups',
+      'Shift type',
+      'Ratio',
+    ].join(','),
+  ];
+
+  function writeRecord(record, typeLabel) {
+    lines.push(
+      [
+        csvEscape(typeLabel),
+        csvEscape(formatStandardVarianceDateForCsv(record)),
+        csvEscape(record.clientName || ''),
+        csvEscape(formatStandardVarianceStartForCsv(record)),
+        csvEscape(formatStandardVarianceEndForCsv(record)),
+        record.duration ?? '',
+        record.totalCost ?? '',
+        csvEscape(record.rateGroups || ''),
+        csvEscape(record.shiftType || ''),
+        csvEscape(normalizeRatio(record.ratio || '')),
+      ].join(',')
+    );
+  }
+
+  for (const record of deletedRecords) {
+    writeRecord(record, 'Deleted');
+  }
+  for (const record of additionalRecords) {
+    writeRecord(record, 'Additional');
+  }
+  for (const record of varianceRecords) {
+    const label = record.source === 'standard' ? 'Variance - Standard' : 'Variance - Forecast';
+    writeRecord(record, label);
+  }
+
+  const code = (loc?.code || 'loc').toLowerCase();
+  const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
+  const filename = `standard_vs_forecast_variance_${code}_${ts}.csv`;
+  return { filename, body: '\uFEFF' + lines.join('\n') };
 }
 
 export async function getStandardVsForecastVarianceDetail({
