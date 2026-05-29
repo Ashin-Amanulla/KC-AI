@@ -890,7 +890,7 @@ async function getVariancePairKeySets(locationId, staffId, clientId) {
           _id: {
             shiftcareId: '$shiftcareId',
             clientDirectoryId: { $ifNull: ['$clientDirectoryId', ''] },
-            clientName: { $first: '$clientName' },
+            clientName: { $ifNull: ['$clientName', ''] },
           },
         },
       },
