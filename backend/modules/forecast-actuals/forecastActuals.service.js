@@ -23,6 +23,7 @@ import {
 import { ForecastRecord } from './forecastRecord.model.js';
 import { ActualsRecord } from './actualsRecord.model.js';
 import { buildSummaryPdf } from './summaryPdf.js';
+import { normalizeRatio } from '../../utils/normalizeRatio.js';
 import { compareShiftDateRows } from '../../utils/weekdaySort.js';
 
 const PAGE_SIZE = () => config.forecastActuals.pageSize;
@@ -190,7 +191,7 @@ export function processRowCommon(row, normalizedColumns, staffMap, clientMap, ro
       shiftType,
       additionalShiftType,
       clientType,
-      ratio,
+      ratio: normalizeRatio(ratio),
     },
   };
 }
@@ -268,7 +269,7 @@ export async function buildForecastActualsDocFromBody(body, credentials, errorPr
       shiftType: body.shiftType || '',
       additionalShiftType: body.additionalShiftType || '',
       clientType: body.clientType || '',
-      ratio: String(body.ratio || '').trim(),
+      ratio: normalizeRatio(body.ratio),
     },
   };
 }
@@ -518,6 +519,7 @@ function serializeDoc(d) {
   o.id = String(o._id);
   delete o._id;
   delete o.__v;
+  if (o.ratio != null) o.ratio = normalizeRatio(o.ratio);
   return o;
 }
 
@@ -760,7 +762,7 @@ function forecastActualsRowToCsvLine(r, tz) {
     csvEscape(r.shiftType || ''),
     csvEscape(r.additionalShiftType || ''),
     csvEscape(r.clientType || ''),
-    csvEscape(r.ratio || ''),
+    csvEscape(normalizeRatio(r.ratio || '')),
   ].join(',');
 }
 
@@ -914,7 +916,7 @@ function computeDiffFields(fRec, aRec) {
   if (!moneyEqual(fRec.totalCost, aRec.totalCost)) diff.push('total_cost');
   if (String(fRec.rateGroups || '') !== String(aRec.rateGroups || '')) diff.push('rate_groups');
   if (String(fRec.shiftType || '') !== String(aRec.shiftType || '')) diff.push('shift_type');
-  if (String(fRec.ratio || '') !== String(aRec.ratio || '')) diff.push('ratio');
+  if (normalizeRatio(fRec.ratio) !== normalizeRatio(aRec.ratio)) diff.push('ratio');
   return diff;
 }
 
@@ -1358,7 +1360,7 @@ export async function exportVarianceCsv({ locationId, staffId, clientId, timezon
         csvEscape(record.shiftcareId),
         csvEscape(record.rateGroups || ''),
         csvEscape(record.shiftType || ''),
-        csvEscape(record.ratio || ''),
+        csvEscape(normalizeRatio(record.ratio || '')),
       ].join(',')
     );
   }

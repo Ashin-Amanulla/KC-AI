@@ -5,6 +5,7 @@
 
 import { TableCell, TableHead } from '../ui/table';
 import { cn } from '../lib/utils';
+import { normalizeRatio } from '../utils/normalizeRatio';
 
 /** Main variance table columns (both Forecast vs Actuals and Standard vs Forecast). */
 export const VARIANCE_COLUMNS = [
@@ -93,7 +94,7 @@ export function varianceCellValue(r, key) {
     case 'shiftType':
       return r.shiftType || '—';
     case 'ratio':
-      return r.ratio || '—';
+      return normalizeRatio(r.ratio) || '—';
     default:
       return '—';
   }

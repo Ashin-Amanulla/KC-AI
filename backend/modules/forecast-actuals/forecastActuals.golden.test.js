@@ -43,7 +43,25 @@ test('golden: processRowCommon happy path matches expected doc', () => {
   assert.strictEqual(doc.shiftDate.toISOString().slice(0, 10), '2026-04-15');
   assert.strictEqual(doc.startDatetime.toISOString(), '2026-04-15T09:00:00.000Z');
   assert.strictEqual(doc.endDatetime.toISOString(), '2026-04-15T17:00:00.000Z');
-  assert.strictEqual(doc.ratio, '1:02');
+  assert.strictEqual(doc.ratio, '1:2');
+});
+
+test('golden: processRowCommon normalizes ratio leading zeros', () => {
+  const row = {
+    'Client Name': 'Demo Client',
+    Date: '15/04/2026',
+    'Start Date Time': '15/04/2026 09:00',
+    'End Date Time': '15/04/2026 17:00',
+    Duration: '8',
+    Cost: '100',
+    'Total Cost': '100',
+    Ratio: '01:02',
+  };
+  const norm = buildNormalizedColumns(Object.keys(row));
+  const clientMap = new Map([['demo client', { id: 'c1', displayName: 'Demo Client' }]]);
+  const r = processRowCommon(row, norm, new Map(), clientMap, 2);
+  assert.ok(!r.error);
+  assert.strictEqual(r.doc.ratio, '1:2');
 });
 
 test('golden: processRowCommon Alex-style CSV (date + time columns, cost only)', () => {
@@ -74,7 +92,7 @@ test('golden: processRowCommon Alex-style CSV (date + time columns, cost only)',
   assert.strictEqual(doc.startDatetime.toISOString(), '2026-05-25T14:00:00.000Z');
   assert.strictEqual(doc.endDatetime.toISOString(), '2026-05-25T16:00:00.000Z');
   assert.strictEqual(doc.shiftType, 'Personal Care');
-  assert.strictEqual(doc.ratio, '1:01');
+  assert.strictEqual(doc.ratio, '1:1');
 });
 
 test('golden: processRowCommon overnight sleepover shift', () => {

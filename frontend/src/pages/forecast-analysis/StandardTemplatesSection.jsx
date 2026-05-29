@@ -10,6 +10,7 @@ import {
   exportStandardCsv,
 } from '../../api/standardForecast';
 import { getErrorMessage } from '../../utils/api';
+import { normalizeRatio } from '../../utils/normalizeRatio';
 import { validateCsvFile, CSV_ACCEPT } from '../../config/upload';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
@@ -336,9 +337,10 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Ratio</label>
                     <Input
-                      placeholder="1:02"
+                      placeholder="1:2"
                       value={rowForm.ratio}
                       onChange={(e) => updateRowField('ratio', e.target.value)}
+                      onBlur={(e) => updateRowField('ratio', normalizeRatio(e.target.value))}
                     />
                   </div>
                 </div>
@@ -408,7 +410,7 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                             <TableCell className="text-right">{r.duration}</TableCell>
                             <TableCell className="text-right">{formatMoney(r.totalCost)}</TableCell>
                             <TableCell>{r.shiftType || '—'}</TableCell>
-                            <TableCell>{r.ratio || '—'}</TableCell>
+                            <TableCell>{normalizeRatio(r.ratio) || '—'}</TableCell>
                             <TableCell>
                               <div className="flex gap-1">
                                 <Button

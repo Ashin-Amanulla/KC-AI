@@ -74,6 +74,21 @@ test('golden: buildStandardVsForecastRecord variance pct null when standard zero
   assert.strictEqual(r.variancePercentage, null);
 });
 
+test('golden: buildStandardDocFromFields normalizes ratio', () => {
+  const r = buildStandardDocFromFields({
+    clientDirectoryId: 'c1',
+    clientName: 'Acme',
+    day: 'Monday',
+    startTimeStr: '06:00',
+    endTimeStr: '10:00',
+    duration: '4',
+    totalCost: '100',
+    ratio: '01:02',
+  });
+  assert.ok(!r.error);
+  assert.strictEqual(r.doc.ratio, '1:2');
+});
+
 test('golden: buildStandardDocFromFields manual row', () => {
   const r = buildStandardDocFromFields({
     clientDirectoryId: 'c1',
@@ -87,7 +102,7 @@ test('golden: buildStandardDocFromFields manual row', () => {
     ratio: '1:01',
   });
   assert.ok(!r.error);
-  assert.strictEqual(r.doc.ratio, '1:01');
+  assert.strictEqual(r.doc.ratio, '1:1');
   assert.strictEqual(r.doc.startTime, '06:00');
   assert.strictEqual(r.doc.endTime, '10:00');
   assert.strictEqual(r.doc.totalCost, 151.96);
@@ -132,7 +147,7 @@ const baseStd = {
   totalCost: 400,
   rateGroups: 'RG1',
   shiftType: 'Personal Care',
-  ratio: '1:01',
+  ratio: '1:1',
   templateKey: 'c1|monday|06:00',
 };
 

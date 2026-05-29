@@ -20,6 +20,7 @@ import {
   sortStandardRecords,
   sortTemplateKeys,
 } from '../../utils/weekdaySort.js';
+import { normalizeRatio } from '../../utils/normalizeRatio.js';
 
 export { sortStandardRecords };
 
@@ -48,7 +49,7 @@ function serializeDoc(d) {
     rateGroups: d.rateGroups,
     referenceNo: d.referenceNo,
     shiftType: d.shiftType,
-    ratio: d.ratio,
+    ratio: normalizeRatio(d.ratio),
   };
 }
 
@@ -106,7 +107,7 @@ export function buildStandardDocFromFields(fields, errorPrefix = '') {
       rateGroups: String(rateGroups || '').trim(),
       referenceNo: String(referenceNo || '').trim(),
       shiftType: String(shiftType || '').trim(),
-      ratio: String(ratio || '').trim(),
+      ratio: normalizeRatio(ratio),
     },
   };
 }
@@ -360,7 +361,7 @@ function standardRowToCsvLine(r) {
     r.duration,
     r.totalCost,
     r.shiftType || '',
-    r.ratio || '',
+    normalizeRatio(r.ratio || ''),
   ]
     .map((c) => {
       const s = String(c ?? '');
@@ -636,7 +637,7 @@ export function computeStandardVarianceDiff(std, fcs) {
   }
   if (String(std.rateGroups || '') !== String(fcs.rateGroups || '')) diff.push('rate_groups');
   if (String(std.shiftType || '') !== String(fcs.shiftType || '')) diff.push('shift_type');
-  if (String(std.ratio || '') !== String(fcs.ratio || '')) diff.push('ratio');
+  if (normalizeRatio(std.ratio) !== normalizeRatio(fcs.ratio)) diff.push('ratio');
   return diff;
 }
 

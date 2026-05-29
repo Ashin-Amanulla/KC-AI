@@ -13,6 +13,7 @@ import {
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import { cn } from '../lib/utils';
 import { getErrorMessage } from '../utils/api';
+import { normalizeRatio } from '../utils/normalizeRatio';
 import { Upload, Download, Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   useCreateForecast,
@@ -140,6 +141,7 @@ function renderCell(r, col) {
     case 'bool':
       return v === true ? 'Yes' : v === false ? 'No' : '—';
     default:
+      if (col.key === 'ratio') return normalizeRatio(v) || '—';
       return v != null && String(v).trim() !== '' ? String(v) : '—';
   }
 }
@@ -375,7 +377,12 @@ export function ForecastActualsRowPanel({
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Ratio</label>
-              <Input placeholder="1:02" value={rowForm.ratio} onChange={(e) => updateField('ratio', e.target.value)} />
+              <Input
+                placeholder="1:2"
+                value={rowForm.ratio}
+                onChange={(e) => updateField('ratio', e.target.value)}
+                onBlur={(e) => updateField('ratio', normalizeRatio(e.target.value))}
+              />
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Rate groups</label>
