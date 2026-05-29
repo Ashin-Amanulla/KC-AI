@@ -5,7 +5,7 @@
 
 import { TableCell, TableHead } from '../ui/table';
 import { cn } from '../lib/utils';
-import { normalizeRatio } from '../utils/normalizeRatio';
+import { formatUtcDate, formatUtcDateTime, normalizeRatio } from '../utils/normalizeRatio';
 
 /** Main variance table columns (both Forecast vs Actuals and Standard vs Forecast). */
 export const VARIANCE_COLUMNS = [
@@ -128,13 +128,11 @@ export function VarianceDataCells({ row, diffCell, shiftIdPrefix = null }) {
 }
 
 export function formatDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString();
+  return formatUtcDate(d);
 }
 
 export function formatDt(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleString();
+  return formatUtcDateTime(d);
 }
 
 export function fmtMoney(v) {

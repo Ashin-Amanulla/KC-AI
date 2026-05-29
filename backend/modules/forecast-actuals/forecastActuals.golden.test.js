@@ -110,7 +110,7 @@ test('golden: processRowCommon overnight sleepover shift', () => {
   const r = processRowCommon(row, norm, new Map(), clientMap, 3);
   assert.ok(!r.error, r.error);
   assert.strictEqual(r.doc.startDatetime.toISOString(), '2026-05-27T22:00:00.000Z');
-  assert.strictEqual(r.doc.endDatetime.toISOString(), '2026-05-28T06:00:00.000Z');
+  assert.strictEqual(r.doc.endDatetime.toISOString(), '2026-05-27T06:00:00.000Z');
 });
 
 test('golden: processRowCommon forecast row with garbled end time', () => {

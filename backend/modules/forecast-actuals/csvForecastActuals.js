@@ -167,6 +167,57 @@ export function parseTime(timeStr) {
 }
 
 /**
+ * Parse start/end from CSV without timezone conversion or overnight adjustment.
+ * Full datetimes in the column are used as-is (UTC components); time-only values
+ * are combined with the row Date column.
+ */
+export function resolveForecastShiftTimes({ dateStr, startTimeStr, endTimeStr }) {
+  const shiftDate = parseDate(dateStr);
+  if (!shiftDate) {
+    return { error: 'invalid_date', detail: dateStr };
+  }
+
+  let startDatetime = parseDateTime(normalizeTimeInput(startTimeStr));
+  if (!startDatetime) {
+    startDatetime = combineDateAndTime(shiftDate, startTimeStr);
+  }
+  if (!startDatetime) {
+    return { error: 'invalid_start', detail: startTimeStr };
+  }
+
+  let endDatetime = parseDateTime(normalizeTimeInput(endTimeStr));
+  if (!endDatetime) {
+    endDatetime = combineDateAndTime(shiftDate, endTimeStr);
+  }
+  if (!endDatetime) {
+    return { error: 'invalid_end', detail: endTimeStr };
+  }
+
+  return { shiftDate, startDatetime, endDatetime };
+}
+
+/** Format stored Date as dd/mm/yyyy using UTC calendar components (no locale TZ). */
+export function formatUtcDateForCsv(d) {
+  if (!d) return '';
+  const t = new Date(d);
+  if (Number.isNaN(t.getTime())) return '';
+  const dd = String(t.getUTCDate()).padStart(2, '0');
+  const mm = String(t.getUTCMonth() + 1).padStart(2, '0');
+  const yyyy = t.getUTCFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+/** Format stored Date as dd/mm/yyyy hh:mm using UTC components (matches import parsers). */
+export function formatUtcDateTimeForCsv(d) {
+  if (!d) return '';
+  const t = new Date(d);
+  if (Number.isNaN(t.getTime())) return '';
+  const hh = String(t.getUTCHours()).padStart(2, '0');
+  const mi = String(t.getUTCMinutes()).padStart(2, '0');
+  return `${formatUtcDateForCsv(d)} ${hh}:${mi}`;
+}
+
+/**
  * Parse a datetime string, or combine shift date with a time-only value.
  */
 export function combineDateAndTime(shiftDate, timeStr) {
@@ -194,14 +245,23 @@ export function parseDateTime(dtStr) {
   const s0 = String(dtStr || '').trim();
   if (!s0) return null;
 
-  let s = s0.replace(' +', '+');
-  const isoTry = new Date(s);
-  if (!Number.isNaN(isoTry.getTime()) && s.includes('-') && s.length >= 16) {
-    return isoTry;
+  const s = s0.replace(' +', '+');
+
+  const isoLoose =
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?(?:\.\d+)?(?:Z)?$/i;
+  let m = s.match(isoLoose);
+  if (m) {
+    const yy = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10) - 1;
+    const dd = parseInt(m[3], 10);
+    const hh = m[4] != null ? parseInt(m[4], 10) : 0;
+    const mi = m[5] != null ? parseInt(m[5], 10) : 0;
+    const ss = m[6] != null ? parseInt(m[6], 10) : 0;
+    return new Date(Date.UTC(yy, mo, dd, hh, mi, ss));
   }
 
   const au24 = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/;
-  let m = s.match(au24);
+  m = s.match(au24);
   if (m) {
     const dd = parseInt(m[1], 10);
     const mm = parseInt(m[2], 10);

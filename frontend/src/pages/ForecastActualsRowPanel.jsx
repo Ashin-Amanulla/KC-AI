@@ -13,7 +13,7 @@ import {
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import { cn } from '../lib/utils';
 import { getErrorMessage } from '../utils/api';
-import { normalizeRatio } from '../utils/normalizeRatio';
+import { formatUtcDate, formatUtcDateTime, normalizeRatio } from '../utils/normalizeRatio';
 import { Upload, Download, Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   useCreateForecast,
@@ -72,13 +72,11 @@ const EMPTY_ROW_FORM = {
 };
 
 function formatDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString();
+  return formatUtcDate(d);
 }
 
 function formatDt(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleString();
+  return formatUtcDateTime(d);
 }
 
 function formatMoneyVal(v) {

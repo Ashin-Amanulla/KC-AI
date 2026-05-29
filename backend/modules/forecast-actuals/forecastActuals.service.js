@@ -10,7 +10,10 @@ import {
 import {
   buildNormalizedColumns,
   combineDateAndTime,
+  formatUtcDateForCsv,
+  formatUtcDateTimeForCsv,
   getRowValue,
+  resolveForecastShiftTimes,
   isBlankCsvRow,
   moneyEqual,
   parseBoolean,
@@ -137,22 +140,17 @@ export function processRowCommon(row, normalizedColumns, staffMap, clientMap, ro
   const clientEntry = clientMap.get(clientName.toLowerCase());
   if (!clientEntry) return { error: `Row ${rowNum}: Client '${clientName}' not found` };
 
-  const shiftDate = parseDate(dateStr);
-  if (!shiftDate) return { error: `Row ${rowNum}: Invalid date format '${dateStr}'` };
-
-  const startDatetime = combineDateAndTime(shiftDate, startTimeStr);
-  if (!startDatetime) {
+  const resolved = resolveForecastShiftTimes({ dateStr, startTimeStr, endTimeStr });
+  if (resolved.error === 'invalid_date') {
+    return { error: `Row ${rowNum}: Invalid date format '${dateStr}'` };
+  }
+  if (resolved.error === 'invalid_start') {
     return { error: `Row ${rowNum}: Invalid start time format '${startTimeStr}'` };
   }
-
-  let endDatetime = combineDateAndTime(shiftDate, endTimeStr);
-  if (!endDatetime) {
+  if (resolved.error === 'invalid_end') {
     return { error: `Row ${rowNum}: Invalid end time format '${endTimeStr}'` };
   }
-
-  if (endDatetime <= startDatetime) {
-    endDatetime = new Date(endDatetime.getTime() + 24 * 60 * 60 * 1000);
-  }
+  const { shiftDate, startDatetime, endDatetime } = resolved;
 
   const duration = parseDecimal(durationStr);
   if (duration == null) return { error: `Row ${rowNum}: Invalid duration '${durationStr}'` };
@@ -220,16 +218,15 @@ export async function buildForecastActualsDocFromBody(body, credentials, errorPr
     staffEntry = staffMap.get(String(body.staffName).toLowerCase()) || null;
   }
 
-  const shiftDate = body.shiftDate ? parseDate(body.shiftDate) : parseDate(body.date);
-  if (!shiftDate) return { error: `${prefix}Invalid date` };
-
-  const startDatetime = parseDateTime(body.startDatetime || body.startTime);
-  if (!startDatetime) return { error: `${prefix}Invalid start time` };
-
-  const endDatetime = parseDateTime(body.endDatetime || body.endTime);
-  if (!endDatetime) return { error: `${prefix}Invalid end time` };
-
-  if (endDatetime <= startDatetime) return { error: `${prefix}End time must be after start time` };
+  const resolved = resolveForecastShiftTimes({
+    dateStr: body.shiftDate || body.date,
+    startTimeStr: body.startDatetime || body.startTime,
+    endTimeStr: body.endDatetime || body.endTime,
+  });
+  if (resolved.error === 'invalid_date') return { error: `${prefix}Invalid date` };
+  if (resolved.error === 'invalid_start') return { error: `${prefix}Invalid start time` };
+  if (resolved.error === 'invalid_end') return { error: `${prefix}Invalid end time` };
+  const { shiftDate, startDatetime, endDatetime } = resolved;
 
   const duration = parseDecimal(body.duration);
   if (duration == null) return { error: `${prefix}Invalid duration` };
@@ -726,27 +723,13 @@ const FORECAST_ACTUALS_CSV_HEADER = [
   'ratio',
 ].join(',');
 
-function formatCsvShiftDate(d, tz) {
-  if (!d) return '';
-  return new Date(d).toLocaleDateString('en-AU', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-/** `dd/mm/yyyy hh:mm` 24h — matches `parseDateTime` au24 in csvForecastActuals */
-function formatCsvDateTimeForImport(d, tz) {
-  if (!d) return '';
-  const t = new Date(d);
-  const dmy = t.toLocaleDateString('en-AU', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' });
-  const hm = t.toLocaleTimeString('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
-  return `${dmy} ${hm}`.trim();
-}
-
-function forecastActualsRowToCsvLine(r, tz) {
+function forecastActualsRowToCsvLine(r) {
   return [
     csvEscape(r.clientName || ''),
-    formatCsvShiftDate(r.shiftDate, tz),
+    formatUtcDateForCsv(r.shiftDate),
     csvEscape(r.staffName || ''),
-    formatCsvDateTimeForImport(r.startDatetime, tz),
-    formatCsvDateTimeForImport(r.endDatetime, tz),
+    formatUtcDateTimeForCsv(r.startDatetime),
+    formatUtcDateTimeForCsv(r.endDatetime),
     r.duration ?? '',
     r.cost ?? '',
     r.totalCost ?? '',
@@ -769,8 +752,7 @@ function forecastActualsRowToCsvLine(r, tz) {
 export async function exportForecastCsv({ locationId, staffId, clientId, timezone }) {
   const filter = listFilter(locationId, staffId, clientId);
   const rows = await ForecastRecord.find(filter).sort({ shiftDate: 1, startDatetime: 1 }).lean();
-  const tz = timezone || 'Australia/Brisbane';
-  const lines = [FORECAST_ACTUALS_CSV_HEADER, ...rows.map((r) => forecastActualsRowToCsvLine(r, tz))];
+  const lines = [FORECAST_ACTUALS_CSV_HEADER, ...rows.map((r) => forecastActualsRowToCsvLine(r))];
   const loc = await Location.findById(locationId).select('code').lean();
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
@@ -781,8 +763,7 @@ export async function exportForecastCsv({ locationId, staffId, clientId, timezon
 export async function exportActualsCsv({ locationId, staffId, clientId, timezone }) {
   const filter = listFilter(locationId, staffId, clientId);
   const rows = await ActualsRecord.find(filter).sort({ shiftDate: 1, startDatetime: 1 }).lean();
-  const tz = timezone || 'Australia/Brisbane';
-  const lines = [FORECAST_ACTUALS_CSV_HEADER, ...rows.map((r) => forecastActualsRowToCsvLine(r, tz))];
+  const lines = [FORECAST_ACTUALS_CSV_HEADER, ...rows.map((r) => forecastActualsRowToCsvLine(r))];
   const loc = await Location.findById(locationId).select('code').lean();
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
@@ -1256,9 +1237,8 @@ function serializeVarianceRow(r) {
   };
 }
 
-export async function exportVarianceCsv({ locationId, staffId, clientId, timezone }) {
+export async function exportVarianceCsv({ locationId, staffId, clientId }) {
   const loc = await Location.findById(locationId).select('code timezone').lean();
-  const tz = timezone || loc?.timezone || 'Australia/Brisbane';
 
   const deletedResult = await listVariance({
     locationId,
@@ -1306,20 +1286,6 @@ export async function exportVarianceCsv({ locationId, staffId, clientId, timezon
     additionalRecords = all;
   }
 
-  function formatDt(dt) {
-    if (!dt) return '';
-    const d = new Date(dt);
-    return d.toLocaleString('en-AU', {
-      timeZone: tz,
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  }
-
   const lines = [
     [
       'Type',
@@ -1336,25 +1302,14 @@ export async function exportVarianceCsv({ locationId, staffId, clientId, timezon
     ].join(','),
   ];
 
-  function formatDateCsv(dt) {
-    if (!dt) return '';
-    const d = new Date(dt);
-    return d.toLocaleDateString('en-AU', {
-      timeZone: tz,
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  }
-
   function writeRecord(record, typeLabel) {
     lines.push(
       [
         csvEscape(typeLabel),
-        csvEscape(formatDateCsv(record.shiftDate)),
+        csvEscape(formatUtcDateForCsv(record.shiftDate)),
         csvEscape(record.clientName || ''),
-        csvEscape(formatDt(record.startDatetime)),
-        csvEscape(formatDt(record.endDatetime)),
+        csvEscape(formatUtcDateTimeForCsv(record.startDatetime)),
+        csvEscape(formatUtcDateTimeForCsv(record.endDatetime)),
         record.duration,
         record.totalCost,
         csvEscape(record.shiftcareId),

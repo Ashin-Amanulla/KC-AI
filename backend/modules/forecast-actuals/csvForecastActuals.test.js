@@ -4,6 +4,7 @@ import {
   buildNormalizedColumns,
   COLUMN_ALIASES,
   combineDateAndTime,
+  formatUtcDateTimeForCsv,
   moneyEqual,
   normalizeColumnName,
   parseBoolean,
@@ -11,6 +12,7 @@ import {
   parseDateTime,
   parseDecimal,
   parseTime,
+  resolveForecastShiftTimes,
   REQUIRED_CSV_COLUMNS,
   roundMoney,
   validateHeaders,
@@ -47,13 +49,15 @@ test('combineDateAndTime merges US date with time-only', () => {
   assert.strictEqual(end.toISOString(), '2026-05-25T16:00:00.000Z');
 });
 
-test('combineDateAndTime supports overnight end on next calendar day', () => {
-  const shiftDate = parseDate('05/25/2026');
-  const start = combineDateAndTime(shiftDate, '10:00:00 PM');
-  let end = combineDateAndTime(shiftDate, '6:00:00 AM');
-  assert.ok(end <= start);
-  end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
-  assert.strictEqual(end.toISOString(), '2026-05-26T06:00:00.000Z');
+test('resolveForecastShiftTimes does not roll overnight end to next day', () => {
+  const r = resolveForecastShiftTimes({
+    dateStr: '05/27/2026',
+    startTimeStr: '10:00:00 PM',
+    endTimeStr: '6:00:00 AM',
+  });
+  assert.ok(!r.error);
+  assert.strictEqual(r.startDatetime.toISOString(), '2026-05-27T22:00:00.000Z');
+  assert.strictEqual(r.endDatetime.toISOString(), '2026-05-27T06:00:00.000Z');
 });
 
 test('normalizeColumnName collapses extra spaces in headers', () => {
@@ -73,6 +77,16 @@ test('parseDate: ISO and AU slash', () => {
   assert.strictEqual(d1.toISOString().slice(0, 10), '2026-04-15');
   const d2 = parseDate('15/04/2026');
   assert.strictEqual(d2.toISOString().slice(0, 10), '2026-04-15');
+});
+
+test('parseDateTime: ISO without Z uses UTC components', () => {
+  const t = parseDateTime('2026-04-15T09:00');
+  assert.strictEqual(t.toISOString(), '2026-04-15T09:00:00.000Z');
+});
+
+test('formatUtcDateTimeForCsv uses UTC not locale TZ', () => {
+  const d = new Date(Date.UTC(2026, 3, 15, 9, 0, 0));
+  assert.strictEqual(formatUtcDateTimeForCsv(d), '15/04/2026 09:00');
 });
 
 test('parseDateTime: AU 24h and 12h', () => {
