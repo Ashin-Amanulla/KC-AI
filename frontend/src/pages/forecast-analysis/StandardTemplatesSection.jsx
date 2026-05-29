@@ -27,6 +27,19 @@ import { LoadingScreen } from '../../ui/LoadingSpinner';
 import { cn } from '../../lib/utils';
 import { sortByWeekdayThenTime } from '../../utils/weekdaySort';
 import { Upload, Download, Plus, Pencil, Trash2 } from 'lucide-react';
+import { VARIANCE_COLUMNS, varianceCellValue } from '../varianceUI';
+
+function standardTemplateKey(r) {
+  return `${r.clientDirectoryId}|${String(r.day || '').trim().toLowerCase()}|${r.startTime || ''}`;
+}
+
+function standardRowForDisplay(r) {
+  return {
+    ...r,
+    shiftcareId: standardTemplateKey(r),
+    templateKey: standardTemplateKey(r),
+  };
+}
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -58,11 +71,8 @@ function recordToStandardForm(r) {
   };
 }
 
-function formatMoney(v) {
-  if (v == null || v === '') return '—';
-  const n = typeof v === 'number' ? v : Number(v);
-  return Number.isFinite(n) ? n.toFixed(2) : '—';
-}
+const TEMPLATE_TABLE_COLUMNS = VARIANCE_COLUMNS;
+const TEMPLATE_TABLE_COLSPAN = TEMPLATE_TABLE_COLUMNS.length + 1;
 
 export function StandardTemplatesSection({ locationId, client, directory, dirLoading }) {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -376,41 +386,54 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
               <LoadingScreen message="Loading standard records…" />
             ) : (
               <>
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Day</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Start</TableHead>
-                        <TableHead>End</TableHead>
-                        <TableHead className="text-right">Duration</TableHead>
-                        <TableHead className="text-right">Cost</TableHead>
-                        <TableHead>Shift type</TableHead>
-                        <TableHead>Ratio</TableHead>
+                        {TEMPLATE_TABLE_COLUMNS.map((col) => (
+                          <TableHead
+                            key={col.key}
+                            className={col.align === 'right' ? 'text-right' : undefined}
+                          >
+                            {col.label}
+                          </TableHead>
+                        ))}
                         <TableHead className="w-[100px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {tableRecords.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                          <TableCell
+                            colSpan={TEMPLATE_TABLE_COLSPAN}
+                            className="text-center text-muted-foreground py-8"
+                          >
                             {client === 'all'
                               ? 'No standard records yet. Add a row or upload a CSV.'
                               : `No standard records for ${selectedClientLabel || 'this client'}.`}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        tableRecords.map((r) => (
+                        tableRecords.map((r) => {
+                          const display = standardRowForDisplay(r);
+                          return (
                           <TableRow key={r.id}>
-                            <TableCell>{r.day}</TableCell>
-                            <TableCell>{r.clientName}</TableCell>
-                            <TableCell>{r.startTime}</TableCell>
-                            <TableCell>{r.endTime}</TableCell>
-                            <TableCell className="text-right">{r.duration}</TableCell>
-                            <TableCell className="text-right">{formatMoney(r.totalCost)}</TableCell>
-                            <TableCell>{r.shiftType || '—'}</TableCell>
-                            <TableCell>{normalizeRatio(r.ratio) || '—'}</TableCell>
+                            {TEMPLATE_TABLE_COLUMNS.map((col) => (
+                              <TableCell
+                                key={col.key}
+                                className={cn(
+                                  col.align === 'right' ? 'text-right whitespace-nowrap' : 'whitespace-nowrap',
+                                  col.key === 'shiftcareId' && 'font-mono text-xs max-w-[180px] truncate',
+                                  col.key === 'clientName' && 'max-w-[200px] truncate',
+                                  col.key === 'rateGroups' && 'max-w-[240px] truncate'
+                                )}
+                                title={
+                                  col.key === 'rateGroups' ? display.rateGroups || undefined : undefined
+                                }
+                              >
+                                {varianceCellValue(display, col.key)}
+                              </TableCell>
+                            ))}
                             <TableCell>
                               <div className="flex gap-1">
                                 <Button
@@ -437,7 +460,8 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
