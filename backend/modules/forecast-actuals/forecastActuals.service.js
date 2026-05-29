@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
-import { parse } from 'csv-parse/sync';
 import { config } from '../../config/index.js';
+import { parseTabularBuffer } from '../../utils/tabularFile.js';
+import { buildTabularExport } from '../../utils/tabularExport.js';
 import { Location } from '../locations/location.model.js';
 import {
   buildLookupMaps,
@@ -358,32 +359,25 @@ export async function deleteActualsRecord({ id, locationId }) {
   return { success: true };
 }
 
-export async function uploadForecastFromCsv({
+async function uploadForecastActualsFromFile({
   locationId,
   fileBuffer,
-  credentials,
+  originalFilename,
   uploadedBy,
+  Model,
+  clientMap,
+  staffMap,
 }) {
-  const clients = await fetchAllClients(credentials);
-  const staff = await fetchAllStaff(credentials);
-  const { clientMap, staffMap } = buildLookupMaps(clients, staff);
-
   let records;
   try {
-    records = parse(fileBuffer, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-      bom: true,
-      relax_column_count: true,
-    });
+    records = parseTabularBuffer(fileBuffer, originalFilename);
   } catch (e) {
     return {
       success: false,
       rowsProcessed: 0,
       recordsCreated: 0,
       recordsSkipped: 0,
-      errors: [`CSV parsing error: ${e.message}`],
+      errors: [`File parsing error: ${e.message}`],
     };
   }
 
@@ -393,7 +387,7 @@ export async function uploadForecastFromCsv({
       rowsProcessed: 0,
       recordsCreated: 0,
       recordsSkipped: 0,
-      errors: ['CSV file is empty or has no data rows'],
+      errors: ['File is empty or has no data rows'],
     };
   }
 
@@ -435,8 +429,8 @@ export async function uploadForecastFromCsv({
   }
 
   if (toInsert.length) {
-    await ForecastRecord.deleteMany({ location: locObj });
-    await ForecastRecord.insertMany(toInsert);
+    await Model.deleteMany({ location: locObj });
+    await Model.insertMany(toInsert);
   }
 
   return {
@@ -448,9 +442,10 @@ export async function uploadForecastFromCsv({
   };
 }
 
-export async function uploadActualsFromCsv({
+export async function uploadForecastFromCsv({
   locationId,
   fileBuffer,
+  originalFilename = '',
   credentials,
   uploadedBy,
 }) {
@@ -458,84 +453,37 @@ export async function uploadActualsFromCsv({
   const staff = await fetchAllStaff(credentials);
   const { clientMap, staffMap } = buildLookupMaps(clients, staff);
 
-  let records;
-  try {
-    records = parse(fileBuffer, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-      bom: true,
-      relax_column_count: true,
-    });
-  } catch (e) {
-    return {
-      success: false,
-      rowsProcessed: 0,
-      recordsCreated: 0,
-      recordsSkipped: 0,
-      errors: [`CSV parsing error: ${e.message}`],
-    };
-  }
+  return uploadForecastActualsFromFile({
+    locationId,
+    fileBuffer,
+    originalFilename,
+    uploadedBy,
+    Model: ForecastRecord,
+    clientMap,
+    staffMap,
+  });
+}
 
-  if (!records.length) {
-    return {
-      success: false,
-      rowsProcessed: 0,
-      recordsCreated: 0,
-      recordsSkipped: 0,
-      errors: ['CSV file is empty or has no data rows'],
-    };
-  }
+export async function uploadActualsFromCsv({
+  locationId,
+  fileBuffer,
+  originalFilename = '',
+  credentials,
+  uploadedBy,
+}) {
+  const clients = await fetchAllClients(credentials);
+  const staff = await fetchAllStaff(credentials);
+  const { clientMap, staffMap } = buildLookupMaps(clients, staff);
 
-  const fieldnames = Object.keys(records[0]);
-  const normalizedColumns = buildNormalizedColumns(fieldnames);
-  const headerErrors = validateHeaders(new Set(normalizedColumns.keys()));
-  if (headerErrors.length) {
-    return {
-      success: false,
-      rowsProcessed: 0,
-      recordsCreated: 0,
-      recordsSkipped: 0,
-      errors: headerErrors,
-    };
-  }
-
-  const locObj = locObjectId(locationId);
-  const toInsert = [];
-  const errors = [];
-  let rowsProcessed = 0;
-  let recordsSkipped = 0;
-  let rowNum = 1;
-
-  for (const row of records) {
-    if (isBlankCsvRow(row)) continue;
-    rowNum += 1;
-    rowsProcessed += 1;
-    const r = processRowCommon(row, normalizedColumns, staffMap, clientMap, rowNum);
-    if (r.error) {
-      errors.push(r.error);
-      recordsSkipped += 1;
-      continue;
-    }
-    toInsert.push({
-      ...r.doc,
-      location: locObj,
-      uploadedBy: uploadedBy || null,
-    });
-  }
-
-  if (toInsert.length) {
-    await ActualsRecord.deleteMany({ location: locObj });
-    await ActualsRecord.insertMany(toInsert);
-  }
-
-  return {
-    success: toInsert.length > 0,
-    rowsProcessed,
-    recordsCreated: toInsert.length,
-    recordsSkipped,
-    errors: errors.slice(0, 50),
-  };
+  return uploadForecastActualsFromFile({
+    locationId,
+    fileBuffer,
+    originalFilename,
+    uploadedBy,
+    Model: ActualsRecord,
+    clientMap,
+    staffMap,
+  });
 }
 
 function serializeDoc(d) {
@@ -719,7 +667,7 @@ export async function getSummary({ locationId, staffId, clientId, credentials, d
 }
 
 /** Aligned with `csvForecastActuals` + `processRowCommon` (import) column names */
-const FORECAST_ACTUALS_CSV_HEADER = [
+const FORECAST_ACTUALS_EXPORT_HEADERS = [
   'client name',
   'date',
   'staff',
@@ -741,103 +689,126 @@ const FORECAST_ACTUALS_CSV_HEADER = [
   'additional shift type',
   'client type',
   'ratio',
-].join(',');
+];
 
-function forecastActualsRowToCsvLine(r) {
+function forecastActualsRowToExportArray(r) {
   return [
-    csvEscape(r.clientName || ''),
+    r.clientName || '',
     formatUtcDateForCsv(r.shiftDate),
-    csvEscape(r.staffName || ''),
+    r.staffName || '',
     formatUtcDateTimeForCsv(r.startDatetime),
     formatUtcDateTimeForCsv(r.endDatetime),
     r.duration ?? '',
     r.cost ?? '',
     r.totalCost ?? '',
-    csvEscape(r.shiftcareId || ''),
-    csvEscape(r.shiftDescription || ''),
+    r.shiftcareId || '',
+    r.shiftDescription || '',
     r.additionalCost ?? '',
     r.kms ?? '',
     r.isAbsent ? 'Yes' : 'No',
-    csvEscape(r.status || ''),
-    csvEscape(r.invoiceNumbers || ''),
-    csvEscape(r.rateGroups || ''),
-    csvEscape(r.referenceNo || ''),
-    csvEscape(r.shiftType || ''),
-    csvEscape(r.additionalShiftType || ''),
-    csvEscape(r.clientType || ''),
-    csvEscape(normalizeRatio(r.ratio || '')),
-  ].join(',');
+    r.status || '',
+    r.invoiceNumbers || '',
+    r.rateGroups || '',
+    r.referenceNo || '',
+    r.shiftType || '',
+    r.additionalShiftType || '',
+    r.clientType || '',
+    normalizeRatio(r.ratio || ''),
+  ];
 }
 
-export async function exportForecastCsv({ locationId, staffId, clientId, timezone, dateFrom, dateTo }) {
+export async function exportForecastCsv({
+  locationId,
+  staffId,
+  clientId,
+  timezone,
+  dateFrom,
+  dateTo,
+  format = 'csv',
+}) {
   const filter = listFilter(locationId, staffId, clientId, dateFrom, dateTo);
   const rows = await ForecastRecord.find(filter).sort({ shiftDate: 1, startDatetime: 1 }).lean();
-  const lines = [FORECAST_ACTUALS_CSV_HEADER, ...rows.map((r) => forecastActualsRowToCsvLine(r))];
   const loc = await Location.findById(locationId).select('code').lean();
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
-  const filename = `forecast_${code}_${ts}.csv`;
-  return { filename, body: '\uFEFF' + lines.join('\n') };
+  return buildTabularExport({
+    headers: FORECAST_ACTUALS_EXPORT_HEADERS,
+    rows: rows.map((r) => forecastActualsRowToExportArray(r)),
+    baseFilename: `forecast_${code}_${ts}`,
+    format,
+  });
 }
 
-export async function exportActualsCsv({ locationId, staffId, clientId, timezone, dateFrom, dateTo }) {
+export async function exportActualsCsv({
+  locationId,
+  staffId,
+  clientId,
+  timezone,
+  dateFrom,
+  dateTo,
+  format = 'csv',
+}) {
   const filter = listFilter(locationId, staffId, clientId, dateFrom, dateTo);
   const rows = await ActualsRecord.find(filter).sort({ shiftDate: 1, startDatetime: 1 }).lean();
-  const lines = [FORECAST_ACTUALS_CSV_HEADER, ...rows.map((r) => forecastActualsRowToCsvLine(r))];
   const loc = await Location.findById(locationId).select('code').lean();
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
-  const filename = `actuals_${code}_${ts}.csv`;
-  return { filename, body: '\uFEFF' + lines.join('\n') };
+  return buildTabularExport({
+    headers: FORECAST_ACTUALS_EXPORT_HEADERS,
+    rows: rows.map((r) => forecastActualsRowToExportArray(r)),
+    baseFilename: `actuals_${code}_${ts}`,
+    format,
+  });
 }
 
-function csvEscape(s) {
-  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
-  return s;
-}
-
-export async function exportSummaryCsv({ locationId, staffId, clientId, credentials, dateFrom, dateTo }) {
+export async function exportSummaryCsv({
+  locationId,
+  staffId,
+  clientId,
+  credentials,
+  dateFrom,
+  dateTo,
+  format = 'csv',
+}) {
   const result = await getSummary({ locationId, staffId, clientId, credentials, dateFrom, dateTo });
-  const lines = [
-    ['Client Name', 'Forecast Budget', 'Net Actuals', 'Mileage', 'Gross Actuals', 'Variance', 'Variance %'].join(
-      ','
-    ),
+  const headers = [
+    'Client Name',
+    'Forecast Budget',
+    'Net Actuals',
+    'Mileage',
+    'Gross Actuals',
+    'Variance',
+    'Variance %',
   ];
-  for (const r of result.records) {
-    const pct = r.variancePercentage != null ? `${r.variancePercentage.toFixed(2)}%` : '';
-    lines.push(
-      [
-        csvEscape(r.clientName),
-        r.forecastBudget.toFixed(2),
-        r.netActuals.toFixed(2),
-        r.mileage.toFixed(2),
-        r.grossActuals.toFixed(2),
-        r.variance.toFixed(2),
-        pct,
-      ].join(',')
-    );
-  }
+  const dataRows = result.records.map((r) => [
+    r.clientName,
+    r.forecastBudget.toFixed(2),
+    r.netActuals.toFixed(2),
+    r.mileage.toFixed(2),
+    r.grossActuals.toFixed(2),
+    r.variance.toFixed(2),
+    r.variancePercentage != null ? `${r.variancePercentage.toFixed(2)}%` : '',
+  ]);
   const t = result.totals;
-  const tpct = t.variancePercentage != null ? `${t.variancePercentage.toFixed(2)}%` : '';
-  lines.push(
-    [
-      csvEscape(t.clientName),
-      t.forecastBudget.toFixed(2),
-      t.netActuals.toFixed(2),
-      t.mileage.toFixed(2),
-      t.grossActuals.toFixed(2),
-      t.variance.toFixed(2),
-      tpct,
-    ].join(',')
-  );
+  dataRows.push([
+    t.clientName,
+    t.forecastBudget.toFixed(2),
+    t.netActuals.toFixed(2),
+    t.mileage.toFixed(2),
+    t.grossActuals.toFixed(2),
+    t.variance.toFixed(2),
+    t.variancePercentage != null ? `${t.variancePercentage.toFixed(2)}%` : '',
+  ]);
 
   const loc = await Location.findById(locationId).select('code').lean();
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
-  const filename = `summary_${code}_${ts}.csv`;
-  return { filename, body: '\uFEFF' + lines.join('\n') };
+  return buildTabularExport({
+    headers,
+    rows: dataRows,
+    baseFilename: `summary_${code}_${ts}`,
+    format,
+  });
 }
 
 export async function exportSummaryPdf({ locationId, staffId, clientId, credentials, dateFrom, dateTo }) {
@@ -1237,7 +1208,14 @@ function serializeVarianceRow(r) {
   };
 }
 
-export async function exportVarianceCsv({ locationId, staffId, clientId, dateFrom, dateTo }) {
+export async function exportVarianceCsv({
+  locationId,
+  staffId,
+  clientId,
+  dateFrom,
+  dateTo,
+  format = 'csv',
+}) {
   const loc = await Location.findById(locationId).select('code timezone').lean();
   const varianceListArgs = { locationId, staffId, clientId, dateFrom, dateTo };
 
@@ -1298,55 +1276,57 @@ export async function exportVarianceCsv({ locationId, staffId, clientId, dateFro
     varianceRecords = all;
   }
 
-  const lines = [
-    [
-      'Type',
-      'Date',
-      'Client name',
-      'Start date time',
-      'End date time',
-      'Duration',
-      'Total cost',
-      'Shift id',
-      'Rate groups',
-      'Shift type',
-      'Ratio',
-    ].join(','),
+  const headers = [
+    'Type',
+    'Date',
+    'Client name',
+    'Start date time',
+    'End date time',
+    'Duration',
+    'Total cost',
+    'Shift id',
+    'Rate groups',
+    'Shift type',
+    'Ratio',
   ];
 
-  function writeRecord(record, typeLabel) {
-    lines.push(
-      [
-        csvEscape(typeLabel),
-        csvEscape(formatUtcDateForCsv(record.shiftDate)),
-        csvEscape(record.clientName || ''),
-        csvEscape(formatUtcDateTimeForCsv(record.startDatetime)),
-        csvEscape(formatUtcDateTimeForCsv(record.endDatetime)),
-        record.duration,
-        record.totalCost,
-        csvEscape(record.shiftcareId),
-        csvEscape(record.rateGroups || ''),
-        csvEscape(record.shiftType || ''),
-        csvEscape(normalizeRatio(record.ratio || '')),
-      ].join(',')
-    );
+  const exportRows = [];
+
+  function pushRecord(record, typeLabel) {
+    exportRows.push([
+      typeLabel,
+      formatUtcDateForCsv(record.shiftDate),
+      record.clientName || '',
+      formatUtcDateTimeForCsv(record.startDatetime),
+      formatUtcDateTimeForCsv(record.endDatetime),
+      record.duration,
+      record.totalCost,
+      record.shiftcareId || '',
+      record.rateGroups || '',
+      record.shiftType || '',
+      normalizeRatio(record.ratio || ''),
+    ]);
   }
 
   for (const record of deletedRecords) {
-    writeRecord(record, 'Deleted');
+    pushRecord(record, 'Deleted');
   }
   for (const record of additionalRecords) {
-    writeRecord(record, 'Additional');
+    pushRecord(record, 'Additional');
   }
   for (const record of varianceRecords) {
     const label = record.source === 'forecast' ? 'Variance - Forecast' : 'Variance - Actuals';
-    writeRecord(record, label);
+    pushRecord(record, label);
   }
 
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
-  const filename = `variance_all_${code}_${ts}.csv`;
-  return { filename, body: '\uFEFF' + lines.join('\n') };
+  return buildTabularExport({
+    headers,
+    rows: exportRows,
+    baseFilename: `variance_all_${code}_${ts}`,
+    format,
+  });
 }
 
 export async function getVarianceDetail({ locationId, variancePairKey }) {

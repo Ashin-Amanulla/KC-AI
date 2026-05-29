@@ -15,7 +15,8 @@ import {
   exportVarianceCsv,
 } from '../../api/forecastActuals';
 import { getErrorMessage } from '../../utils/api';
-import { validateCsvFile, CSV_ACCEPT } from '../../config/upload';
+import { validateTabularFile, TABULAR_ACCEPT } from '../../config/upload';
+import { TabularExportButtons } from '../../components/TabularExportButtons';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import {
@@ -28,7 +29,7 @@ import {
 } from '../../ui/table';
 import { LoadingScreen } from '../../ui/LoadingSpinner';
 import { cn } from '../../lib/utils';
-import { Download, FileSpreadsheet } from 'lucide-react';
+import { FileSpreadsheet } from 'lucide-react';
 import { ForecastActualsRowPanel } from '../ForecastActualsRowPanel';
 import {
   formatDate,
@@ -111,7 +112,7 @@ export function ForecastActualsSection({
   const onDropForecast = async (files) => {
     const f = files?.[0];
     if (!f || !locationId) return;
-    const validation = validateCsvFile(f);
+    const validation = validateTabularFile(f);
     if (!validation.valid) {
       toast.error(validation.error);
       return;
@@ -127,7 +128,7 @@ export function ForecastActualsSection({
   const onDropActuals = async (files) => {
     const f = files?.[0];
     if (!f || !locationId) return;
-    const validation = validateCsvFile(f);
+    const validation = validateTabularFile(f);
     if (!validation.valid) {
       toast.error(validation.error);
       return;
@@ -142,13 +143,13 @@ export function ForecastActualsSection({
 
   const fzForecast = useDropzone({
     onDrop: onDropForecast,
-    accept: CSV_ACCEPT,
+    accept: TABULAR_ACCEPT,
     multiple: false,
     disabled: !locationId || uploadForecastM.isPending,
   });
   const fzActuals = useDropzone({
     onDrop: onDropActuals,
-    accept: CSV_ACCEPT,
+    accept: TABULAR_ACCEPT,
     multiple: false,
     disabled: !locationId || uploadActualsM.isPending,
   });
@@ -199,7 +200,14 @@ export function ForecastActualsSection({
                   listLoading={forecastQ.isLoading}
                   listError={forecastQ.error}
                   dropzone={fzForecast}
-                  onExport={() => exportForecastCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))}
+                  onExportCsv={() =>
+                    exportForecastCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))
+                  }
+                  onExportXlsx={() =>
+                    exportForecastCsv({ ...exportBase, format: 'xlsx' }).catch((e) =>
+                      toast.error(getErrorMessage(e))
+                    )
+                  }
                   page={page}
                   setPage={onPageChange}
                 />
@@ -223,7 +231,14 @@ export function ForecastActualsSection({
                   listLoading={actualsQ.isLoading}
                   listError={actualsQ.error}
                   dropzone={fzActuals}
-                  onExport={() => exportActualsCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))}
+                  onExportCsv={() =>
+                    exportActualsCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))
+                  }
+                  onExportXlsx={() =>
+                    exportActualsCsv({ ...exportBase, format: 'xlsx' }).catch((e) =>
+                      toast.error(getErrorMessage(e))
+                    )
+                  }
                   page={page}
                   setPage={onPageChange}
                 />
@@ -235,23 +250,24 @@ export function ForecastActualsSection({
             <Card>
               <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
                 <CardTitle>Summary by client</CardTitle>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => exportSummaryCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))}
-                  >
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    CSV
-                  </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <TabularExportButtons
+                    onExportCsv={() =>
+                      exportSummaryCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))
+                    }
+                    onExportXlsx={() =>
+                      exportSummaryCsv({ ...exportBase, format: 'xlsx' }).catch((e) =>
+                        toast.error(getErrorMessage(e))
+                      )
+                    }
+                  />
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => exportSummaryPdf(exportBase).catch((e) => toast.error(getErrorMessage(e)))}
                   >
-                    <Download className="mr-2 h-4 w-4" />
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
                     PDF
                   </Button>
                 </div>
@@ -334,15 +350,16 @@ export function ForecastActualsSection({
             <Card>
               <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
                 <CardTitle>Variance by Shift ID</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => exportVarianceCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
-                </Button>
+                <TabularExportButtons
+                  onExportCsv={() =>
+                    exportVarianceCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))
+                  }
+                  onExportXlsx={() =>
+                    exportVarianceCsv({ ...exportBase, format: 'xlsx' }).catch((e) =>
+                      toast.error(getErrorMessage(e))
+                    )
+                  }
+                />
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="border-b border-border">

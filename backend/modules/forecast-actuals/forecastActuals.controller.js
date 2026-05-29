@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import fs from 'fs';
 import { getShiftCareCredentials } from '../../middlewares/auth.middleware.js';
 import { Location } from '../locations/location.model.js';
+import { sendTabularExport } from '../../utils/tabularExport.js';
+import { resolveExportFormat } from '../../utils/tabularExport.js';
 import {
   createActualsRecord,
   createForecastRecord,
@@ -84,6 +86,7 @@ export const postForecastUpload = async (req, res, next) => {
     const result = await uploadForecastFromCsv({
       locationId,
       fileBuffer: buffer,
+      originalFilename: req.file.originalname,
       credentials,
       uploadedBy: req.user?.userId || null,
     });
@@ -118,6 +121,7 @@ export const postActualsUpload = async (req, res, next) => {
     const result = await uploadActualsFromCsv({
       locationId,
       fileBuffer: buffer,
+      originalFilename: req.file.originalname,
       credentials,
       uploadedBy: req.user?.userId || null,
     });
@@ -303,16 +307,15 @@ export const getForecastExport = async (req, res, next) => {
     const { error, status, location } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const { filename, body } = await exportForecastCsv({
+    const result = await exportForecastCsv({
       locationId,
       staffId: staff,
       clientId: client,
       timezone: location.timezone,
+      format: resolveExportFormat(req.query.format),
       ...scopeDateRange(req.query),
     });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(body);
+    sendTabularExport(res, result);
   } catch (e) {
     next(e);
   }
@@ -324,16 +327,15 @@ export const getActualsExport = async (req, res, next) => {
     const { error, status, location } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const { filename, body } = await exportActualsCsv({
+    const result = await exportActualsCsv({
       locationId,
       staffId: staff,
       clientId: client,
       timezone: location.timezone,
+      format: resolveExportFormat(req.query.format),
       ...scopeDateRange(req.query),
     });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(body);
+    sendTabularExport(res, result);
   } catch (e) {
     next(e);
   }
@@ -348,16 +350,15 @@ export const getSummaryExportCsv = async (req, res, next) => {
     const { error, status } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const { filename, body } = await exportSummaryCsv({
+    const result = await exportSummaryCsv({
       locationId,
       staffId: staff,
       clientId: client,
       credentials,
+      format: resolveExportFormat(req.query.format),
       ...scopeDateRange(req.query),
     });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(body);
+    sendTabularExport(res, result);
   } catch (e) {
     next(e);
   }
@@ -413,15 +414,14 @@ export const getVarianceExport = async (req, res, next) => {
     const { error, status, location } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const { filename, body } = await exportVarianceCsv({
+    const result = await exportVarianceCsv({
       locationId,
       staffId: staff,
       clientId: client,
+      format: resolveExportFormat(req.query.format),
       ...scopeDateRange(req.query),
     });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(body);
+    sendTabularExport(res, result);
   } catch (e) {
     next(e);
   }

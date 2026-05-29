@@ -11,7 +11,8 @@ import {
 } from '../../api/standardForecast';
 import { getErrorMessage } from '../../utils/api';
 import { normalizeRatio } from '../../utils/normalizeRatio';
-import { validateCsvFile, CSV_ACCEPT } from '../../config/upload';
+import { validateTabularFile, TABULAR_ACCEPT } from '../../config/upload';
+import { TabularExportButtons } from '../../components/TabularExportButtons';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -26,7 +27,7 @@ import {
 import { LoadingScreen } from '../../ui/LoadingSpinner';
 import { cn } from '../../lib/utils';
 import { sortByWeekdayThenTime } from '../../utils/weekdaySort';
-import { Upload, Download, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Upload, Plus, Pencil, Trash2 } from 'lucide-react';
 import { VARIANCE_COLUMNS, varianceCellValue } from '../varianceUI';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -83,7 +84,7 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
   const onDrop = async (files) => {
     const f = files?.[0];
     if (!f || !locationId) return;
-    const validation = validateCsvFile(f);
+    const validation = validateTabularFile(f);
     if (!validation.valid) {
       toast.error(validation.error);
       return;
@@ -98,7 +99,7 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
 
   const dropzone = useDropzone({
     onDrop,
-    accept: CSV_ACCEPT,
+    accept: TABULAR_ACCEPT,
     multiple: false,
     disabled: !locationId || uploadM.isPending,
   });
@@ -218,15 +219,16 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                 <Plus className="mr-2 h-4 w-4" />
                 {showAddForm ? 'Cancel' : 'Add row'}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => exportStandardCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
+              <TabularExportButtons
+                onExportCsv={() =>
+                  exportStandardCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))
+                }
+                onExportXlsx={() =>
+                  exportStandardCsv({ ...exportBase, format: 'xlsx' }).catch((e) =>
+                    toast.error(getErrorMessage(e))
+                  )
+                }
+              />
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -366,7 +368,7 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
               <p className="text-sm text-muted-foreground">
                 {uploadM.isPending
                   ? 'Uploading…'
-                  : 'Drop CSV here or click to bulk-replace all standard rows for this location'}
+                  : 'Drop CSV or Excel here or click to bulk-replace all standard rows for this location'}
               </p>
             </div>
 

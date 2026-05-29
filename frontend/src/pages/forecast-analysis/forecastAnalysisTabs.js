@@ -2,7 +2,7 @@ export const PRIMARY_TABS = [
   {
     id: 'templates',
     label: 'Standard templates',
-    description: 'Manage weekly shift templates and upload standard CSV data.',
+    description: 'Manage weekly shift templates and upload standard CSV or Excel data.',
   },
   {
     id: 'standard-vs-forecast',

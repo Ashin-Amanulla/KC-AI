@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
-import { parse } from 'csv-parse/sync';
 import { config } from '../../config/index.js';
+import { parseTabularBuffer } from '../../utils/tabularFile.js';
+import { buildTabularExport } from '../../utils/tabularExport.js';
 import { Location } from '../locations/location.model.js';
 import { ForecastRecord } from '../forecast-actuals/forecastRecord.model.js';
 import { buildLookupMaps, fetchAllClients } from '../forecast-actuals/directory.service.js';
@@ -251,26 +252,26 @@ export async function deleteStandardForecastRecord({ id, locationId }) {
   return { success: true };
 }
 
-export async function uploadStandardForecastFromCsv({ locationId, fileBuffer, credentials, uploadedBy }) {
+export async function uploadStandardForecastFromCsv({
+  locationId,
+  fileBuffer,
+  originalFilename = '',
+  credentials,
+  uploadedBy,
+}) {
   const clients = await fetchAllClients(credentials);
   const { clientMap } = buildLookupMaps(clients, []);
 
   let records;
   try {
-    records = parse(fileBuffer, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-      bom: true,
-      relax_column_count: true,
-    });
+    records = parseTabularBuffer(fileBuffer, originalFilename);
   } catch (e) {
     return {
       success: false,
       rowsProcessed: 0,
       recordsCreated: 0,
       recordsSkipped: 0,
-      errors: [`CSV parsing error: ${e.message}`],
+      errors: [`File parsing error: ${e.message}`],
     };
   }
 
@@ -280,7 +281,7 @@ export async function uploadStandardForecastFromCsv({ locationId, fileBuffer, cr
       rowsProcessed: 0,
       recordsCreated: 0,
       recordsSkipped: 0,
-      errors: ['CSV file is empty'],
+      errors: ['File is empty or has no data rows'],
     };
   }
 
@@ -365,7 +366,7 @@ const STANDARD_CSV_HEADER = [
   'Ratio',
 ];
 
-function standardRowToCsvLine(r) {
+function standardRowToExportArray(r) {
   return [
     r.day,
     r.clientName,
@@ -375,27 +376,23 @@ function standardRowToCsvLine(r) {
     r.totalCost,
     r.shiftType || '',
     normalizeRatio(r.ratio || ''),
-  ]
-    .map((c) => {
-      const s = String(c ?? '');
-      return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
-    })
-    .join(',');
+  ];
 }
 
-export async function exportStandardForecastCsv({ locationId, clientId }) {
+export async function exportStandardForecastCsv({ locationId, clientId, format = 'csv' }) {
   const filter = listFilter(locationId, clientId);
   const items = await StandardForecast.find(filter).lean();
   const rows = sortStandardRecords(items.map(serializeDoc));
 
-  const lines = [STANDARD_CSV_HEADER.join(','), ...rows.map(standardRowToCsvLine)];
-  const body = Buffer.from(lines.join('\n'), 'utf-8');
-
   const loc = await Location.findById(locationId).lean();
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
-  const filename = `standard_forecast_${code}_${ts}.csv`;
-  return { filename, body };
+  return buildTabularExport({
+    headers: STANDARD_CSV_HEADER,
+    rows: rows.map(standardRowToExportArray),
+    baseFilename: `standard_forecast_${code}_${ts}`,
+    format,
+  });
 }
 
 /** Count weekday occurrences in inclusive date range (keys: monday..sunday) */
@@ -553,6 +550,7 @@ export async function exportStandardVsForecastCsv({
   credentials,
   dateFrom,
   dateTo,
+  format = 'csv',
 }) {
   const result = await getStandardVsForecastSummary({
     locationId,
@@ -561,40 +559,32 @@ export async function exportStandardVsForecastCsv({
     dateFrom,
     dateTo,
   });
-  const header = ['Client Name', 'Standard Budget', 'Forecast Budget', 'Variance', 'Variance %'];
-  const lines = [header.join(',')];
-
-  for (const r of result.records) {
-    const pct = r.variancePercentage != null ? `${r.variancePercentage.toFixed(2)}%` : '';
-    lines.push(
-      [
-        csvEscape(r.clientName),
-        r.standardBudget.toFixed(2),
-        r.forecastBudget.toFixed(2),
-        r.variance.toFixed(2),
-        pct,
-      ].join(',')
-    );
-  }
-
+  const headers = ['Client Name', 'Standard Budget', 'Forecast Budget', 'Variance', 'Variance %'];
+  const dataRows = result.records.map((r) => [
+    r.clientName,
+    r.standardBudget.toFixed(2),
+    r.forecastBudget.toFixed(2),
+    r.variance.toFixed(2),
+    r.variancePercentage != null ? `${r.variancePercentage.toFixed(2)}%` : '',
+  ]);
   const t = result.totals;
-  const totalsPct = t.variancePercentage != null ? `${t.variancePercentage.toFixed(2)}%` : '';
-  lines.push(
-    [
-      csvEscape(t.clientName),
-      t.standardBudget.toFixed(2),
-      t.forecastBudget.toFixed(2),
-      t.variance.toFixed(2),
-      totalsPct,
-    ].join(',')
-  );
+  dataRows.push([
+    t.clientName,
+    t.standardBudget.toFixed(2),
+    t.forecastBudget.toFixed(2),
+    t.variance.toFixed(2),
+    t.variancePercentage != null ? `${t.variancePercentage.toFixed(2)}%` : '',
+  ]);
 
-  const body = Buffer.from(lines.join('\n'), 'utf-8');
   const loc = await Location.findById(locationId).lean();
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
-  const filename = `standard_vs_forecast_${code}_${ts}.csv`;
-  return { filename, body };
+  return buildTabularExport({
+    headers,
+    rows: dataRows,
+    baseFilename: `standard_vs_forecast_${code}_${ts}`,
+    format,
+  });
 }
 
 export async function exportStandardVsForecastPdf({
@@ -1106,6 +1096,7 @@ export async function exportStandardVsForecastVarianceCsv({
   credentials,
   dateFrom,
   dateTo,
+  format = 'csv',
 }) {
   const loc = await Location.findById(locationId).select('code').lean();
   const listArgs = { locationId, clientId, credentials, dateFrom, dateTo };
@@ -1114,53 +1105,54 @@ export async function exportStandardVsForecastVarianceCsv({
   const additionalRecords = await fetchAllStandardVarianceTabRecords(listArgs, 'additional');
   const varianceRecords = await fetchAllStandardVarianceTabRecords(listArgs, 'variance');
 
-  const lines = [
-    [
-      'Type',
-      'Date',
-      'Client name',
-      'Start time',
-      'End time',
-      'Duration',
-      'Total cost',
-      'Rate groups',
-      'Shift type',
-      'Ratio',
-    ].join(','),
+  const headers = [
+    'Type',
+    'Date',
+    'Client name',
+    'Start time',
+    'End time',
+    'Duration',
+    'Total cost',
+    'Rate groups',
+    'Shift type',
+    'Ratio',
   ];
+  const exportRows = [];
 
-  function writeRecord(record, typeLabel) {
-    lines.push(
-      [
-        csvEscape(typeLabel),
-        csvEscape(formatStandardVarianceDateForCsv(record)),
-        csvEscape(record.clientName || ''),
-        csvEscape(formatStandardVarianceStartForCsv(record)),
-        csvEscape(formatStandardVarianceEndForCsv(record)),
-        record.duration ?? '',
-        record.totalCost ?? '',
-        csvEscape(record.rateGroups || ''),
-        csvEscape(record.shiftType || ''),
-        csvEscape(normalizeRatio(record.ratio || '')),
-      ].join(',')
-    );
+  function pushRecord(record, typeLabel) {
+    exportRows.push([
+      typeLabel,
+      formatStandardVarianceDateForCsv(record),
+      record.clientName || '',
+      formatStandardVarianceStartForCsv(record),
+      formatStandardVarianceEndForCsv(record),
+      record.duration ?? '',
+      record.totalCost ?? '',
+      record.rateGroups || '',
+      record.shiftType || '',
+      normalizeRatio(record.ratio || ''),
+    ]);
   }
 
   for (const record of deletedRecords) {
-    writeRecord(record, 'Deleted');
+    pushRecord(record, 'Deleted');
   }
   for (const record of additionalRecords) {
-    writeRecord(record, 'Additional');
+    pushRecord(record, 'Additional');
   }
   for (const record of varianceRecords) {
     const label = record.source === 'standard' ? 'Variance - Standard' : 'Variance - Forecast';
-    writeRecord(record, label);
+    pushRecord(record, label);
   }
 
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
-  const filename = `standard_vs_forecast_variance_${code}_${ts}.csv`;
-  return { filename, body: '\uFEFF' + lines.join('\n') };
+  return buildTabularExport({
+    headers,
+    rows: exportRows,
+    baseFilename: `standard_vs_forecast_variance_${code}_${ts}`,
+    format,
+  });
 }
 
 export async function getStandardVsForecastVarianceDetail({

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import fs from 'fs';
 import { getShiftCareCredentials } from '../../middlewares/auth.middleware.js';
+import { resolveExportFormat, sendTabularExport } from '../../utils/tabularExport.js';
 import { Location } from '../locations/location.model.js';
 import {
   exportStandardForecastCsv,
@@ -82,6 +83,7 @@ export const postStandardUpload = async (req, res, next) => {
     const result = await uploadStandardForecastFromCsv({
       locationId,
       fileBuffer: buffer,
+      originalFilename: req.file.originalname,
       credentials,
       uploadedBy: req.user?.userId || null,
     });
@@ -220,13 +222,12 @@ export const getStandardExport = async (req, res, next) => {
     const { error, status } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const { filename, body } = await exportStandardForecastCsv({
+    const result = await exportStandardForecastCsv({
       locationId,
       clientId: resolveClientFilter(req.query),
+      format: resolveExportFormat(req.query.format),
     });
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(body);
+    sendTabularExport(res, result);
   } catch (e) {
     next(e);
   }
@@ -262,15 +263,14 @@ export const getSummaryExportCsv = async (req, res, next) => {
     const { error, status } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const { filename, body } = await exportStandardVsForecastCsv({
+    const result = await exportStandardVsForecastCsv({
       locationId,
       clientId: resolveClientFilter(req.query),
       credentials,
+      format: resolveExportFormat(req.query.format),
       ...scopeDateRange(req.query),
     });
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(body);
+    sendTabularExport(res, result);
   } catch (e) {
     next(e);
   }
@@ -327,15 +327,14 @@ export const getVarianceExport = async (req, res, next) => {
     const { error, status } = await resolveLocation(locationId);
     if (error) return res.status(status).json({ error });
 
-    const { filename, body } = await exportStandardVsForecastVarianceCsv({
+    const result = await exportStandardVsForecastVarianceCsv({
       locationId,
       clientId: resolveClientFilter(req.query),
       credentials,
+      format: resolveExportFormat(req.query.format),
       ...scopeDateRange(req.query),
     });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(body);
+    sendTabularExport(res, result);
   } catch (e) {
     next(e);
   }

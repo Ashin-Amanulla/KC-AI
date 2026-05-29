@@ -14,7 +14,8 @@ import { LoadingScreen } from '../ui/LoadingSpinner';
 import { cn } from '../lib/utils';
 import { getErrorMessage } from '../utils/api';
 import { formatUtcDate, formatUtcDateTime, normalizeRatio } from '../utils/normalizeRatio';
-import { Upload, Download, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Upload, Plus, Pencil, Trash2 } from 'lucide-react';
+import { TabularExportButtons } from '../components/TabularExportButtons';
 import {
   useCreateForecast,
   useUpdateForecast,
@@ -167,7 +168,8 @@ export function ForecastActualsRowPanel({
   listLoading,
   listError,
   dropzone,
-  onExport,
+  onExportCsv,
+  onExportXlsx,
   page,
   setPage,
 }) {
@@ -261,10 +263,7 @@ export function ForecastActualsRowPanel({
           <Plus className="mr-2 h-4 w-4" />
           {showForm ? 'Cancel' : 'Add row'}
         </Button>
-        <Button type="button" variant="outline" size="sm" onClick={onExport}>
-          <Download className="mr-2 h-4 w-4" />
-          Export CSV
-        </Button>
+        <TabularExportButtons onExportCsv={onExportCsv} onExportXlsx={onExportXlsx} />
       </div>
 
       {showForm && (
@@ -411,7 +410,7 @@ export function ForecastActualsRowPanel({
       >
         <input {...dropzone.getInputProps()} />
         <Upload className="mx-auto mb-2 h-8 w-8 opacity-50" />
-        Drop {title.toLowerCase()} CSV here, or click to select (full replace for this location)
+        Drop {title.toLowerCase()} CSV or Excel here, or click to select (full replace for this location)
       </div>
 
       {listLoading ? (

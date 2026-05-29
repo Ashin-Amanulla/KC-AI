@@ -19,7 +19,8 @@ import {
   TableRow,
 } from '../../ui/table';
 import { LoadingScreen } from '../../ui/LoadingSpinner';
-import { Download, FileSpreadsheet } from 'lucide-react';
+import { FileSpreadsheet } from 'lucide-react';
+import { TabularExportButtons } from '../../components/TabularExportButtons';
 import { cn } from '../../lib/utils';
 import {
   formatDate,
@@ -133,18 +134,19 @@ export function StandardVsForecastSection({
             <Card>
               <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
                 <CardTitle>Comparison</CardTitle>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      exportStandardVsForecastCsv(exportBase).catch((e) => toast.error(getErrorMessage(e)))
+                <div className="flex flex-wrap items-center gap-2">
+                  <TabularExportButtons
+                    onExportCsv={() =>
+                      exportStandardVsForecastCsv(exportBase).catch((e) =>
+                        toast.error(getErrorMessage(e))
+                      )
                     }
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Export CSV
-                  </Button>
+                    onExportXlsx={() =>
+                      exportStandardVsForecastCsv({ ...exportBase, format: 'xlsx' }).catch((e) =>
+                        toast.error(getErrorMessage(e))
+                      )
+                    }
+                  />
                   <Button
                     type="button"
                     variant="outline"
@@ -248,19 +250,18 @@ export function StandardVsForecastSection({
             <Card>
               <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
                 <CardTitle>Template-level variance</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
+                <TabularExportButtons
+                  onExportCsv={() =>
                     exportStandardVsForecastVarianceCsv(exportBase).catch((e) =>
                       toast.error(getErrorMessage(e))
                     )
                   }
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
-                </Button>
+                  onExportXlsx={() =>
+                    exportStandardVsForecastVarianceCsv({ ...exportBase, format: 'xlsx' }).catch(
+                      (e) => toast.error(getErrorMessage(e))
+                    )
+                  }
+                />
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="border-b border-border">
