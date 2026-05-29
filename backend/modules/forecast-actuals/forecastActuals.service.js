@@ -23,6 +23,7 @@ import {
 import { ForecastRecord } from './forecastRecord.model.js';
 import { ActualsRecord } from './actualsRecord.model.js';
 import { buildSummaryPdf } from './summaryPdf.js';
+import { compareShiftDateRows } from '../../utils/weekdaySort.js';
 
 const PAGE_SIZE = () => config.forecastActuals.pageSize;
 
@@ -45,6 +46,44 @@ function shiftcareMatchExtras(locationId, staffId, clientId) {
   if (staffId && staffId !== 'all') m.staffDirectoryId = staffId;
   if (clientId && clientId !== 'all') m.clientDirectoryId = clientId;
   return m;
+}
+
+const VARIANCE_PAIR_SEP = '|';
+
+/** Unique variance identity: shift id + client (directory id preferred, else normalized name). */
+export function buildVariancePairKey(shiftcareId, clientDirectoryId, clientName) {
+  const sid = String(shiftcareId || '').trim();
+  const cid = String(clientDirectoryId || '').trim();
+  const clientKey = cid
+    ? `id:${cid}`
+    : `name:${String(clientName || '').trim().toLowerCase()}`;
+  return `${sid}${VARIANCE_PAIR_SEP}${clientKey}`;
+}
+
+export function parseVariancePairKey(pairKey) {
+  const raw = String(pairKey || '');
+  const sep = raw.indexOf(VARIANCE_PAIR_SEP);
+  if (sep < 0) {
+    return { shiftcareId: raw.trim(), clientKey: null, legacyShiftOnly: true };
+  }
+  return {
+    shiftcareId: raw.slice(0, sep).trim(),
+    clientKey: raw.slice(sep + 1),
+    legacyShiftOnly: false,
+  };
+}
+
+function pairKeyClientFilter(clientKey) {
+  if (!clientKey) return {};
+  if (clientKey.startsWith('id:')) {
+    return { clientDirectoryId: clientKey.slice(3) };
+  }
+  if (clientKey.startsWith('name:')) {
+    const name = clientKey.slice(5);
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return { clientName: new RegExp(`^${escaped}$`, 'i') };
+  }
+  return {};
 }
 
 export async function getDirectoryOptions(credentials) {
@@ -484,7 +523,7 @@ function serializeDoc(d) {
 
 export async function listForecast({ locationId, staffId, clientId, page }) {
   const filter = listFilter(locationId, staffId, clientId);
-  const sort = { shiftDate: -1, startDatetime: -1 };
+  const sort = { shiftDate: 1, startDatetime: 1 };
   const total = await ForecastRecord.countDocuments(filter);
   const pageSize = PAGE_SIZE();
   const p = Math.max(1, parseInt(page, 10) || 1);
@@ -517,7 +556,7 @@ export async function listForecast({ locationId, staffId, clientId, page }) {
 
 export async function listActuals({ locationId, staffId, clientId, page }) {
   const filter = listFilter(locationId, staffId, clientId);
-  const sort = { shiftDate: -1, startDatetime: -1 };
+  const sort = { shiftDate: 1, startDatetime: 1 };
   const total = await ActualsRecord.countDocuments(filter);
   const pageSize = PAGE_SIZE();
   const p = Math.max(1, parseInt(page, 10) || 1);
@@ -839,46 +878,88 @@ export async function exportSummaryPdf({ locationId, staffId, clientId, credenti
   return { filename, body: pdfBuffer };
 }
 
-async function getShiftcareIdSets(locationId, staffId, clientId) {
+async function getVariancePairKeySets(locationId, staffId, clientId) {
   const m = shiftcareMatchExtras(locationId, staffId, clientId);
-  const fIds = await ForecastRecord.distinct('shiftcareId', m);
-  const aIds = await ActualsRecord.distinct('shiftcareId', m);
-  const forecastIds = new Set(fIds.filter((id) => id != null && String(id).trim() !== ''));
-  const actualsIds = new Set(aIds.filter((id) => id != null && String(id).trim() !== ''));
-  return { forecastIds, actualsIds };
+  const collect = async (Model) => {
+    const rows = await Model.aggregate([
+      { $match: m },
+      {
+        $group: {
+          _id: {
+            shiftcareId: '$shiftcareId',
+            clientDirectoryId: { $ifNull: ['$clientDirectoryId', ''] },
+            clientName: { $first: '$clientName' },
+          },
+        },
+      },
+    ]);
+    return rows.map((r) =>
+      buildVariancePairKey(r._id.shiftcareId, r._id.clientDirectoryId, r._id.clientName)
+    );
+  };
+  const [fKeys, aKeys] = await Promise.all([collect(ForecastRecord), collect(ActualsRecord)]);
+  return {
+    forecastKeys: new Set(fKeys),
+    actualsKeys: new Set(aKeys),
+  };
 }
 
 function computeDiffFields(fRec, aRec) {
   const diff = [];
   const t = (d) => (d ? new Date(d).getTime() : 0);
   if (t(fRec.shiftDate) !== t(aRec.shiftDate)) diff.push('shift_date');
-  if (String(fRec.clientName || '') !== String(aRec.clientName || '')) diff.push('client_name');
   if (t(fRec.startDatetime) !== t(aRec.startDatetime)) diff.push('start_datetime');
   if (t(fRec.endDatetime) !== t(aRec.endDatetime)) diff.push('end_datetime');
   if (!moneyEqual(fRec.duration, aRec.duration)) diff.push('duration');
   if (!moneyEqual(fRec.totalCost, aRec.totalCost)) diff.push('total_cost');
-  if (String(fRec.shiftcareId || '') !== String(aRec.shiftcareId || '')) diff.push('shift_id');
   if (String(fRec.rateGroups || '') !== String(aRec.rateGroups || '')) diff.push('rate_groups');
   if (String(fRec.shiftType || '') !== String(aRec.shiftType || '')) diff.push('shift_type');
   if (String(fRec.ratio || '') !== String(aRec.ratio || '')) diff.push('ratio');
   return diff;
 }
 
-async function aggregateByShiftcareId(Model, locationId, shiftcareIds, staffId, clientId, source) {
-  const ids = [...shiftcareIds].filter((x) => x != null && String(x).trim() !== '');
-  if (!ids.length) return new Map();
+async function aggregateByVariancePairKeys(Model, locationId, pairKeys, staffId, clientId, source) {
+  const keys = [...pairKeys].filter((x) => x != null && String(x).trim() !== '');
+  if (!keys.length) return new Map();
+
+  const orConditions = keys.map((k) => {
+    const { shiftcareId, clientKey, legacyShiftOnly } = parseVariancePairKey(k);
+    if (legacyShiftOnly) return { shiftcareId };
+    return { shiftcareId, ...pairKeyClientFilter(clientKey) };
+  });
 
   const match = {
     ...shiftcareMatchExtras(locationId, staffId, clientId),
-    shiftcareId: { $in: ids },
+    $or: orConditions,
   };
 
   const pipeline = [
     { $match: match },
+    {
+      $addFields: {
+        varianceClientKey: {
+          $cond: [
+            {
+              $and: [
+                { $ne: ['$clientDirectoryId', null] },
+                { $ne: ['$clientDirectoryId', ''] },
+              ],
+            },
+            { $concat: ['id:', '$clientDirectoryId'] },
+            {
+              $concat: [
+                'name:',
+                { $toLower: { $trim: { input: { $ifNull: ['$clientName', ''] } } } },
+              ],
+            },
+          ],
+        },
+      },
+    },
     { $sort: { startDatetime: 1 } },
     {
       $group: {
-        _id: '$shiftcareId',
+        _id: { shiftcareId: '$shiftcareId', clientKey: '$varianceClientKey' },
         minShiftDate: { $min: '$shiftDate' },
         minStart: { $min: '$startDatetime' },
         maxEnd: { $max: '$endDatetime' },
@@ -886,6 +967,7 @@ async function aggregateByShiftcareId(Model, locationId, shiftcareIds, staffId, 
         sumCost: { $sum: '$cost' },
         sumTotalCost: { $sum: '$totalCost' },
         clientName: { $first: '$clientName' },
+        clientDirectoryId: { $first: '$clientDirectoryId' },
         rateGroups: { $first: '$rateGroups' },
         shiftType: { $first: '$shiftType' },
         ratio: { $first: '$ratio' },
@@ -896,10 +978,13 @@ async function aggregateByShiftcareId(Model, locationId, shiftcareIds, staffId, 
   const agg = await Model.aggregate(pipeline);
   const map = new Map();
   for (const item of agg) {
-    map.set(item._id, {
-      shiftcareId: item._id,
+    const variancePairKey = `${item._id.shiftcareId}${VARIANCE_PAIR_SEP}${item._id.clientKey}`;
+    map.set(variancePairKey, {
+      variancePairKey,
+      shiftcareId: item._id.shiftcareId,
       shiftDate: item.minShiftDate,
       clientName: item.clientName || '',
+      clientDirectoryId: item.clientDirectoryId || '',
       startDatetime: item.minStart,
       endDatetime: item.maxEnd,
       duration: roundMoney(item.sumDuration || 0),
@@ -921,96 +1006,96 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
   const p = Math.max(1, parseInt(page, 10) || 1);
   const t = ['all', 'deleted', 'additional', 'variance'].includes(tab) ? tab : 'all';
 
-  const { forecastIds, actualsIds } = await getShiftcareIdSets(locationId, staffId, clientId);
-  const deletedIds = new Set([...forecastIds].filter((id) => !actualsIds.has(id)));
-  const additionalIds = new Set([...actualsIds].filter((id) => !forecastIds.has(id)));
-  const commonIds = new Set([...forecastIds].filter((id) => actualsIds.has(id)));
+  const { forecastKeys, actualsKeys } = await getVariancePairKeySets(locationId, staffId, clientId);
+  const deletedKeys = new Set([...forecastKeys].filter((k) => !actualsKeys.has(k)));
+  const additionalKeys = new Set([...actualsKeys].filter((k) => !forecastKeys.has(k)));
+  const commonKeys = new Set([...forecastKeys].filter((k) => actualsKeys.has(k)));
 
-  const varianceIds = new Set();
-  if (commonIds.size) {
-    const fAgg = await aggregateByShiftcareId(
+  const varianceKeys = new Set();
+  if (commonKeys.size) {
+    const fAgg = await aggregateByVariancePairKeys(
       ForecastRecord,
       locationId,
-      commonIds,
+      commonKeys,
       staffId,
       clientId,
       'forecast'
     );
-    const aAgg = await aggregateByShiftcareId(
+    const aAgg = await aggregateByVariancePairKeys(
       ActualsRecord,
       locationId,
-      commonIds,
+      commonKeys,
       staffId,
       clientId,
       'actuals'
     );
-    for (const sid of commonIds) {
-      const f = fAgg.get(sid);
-      const a = aAgg.get(sid);
+    for (const pairKey of commonKeys) {
+      const f = fAgg.get(pairKey);
+      const a = aAgg.get(pairKey);
       if (f && a && computeDiffFields(f, a).length > 0) {
-        varianceIds.add(sid);
+        varianceKeys.add(pairKey);
       }
     }
   }
 
-  const deletedCount = deletedIds.size;
-  const additionalCount = additionalIds.size;
-  const varianceCount = varianceIds.size;
+  const deletedCount = deletedKeys.size;
+  const additionalCount = additionalKeys.size;
+  const varianceCount = varianceKeys.size;
   const allCount = deletedCount + additionalCount + varianceCount;
 
   let records = [];
 
   if (t === 'all') {
-    const deletedAgg = await aggregateByShiftcareId(
+    const deletedAgg = await aggregateByVariancePairKeys(
       ForecastRecord,
       locationId,
-      deletedIds,
+      deletedKeys,
       staffId,
       clientId,
       'forecast'
     );
-    for (const sid of [...deletedIds].sort()) {
-      const rec = deletedAgg.get(sid);
+    for (const pairKey of [...deletedKeys]) {
+      const rec = deletedAgg.get(pairKey);
       if (rec) {
         rec.recordType = 'deleted';
         records.push(rec);
       }
     }
-    const additionalAgg = await aggregateByShiftcareId(
+    const additionalAgg = await aggregateByVariancePairKeys(
       ActualsRecord,
       locationId,
-      additionalIds,
+      additionalKeys,
       staffId,
       clientId,
       'actuals'
     );
-    for (const sid of [...additionalIds].sort()) {
-      const rec = additionalAgg.get(sid);
+    for (const pairKey of [...additionalKeys]) {
+      const rec = additionalAgg.get(pairKey);
       if (rec) {
         rec.recordType = 'additional';
         records.push(rec);
       }
     }
-    const sortedVarIds = [...varianceIds].sort();
-    const vF = await aggregateByShiftcareId(
+    const sortedVarKeys = [...varianceKeys];
+    const vF = await aggregateByVariancePairKeys(
       ForecastRecord,
       locationId,
-      varianceIds,
+      varianceKeys,
       staffId,
       clientId,
       'forecast'
     );
-    const vA = await aggregateByShiftcareId(
+    const vA = await aggregateByVariancePairKeys(
       ActualsRecord,
       locationId,
-      varianceIds,
+      varianceKeys,
       staffId,
       clientId,
       'actuals'
     );
-    for (const sid of sortedVarIds) {
-      const fRec = vF.get(sid);
-      const aRec = vA.get(sid);
+    for (const pairKey of sortedVarKeys) {
+      const fRec = vF.get(pairKey);
+      const aRec = vA.get(pairKey);
       if (fRec) {
         fRec.recordType = 'variance';
         records.push(fRec);
@@ -1024,52 +1109,56 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
         records.push(aRec);
       }
     }
+    records.sort(compareShiftDateRows);
   } else if (t === 'deleted') {
-    const agg = await aggregateByShiftcareId(
+    const agg = await aggregateByVariancePairKeys(
       ForecastRecord,
       locationId,
-      deletedIds,
+      deletedKeys,
       staffId,
       clientId,
       'forecast'
     );
     records = [...agg.values()];
-    records.sort((a, b) => a.shiftcareId.localeCompare(b.shiftcareId));
+    records.sort(compareShiftDateRows);
   } else if (t === 'additional') {
-    const agg = await aggregateByShiftcareId(
+    const agg = await aggregateByVariancePairKeys(
       ActualsRecord,
       locationId,
-      additionalIds,
+      additionalKeys,
       staffId,
       clientId,
       'actuals'
     );
     records = [...agg.values()];
-    records.sort((a, b) => a.shiftcareId.localeCompare(b.shiftcareId));
+    records.sort(compareShiftDateRows);
   } else if (t === 'variance') {
-    const sortedVarianceIds = [...varianceIds].sort();
+    const forecastAgg = await aggregateByVariancePairKeys(
+      ForecastRecord,
+      locationId,
+      varianceKeys,
+      staffId,
+      clientId,
+      'forecast'
+    );
+    const actualsAgg = await aggregateByVariancePairKeys(
+      ActualsRecord,
+      locationId,
+      varianceKeys,
+      staffId,
+      clientId,
+      'actuals'
+    );
+    const sortedVarianceKeys = [...varianceKeys].sort((a, b) => {
+      const ra = forecastAgg.get(a) || actualsAgg.get(a) || {};
+      const rb = forecastAgg.get(b) || actualsAgg.get(b) || {};
+      return compareShiftDateRows(ra, rb);
+    });
     const pairStart = (p - 1) * pageSize;
     const pairEnd = pairStart + pageSize;
-    const pageVarianceIds = new Set(sortedVarianceIds.slice(pairStart, pairEnd));
-    const forecastAgg = await aggregateByShiftcareId(
-      ForecastRecord,
-      locationId,
-      pageVarianceIds,
-      staffId,
-      clientId,
-      'forecast'
-    );
-    const actualsAgg = await aggregateByShiftcareId(
-      ActualsRecord,
-      locationId,
-      pageVarianceIds,
-      staffId,
-      clientId,
-      'actuals'
-    );
-    for (const sid of sortedVarianceIds.slice(pairStart, pairEnd)) {
-      const fRec = forecastAgg.get(sid);
-      const aRec = actualsAgg.get(sid);
+    for (const pairKey of sortedVarianceKeys.slice(pairStart, pairEnd)) {
+      const fRec = forecastAgg.get(pairKey);
+      const aRec = actualsAgg.get(pairKey);
       if (fRec) records.push(fRec);
       if (aRec && fRec) {
         aRec.diffFields = computeDiffFields(fRec, aRec);
@@ -1086,7 +1175,7 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
   let endIndex;
 
   if (t === 'variance') {
-    total = varianceIds.size;
+    total = varianceKeys.size;
     const startIdx = (p - 1) * pageSize;
     const endIdx = startIdx + pageSize;
     pageRecords = records;
@@ -1096,12 +1185,13 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
     total = allCount;
     const seenIds = [];
     for (const rec of records) {
-      if (!seenIds.includes(rec.shiftcareId)) seenIds.push(rec.shiftcareId);
+      const pk = rec.variancePairKey || rec.shiftcareId;
+      if (!seenIds.includes(pk)) seenIds.push(pk);
     }
     const startIdx = (p - 1) * pageSize;
     const endIdx = startIdx + pageSize;
     const pageIdSet = new Set(seenIds.slice(startIdx, endIdx));
-    pageRecords = records.filter((r) => pageIdSet.has(r.shiftcareId));
+    pageRecords = records.filter((r) => pageIdSet.has(r.variancePairKey || r.shiftcareId));
     startIndex = total > 0 ? startIdx + 1 : 0;
     endIndex = Math.min(endIdx, total);
   } else {
@@ -1147,6 +1237,7 @@ export async function listVariance({ locationId, tab, staffId, clientId, page })
 
 function serializeVarianceRow(r) {
   return {
+    variancePairKey: r.variancePairKey || r.shiftcareId,
     shiftcareId: r.shiftcareId,
     shiftDate: r.shiftDate,
     clientName: r.clientName,
@@ -1289,40 +1380,47 @@ export async function exportVarianceCsv({ locationId, staffId, clientId, timezon
   return { filename, body: '\uFEFF' + lines.join('\n') };
 }
 
-export async function getVarianceDetail({ locationId, shiftcareId }) {
+export async function getVarianceDetail({ locationId, variancePairKey }) {
   const locObj = locObjectId(locationId);
-  const forecastRecords = await ForecastRecord.find({
-    location: locObj,
-    shiftcareId,
-  })
-    .sort({ startDatetime: 1 })
-    .lean();
-  const actualsRecords = await ActualsRecord.find({
-    location: locObj,
-    shiftcareId,
-  })
-    .sort({ startDatetime: 1 })
-    .lean();
+  const { shiftcareId, clientKey, legacyShiftOnly } = parseVariancePairKey(variancePairKey);
+  const clientFilter = legacyShiftOnly ? {} : pairKeyClientFilter(clientKey);
+  const rowFilter = { location: locObj, shiftcareId, ...clientFilter };
 
-  const fAgg = await aggregateByShiftcareId(
+  const forecastRecords = await ForecastRecord.find(rowFilter).sort({ startDatetime: 1 }).lean();
+  const actualsRecords = await ActualsRecord.find(rowFilter).sort({ startDatetime: 1 }).lean();
+
+  let lookupKey = variancePairKey;
+  if (legacyShiftOnly) {
+    const sample = forecastRecords[0] || actualsRecords[0];
+    if (sample) {
+      lookupKey = buildVariancePairKey(
+        sample.shiftcareId,
+        sample.clientDirectoryId,
+        sample.clientName
+      );
+    } else {
+      lookupKey = shiftcareId;
+    }
+  }
+  const fAgg = await aggregateByVariancePairKeys(
     ForecastRecord,
     locationId,
-    new Set([shiftcareId]),
+    new Set([lookupKey]),
     'all',
     'all',
     'forecast'
   );
-  const aAgg = await aggregateByShiftcareId(
+  const aAgg = await aggregateByVariancePairKeys(
     ActualsRecord,
     locationId,
-    new Set([shiftcareId]),
+    new Set([lookupKey]),
     'all',
     'all',
     'actuals'
   );
 
-  const forecastAgg = fAgg.get(shiftcareId) || null;
-  const actualsAgg = aAgg.get(shiftcareId) || null;
+  const forecastAgg = fAgg.get(lookupKey) || null;
+  const actualsAgg = aAgg.get(lookupKey) || null;
 
   let diffFields = [];
   if (forecastAgg && actualsAgg) {
@@ -1330,6 +1428,7 @@ export async function getVarianceDetail({ locationId, shiftcareId }) {
   }
 
   return {
+    variancePairKey: forecastAgg?.variancePairKey || actualsAgg?.variancePairKey || variancePairKey,
     shiftcareId,
     diffFields,
     forecastRecords: forecastRecords.map(serializeDoc),

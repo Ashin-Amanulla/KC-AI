@@ -15,24 +15,15 @@ import {
   validateHeaders,
 } from './csvStandardForecast.js';
 import { moneyEqual } from '../forecast-actuals/csvForecastActuals.js';
+import {
+  compareTemplateKeys,
+  sortStandardRecords,
+  sortTemplateKeys,
+} from '../../utils/weekdaySort.js';
+
+export { sortStandardRecords };
 
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
-const WEEKDAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-function weekdayIndex(day) {
-  const i = WEEKDAY_ORDER.findIndex((d) => d.toLowerCase() === String(day || '').trim().toLowerCase());
-  return i >= 0 ? i : WEEKDAY_ORDER.length;
-}
-
-/** Sort by calendar day (Mon→Sun), then start time ascending */
-export function sortStandardRecords(records) {
-  return [...records].sort((a, b) => {
-    const dayDiff = weekdayIndex(a.day) - weekdayIndex(b.day);
-    if (dayDiff !== 0) return dayDiff;
-    return String(a.startTime || '').localeCompare(String(b.startTime || ''));
-  });
-}
 
 function locObjectId(locationId) {
   return new mongoose.Types.ObjectId(locationId);
@@ -890,11 +881,11 @@ export async function listStandardVsForecastVariance({
 
   const deletedKeys = [];
   for (const k of standardKeys) if (!forecastKeys.has(k)) deletedKeys.push(k);
-  deletedKeys.sort();
+  sortTemplateKeys(deletedKeys);
 
   const additionalKeys = [];
   for (const k of forecastKeys) if (!standardKeys.has(k)) additionalKeys.push(k);
-  additionalKeys.sort();
+  sortTemplateKeys(additionalKeys);
 
   const varianceKeys = [];
   for (const k of standardKeys) {
@@ -907,7 +898,7 @@ export async function listStandardVsForecastVariance({
       varianceKeys.push(k);
     }
   }
-  varianceKeys.sort();
+  sortTemplateKeys(varianceKeys);
 
   const deletedCount = deletedKeys.length;
   const additionalCount = additionalKeys.length;
@@ -950,6 +941,7 @@ export async function listStandardVsForecastVariance({
       ...additionalKeys.map((k) => ({ k, kind: 'additional' })),
       ...varianceKeys.map((k) => ({ k, kind: 'variance' })),
     ];
+    combined.sort((a, b) => compareTemplateKeys(a.k, b.k));
     const slice = combined.slice((p - 1) * pageSize, (p - 1) * pageSize + pageSize);
     for (const { k, kind } of slice) {
       if (kind === 'deleted') {
@@ -1031,20 +1023,22 @@ export async function getStandardVsForecastVarianceDetail({
       rows.filter((r) => String(r.day || '').trim().toLowerCase() === day)
     );
 
-  const standardRecords = standardDocs.map((r) => ({
-    id: String(r._id),
-    shiftcareId: templateKey,
-    clientDirectoryId: r.clientDirectoryId,
-    clientName: r.clientName,
-    day: r.day,
-    startTime: r.startTime,
-    endTime: r.endTime,
-    duration: r.duration,
-    totalCost: r.totalCost,
-    rateGroups: r.rateGroups,
-    shiftType: r.shiftType,
-    ratio: r.ratio,
-  }));
+  const standardRecords = sortStandardRecords(
+    standardDocs.map((r) => ({
+      id: String(r._id),
+      shiftcareId: templateKey,
+      clientDirectoryId: r.clientDirectoryId,
+      clientName: r.clientName,
+      day: r.day,
+      startTime: r.startTime,
+      endTime: r.endTime,
+      duration: r.duration,
+      totalCost: r.totalCost,
+      rateGroups: r.rateGroups,
+      shiftType: r.shiftType,
+      ratio: r.ratio,
+    }))
+  );
 
   let forecastRecords = [];
   let forecastAggregated = null;

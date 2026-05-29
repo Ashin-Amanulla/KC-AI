@@ -1,7 +1,12 @@
 import assert from 'node:assert';
 import test from 'node:test';
 import { buildNormalizedColumns } from './csvForecastActuals.js';
-import { buildSummaryRecord, processRowCommon } from './forecastActuals.service.js';
+import {
+  buildSummaryRecord,
+  buildVariancePairKey,
+  parseVariancePairKey,
+  processRowCommon,
+} from './forecastActuals.service.js';
 
 function maps() {
   const clientMap = new Map();
@@ -131,4 +136,17 @@ test('golden: totals variance equals sum of row variances', () => {
   const totalForecast = rows.reduce((s, r) => s + r.forecastBudget, 0);
   assert.strictEqual(sumVariance, 10);
   assert.strictEqual((sumVariance / totalForecast) * 100, 10 / 3);
+});
+
+test('golden: variance pair key is shift id + client', () => {
+  const k1 = buildVariancePairKey('SHIFT-1', 'client-a', 'Alice');
+  const k2 = buildVariancePairKey('SHIFT-1', 'client-b', 'Bob');
+  assert.notStrictEqual(k1, k2);
+  assert.ok(k1.includes('SHIFT-1'));
+  assert.ok(k1.includes('id:client-a'));
+  const parsed = parseVariancePairKey(k1);
+  assert.strictEqual(parsed.shiftcareId, 'SHIFT-1');
+  assert.strictEqual(parsed.clientKey, 'id:client-a');
+  const nameKey = buildVariancePairKey('SHIFT-2', '', 'Charlie');
+  assert.ok(nameKey.endsWith('name:charlie'));
 });

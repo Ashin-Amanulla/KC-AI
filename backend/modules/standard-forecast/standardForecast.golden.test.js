@@ -9,6 +9,7 @@ import {
   parseTemplateKey,
   sortStandardRecords,
 } from './standardForecast.service.js';
+import { compareTemplateKeys, sortTemplateKeys } from '../../utils/weekdaySort.js';
 
 test('golden: sortStandardRecords Mon→Sun then start time', () => {
   const input = [
@@ -29,6 +30,23 @@ test('golden: sortStandardRecords Mon→Sun then start time', () => {
       'Sunday 08:00',
     ]
   );
+});
+
+test('golden: sortTemplateKeys Mon→Sun not alphabetical', () => {
+  const keys = [
+    'c1|friday|14:00',
+    'c1|monday|06:00',
+    'c1|sunday|08:00',
+    'c1|monday|14:00',
+  ];
+  sortTemplateKeys(keys);
+  assert.deepStrictEqual(keys, [
+    'c1|monday|06:00',
+    'c1|monday|14:00',
+    'c1|friday|14:00',
+    'c1|sunday|08:00',
+  ]);
+  assert.ok(compareTemplateKeys('c1|monday|06:00', 'c1|tuesday|08:00') < 0);
 });
 
 test('golden: countDaysInRange Mon–Sun over two weeks', () => {

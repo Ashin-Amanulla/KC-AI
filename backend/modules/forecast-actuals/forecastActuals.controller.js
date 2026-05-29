@@ -415,7 +415,7 @@ export const getVarianceDetailHandler = async (req, res, next) => {
       return res.status(400).json({ error: 'shiftcareId required' });
     }
 
-    const data = await getVarianceDetail({ locationId, shiftcareId });
+    const data = await getVarianceDetail({ locationId, variancePairKey: shiftcareId });
     res.json(data);
   } catch (e) {
     next(e);

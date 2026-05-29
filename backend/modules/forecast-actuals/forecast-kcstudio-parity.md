@@ -16,7 +16,7 @@
 | Summary by client | `getSummary`: aggregate forecast `cost` by `clientDirectoryId`; actuals `cost` + `kms`; `buildSummaryRecord` |
 | Summary math | `grossActuals = netActuals + mileage`; `variance = netActuals - forecastBudget`; `variancePct = (variance/forecastBudget)*100` if `forecastBudget > 0` |
 | Client list for summary | From ShiftCare directory (`fetchAllClients`), filtered by `clientId`; one row per listed client even if zeros |
-| Variance tab | `listVariance`: sets by `shiftcareId` — deleted (forecast only), additional (actuals only), variance (common id, cost/totalCost mismatch after aggregation) |
+| Variance tab | `listVariance`: sets by `shiftcareId` + client (`variancePairKey`) — deleted (forecast only), additional (actuals only), variance (common pair, cost/totalCost mismatch after aggregation) |
 | Shift aggregation | `aggregateByShiftcareId`: min start, max end, sum duration/cost/totalCost, first description/rateGroups/referenceNo |
 | Field-level diff (common shifts) | `computeDiffFields`: start/end time, duration, cost, totalCost, rateGroups, referenceNo |
 | PDF | `summaryPdf.js` + `exportSummaryPdf` (declared mirror of KC Studio ReportLab layout) |

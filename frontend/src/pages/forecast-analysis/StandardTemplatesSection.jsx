@@ -24,6 +24,7 @@ import {
 } from '../../ui/table';
 import { LoadingScreen } from '../../ui/LoadingSpinner';
 import { cn } from '../../lib/utils';
+import { sortByWeekdayThenTime } from '../../utils/weekdaySort';
 import { Upload, Download, Plus, Pencil, Trash2 } from 'lucide-react';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -113,8 +114,11 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
 
   const tableRecords = useMemo(() => {
     const rows = listQ.data?.records ?? [];
-    if (client === 'all') return rows;
-    return rows.filter((r) => String(r.clientDirectoryId) === String(client));
+    const filtered =
+      client === 'all'
+        ? rows
+        : rows.filter((r) => String(r.clientDirectoryId) === String(client));
+    return sortByWeekdayThenTime(filtered);
   }, [listQ.data?.records, client]);
 
   const updateRowField = (field, value) => {

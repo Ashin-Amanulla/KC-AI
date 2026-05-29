@@ -67,6 +67,10 @@ const varianceRowClass = makeVarianceRowClass('forecast');
 const diffCell = makeDiffCell('actuals', VARIANCE_DIFF_KEYS);
 const diffActualCell = diffPanelCell;
 
+function variancePairKey(r) {
+  return r?.variancePairKey || r?.shiftcareId;
+}
+
 function VarianceDetailPanel({ data }) {
   const diff = data.diffFields || [];
   const fAgg = data.forecastAggregated;
@@ -595,22 +599,21 @@ export function ForecastActualsSection({
                             </TableRow>
                           ) : (
                             (varianceQ.data?.records || []).map((r, idx, arr) => {
-                              const open = expandedSid === r.shiftcareId && r.recordType === 'variance';
+                              const pairKey = variancePairKey(r);
+                              const open = expandedSid === pairKey && r.recordType === 'variance';
                               const isClickable = r.recordType === 'variance';
                               const isLastOfPair =
-                                expandedSid === r.shiftcareId &&
+                                expandedSid === pairKey &&
                                 r.recordType === 'variance' &&
-                                (idx === arr.length - 1 || arr[idx + 1].shiftcareId !== r.shiftcareId);
+                                (idx === arr.length - 1 || variancePairKey(arr[idx + 1]) !== pairKey);
                               return (
-                                <Fragment key={`${r.shiftcareId}-${idx}-${r.source || ''}`}>
+                                <Fragment key={`${pairKey}-${idx}-${r.source || ''}`}>
                                   <TableRow
                                     className={varianceRowClass(r)}
                                     onClick={
                                       isClickable
                                         ? () =>
-                                            onExpandedSidChange(
-                                              expandedSid === r.shiftcareId ? null : r.shiftcareId
-                                            )
+                                            onExpandedSidChange(expandedSid === pairKey ? null : pairKey)
                                         : undefined
                                     }
                                   >
