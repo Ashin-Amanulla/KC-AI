@@ -190,3 +190,23 @@ test('golden: computeStandardVarianceDiff treats cent-level money diff as equal'
   const fcs = { ...baseStd, totalCost: 400.001 };
   assert.deepStrictEqual(computeStandardVarianceDiff(baseStd, fcs), []);
 });
+
+test('golden: computeStandardVarianceDiff ignores forecast shiftDate when standard uses weekday', () => {
+  const std = { ...baseStd, day: 'Monday', shiftDate: null };
+  const fcs = {
+    ...baseStd,
+    day: 'Monday',
+    shiftDate: new Date('2026-05-25T00:00:00.000Z'),
+  };
+  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), []);
+});
+
+test('golden: computeStandardVarianceDiff detects weekday mismatch', () => {
+  const std = { ...baseStd, day: 'Monday', shiftDate: null };
+  const fcs = {
+    ...baseStd,
+    day: 'Tuesday',
+    shiftDate: new Date('2026-05-26T00:00:00.000Z'),
+  };
+  assert.deepStrictEqual(computeStandardVarianceDiff(std, fcs), ['shift_date']);
+});

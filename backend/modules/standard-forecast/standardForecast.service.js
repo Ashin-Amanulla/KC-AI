@@ -667,12 +667,29 @@ const DAY_LABEL = {
   sunday: 'Sunday',
 };
 
+const UTC_DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+function dayKeyFromLabel(day) {
+  if (!day) return '';
+  return String(day).trim().toLowerCase();
+}
+
+function dayKeyFromShiftDate(d) {
+  if (!d) return '';
+  return UTC_DAY_KEYS[new Date(d).getUTCDay()] || '';
+}
+
 /** Diff between an aggregated standard bucket and an aggregated forecast bucket. */
 export function computeStandardVarianceDiff(std, fcs) {
   const diff = [];
   const t = (d) => (d ? new Date(d).getTime() : 0);
-  if (std.shiftDate || fcs.shiftDate) {
+  // Standard templates use weekday; forecast rows use calendar shiftDate — compare day-of-week, not timestamps.
+  if (std.shiftDate && fcs.shiftDate) {
     if (t(std.shiftDate) !== t(fcs.shiftDate)) diff.push('shift_date');
+  } else {
+    const stdDay = dayKeyFromLabel(std.day);
+    const fcsDay = dayKeyFromLabel(fcs.day) || dayKeyFromShiftDate(fcs.shiftDate);
+    if (stdDay && fcsDay && stdDay !== fcsDay) diff.push('shift_date');
   }
   if (String(std.clientName || '') !== String(fcs.clientName || '')) diff.push('client_name');
   if (String(std.startTime || '') !== String(fcs.startTime || '')) diff.push('start_datetime');
