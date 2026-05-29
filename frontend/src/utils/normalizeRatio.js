@@ -17,6 +17,13 @@ export function formatUtcDateTime(d) {
   return `${formatUtcDate(d)} ${pad2(t.getUTCHours())}:${pad2(t.getUTCMinutes())}`;
 }
 
+export function formatUtcTime(d) {
+  if (!d) return '—';
+  const t = new Date(d);
+  if (Number.isNaN(t.getTime())) return '—';
+  return `${pad2(t.getUTCHours())}:${pad2(t.getUTCMinutes())}`;
+}
+
 /** Match backend utils/normalizeRatio.js — strip leading zeros per side of ":" */
 export function normalizeRatio(raw) {
   const s = String(raw ?? '').trim();

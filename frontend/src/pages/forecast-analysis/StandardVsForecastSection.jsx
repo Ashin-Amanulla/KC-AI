@@ -29,7 +29,7 @@ import {
   makeDiffCell,
   diffPanelCell,
   TypePill,
-  VARIANCE_COLUMNS,
+  STANDARD_VS_FORECAST_VARIANCE_COLUMNS,
   VARIANCE_DIFF_KEYS,
   VARIANCE_DIFF_LABELS,
   VarianceColumnHeaders,
@@ -37,6 +37,8 @@ import {
   varianceColSpan,
   varianceCellValue,
 } from '../varianceUI';
+
+const SVF_VARIANCE_CELL_OPTS = { timeOnly: true };
 
 const SECTIONS = [
   { id: 'summary', label: 'Summary' },
@@ -96,7 +98,7 @@ function StandardVarianceDetailPanel({ data }) {
               <table className="w-full text-xs">
                 <thead className="bg-blue-50 text-blue-700">
                   <tr>
-                    {VARIANCE_COLUMNS.map((col) => (
+                    {STANDARD_VS_FORECAST_VARIANCE_COLUMNS.map((col) => (
                       <th
                         key={col.key}
                         className={cn(
@@ -112,7 +114,7 @@ function StandardVarianceDetailPanel({ data }) {
                 <tbody className="bg-background divide-y divide-blue-100">
                   {standardRows.map((sr) => (
                     <tr key={sr.id}>
-                      {VARIANCE_COLUMNS.map((col) => (
+                      {STANDARD_VS_FORECAST_VARIANCE_COLUMNS.map((col) => (
                         <td
                           key={col.key}
                           className={cn(
@@ -131,7 +133,8 @@ function StandardVarianceDetailPanel({ data }) {
                                   ? (sr.totalCost || 0) * data.dayCount
                                   : sr.totalCost,
                             },
-                            col.key
+                            col.key,
+                            SVF_VARIANCE_CELL_OPTS
                           )}
                         </td>
                       ))}
@@ -166,7 +169,7 @@ function StandardVarianceDetailPanel({ data }) {
               <table className="w-full text-xs">
                 <thead className="bg-green-50 text-green-700">
                   <tr>
-                    {VARIANCE_COLUMNS.map((col) => (
+                    {STANDARD_VS_FORECAST_VARIANCE_COLUMNS.map((col) => (
                       <th
                         key={col.key}
                         className={cn(
@@ -182,7 +185,7 @@ function StandardVarianceDetailPanel({ data }) {
                 <tbody className="bg-background divide-y divide-green-100">
                   {forecastRecords.map((fr) => (
                     <tr key={fr.id}>
-                      {VARIANCE_COLUMNS.map((col) => {
+                      {STANDARD_VS_FORECAST_VARIANCE_COLUMNS.map((col) => {
                         const diffKey = VARIANCE_DIFF_KEYS[col.key];
                         return (
                           <td
@@ -196,7 +199,8 @@ function StandardVarianceDetailPanel({ data }) {
                           >
                             {varianceCellValue(
                               { ...fr, shiftcareId: fr.shiftcareId || data.templateKey },
-                              col.key
+                              col.key,
+                              SVF_VARIANCE_CELL_OPTS
                             )}
                           </td>
                         );
@@ -522,14 +526,20 @@ export function StandardVsForecastSection({
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <VarianceColumnHeaders showType={varianceTab === 'all'} />
+                            <VarianceColumnHeaders
+                              showType={varianceTab === 'all'}
+                              columns={STANDARD_VS_FORECAST_VARIANCE_COLUMNS}
+                            />
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {(varianceQ.data?.records || []).length === 0 ? (
                             <TableRow>
                               <TableCell
-                                colSpan={varianceColSpan(varianceTab === 'all')}
+                                colSpan={varianceColSpan(
+                                  varianceTab === 'all',
+                                  STANDARD_VS_FORECAST_VARIANCE_COLUMNS
+                                )}
                                 className="text-center text-muted-foreground py-8"
                               >
                                 {varianceTab === 'deleted'
@@ -572,6 +582,8 @@ export function StandardVsForecastSection({
                                     <VarianceDataCells
                                       row={r}
                                       diffCell={diffCell}
+                                      timeOnly
+                                      columns={STANDARD_VS_FORECAST_VARIANCE_COLUMNS}
                                       shiftIdPrefix={
                                         r.recordType === 'variance' && r.source === 'standard' ? (
                                           <ChevronRight
@@ -587,7 +599,10 @@ export function StandardVsForecastSection({
                                   {isLastOfPair && (
                                     <TableRow>
                                       <TableCell
-                                        colSpan={varianceColSpan(varianceTab === 'all')}
+                                        colSpan={varianceColSpan(
+                                          varianceTab === 'all',
+                                          STANDARD_VS_FORECAST_VARIANCE_COLUMNS
+                                        )}
                                         className="bg-muted/10 p-4 align-top"
                                       >
                                         {detailQ.isLoading ? (

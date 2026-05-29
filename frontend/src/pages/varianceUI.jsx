@@ -5,7 +5,7 @@
 
 import { TableCell, TableHead } from '../ui/table';
 import { cn } from '../lib/utils';
-import { formatUtcDate, formatUtcDateTime, normalizeRatio } from '../utils/normalizeRatio';
+import { formatUtcDate, formatUtcDateTime, formatUtcTime, normalizeRatio } from '../utils/normalizeRatio';
 
 /** Main variance table columns (both Forecast vs Actuals and Standard vs Forecast). */
 export const VARIANCE_COLUMNS = [
@@ -47,15 +47,21 @@ export const VARIANCE_DIFF_LABELS = {
   ratio: 'Ratio',
 };
 
-export function varianceColSpan(showType) {
-  return VARIANCE_COLUMNS.length + (showType ? 1 : 0);
+export const STANDARD_VS_FORECAST_VARIANCE_COLUMNS = VARIANCE_COLUMNS.map((col) => {
+  if (col.key === 'startDatetime') return { ...col, label: 'Start time' };
+  if (col.key === 'endDatetime') return { ...col, label: 'End time' };
+  return col;
+});
+
+export function varianceColSpan(showType, columns = VARIANCE_COLUMNS) {
+  return columns.length + (showType ? 1 : 0);
 }
 
-export function VarianceColumnHeaders({ showType = false }) {
+export function VarianceColumnHeaders({ showType = false, columns = VARIANCE_COLUMNS }) {
   return (
     <>
       {showType && <TableHead className="w-[110px]">Type</TableHead>}
-      {VARIANCE_COLUMNS.map((col) => (
+      {columns.map((col) => (
         <TableHead
           key={col.key}
           className={col.align === 'right' ? 'text-right' : undefined}
@@ -67,7 +73,14 @@ export function VarianceColumnHeaders({ showType = false }) {
   );
 }
 
-export function varianceCellValue(r, key) {
+function varianceTimeValue(r, datetimeKey, timeKey) {
+  if (r[timeKey]) return String(r[timeKey]);
+  if (r[datetimeKey]) return formatUtcTime(r[datetimeKey]);
+  return '—';
+}
+
+export function varianceCellValue(r, key, options = {}) {
+  const { timeOnly = false } = options;
   switch (key) {
     case 'shiftDate':
       if (r.shiftDate) return formatDate(r.shiftDate);
@@ -76,10 +89,12 @@ export function varianceCellValue(r, key) {
     case 'clientName':
       return r.clientName || '—';
     case 'startDatetime':
+      if (timeOnly) return varianceTimeValue(r, 'startDatetime', 'startTime');
       if (r.startDatetime) return formatDt(r.startDatetime);
       if (r.startTime) return String(r.startTime);
       return '—';
     case 'endDatetime':
+      if (timeOnly) return varianceTimeValue(r, 'endDatetime', 'endTime');
       if (r.endDatetime) return formatDt(r.endDatetime);
       if (r.endTime) return String(r.endTime);
       return '—';
@@ -100,10 +115,17 @@ export function varianceCellValue(r, key) {
   }
 }
 
-export function VarianceDataCells({ row, diffCell, shiftIdPrefix = null }) {
+export function VarianceDataCells({
+  row,
+  diffCell,
+  shiftIdPrefix = null,
+  timeOnly = false,
+  columns = VARIANCE_COLUMNS,
+}) {
+  const cellOpts = timeOnly ? { timeOnly: true } : {};
   return (
     <>
-      {VARIANCE_COLUMNS.map((col) => (
+      {columns.map((col) => (
         <TableCell
           key={col.key}
           className={cn(
@@ -119,7 +141,7 @@ export function VarianceDataCells({ row, diffCell, shiftIdPrefix = null }) {
               {varianceCellValue(row, col.key)}
             </span>
           ) : (
-            varianceCellValue(row, col.key)
+            varianceCellValue(row, col.key, cellOpts)
           )}
         </TableCell>
       ))}
