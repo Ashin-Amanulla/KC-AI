@@ -29,18 +29,6 @@ import { sortByWeekdayThenTime } from '../../utils/weekdaySort';
 import { Upload, Download, Plus, Pencil, Trash2 } from 'lucide-react';
 import { VARIANCE_COLUMNS, varianceCellValue } from '../varianceUI';
 
-function standardTemplateKey(r) {
-  return `${r.clientDirectoryId}|${String(r.day || '').trim().toLowerCase()}|${r.startTime || ''}`;
-}
-
-function standardRowForDisplay(r) {
-  return {
-    ...r,
-    shiftcareId: standardTemplateKey(r),
-    templateKey: standardTemplateKey(r),
-  };
-}
-
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const EMPTY_ROW_FORM = {
@@ -71,7 +59,7 @@ function recordToStandardForm(r) {
   };
 }
 
-const TEMPLATE_TABLE_COLUMNS = VARIANCE_COLUMNS;
+const TEMPLATE_TABLE_COLUMNS = VARIANCE_COLUMNS.filter((col) => col.key !== 'shiftcareId');
 const TEMPLATE_TABLE_COLSPAN = TEMPLATE_TABLE_COLUMNS.length + 1;
 
 export function StandardTemplatesSection({ locationId, client, directory, dirLoading }) {
@@ -414,24 +402,19 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                           </TableCell>
                         </TableRow>
                       ) : (
-                        tableRecords.map((r) => {
-                          const display = standardRowForDisplay(r);
-                          return (
+                        tableRecords.map((r) => (
                           <TableRow key={r.id}>
                             {TEMPLATE_TABLE_COLUMNS.map((col) => (
                               <TableCell
                                 key={col.key}
                                 className={cn(
                                   col.align === 'right' ? 'text-right whitespace-nowrap' : 'whitespace-nowrap',
-                                  col.key === 'shiftcareId' && 'font-mono text-xs max-w-[180px] truncate',
                                   col.key === 'clientName' && 'max-w-[200px] truncate',
                                   col.key === 'rateGroups' && 'max-w-[240px] truncate'
                                 )}
-                                title={
-                                  col.key === 'rateGroups' ? display.rateGroups || undefined : undefined
-                                }
+                                title={col.key === 'rateGroups' ? r.rateGroups || undefined : undefined}
                               >
-                                {varianceCellValue(display, col.key)}
+                                {varianceCellValue(r, col.key)}
                               </TableCell>
                             ))}
                             <TableCell>
@@ -460,8 +443,7 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                               </div>
                             </TableCell>
                           </TableRow>
-                          );
-                        })
+                        ))
                       )}
                     </TableBody>
                   </Table>
