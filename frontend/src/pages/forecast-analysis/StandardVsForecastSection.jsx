@@ -1,9 +1,8 @@
-import { Fragment, useMemo } from 'react';
+import { useMemo } from 'react';
 import { toast } from 'sonner';
 import {
   useStandardVsForecastSummary,
   useStandardForecastVarianceList,
-  useStandardForecastVarianceDetail,
   exportStandardVsForecastCsv,
   exportStandardVsForecastPdf,
 } from '../../api/standardForecast';
@@ -19,23 +18,18 @@ import {
   TableRow,
 } from '../../ui/table';
 import { LoadingScreen } from '../../ui/LoadingSpinner';
-import { ChevronRight, Download, FileSpreadsheet } from 'lucide-react';
+import { Download, FileSpreadsheet } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
   formatDate,
-  fmtMoney,
-  fmtNum,
   makeVarianceRowClass,
   makeDiffCell,
-  diffPanelCell,
   TypePill,
   STANDARD_VS_FORECAST_VARIANCE_COLUMNS,
   VARIANCE_DIFF_KEYS,
-  VARIANCE_DIFF_LABELS,
   VarianceColumnHeaders,
   VarianceDataCells,
   varianceColSpan,
-  varianceCellValue,
 } from '../varianceUI';
 
 const SVF_VARIANCE_CELL_OPTS = { timeOnly: true };
@@ -67,182 +61,6 @@ function summaryVarianceClass(v) {
   return '';
 }
 
-function StandardVarianceDetailPanel({ data }) {
-  const diff = data.diffFields || [];
-  const sAgg = data.standardAggregated;
-  const fAgg = data.forecastAggregated;
-  const standardRecords = data.standardRecords || [];
-  const forecastRecords = data.forecastRecords || [];
-
-  const standardRows =
-    standardRecords.length > 0
-      ? standardRecords
-      : sAgg
-        ? [{ id: 'agg-standard', ...sAgg, totalCost: sAgg.totalCost }]
-        : [];
-
-  return (
-    <div className="space-y-3">
-      <div className="text-sm font-semibold text-foreground">
-        {sAgg?.clientName || fAgg?.clientName || 'Template'} · {sAgg?.day || fAgg?.day || '—'} ·{' '}
-        {sAgg?.startTime || fAgg?.startTime || '—'}–{sAgg?.endTime || fAgg?.endTime || '—'}
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div>
-          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-blue-700">
-            <span className="inline-block h-3 w-3 rounded border border-blue-300 bg-blue-100" />
-            Standard template ({standardRows.length})
-          </h4>
-          {standardRows.length ? (
-            <div className="overflow-x-auto rounded border border-blue-200">
-              <table className="w-full text-xs">
-                <thead className="bg-blue-50 text-blue-700">
-                  <tr>
-                    {STANDARD_VS_FORECAST_VARIANCE_COLUMNS.map((col) => (
-                      <th
-                        key={col.key}
-                        className={cn(
-                          'px-2 py-1.5 font-medium',
-                          col.align === 'right' ? 'text-right' : 'text-left'
-                        )}
-                      >
-                        {col.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-background divide-y divide-blue-100">
-                  {standardRows.map((sr) => (
-                    <tr key={sr.id}>
-                      {STANDARD_VS_FORECAST_VARIANCE_COLUMNS.map((col) => (
-                        <td
-                          key={col.key}
-                          className={cn(
-                            'px-2 py-1.5',
-                            col.align === 'right' ? 'text-right' : '',
-                            col.key === 'shiftcareId' && 'font-mono'
-                          )}
-                        >
-                          {varianceCellValue(
-                            {
-                              ...sr,
-                              shiftDate: sr.shiftDate ?? null,
-                              shiftcareId: sr.shiftcareId || data.templateKey,
-                              totalCost:
-                                col.key === 'totalCost' && data.dayCount
-                                  ? (sr.totalCost || 0) * data.dayCount
-                                  : sr.totalCost,
-                            },
-                            col.key,
-                            SVF_VARIANCE_CELL_OPTS
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-                {sAgg && data.dayCount > 0 && (
-                  <tfoot className="bg-blue-100 font-medium text-blue-800">
-                    <tr>
-                      <td colSpan={4} className="px-2 py-1.5">
-                        Standard total ({data.dayCount} day{data.dayCount === 1 ? '' : 's'})
-                      </td>
-                      <td className="px-2 py-1.5 text-right">{fmtNum(sAgg.duration)}</td>
-                      <td className="px-2 py-1.5 text-right">{fmtMoney(sAgg.totalCost)}</td>
-                      <td colSpan={4} />
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-          ) : (
-            <p className="text-sm italic text-muted-foreground">No standard template found.</p>
-          )}
-        </div>
-        <div>
-          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-green-700">
-            <span className="inline-block h-3 w-3 rounded border border-green-300 bg-green-100" />
-            Forecast occurrences ({forecastRecords.length})
-          </h4>
-          {forecastRecords.length ? (
-            <div className="overflow-x-auto rounded border border-green-200">
-              <table className="w-full text-xs">
-                <thead className="bg-green-50 text-green-700">
-                  <tr>
-                    {STANDARD_VS_FORECAST_VARIANCE_COLUMNS.map((col) => (
-                      <th
-                        key={col.key}
-                        className={cn(
-                          'px-2 py-1.5 font-medium',
-                          col.align === 'right' ? 'text-right' : 'text-left'
-                        )}
-                      >
-                        {col.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-background divide-y divide-green-100">
-                  {forecastRecords.map((fr) => (
-                    <tr key={fr.id}>
-                      {STANDARD_VS_FORECAST_VARIANCE_COLUMNS.map((col) => {
-                        const diffKey = VARIANCE_DIFF_KEYS[col.key];
-                        return (
-                          <td
-                            key={col.key}
-                            className={cn(
-                              'px-2 py-1.5',
-                              col.align === 'right' ? 'text-right' : '',
-                              col.key === 'shiftcareId' && 'font-mono',
-                              diffPanelCell(diff, diffKey)
-                            )}
-                          >
-                            {varianceCellValue(
-                              { ...fr, shiftcareId: fr.shiftcareId || data.templateKey },
-                              col.key,
-                              SVF_VARIANCE_CELL_OPTS
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-                {fAgg && (
-                  <tfoot className="bg-green-100 font-medium text-green-800">
-                    <tr>
-                      <td colSpan={4} className="px-2 py-1.5">
-                        Aggregated total
-                      </td>
-                      <td className={cn('px-2 py-1.5 text-right', diff.includes('duration') && 'bg-yellow-200')}>
-                        {fmtNum(fAgg.duration)}
-                      </td>
-                      <td className={cn('px-2 py-1.5 text-right', diff.includes('total_cost') && 'bg-yellow-200')}>
-                        {fmtMoney(fAgg.totalCost)}
-                      </td>
-                      <td colSpan={4} />
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-          ) : (
-            <p className="text-sm italic text-muted-foreground">No forecast occurrences found.</p>
-          )}
-        </div>
-      </div>
-      {diff.length > 0 && (
-        <div className="rounded border border-yellow-200 bg-yellow-50 p-2 text-xs">
-          <span className="font-medium text-yellow-800">Differences found in:</span>{' '}
-          <span className="text-yellow-700">
-            {diff.map((f) => VARIANCE_DIFF_LABELS[f] || f).join(', ')}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function scopeDateQuery(dateFrom, dateTo) {
   const q = {};
   if (dateFrom) q.dateFrom = dateFrom;
@@ -261,8 +79,6 @@ export function StandardVsForecastSection({
   onPageChange,
   varianceTab,
   onVarianceTabChange,
-  expandedKey,
-  onExpandedKeyChange,
 }) {
 
   const summaryParams = useMemo(
@@ -282,11 +98,6 @@ export function StandardVsForecastSection({
 
   const summaryQ = useStandardVsForecastSummary(summaryParams, Boolean(locationId) && section === 'summary');
   const varianceQ = useStandardForecastVarianceList(varianceParams, section === 'variance');
-  const detailQ = useStandardForecastVarianceDetail(
-    locationId,
-    expandedKey,
-    Boolean(expandedKey && section === 'variance')
-  );
 
   const exportBase = { locationId, client, ...scopeDateQuery(dateFrom, dateTo) };
 
@@ -310,7 +121,6 @@ export function StandardVsForecastSection({
             onClick={() => {
               onSectionChange(s.id);
               onPageChange(1);
-              onExpandedKeyChange(null);
             }}
           >
             {s.label}
@@ -451,7 +261,6 @@ export function StandardVsForecastSection({
                           onClick={() => {
                             onVarianceTabChange(t.id);
                             onPageChange(1);
-                            onExpandedKeyChange(null);
                           }}
                           className={cn(
                             'border-b-2 py-2 px-1 text-sm font-medium transition-colors',
@@ -517,9 +326,6 @@ export function StandardVsForecastSection({
                             Difference
                           </span>
                         </div>
-                        <span className="text-xs italic text-muted-foreground">
-                          Click any variance pair to see individual records
-                        </span>
                       </div>
                     )}
                     <div className="rounded-md border overflow-x-auto">
@@ -552,70 +358,26 @@ export function StandardVsForecastSection({
                               </TableCell>
                             </TableRow>
                           ) : (
-                            (varianceQ.data?.records || []).map((r, idx, arr) => {
-                              const rowKey = r.shiftcareId || r.templateKey;
-                              const open = expandedKey === rowKey && r.recordType === 'variance';
-                              const isClickable = r.recordType === 'variance';
-                              const isLastOfPair =
-                                expandedKey === rowKey &&
-                                r.recordType === 'variance' &&
-                                (idx === arr.length - 1 ||
-                                  (arr[idx + 1].shiftcareId || arr[idx + 1].templateKey) !== rowKey);
-                              return (
-                                <Fragment key={`${rowKey}-${idx}-${r.source || ''}`}>
-                                  <TableRow
-                                    className={cn(varianceRowClass(r), isClickable && 'cursor-pointer')}
-                                    onClick={
-                                      isClickable
-                                        ? () =>
-                                            onExpandedKeyChange(expandedKey === rowKey ? null : rowKey)
-                                        : undefined
-                                    }
-                                  >
-                                    {varianceTab === 'all' && (
-                                      <TableCell className="whitespace-nowrap">
-                                        {r.source === 'standard' || r.recordType !== 'variance' ? (
-                                          <TypePill recordType={r.recordType} />
-                                        ) : null}
-                                      </TableCell>
-                                    )}
-                                    <VarianceDataCells
-                                      row={r}
-                                      diffCell={diffCell}
-                                      timeOnly
-                                      columns={STANDARD_VS_FORECAST_VARIANCE_COLUMNS}
-                                      shiftIdPrefix={
-                                        r.recordType === 'variance' && r.source === 'standard' ? (
-                                          <ChevronRight
-                                            className={cn(
-                                              'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
-                                              open && 'rotate-90'
-                                            )}
-                                          />
-                                        ) : null
-                                      }
-                                    />
-                                  </TableRow>
-                                  {isLastOfPair && (
-                                    <TableRow>
-                                      <TableCell
-                                        colSpan={varianceColSpan(
-                                          varianceTab === 'all',
-                                          STANDARD_VS_FORECAST_VARIANCE_COLUMNS
-                                        )}
-                                        className="bg-muted/10 p-4 align-top"
-                                      >
-                                        {detailQ.isLoading ? (
-                                          <LoadingScreen message="Loading detail…" />
-                                        ) : detailQ.data ? (
-                                          <StandardVarianceDetailPanel data={detailQ.data} />
-                                        ) : null}
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                </Fragment>
-                              );
-                            })
+                            (varianceQ.data?.records || []).map((r, idx) => (
+                              <TableRow
+                                key={`${r.shiftcareId || r.templateKey}-${idx}-${r.source || ''}`}
+                                className={varianceRowClass(r)}
+                              >
+                                {varianceTab === 'all' && (
+                                  <TableCell className="whitespace-nowrap">
+                                    {r.source === 'standard' || r.recordType !== 'variance' ? (
+                                      <TypePill recordType={r.recordType} />
+                                    ) : null}
+                                  </TableCell>
+                                )}
+                                <VarianceDataCells
+                                  row={r}
+                                  diffCell={diffCell}
+                                  timeOnly
+                                  columns={STANDARD_VS_FORECAST_VARIANCE_COLUMNS}
+                                />
+                              </TableRow>
+                            ))
                           )}
                         </TableBody>
                       </Table>

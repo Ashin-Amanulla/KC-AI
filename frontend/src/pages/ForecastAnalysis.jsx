@@ -18,7 +18,6 @@ const INITIAL_SVF_UI = {
   section: 'summary',
   page: 1,
   varianceTab: 'all',
-  expandedKey: null,
 };
 
 const INITIAL_FVA_UI = {
@@ -67,7 +66,7 @@ export function ForecastAnalysis() {
   };
 
   const resetPages = () => {
-    setSvfUi((u) => ({ ...u, page: 1, expandedKey: null }));
+    setSvfUi((u) => ({ ...u, page: 1 }));
     setFvaUi((u) => ({ ...u, page: 1 }));
   };
 
@@ -89,7 +88,7 @@ export function ForecastAnalysis() {
 
   const onClientChange = (value) => {
     setClient(value);
-    setSvfUi((u) => ({ ...u, page: 1, expandedKey: null }));
+    setSvfUi((u) => ({ ...u, page: 1 }));
     setFvaUi((u) => ({ ...u, page: 1 }));
   };
 
@@ -167,8 +166,6 @@ export function ForecastAnalysis() {
               onPageChange={(page) => setSvfUi((u) => ({ ...u, page }))}
               varianceTab={svfUi.varianceTab}
               onVarianceTabChange={(varianceTab) => setSvfUi((u) => ({ ...u, varianceTab }))}
-              expandedKey={svfUi.expandedKey}
-              onExpandedKeyChange={(expandedKey) => setSvfUi((u) => ({ ...u, expandedKey }))}
             />
           )}
           {primaryTab === 'forecast-vs-actuals' && (
