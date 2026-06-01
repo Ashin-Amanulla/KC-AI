@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../utils/api';
+import { nameMatchKeys, normStaffNameForMatch } from '../lib/staffNameNorm';
 
 export const STAFF_RATES_KEY = 'staff-rates';
 
@@ -7,12 +8,25 @@ export const STAFF_RATES_KEY = 'staff-rates';
 export function staffRatesArrayToMap(rows) {
   const m = new Map();
   for (const r of rows || []) {
-    if (!r?.normName || !r.rates) continue;
+    if (!r?.rates) continue;
     const ratesObj = { ...r.rates, name: r.rates.name || r.staffName };
-    m.set(r.normName, ratesObj);
+    const canonical = normStaffNameForMatch(r.staffName) || r.normName;
+    if (!canonical) continue;
+
+    const addKey = (key) => {
+      if (key && !m.has(key)) m.set(key, ratesObj);
+    };
+
+    addKey(canonical);
+    if (r.normName && r.normName !== canonical) addKey(r.normName);
+
+    for (const k of nameMatchKeys(r.staffName)) addKey(k);
+
     if (Array.isArray(r.aliases)) {
       for (const alias of r.aliases) {
-        if (alias && !m.has(alias)) m.set(alias, ratesObj);
+        if (!alias) continue;
+        for (const k of nameMatchKeys(alias)) addKey(k);
+        addKey(alias);
       }
     }
   }

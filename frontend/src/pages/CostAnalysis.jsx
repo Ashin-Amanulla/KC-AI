@@ -2,7 +2,8 @@ import React, { useState, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { usePayHours } from '../api/payHours';
 import { useStaffRates, staffRatesArrayToMap } from '../api/staffRates';
-import { buildAwardCostMapFromPayHours, r2 as r2Schads, VEHICLE_RATE } from '../lib/schadsWageCalc';
+import { buildAwardCostMapFromPayHours, r2 as r2Schads, VEHICLE_RATE, normName } from '../lib/schadsWageCalc';
+import { nameMatchKeys } from '../lib/staffNameNorm';
 import { useDropzone } from 'react-dropzone';
 import {
   Upload, TrendingDown, DollarSign, Clock, Users, AlertTriangle,
@@ -19,8 +20,6 @@ const r2 = (n) => Math.round(n * 100) / 100;
 const fmt = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const fmtK = (n) => n >= 1000 ? '$' + (n / 1000).toFixed(1) + 'k' : fmt(n);
 const pct = (part, total) => total > 0 ? ((part / total) * 100).toFixed(1) + '%' : '0%';
-const normName = (n) => n?.toLowerCase().replace(/\s+/g, ' ').trim() ?? '';
-
 // ─── Payroll file parser (ShiftCare Payroll Employee Summary XLSX) ────────────
 function parsePayrollXlsx(arrayBuffer) {
   const wb = XLSX.read(arrayBuffer, { type: 'array' });
@@ -118,6 +117,29 @@ function parseAwardRatesXlsx(arrayBuffer) {
   return map;
 }
 
+function lookupCostMap(map, displayName, aggregateKey) {
+  if (!map?.size) return null;
+  if (map.has(aggregateKey)) return map.get(aggregateKey);
+  for (const k of nameMatchKeys(displayName)) {
+    if (map.has(k)) return map.get(k);
+  }
+  return null;
+}
+
+/** Register all name variants on a payroll-shaped map (earnings/super/totalCost). */
+function enrichCostMapWithNameKeys(map) {
+  if (!map?.size) return map;
+  const extra = [];
+  for (const [key, val] of map) {
+    const label = val?.name || key;
+    for (const k of nameMatchKeys(label)) {
+      if (k && k !== key && !map.has(k)) extra.push([k, val]);
+    }
+  }
+  for (const [k, v] of extra) map.set(k, v);
+  return map;
+}
+
 // ─── Staff profitability analysis ─────────────────────────────────────────────
 function analyzeStaffProfitability(rows, payrollMap) {
   // Aggregate revenue, hours, and raw billing rows per staff
@@ -136,6 +158,7 @@ function analyzeStaffProfitability(rows, payrollMap) {
 
   const staffRows = [];
   let matchedCount = 0;
+  const matchedPayrollEntries = new Set();
   // Only sum matched staff for the overall margin (apples-to-apples)
   let matchedRevenue = 0, matchedWages = 0, matchedSuper = 0;
   const totalRevenue = r2(Object.values(byStaff).reduce((s, d) => s + d.revenue, 0));
@@ -164,7 +187,7 @@ function analyzeStaffProfitability(rows, payrollMap) {
   }
 
   for (const [key, d] of Object.entries(byStaff)) {
-    const payroll  = payrollMap.get(key);
+    const payroll  = lookupCostMap(payrollMap, d.name, key);
     const wages    = payroll?.earnings ?? null;
     const superAmt = payroll?.superAmt ?? null;
     const employerCost = wages !== null ? r2(wages + (superAmt || 0)) : null;
@@ -175,6 +198,7 @@ function analyzeStaffProfitability(rows, payrollMap) {
 
     if (payroll) {
       matchedCount++;
+      matchedPayrollEntries.add(payroll);
       matchedRevenue += d.revenue;
       matchedWages   += wages;
       matchedSuper   += superAmt || 0;
@@ -229,12 +253,12 @@ function analyzeStaffProfitability(rows, payrollMap) {
   }
 
   // Staff in payroll but no shifts in this billing file
-  const billedKeys = new Set(Object.keys(byStaff));
   const paidNotBilled = [];
-  for (const [key, p] of payrollMap.entries()) {
-    if (!billedKeys.has(key)) {
-      paidNotBilled.push({ name: p.name, wages: p.earnings, superAmt: p.superAmt, employerCost: p.totalCost });
-    }
+  const seenPaidNotBilled = new Set();
+  for (const [, p] of payrollMap.entries()) {
+    if (matchedPayrollEntries.has(p) || seenPaidNotBilled.has(p)) continue;
+    seenPaidNotBilled.add(p);
+    paidNotBilled.push({ name: p.name, wages: p.earnings, superAmt: p.superAmt, employerCost: p.totalCost });
   }
 
   staffRows.sort((a, b) => b.revenue - a.revenue);
@@ -1425,10 +1449,13 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
       defaultEmpType: awardEmpType,
       superPct,
     });
-    return map.size > 0 ? map : null;
+    return map.size > 0 ? enrichCostMapWithNameKeys(map) : null;
   }, [wageSource, payHoursRows, hubXlsxRatesMerge, awardDefaultRate, awardEmpType, superPct]);
 
-  const effectiveCostMap = wageSource === 'award' ? awardCostMap : payrollMap;
+  const effectiveCostMap = useMemo(() => {
+    const raw = wageSource === 'award' ? awardCostMap : payrollMap;
+    return raw?.size ? enrichCostMapWithNameKeys(raw) : raw;
+  }, [wageSource, awardCostMap, payrollMap]);
   const effectiveCostLabel = useMemo(() => {
     if (!effectiveCostMap?.size) return '';
     if (wageSource === 'payroll') return payrollName;

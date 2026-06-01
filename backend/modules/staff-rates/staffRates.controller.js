@@ -1,16 +1,23 @@
 import mongoose from 'mongoose';
 import { StaffSchadsRate } from './staffSchadsRate.model.js';
 import { Location } from '../locations/location.model.js';
+import { normStaffNameForMatch, nameMatchKeys } from '../../utils/staffNameNorm.js';
 
 function normName(s) {
-  if (!s) return '';
-  let n = s.toString().toLowerCase().replace(/\([^)]*\)/g, '').trim();
-  n = n.replace(/\s+/g, ' ');
-  const parts = n.split(' ');
-  if (parts.length >= 2) {
-    return `${parts[0]} ${parts[parts.length - 1]}`;
+  return normStaffNameForMatch(s);
+}
+
+/** Normalized lookup keys for alternate ShiftCare / billing spellings (excludes canonical normName). */
+function normalizeAliases(rawAliases, staffName) {
+  const canonical = normName(staffName);
+  const keys = new Set();
+  for (const a of rawAliases || []) {
+    if (typeof a !== 'string' || !a.trim()) continue;
+    for (const k of nameMatchKeys(a.trim())) {
+      if (k && k !== canonical) keys.add(k);
+    }
   }
-  return n;
+  return [...keys];
 }
 
 function r2(n) {
@@ -116,7 +123,7 @@ export const upsertStaffRate = async (req, res, next) => {
           shiftcareStaffId: scId,
           staffName: nameStr,
           normName: n,
-          aliases: Array.isArray(aliases) ? aliases.filter(a => typeof a === 'string' && a.trim()).map(a => a.trim()) : [],
+          aliases: normalizeAliases(aliases, nameStr),
           rates,
         },
       },
@@ -180,7 +187,7 @@ export const bulkUpsertStaffRates = async (req, res, next) => {
       if (!n) {
         return res.status(400).json({ error: 'Invalid staffName in row' });
       }
-      const aliases = Array.isArray(r.aliases) ? r.aliases.filter(a => typeof a === 'string' && a.trim()).map(a => a.trim()) : [];
+      const aliases = normalizeAliases(r.aliases, nameStr);
       const rates = normalizeRatesBody({ ...r.rates, name: r.rates?.name != null ? r.rates.name : nameStr });
       if (!rates) {
         return res.status(400).json({ error: 'Invalid rates in row' });
