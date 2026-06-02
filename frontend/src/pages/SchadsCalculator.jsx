@@ -3,7 +3,8 @@ import { useQueries } from '@tanstack/react-query';
 import api from '../utils/api';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { Plus, X, AlertCircle, Upload, FileSpreadsheet, ChevronDown, UserPlus, EyeOff, Trash2 } from 'lucide-react';
+import { Plus, X, AlertCircle, Upload, FileSpreadsheet, ChevronDown, UserPlus, EyeOff, Trash2, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -35,6 +36,7 @@ import {
   calcOtAndBrokenPay,
   calcOt76MonetaryPay,
 } from '../lib/schadsWageCalc';
+import { downloadStaffPaySummaryCsv } from '../lib/staffPaySummaryExport';
 
 const fmt = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const fmtH = (n) => n.toFixed(2) + 'h';
@@ -1631,6 +1633,43 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
 
   const summaryColSpan = 28 + (payrollData ? 3 : 0);
 
+  const handleExportEmployeeHours = useCallback(() => {
+    if (!displayRows.length) {
+      toast.message('No staff rows to export');
+      return;
+    }
+    try {
+      downloadStaffPaySummaryCsv(displayRows, {
+        getMergedRow,
+        getGrossPay: (row, mrow) => {
+          const rateVal = baseRates[row.staffName] ?? defaultRate;
+          const empT = getEmpType(row.staffName);
+          const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
+          const modeledBase = staffRates
+            ? calcGrossFromRates(mrow, staffRates)
+            : calcGross(mrow, rateVal, empT);
+          const addAlRow = r2(Number(mrow.additionalAllowance) || 0);
+          const modeledGross = modeledBase !== null ? r2(modeledBase + addAlRow) : null;
+          const payrollForGross = payrollData?.get(normName(row.staffName));
+          if (alignGrossToPayroll && payrollForGross) return payrollForGross.earnings;
+          return modeledGross;
+        },
+      });
+    } catch (err) {
+      toast.error(err?.message || 'Export failed');
+    }
+  }, [
+    displayRows,
+    getMergedRow,
+    baseRates,
+    defaultRate,
+    getEmpType,
+    resolvedStaffRatesMap,
+    normName,
+    payrollData,
+    alignGrossToPayroll,
+  ]);
+
   return (
     <div className="space-y-4">
       {/* Floating cell editor (context menu) */}
@@ -1710,7 +1749,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       </div>
 
       {/* View toggle */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         <Button size="sm" variant={view === 'summary'    ? 'default' : 'outline'} onClick={() => setView('summary')}>Staff Pay Summary</Button>
         <Button size="sm" variant={view === 'exceptions' ? 'default' : 'outline'} onClick={() => setView('exceptions')}>
           Exceptions
@@ -1722,6 +1761,18 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           Staff rates
         </Button>
         <Button size="sm" variant={view === 'manual'     ? 'default' : 'outline'} onClick={() => setView('manual')}>Manual Scenario</Button>
+        {view === 'summary' && displayRows.length > 0 && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="gap-1.5 ml-auto"
+            onClick={handleExportEmployeeHours}
+          >
+            <Download className="h-4 w-4" />
+            Export employee hours
+          </Button>
+        )}
       </div>
 
       {/* ── STAFF SUMMARY ──────────────────────────────────────── */}

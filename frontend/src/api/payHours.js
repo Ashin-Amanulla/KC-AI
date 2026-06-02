@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../utils/api';
+import { downloadBlobGet } from '../lib/downloadBlob';
 
 const PAY_HOURS_QUERY_KEY = 'pay-hours';
 const PAY_HOURS_JOB_QUERY_KEY = 'pay-hours-job';
@@ -65,7 +66,6 @@ export const useRunPayHoursTests = () => {
   });
 };
 
-export const getPayHoursExportUrl = (params = {}) => {
-  const qs = new URLSearchParams(params).toString();
-  return `/api/pay-hours/export${qs ? `?${qs}` : ''}`;
-};
+export async function exportPayHoursCsv(params = {}) {
+  await downloadBlobGet('/api/pay-hours/export', params, 'pay_hours.csv');
+}

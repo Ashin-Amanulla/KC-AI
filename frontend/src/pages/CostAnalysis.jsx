@@ -572,7 +572,7 @@ function rateGroupShort(rg) {
     .substring(0, 50);
 }
 
-function StaffDetailRows({ s }) {
+function StaffDetailRows({ s, lineStaffPaidMap }) {
   // Group billing rows by date for readability
   const byDate = {};
   for (const r of s.billingRows) {
@@ -580,7 +580,11 @@ function StaffDetailRows({ s }) {
     if (!byDate[key]) byDate[key] = [];
     byDate[key].push(r);
   }
-  const sortedDates = Object.keys(byDate).sort((a, b) => new Date(a) - new Date(b));
+  const sortedDates = Object.keys(byDate).sort((a, b) => {
+    const [am, ad, ay] = a.split('/').map(Number);
+    const [bm, bd, by] = b.split('/').map(Number);
+    return new Date(ay, am - 1, ad) - new Date(by, bm - 1, bd);
+  });
 
   const dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const getDow = (dateStr) => {
@@ -597,6 +601,8 @@ function StaffDetailRows({ s }) {
     byClient[r.client].hours = r2(byClient[r.client].hours + r.duration);
   }
   const allocStaffPaid = (row) => {
+    const mapped = lineStaffPaidMap?.get(row);
+    if (mapped !== undefined) return mapped;
     if (s.employerCost === null || !s.hours || s.hours <= 0) return null;
     return r2((s.employerCost * (row.duration || 0)) / s.hours);
   };
@@ -608,9 +614,12 @@ function StaffDetailRows({ s }) {
 
           {/* Billing line by line */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Billing Lines ({s.billingRows.length} rows)</p>
-            <div className="rounded-lg border border-gray-200 overflow-hidden">
-              <table className="w-full text-xs">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Billing Lines ({s.billingRows.length} rows)
+              <span className="font-normal normal-case text-gray-400 ml-2">Scroll horizontally for Staff Paid &amp; $/hr</span>
+            </p>
+            <div className="rounded-lg border border-gray-200 overflow-x-auto">
+              <table className="w-full text-xs min-w-[960px]">
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="text-left px-3 py-1.5 font-medium text-gray-600">Date</th>
@@ -620,7 +629,7 @@ function StaffDetailRows({ s }) {
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Start</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">End</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Hrs</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Base Cost</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Billed shift cost from export (before km/add-ons)">Billed Cost</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Km</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Total</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Staff Paid</th>
@@ -1213,7 +1222,7 @@ function StaffProfitabilitySection({
                               <TableCell className="text-right text-gray-500 text-sm">{s.hours}h</TableCell>
                               <TableCell className="text-right text-gray-500 text-sm">{s.clients}</TableCell>
                             </TableRow>
-                            {isOpen && <StaffDetailRows s={s} />}
+                            {isOpen && <StaffDetailRows s={s} lineStaffPaidMap={lineStaffPaidMap} />}
                           </React.Fragment>
                         );
                       })}

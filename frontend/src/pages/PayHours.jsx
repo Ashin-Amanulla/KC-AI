@@ -16,6 +16,7 @@ import {
   useShiftPayHours,
   useComputePayHours,
   usePayHoursJobStatus,
+  exportPayHoursCsv,
 } from '../api/payHours';
 import { getErrorMessage } from '../utils/api';
 import { LoadingScreen } from '../ui/LoadingSpinner';
@@ -428,7 +429,16 @@ export const PayHours = ({
 
   const h = (v) => (v != null ? v.toFixed(2) : '-');
 
-  const exportUrl = `/api/pay-hours/export${locationId ? `?locationId=${locationId}` : ''}`;
+  const handleExportPayHours = async () => {
+    try {
+      const params = {};
+      if (locationId) params.locationId = locationId;
+      if (staffFilter?.trim()) params.staffName = staffFilter.trim();
+      await exportPayHoursCsv(params);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  };
 
   const payHoursTableBody = (
     <>
@@ -531,13 +541,15 @@ export const PayHours = ({
                 </p>
               </div>
               {payHours.length > 0 && (
-                <a
-                  href={exportUrl}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent"
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0 gap-2"
+                  onClick={handleExportPayHours}
                 >
                   <Download className="h-4 w-4" />
                   Export pay hours CSV
-                </a>
+                </Button>
               )}
             </div>
           </CardHeader>
@@ -646,13 +658,10 @@ export const PayHours = ({
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Pay Hours</h2>
         {payHours.length > 0 && (
-          <a
-            href={exportUrl}
-            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent"
-          >
+          <Button type="button" variant="outline" className="gap-2" onClick={handleExportPayHours}>
             <Download className="h-4 w-4" />
             Export CSV
-          </a>
+          </Button>
         )}
       </div>
       )}
