@@ -535,9 +535,9 @@ export const PayHours = ({
               <div className="min-w-0">
                 <CardTitle className="text-lg">Shifts &amp; pay hours</CardTitle>
                 <p className="text-sm text-muted-foreground font-normal mt-1.5 leading-relaxed">
-                  One place for your roster: upload a <strong className="text-foreground font-medium">ShiftCare CSV</strong> (shifts
-                  are saved and pay hours compute automatically). Expand a staff row to review <strong className="text-foreground font-medium">individual shifts</strong>.
-                  Use <strong className="text-foreground font-medium">Compute pay hours</strong> to recalculate without uploading again.
+                  One place for your roster: upload a <strong className="text-foreground font-medium">Scheduler timesheet CSV</strong>{' '}
+                  (<span className="font-mono text-xs">Scheduler_Timesheet_Export_*.csv</span> with Staff, Start/End Date Time, Shift Type).
+                  Not the Timesheet &quot;all hours&quot; summary or billing export.
                 </p>
               </div>
               {payHours.length > 0 && (
@@ -565,7 +565,14 @@ export const PayHours = ({
               {selectedFile ? (
                 <p className="text-sm font-medium">{selectedFile.name}</p>
               ) : (
-                <p className="text-sm text-muted-foreground">Drop a ShiftCare CSV or click to browse</p>
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Drop <span className="font-mono text-xs">Scheduler_Timesheet_Export_*.csv</span> or click to browse
+                  </p>
+                  <p className="text-xs text-muted-foreground/80 mt-1 max-w-md">
+                    Not Timesheet &quot;all hours&quot; (Name/Total columns) — use the Scheduler export with shift start/end times.
+                  </p>
+                </>
               )}
             </div>
 
@@ -759,7 +766,14 @@ export const PayHours = ({
             {selectedFile ? (
               <p className="text-sm font-medium">{selectedFile.name}</p>
             ) : (
-              <p className="text-sm text-muted-foreground">Drop a ShiftCare CSV or click to browse</p>
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Drop <span className="font-mono text-xs">Scheduler_Timesheet_Export_*.csv</span> or click to browse
+                </p>
+                <p className="text-xs text-muted-foreground/80 mt-1 max-w-md">
+                  Not Timesheet &quot;all hours&quot; (Name/Total columns) — use the Scheduler export with shift start/end times.
+                </p>
+              </>
             )}
           </div>
 

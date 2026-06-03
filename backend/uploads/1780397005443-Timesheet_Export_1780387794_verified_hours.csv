@@ -1,0 +1,1782 @@
+Employee External Id,Start Date Time,End Date Time,Break Duration,Shift Type,Shift Type Id,Units,Comments,External System Identifier,Client Type,Shift Type External ID
+532524,30/05/2026 06:00 am,30/05/2026 02:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+532524,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+532524,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+532524,31/05/2026 02:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+532524,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+532524,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+532524,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+532524,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+532524,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+532524,26/05/2026 06:00 am,26/05/2026 02:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+532524,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+532524,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+532524,27/05/2026 02:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+532524,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+532524,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+532524,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+532524,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+532524,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+532524,28/05/2026 06:00 am,28/05/2026 01:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+532524,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+532524,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+461121,31/05/2026 06:00 am,31/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+461121,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+461121,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+461121,27/05/2026 02:00 pm,28/05/2026 12:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+461121,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+461121,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+461121,28/05/2026 02:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+461121,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+461121,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+461121,25/05/2026 02:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+461121,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+461121,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+461121,29/05/2026 02:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+461121,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+461121,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+991252,28/05/2026 06:00 am,28/05/2026 04:00 pm,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+991252,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+991252,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+991252,29/05/2026 02:00 pm,29/05/2026 08:00 pm,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+991252,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+991252,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+538661,25/05/2026 12:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,"Joanne Moore, Joanne Moore",,Plan Managed,0
+538661,25/05/2026 12:00 pm,25/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+538661,25/05/2026 12:00 pm,25/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+538661,30/05/2026 06:00 am,30/05/2026 12:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+538661,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+538661,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+538661,28/05/2026 08:00 am,28/05/2026 01:00 pm,0,Personal Care,217,,"Darren Aurisch, Darren Aurisch",,Plan Managed,0
+538661,28/05/2026 08:00 am,28/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+538661,28/05/2026 08:00 am,28/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1008413,31/05/2026 02:30 pm,31/05/2026 07:30 pm,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+1008413,31/05/2026 02:30 pm,31/05/2026 02:30 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1008413,31/05/2026 02:30 pm,31/05/2026 02:30 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1008413,27/05/2026 05:30 pm,27/05/2026 10:00 pm,0,Personal Care,217,,David Deas,,Plan Managed,0
+1008413,27/05/2026 05:30 pm,27/05/2026 05:30 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1008413,27/05/2026 05:30 pm,27/05/2026 05:30 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1008413,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1008413,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1008413,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1008413,29/05/2026 04:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith",,Plan Managed,0
+1008413,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1008413,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1008413,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1008413,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1008413,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1008413,25/05/2026 08:00 am,25/05/2026 01:00 pm,0,Personal Care,217,,"Darren Aurisch, Darren Aurisch",,Plan Managed,0
+1008413,25/05/2026 08:00 am,25/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1008413,25/05/2026 08:00 am,25/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1008413,26/05/2026 08:00 am,26/05/2026 01:00 pm,0,Personal Care,217,,"Darren Aurisch, Darren Aurisch",,Plan Managed,0
+1008413,26/05/2026 08:00 am,26/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1008413,26/05/2026 08:00 am,26/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+920968,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+920968,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+920968,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+920968,29/05/2026 06:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+920968,29/05/2026 06:00 pm,29/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+920968,29/05/2026 06:00 pm,29/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+920968,30/05/2026 06:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+920968,30/05/2026 06:00 pm,30/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+920968,30/05/2026 06:00 pm,30/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+920968,31/05/2026 06:00 am,31/05/2026 12:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+920968,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+920968,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+920968,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+920968,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+920968,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1039503,30/05/2026 03:00 pm,31/05/2026 12:00 am,0,Personal Care,217,,Kyle Warne,,Self Managed,0
+1039503,30/05/2026 03:00 pm,30/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1039503,30/05/2026 03:00 pm,30/05/2026 03:00 pm,,Mileage,3643,30,Mileage,,Self Managed,
+1039503,26/05/2026 06:00 am,26/05/2026 04:00 pm,0,Personal Care,217,,Kyle Warne,,Self Managed,0
+1039503,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1039503,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,56,Mileage,,Self Managed,
+1039503,28/05/2026 06:00 am,28/05/2026 04:00 pm,0,Personal Care,217,,Kyle Warne,,Self Managed,0
+1039503,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1039503,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,8,Mileage,,Self Managed,
+1039503,29/05/2026 06:00 am,29/05/2026 03:00 pm,0,Personal Care,217,,Kyle Warne,,Self Managed,0
+1039503,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1039503,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,16,Mileage,,Self Managed,
+984039,25/05/2026 12:00 pm,25/05/2026 07:30 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+984039,25/05/2026 12:00 pm,25/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+984039,25/05/2026 12:00 pm,25/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+984039,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+984039,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+984039,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+984039,27/05/2026 06:00 am,27/05/2026 08:30 am,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+984039,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+984039,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+984039,26/05/2026 06:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Martin Scott",,Ndis Managed,0
+984039,26/05/2026 06:00 pm,26/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+984039,26/05/2026 06:00 pm,26/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+984039,28/05/2026 04:00 pm,28/05/2026 09:30 pm,0,Personal Care,217,,Amy Hamerslag,,Self Managed,0
+984039,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+984039,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+984039,29/05/2026 04:00 pm,29/05/2026 09:30 pm,0,Personal Care,217,,Amy Hamerslag,,Self Managed,0
+984039,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+984039,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+929553,31/05/2026 06:00 am,31/05/2026 12:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+929553,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+929553,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+848629,31/05/2026 08:00 am,31/05/2026 05:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+848629,31/05/2026 08:00 am,31/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+848629,31/05/2026 08:00 am,31/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+848629,29/05/2026 12:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,"Joanne Moore, Joanne Moore",,Plan Managed,0
+848629,29/05/2026 12:00 pm,29/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+848629,29/05/2026 12:00 pm,29/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1050190,29/05/2026 02:00 pm,29/05/2026 06:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+1050190,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1050190,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1050190,30/05/2026 11:00 am,30/05/2026 06:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+1050190,30/05/2026 11:00 am,30/05/2026 11:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1050190,30/05/2026 11:00 am,30/05/2026 11:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+805278,31/05/2026 06:00 am,31/05/2026 01:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+805278,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+805278,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+805278,30/05/2026 06:00 am,30/05/2026 01:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+805278,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+805278,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+805278,29/05/2026 06:00 am,29/05/2026 04:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+805278,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+805278,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+805278,28/05/2026 06:00 am,28/05/2026 02:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+805278,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+805278,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+805278,27/05/2026 06:30 am,27/05/2026 07:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+805278,27/05/2026 06:30 am,27/05/2026 06:30 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+805278,27/05/2026 06:30 am,27/05/2026 06:30 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+579377,25/05/2026 06:00 am,25/05/2026 02:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+579377,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+579377,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+579377,26/05/2026 06:00 am,26/05/2026 02:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+579377,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+579377,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+579377,27/05/2026 06:00 am,27/05/2026 02:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+579377,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+579377,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+579377,28/05/2026 06:00 am,28/05/2026 02:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+579377,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+579377,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+579377,31/05/2026 06:00 am,31/05/2026 04:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+579377,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+579377,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1002931,26/05/2026 09:00 am,26/05/2026 11:00 am,0,Support coordination,665,,Rebecca Harmon,,Ndis Managed,4-1000
+1002931,26/05/2026 11:00 am,26/05/2026 12:00 pm,0,Support coordination,665,,Julie Eldered,,Plan Managed,4-1000
+1002931,26/05/2026 03:00 pm,26/05/2026 05:00 pm,0,Support coordination,665,,Susan Paterson,,Ndis Managed,4-1000
+1039473,28/05/2026 12:00 pm,28/05/2026 06:30 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+1039473,28/05/2026 12:00 pm,28/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1039473,28/05/2026 12:00 pm,28/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1039473,30/05/2026 12:00 pm,30/05/2026 06:30 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+1039473,30/05/2026 12:00 pm,30/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1039473,30/05/2026 12:00 pm,30/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+833845,31/05/2026 10:00 pm,01/06/2026 06:00 am,0,Personal Care,217,,"Duy Nguyen, Duy Nguyen",,Ndis Managed,0
+833845,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+833845,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+833845,30/05/2026 10:00 pm,31/05/2026 06:00 am,0,Personal Care,217,,"Duy Nguyen, Duy Nguyen",,Ndis Managed,0
+833845,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+833845,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+833845,29/05/2026 10:00 pm,30/05/2026 06:00 am,0,Personal Care,217,,"Duy Nguyen, Duy Nguyen",,Ndis Managed,0
+833845,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+833845,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1034167,25/05/2026 07:00 pm,25/05/2026 09:00 pm,0,Personal Care,217,,Ian Rich,,Ndis Managed,0
+1034167,25/05/2026 07:00 pm,25/05/2026 07:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1034167,25/05/2026 07:00 pm,25/05/2026 07:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1034167,26/05/2026 07:00 pm,26/05/2026 09:00 pm,0,Personal Care,217,,Ian Rich,,Ndis Managed,0
+1034167,26/05/2026 07:00 pm,26/05/2026 07:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1034167,26/05/2026 07:00 pm,26/05/2026 07:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1034167,27/05/2026 07:00 pm,27/05/2026 09:00 pm,0,Personal Care,217,,Ian Rich,,Ndis Managed,0
+1034167,27/05/2026 07:00 pm,27/05/2026 07:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1034167,27/05/2026 07:00 pm,27/05/2026 07:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1034167,28/05/2026 07:00 pm,28/05/2026 09:00 pm,0,Personal Care,217,,Ian Rich,,Ndis Managed,0
+1034167,28/05/2026 07:00 pm,28/05/2026 07:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1034167,28/05/2026 07:00 pm,28/05/2026 07:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+777346,27/05/2026 06:00 am,27/05/2026 02:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+777346,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+777346,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+777346,29/05/2026 06:00 am,29/05/2026 01:00 pm,0,Personal Care,217,,"David Deas, David Deas, Richie Xiao ( Jacky )",,Plan Managed,0
+777346,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+777346,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+777346,25/05/2026 06:00 am,25/05/2026 12:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+777346,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+777346,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+777346,30/05/2026 08:00 am,30/05/2026 05:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+777346,30/05/2026 08:00 am,30/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+777346,30/05/2026 08:00 am,30/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+484038,25/05/2026 12:00 pm,25/05/2026 02:00 pm,0,Nursing Support,452140,,Billie Michiko,,Plan Managed,1000
+484038,25/05/2026 12:00 pm,25/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+484038,25/05/2026 12:00 pm,25/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+484038,26/05/2026 04:00 pm,26/05/2026 06:00 pm,0,Nursing Support,452140,,Billie Michiko,,Plan Managed,1000
+484038,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+484038,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+484038,27/05/2026 04:00 pm,27/05/2026 06:00 pm,0,Nursing Support,452140,,Billie Michiko,,Plan Managed,1000
+484038,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+484038,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+484038,28/05/2026 04:00 pm,28/05/2026 06:00 pm,0,Nursing Support,452140,,Billie Michiko,,Plan Managed,1000
+484038,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+484038,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+484038,29/05/2026 04:00 pm,29/05/2026 06:00 pm,0,Nursing Support,452140,,Billie Michiko,,Plan Managed,1000
+484038,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+484038,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+484038,30/05/2026 04:00 pm,30/05/2026 06:00 pm,0,Nursing Support,452140,,Billie Michiko,,Plan Managed,1000
+484038,30/05/2026 04:00 pm,30/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+484038,30/05/2026 04:00 pm,30/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+484038,31/05/2026 04:00 pm,31/05/2026 06:00 pm,0,Nursing Support,452140,,Billie Michiko,,Plan Managed,1000
+484038,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+484038,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+484038,30/05/2026 06:00 am,30/05/2026 01:30 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+484038,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+484038,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+484038,25/05/2026 02:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+484038,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+484038,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1017285,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+1017285,30/05/2026 06:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly",,Ndis Managed,0
+1017285,30/05/2026 06:00 pm,30/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1017285,30/05/2026 06:00 pm,30/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1017285,31/05/2026 06:00 am,31/05/2026 06:30 am,0,Personal Care,217,,Ross Daly,,Ndis Managed,0
+1017285,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1017285,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1032626,29/05/2026 02:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+1032626,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1032626,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1032626,31/05/2026 10:00 pm,01/06/2026 06:00 am,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+1032626,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1032626,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+107479,30/05/2026 06:00 am,30/05/2026 02:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+107479,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+107479,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+107479,31/05/2026 06:00 am,31/05/2026 02:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+107479,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+107479,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+107479,26/05/2026 06:00 am,26/05/2026 02:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+107479,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+107479,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+107479,27/05/2026 06:00 am,27/05/2026 02:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+107479,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+107479,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+126126,25/05/2026 06:00 pm,25/05/2026 09:00 pm,0,Personal Care,217,,Billie Michiko,,Plan Managed,0
+126126,25/05/2026 06:00 pm,25/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+126126,25/05/2026 06:00 pm,25/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+126126,26/05/2026 11:00 pm,27/05/2026 09:00 am,0,Personal Care,217,,"Billie Michiko, Billie Michiko",,Plan Managed,0
+126126,26/05/2026 11:00 pm,26/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+126126,26/05/2026 11:00 pm,26/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+126126,27/05/2026 11:00 pm,28/05/2026 09:00 am,0,Personal Care,217,,"Billie Michiko, Billie Michiko",,Plan Managed,0
+126126,27/05/2026 11:00 pm,27/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+126126,27/05/2026 11:00 pm,27/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+126126,28/05/2026 11:00 pm,29/05/2026 09:00 am,0,Personal Care,217,,"Billie Michiko, Billie Michiko",,Plan Managed,0
+126126,28/05/2026 11:00 pm,28/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+126126,28/05/2026 11:00 pm,28/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+126126,31/05/2026 09:00 am,31/05/2026 12:00 pm,0,Personal Care,217,,Billie Michiko,,Plan Managed,0
+126126,31/05/2026 09:00 am,31/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+126126,31/05/2026 09:00 am,31/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1043457,25/05/2026 06:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Martin Scott",,Ndis Managed,0
+1043457,25/05/2026 06:00 pm,25/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1043457,25/05/2026 06:00 pm,25/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1043457,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1043457,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1043457,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+1043457,27/05/2026 06:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Martin Scott",,Ndis Managed,0
+1043457,27/05/2026 06:00 pm,27/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1043457,27/05/2026 06:00 pm,27/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1043457,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1043457,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1043457,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+1043457,26/05/2026 06:00 am,26/05/2026 08:30 am,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+1043457,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1043457,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1043457,28/05/2026 02:00 pm,28/05/2026 08:00 pm,0,Personal Care,217,,"Beatriz Gobalesa, Beatriz Gobalesa",,Plan Managed,0
+1043457,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1043457,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+102203,26/05/2026 06:00 am,26/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+102203,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+102203,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+102203,31/05/2026 02:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+102203,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+102203,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+102203,28/05/2026 06:00 am,28/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+102203,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+102203,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+862406,26/05/2026 10:00 pm,27/05/2026 06:00 am,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+862406,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+862406,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+817345,25/05/2026 07:00 am,25/05/2026 03:00 pm,0,Personal Care,217,,Ralph Carmona,,Plan Managed,0
+817345,25/05/2026 07:00 am,25/05/2026 07:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+817345,25/05/2026 07:00 am,25/05/2026 07:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+817345,30/05/2026 07:00 am,30/05/2026 11:00 am,0,Personal Care,217,,Ralph Carmona,,Plan Managed,0
+817345,30/05/2026 07:00 am,30/05/2026 07:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+817345,30/05/2026 07:00 am,30/05/2026 07:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+817345,26/05/2026 02:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+817345,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+817345,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+817345,28/05/2026 12:00 pm,28/05/2026 04:00 pm,0,Personal Care,217,,"Timothy William Brown, Timothy William Brown",,Plan Managed,0
+817345,28/05/2026 12:00 pm,28/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+817345,28/05/2026 12:00 pm,28/05/2026 12:00 pm,,Mileage,3643,3,Mileage,,Plan Managed,
+338509,25/05/2026 04:00 pm,25/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+338509,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+338509,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+338509,26/05/2026 11:00 pm,27/05/2026 09:00 am,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+338509,26/05/2026 11:00 pm,26/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+338509,26/05/2026 11:00 pm,26/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+338509,30/05/2026 03:00 pm,30/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+338509,30/05/2026 03:00 pm,30/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+338509,30/05/2026 03:00 pm,30/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+338509,31/05/2026 03:00 pm,31/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+338509,31/05/2026 03:00 pm,31/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+338509,31/05/2026 03:00 pm,31/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+880291,25/05/2026 02:00 pm,25/05/2026 08:00 pm,0,Personal Care,217,,Susan Gillespie,,Self Managed,0
+880291,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+880291,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+880291,26/05/2026 04:00 pm,26/05/2026 08:00 pm,0,Personal Care,217,,Richie Xiao ( Jacky ),,Plan Managed,0
+880291,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+880291,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Mileage,3643,20,Mileage,,Plan Managed,
+880291,27/05/2026 06:00 am,27/05/2026 01:30 pm,0,Personal Care,217,,"David Deas, David Deas, Richie Xiao ( Jacky )",,Plan Managed,0
+880291,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+880291,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+880291,28/05/2026 06:00 am,28/05/2026 09:30 am,0,Personal Care,217,,David Deas,,Plan Managed,0
+880291,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+880291,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+880291,28/05/2026 09:30 am,28/05/2026 12:30 pm,0,Personal Care,217,,Richie Xiao ( Jacky ),,Plan Managed,0
+880291,28/05/2026 09:30 am,28/05/2026 09:30 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+880291,28/05/2026 09:30 am,28/05/2026 09:30 am,,Mileage,3643,10,Mileage,,Plan Managed,
+787583,26/05/2026 01:30 pm,26/05/2026 07:30 pm,0,Personal Care,217,,Kimiiya Santos,,Plan Managed,0
+787583,26/05/2026 01:30 pm,26/05/2026 01:30 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+787583,26/05/2026 01:30 pm,26/05/2026 01:30 pm,,Mileage,3643,40,Mileage,,Plan Managed,
+787583,28/05/2026 01:30 pm,28/05/2026 07:30 pm,0,Personal Care,217,,Kimiiya Santos,,Plan Managed,0
+787583,28/05/2026 01:30 pm,28/05/2026 01:30 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+787583,28/05/2026 01:30 pm,28/05/2026 01:30 pm,,Mileage,3643,40,Mileage,,Plan Managed,
+787583,30/05/2026 01:30 pm,30/05/2026 08:30 pm,0,Personal Care,217,,"Kimiiya Santos, Kimiiya Santos",,Plan Managed,0
+787583,30/05/2026 01:30 pm,30/05/2026 01:30 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+787583,30/05/2026 01:30 pm,30/05/2026 01:30 pm,,Mileage,3643,46,Mileage,,Plan Managed,
+787583,25/05/2026 06:00 am,25/05/2026 02:30 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+787583,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+787583,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1032103,27/05/2026 09:00 am,27/05/2026 02:00 pm,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1032103,27/05/2026 09:00 am,27/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1032103,27/05/2026 09:00 am,27/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1032103,26/05/2026 07:00 am,26/05/2026 06:00 pm,0,Personal Care,217,,"Teresa Zajdlewicz, Teresa Zajdlewicz, Teresa Zajdlewicz",,Plan Managed,0
+1032103,26/05/2026 07:00 am,26/05/2026 07:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1032103,26/05/2026 07:00 am,26/05/2026 07:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1032103,25/05/2026 05:00 pm,25/05/2026 09:00 pm,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1032103,25/05/2026 05:00 pm,25/05/2026 05:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1032103,25/05/2026 05:00 pm,25/05/2026 05:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1032103,29/05/2026 09:00 am,29/05/2026 01:30 pm,0,Personal Care,217,,"David Deas, David Deas, David Deas, Richie Xiao ( Jacky )",,Plan Managed,0
+1032103,29/05/2026 09:00 am,29/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1032103,29/05/2026 09:00 am,29/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+996729,30/05/2026 06:00 am,30/05/2026 02:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+996729,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+996729,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+996729,27/05/2026 07:00 am,27/05/2026 03:00 pm,0,Personal Care,217,,Ralph Carmona,,Plan Managed,0
+996729,27/05/2026 07:00 am,27/05/2026 07:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+996729,27/05/2026 07:00 am,27/05/2026 07:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+996729,31/05/2026 05:00 pm,31/05/2026 08:00 pm,0,Personal Care,217,,Timothy William Brown,,Plan Managed,0
+996729,31/05/2026 05:00 pm,31/05/2026 05:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+996729,31/05/2026 05:00 pm,31/05/2026 05:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+923582,26/05/2026 04:00 pm,26/05/2026 08:00 pm,0,Personal Care,217,,Beatriz Gobalesa,,Plan Managed,0
+923582,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+923582,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+377385,26/05/2026 12:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,"Joanne Moore, Joanne Moore",,Plan Managed,0
+377385,26/05/2026 12:00 pm,26/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+377385,26/05/2026 12:00 pm,26/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+377385,31/05/2026 12:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,"Joanne Moore, Joanne Moore",,Plan Managed,0
+377385,31/05/2026 12:00 pm,31/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+377385,31/05/2026 12:00 pm,31/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+994423,29/05/2026 03:00 pm,30/05/2026 12:00 am,0,Personal Care,217,,Kyle Warne,,Self Managed,0
+994423,29/05/2026 03:00 pm,29/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+994423,29/05/2026 03:00 pm,29/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+994423,28/05/2026 04:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,Kyle Warne,,Self Managed,0
+994423,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+994423,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Mileage,3643,29,Mileage,,Self Managed,
+994423,27/05/2026 07:00 am,27/05/2026 04:00 pm,0,Personal Care,217,,Kyle Warne,,Self Managed,0
+994423,27/05/2026 07:00 am,27/05/2026 07:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+994423,27/05/2026 07:00 am,27/05/2026 07:00 am,,Mileage,3643,24,Mileage,,Self Managed,
+994423,26/05/2026 04:00 pm,26/05/2026 09:00 pm,0,Personal Care,217,,Kyle Warne,,Self Managed,0
+994423,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+994423,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Mileage,3643,15,Mileage,,Self Managed,
+935844,25/05/2026 09:00 am,25/05/2026 03:00 pm,0,Personal Care,217,,Kimiiya Santos,,Plan Managed,0
+935844,25/05/2026 09:00 am,25/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+935844,25/05/2026 09:00 am,25/05/2026 09:00 am,,Mileage,3643,10,Mileage,,Plan Managed,
+935844,27/05/2026 09:00 am,27/05/2026 03:00 pm,0,Personal Care,217,,Kimiiya Santos,,Plan Managed,0
+935844,27/05/2026 09:00 am,27/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+935844,27/05/2026 09:00 am,27/05/2026 09:00 am,,Mileage,3643,7,Mileage,,Plan Managed,
+973379,25/05/2026 02:30 pm,25/05/2026 07:30 pm,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+973379,25/05/2026 02:30 pm,25/05/2026 02:30 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+973379,25/05/2026 02:30 pm,25/05/2026 02:30 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+973379,26/05/2026 02:30 pm,26/05/2026 07:30 pm,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+973379,26/05/2026 02:30 pm,26/05/2026 02:30 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+973379,26/05/2026 02:30 pm,26/05/2026 02:30 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+973379,27/05/2026 12:00 pm,27/05/2026 07:30 pm,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+973379,27/05/2026 12:00 pm,27/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+973379,27/05/2026 12:00 pm,27/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+855750,31/05/2026 06:00 am,31/05/2026 08:00 am,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+855750,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+855750,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+855750,30/05/2026 04:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+855750,30/05/2026 04:00 pm,30/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+855750,30/05/2026 04:00 pm,30/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+855750,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed, Ndis Managed",
+837937,27/05/2026 08:00 am,27/05/2026 05:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+837937,27/05/2026 08:00 am,27/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+837937,27/05/2026 08:00 am,27/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+837937,26/05/2026 08:00 am,26/05/2026 05:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+837937,26/05/2026 08:00 am,26/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+837937,26/05/2026 08:00 am,26/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+837937,29/05/2026 06:00 am,29/05/2026 12:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+837937,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+837937,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+924511,27/05/2026 04:00 pm,27/05/2026 08:00 pm,0,Personal Care,217,,Beatriz Gobalesa,,Plan Managed,0
+924511,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+924511,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+924511,25/05/2026 08:30 am,25/05/2026 04:30 pm,0,Personal Care,217,,Carmel Young,,Self Managed,0
+924511,25/05/2026 08:30 am,25/05/2026 08:30 am,,Expense,Expense,0.0,Expense,,Self Managed,
+924511,25/05/2026 08:30 am,25/05/2026 08:30 am,,Mileage,3643,8,Mileage,,Self Managed,
+924511,26/05/2026 11:00 am,26/05/2026 04:30 pm,0,Personal Care,217,,Carmel Young,,Self Managed,0
+924511,26/05/2026 11:00 am,26/05/2026 11:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+924511,26/05/2026 11:00 am,26/05/2026 11:00 am,,Mileage,3643,5,Mileage,,Self Managed,
+924511,28/05/2026 08:30 am,28/05/2026 04:30 pm,0,Personal Care,217,,Carmel Young,,Self Managed,0
+924511,28/05/2026 08:30 am,28/05/2026 08:30 am,,Expense,Expense,0.0,Expense,,Self Managed,
+924511,28/05/2026 08:30 am,28/05/2026 08:30 am,,Mileage,3643,0,Mileage,,Self Managed,
+924511,31/05/2026 09:00 am,31/05/2026 01:00 pm,0,Personal Care,217,,Carmel Young,,Self Managed,0
+924511,31/05/2026 09:00 am,31/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+924511,31/05/2026 09:00 am,31/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1017266,25/05/2026 03:00 pm,25/05/2026 11:00 pm,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1017266,25/05/2026 03:00 pm,25/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1017266,25/05/2026 03:00 pm,25/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1017266,29/05/2026 03:00 pm,29/05/2026 11:00 pm,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1017266,29/05/2026 03:00 pm,29/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1017266,29/05/2026 03:00 pm,29/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1037579,29/05/2026 09:00 am,29/05/2026 03:00 pm,0,Personal Care,217,,Kimiiya Santos,,Plan Managed,0
+1037579,29/05/2026 09:00 am,29/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1037579,29/05/2026 09:00 am,29/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1045814,27/05/2026 11:00 am,27/05/2026 08:00 pm,0,Personal Care,217,,"David Deas, David Deas, Richie Xiao ( Jacky )",,Plan Managed,0
+1045814,27/05/2026 11:00 am,27/05/2026 11:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1045814,27/05/2026 11:00 am,27/05/2026 11:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1045814,28/05/2026 08:00 am,28/05/2026 05:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith",,Plan Managed,0
+1045814,28/05/2026 08:00 am,28/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1045814,28/05/2026 08:00 am,28/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1034161,25/05/2026 04:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+1034161,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1034161,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1034161,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1034161,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1034161,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed",
+1034161,30/05/2026 02:00 pm,30/05/2026 08:00 pm,0,Personal Care,217,,Susan Gillespie,,Self Managed,0
+1034161,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1034161,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Mileage,3643,13,Mileage,,Self Managed,
+793118,26/05/2026 02:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+793118,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+793118,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+793118,27/05/2026 02:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+793118,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+793118,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+793118,28/05/2026 02:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+793118,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+793118,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+793118,29/05/2026 02:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+793118,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+793118,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+793118,30/05/2026 02:15 pm,30/05/2026 10:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+793118,30/05/2026 02:15 pm,30/05/2026 02:15 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+793118,30/05/2026 02:15 pm,30/05/2026 02:15 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+804476,29/05/2026 10:00 pm,30/05/2026 06:00 am,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+804476,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+804476,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+405960,31/05/2026 06:00 am,31/05/2026 02:30 pm,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+405960,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+405960,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1018028,26/05/2026 06:00 pm,26/05/2026 11:00 pm,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1018028,26/05/2026 06:00 pm,26/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1018028,26/05/2026 06:00 pm,26/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1018028,28/05/2026 03:00 pm,28/05/2026 11:00 pm,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1018028,28/05/2026 03:00 pm,28/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1018028,28/05/2026 03:00 pm,28/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1018028,27/05/2026 02:00 pm,27/05/2026 11:00 pm,0,Personal Care,217,,"Teresa Zajdlewicz, Teresa Zajdlewicz",,Plan Managed,0
+1018028,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1018028,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1018028,25/05/2026 11:00 pm,26/05/2026 09:00 am,0,Personal Care,217,,"Teresa Zajdlewicz, Teresa Zajdlewicz",,Plan Managed,0
+1018028,25/05/2026 11:00 pm,25/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1018028,25/05/2026 11:00 pm,25/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1018028,31/05/2026 01:00 pm,31/05/2026 11:00 pm,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1018028,31/05/2026 01:00 pm,31/05/2026 01:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1018028,31/05/2026 01:00 pm,31/05/2026 01:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1018028,31/05/2026 09:00 am,31/05/2026 01:00 pm,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1018028,31/05/2026 09:00 am,31/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1018028,31/05/2026 09:00 am,31/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+920970,25/05/2026 10:00 pm,26/05/2026 06:00 am,0,Personal Care,217,,Joanne Moore,,Plan Managed,0
+920970,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+920970,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+761009,26/05/2026 02:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+761009,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+761009,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+580186,25/05/2026 11:00 pm,26/05/2026 09:00 am,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+580186,25/05/2026 11:00 pm,25/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+580186,25/05/2026 11:00 pm,25/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+580186,29/05/2026 04:00 pm,29/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+580186,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+580186,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+580186,30/05/2026 11:00 pm,31/05/2026 07:00 am,0,Personal Care,217,,"Luke Taylor, Luke Taylor",,Ndis Managed,0
+580186,30/05/2026 11:00 pm,30/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+580186,30/05/2026 11:00 pm,30/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+580186,27/05/2026 08:00 pm,28/05/2026 06:00 am,0,Personal Care,217,,"Alexandre Noskoff, Alexandre Noskoff, Danny Barsby, Danny Barsby",,Ndis Managed,0
+580186,27/05/2026 08:00 pm,27/05/2026 08:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+580186,27/05/2026 08:00 pm,27/05/2026 08:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1017746,31/05/2026 10:00 pm,01/06/2026 06:00 am,0,Personal Care,217,,"Kay Duval, Kay Duval",,Self Managed,0
+1017746,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1017746,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+975349,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed, Ndis Managed",
+975349,26/05/2026 06:00 am,26/05/2026 08:00 am,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+975349,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+975349,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+975349,25/05/2026 04:30 pm,25/05/2026 10:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+975349,25/05/2026 04:30 pm,25/05/2026 04:30 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+975349,25/05/2026 04:30 pm,25/05/2026 04:30 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+1017883,30/05/2026 11:00 am,30/05/2026 06:00 pm,0,Personal Care,217,,David Deas,,Plan Managed,0
+1017883,30/05/2026 11:00 am,30/05/2026 11:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1017883,30/05/2026 11:00 am,30/05/2026 11:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1017883,29/05/2026 11:30 am,29/05/2026 08:00 pm,0,Personal Care,217,,"David Deas, David Deas, Richie Xiao ( Jacky )",,Plan Managed,0
+1017883,29/05/2026 11:30 am,29/05/2026 11:30 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1017883,29/05/2026 11:30 am,29/05/2026 11:30 am,,Mileage,3643,0,Mileage,,Plan Managed,
+579408,26/05/2026 06:00 am,26/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+579408,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+579408,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+579408,27/05/2026 06:00 am,27/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+579408,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+579408,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+579408,31/05/2026 06:00 am,31/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+579408,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+579408,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+579408,25/05/2026 06:00 am,25/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+579408,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+579408,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+133406,27/05/2026 06:00 am,27/05/2026 12:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+133406,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+133406,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+133406,28/05/2026 08:00 am,28/05/2026 05:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+133406,28/05/2026 08:00 am,28/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+133406,28/05/2026 08:00 am,28/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+133406,29/05/2026 08:00 am,29/05/2026 05:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+133406,29/05/2026 08:00 am,29/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+133406,29/05/2026 08:00 am,29/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+133406,31/05/2026 08:00 am,31/05/2026 05:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+133406,31/05/2026 08:00 am,31/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+133406,31/05/2026 08:00 am,31/05/2026 08:00 am,,Mileage,3643,53,Mileage,,"Self Managed, Plan Managed",
+133406,26/05/2026 08:00 am,26/05/2026 01:00 pm,0,Personal Care,217,,"Susan Gillespie, Susan Gillespie",,Self Managed,0
+133406,26/05/2026 08:00 am,26/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+133406,26/05/2026 08:00 am,26/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1000778,30/05/2026 03:00 pm,30/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+1000778,30/05/2026 03:00 pm,30/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1000778,30/05/2026 03:00 pm,30/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1017882,31/05/2026 11:00 am,31/05/2026 08:00 pm,0,Personal Care,217,,"David Deas, Richie Xiao ( Jacky )",,Plan Managed,0
+1017882,31/05/2026 11:00 am,31/05/2026 11:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1017882,31/05/2026 11:00 am,31/05/2026 11:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1017882,27/05/2026 04:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+1017882,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1017882,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1017882,25/05/2026 03:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+1017882,25/05/2026 03:00 pm,25/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1017882,25/05/2026 03:00 pm,25/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1017882,28/05/2026 03:00 pm,28/05/2026 06:00 pm,0,Personal Care,217,,"David Deas, David Deas",,Plan Managed,0
+1017882,28/05/2026 03:00 pm,28/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1017882,28/05/2026 03:00 pm,28/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1011683,26/05/2026 06:00 am,26/05/2026 02:00 pm,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+1011683,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1011683,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1011683,28/05/2026 04:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+1011683,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1011683,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1011683,27/05/2026 10:00 pm,28/05/2026 06:00 am,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+1011683,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1011683,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1018064,28/05/2026 02:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1018064,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1018064,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+993735,25/05/2026 09:00 am,25/05/2026 10:00 am,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+993735,25/05/2026 09:00 am,25/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1015765,26/05/2026 06:00 am,26/05/2026 02:00 pm,0,Personal Care,217,,"Beven Jarmey, Beven Jarmey",,Plan Managed,0
+1015765,27/05/2026 06:00 am,27/05/2026 03:00 pm,0,Personal Care,217,,"Beven Jarmey, Beven Jarmey, Beven Jarmey",,Plan Managed,0
+1015765,30/05/2026 06:00 am,30/05/2026 02:00 pm,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+924507,29/05/2026 06:00 am,29/05/2026 04:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby, Danny Barsby, Danny Barsby",,Ndis Managed,0
+924507,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+924507,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1015774,29/05/2026 06:00 am,29/05/2026 02:00 pm,0,Personal Care,217,,"Garth Daniels, Garth Daniels, Paul Bowman",,Plan Managed,0
+1015774,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1015774,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+948793,28/05/2026 02:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+948793,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+948793,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+948793,26/05/2026 04:00 pm,26/05/2026 09:30 pm,0,Personal Care,217,,Amy Hamerslag,,Self Managed,0
+948793,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+948793,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+197763,26/05/2026 02:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+197763,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+197763,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+197763,27/05/2026 02:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+197763,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+197763,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+197763,29/05/2026 02:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+197763,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+197763,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+197763,30/05/2026 02:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+197763,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+197763,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1039470,30/05/2026 11:00 am,30/05/2026 02:00 pm,0,Personal Care,217,,Susan Paterson,,Ndis Managed,0
+1039470,30/05/2026 11:00 am,30/05/2026 11:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1039470,30/05/2026 11:00 am,30/05/2026 11:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1039470,31/05/2026 11:00 am,31/05/2026 02:00 pm,0,Personal Care,217,,Susan Paterson,,Ndis Managed,0
+1039470,31/05/2026 11:00 am,31/05/2026 11:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1039470,31/05/2026 11:00 am,31/05/2026 11:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1039470,29/05/2026 09:00 am,29/05/2026 01:00 pm,0,Personal Care,217,,Rebecca Harmon,,Ndis Managed,0
+1039470,29/05/2026 09:00 am,29/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1039470,29/05/2026 09:00 am,29/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+787903,27/05/2026 12:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+787903,28/05/2026 02:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+787903,31/05/2026 10:00 pm,01/06/2026 06:00 am,0,Personal Care,217,,"Beven Jarmey, Beven Jarmey",,Plan Managed,0
+787903,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+787903,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+369693,26/05/2026 04:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+369693,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+369693,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+369693,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+369693,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+369693,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed",
+369693,25/05/2026 08:00 am,25/05/2026 05:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+369693,25/05/2026 08:00 am,25/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+369693,25/05/2026 08:00 am,25/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+369693,28/05/2026 02:00 pm,28/05/2026 08:00 pm,0,Personal Care,217,,Susan Gillespie,,Self Managed,0
+369693,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+369693,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+224892,25/05/2026 02:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+224892,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+224892,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+224892,26/05/2026 10:00 pm,27/05/2026 06:00 am,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+224892,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+224892,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+224892,29/05/2026 10:00 pm,30/05/2026 06:00 am,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+224892,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+224892,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+224892,30/05/2026 10:00 pm,31/05/2026 06:00 am,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+224892,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+224892,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+224892,31/05/2026 04:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+224892,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+224892,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+784452,26/05/2026 10:00 pm,27/05/2026 06:00 am,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+784452,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+784452,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+784452,29/05/2026 10:00 pm,30/05/2026 06:00 am,0,Personal Care,217,,"Beven Jarmey, Beven Jarmey",,Plan Managed,0
+784452,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+784452,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+784452,30/05/2026 10:30 pm,31/05/2026 06:00 am,0,Personal Care,217,,"Beven Jarmey, Beven Jarmey",,Plan Managed,0
+784452,30/05/2026 10:30 pm,30/05/2026 10:30 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+784452,30/05/2026 10:30 pm,30/05/2026 10:30 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+758640,30/05/2026 06:00 am,30/05/2026 04:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+758640,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+758640,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+758640,29/05/2026 09:00 am,29/05/2026 06:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+758640,29/05/2026 09:00 am,29/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+758640,29/05/2026 09:00 am,29/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+758640,25/05/2026 09:00 am,25/05/2026 07:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+758640,25/05/2026 09:00 am,25/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+758640,25/05/2026 09:00 am,25/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+457978,29/05/2026 08:30 am,29/05/2026 04:30 pm,0,Personal Care,217,,Carmel Young,,Self Managed,0
+457978,29/05/2026 08:30 am,29/05/2026 08:30 am,,Expense,Expense,0.0,Expense,,Self Managed,
+457978,29/05/2026 08:30 am,29/05/2026 08:30 am,,Mileage,3643,0,Mileage,,Self Managed,
+457978,30/05/2026 09:00 am,30/05/2026 01:00 pm,0,Personal Care,217,,Carmel Young,,Self Managed,0
+457978,30/05/2026 09:00 am,30/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+457978,30/05/2026 09:00 am,30/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1020260,25/05/2026 04:00 pm,25/05/2026 09:30 pm,0,Personal Care,217,,Amy Hamerslag,,Self Managed,0
+1020260,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1020260,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1020260,30/05/2026 04:00 pm,30/05/2026 09:30 pm,0,Personal Care,217,,Amy Hamerslag,,Self Managed,0
+1020260,30/05/2026 04:00 pm,30/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1020260,30/05/2026 04:00 pm,30/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1020260,27/05/2026 08:00 am,27/05/2026 12:00 pm,0,Personal Care,217,,Amy Hamerslag,,Self Managed,0
+1020260,27/05/2026 08:00 am,27/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1020260,27/05/2026 08:00 am,27/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+944060,29/05/2026 10:00 pm,30/05/2026 06:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+944060,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+944060,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+522172,28/05/2026 10:00 pm,29/05/2026 08:00 am,0,Personal Care,217,,"Mohammed Sunny Manikam, Mohammed Sunny Manikam",,Plan Managed,0
+522172,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+522172,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+522172,31/05/2026 06:00 am,31/05/2026 02:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+522172,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+522172,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+522172,25/05/2026 10:00 pm,26/05/2026 06:00 am,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+522172,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+522172,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+522172,26/05/2026 10:00 pm,27/05/2026 06:00 am,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+522172,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+522172,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+522172,27/05/2026 10:00 pm,28/05/2026 06:00 am,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+522172,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+522172,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+482393,28/05/2026 06:00 am,28/05/2026 02:00 pm,0,Personal Care,217,,Joanne Moore,,Plan Managed,0
+482393,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+482393,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+482393,29/05/2026 06:00 am,29/05/2026 02:00 pm,0,Personal Care,217,,Joanne Moore,,Plan Managed,0
+482393,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+482393,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+482393,30/05/2026 06:00 am,30/05/2026 02:00 pm,0,Personal Care,217,,Joanne Moore,,Plan Managed,0
+482393,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+482393,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1007881,27/05/2026 04:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith",,Plan Managed,0
+1007881,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1007881,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1007881,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1007881,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1007881,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+938625,28/05/2026 01:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+938625,28/05/2026 01:00 pm,28/05/2026 01:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+938625,28/05/2026 01:00 pm,28/05/2026 01:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+938625,29/05/2026 08:00 am,29/05/2026 04:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+938625,29/05/2026 08:00 am,29/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+938625,29/05/2026 08:00 am,29/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+938625,31/05/2026 10:00 pm,01/06/2026 06:00 am,0,Personal Care,217,,"Mohammed Sunny Manikam, Mohammed Sunny Manikam",,Plan Managed,0
+938625,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+938625,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+127642,30/05/2026 06:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Martin Scott",,Ndis Managed,0
+127642,30/05/2026 06:00 pm,30/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+127642,30/05/2026 06:00 pm,30/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+127642,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+127642,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+127642,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+901249,26/05/2026 10:00 pm,27/05/2026 06:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+901249,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+901249,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+901249,28/05/2026 10:00 pm,29/05/2026 06:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+901249,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+901249,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+901249,28/05/2026 12:00 am,28/05/2026 06:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+901249,28/05/2026 12:00 am,28/05/2026 12:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+901249,28/05/2026 12:00 am,28/05/2026 12:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+901249,25/05/2026 10:00 pm,26/05/2026 06:00 am,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+901249,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+901249,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+901249,31/05/2026 10:00 pm,01/06/2026 06:00 am,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+901249,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+901249,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1011396,29/05/2026 06:00 am,29/05/2026 02:00 pm,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+1011396,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1011396,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1011396,25/05/2026 06:00 am,25/05/2026 03:00 pm,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+1011396,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1011396,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1011396,30/05/2026 06:00 am,30/05/2026 02:00 pm,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+1011396,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,23.3,Expense,,Self Managed,
+1011396,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+997513,26/05/2026 03:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,David Deas,,Plan Managed,0
+997513,26/05/2026 03:00 pm,26/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+997513,26/05/2026 03:00 pm,26/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+997513,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+997513,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+997513,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1016147,25/05/2026 06:00 am,25/05/2026 10:00 am,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1016147,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1016147,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1016147,26/05/2026 06:00 am,26/05/2026 02:00 pm,0,Personal Care,217,,"Kay Duval, Kay Duval",,Self Managed,0
+1016147,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1016147,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1016147,29/05/2026 06:00 am,29/05/2026 02:00 pm,0,Personal Care,217,,"Kay Duval, Kay Duval",,Self Managed,0
+1016147,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1016147,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1016147,30/05/2026 06:00 am,30/05/2026 02:00 pm,0,Personal Care,217,,"Kay Duval, Kay Duval",,Self Managed,0
+1016147,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1016147,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1016147,31/05/2026 07:30 am,31/05/2026 04:00 pm,0,Personal Care,217,,"Kay Duval, Kay Duval, Kay Duval",,Self Managed,0
+1016147,31/05/2026 07:30 am,31/05/2026 07:30 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1016147,31/05/2026 07:30 am,31/05/2026 07:30 am,,Mileage,3643,36,Mileage,,Self Managed,
+402542,31/05/2026 06:00 am,31/05/2026 02:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby, Danny Barsby",,Ndis Managed,0
+402542,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+402542,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+402542,26/05/2026 10:00 pm,27/05/2026 06:00 am,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+402542,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+402542,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+402542,29/05/2026 10:00 pm,30/05/2026 06:00 am,0,Personal Care,217,,"Joanne Moore, Joanne Moore",,Plan Managed,0
+402542,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+402542,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+922742,26/05/2026 10:00 pm,27/05/2026 06:00 am,0,Personal Care,217,,Joanne Moore,,Plan Managed,0
+922742,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+922742,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+922742,28/05/2026 10:00 pm,29/05/2026 06:00 am,0,Personal Care,217,,Joanne Moore,,Plan Managed,0
+922742,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+922742,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+922742,30/05/2026 10:00 pm,31/05/2026 06:00 am,0,Personal Care,217,,"Joanne Moore, Joanne Moore",,Plan Managed,0
+922742,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+922742,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+922742,31/05/2026 10:00 pm,01/06/2026 06:00 am,0,Personal Care,217,,"Joanne Moore, Joanne Moore",,Plan Managed,0
+922742,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+922742,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+922742,26/05/2026 06:00 am,26/05/2026 12:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+922742,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+922742,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+918823,29/05/2026 03:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+918823,29/05/2026 03:00 pm,29/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+918823,29/05/2026 03:00 pm,29/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+918823,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+918823,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+918823,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+918823,30/05/2026 02:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+918823,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+918823,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+918823,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+918823,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+918823,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+918823,25/05/2026 03:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+918823,25/05/2026 03:00 pm,25/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+918823,25/05/2026 03:00 pm,25/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1018086,27/05/2026 03:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1018086,27/05/2026 03:00 pm,27/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1018086,27/05/2026 03:00 pm,27/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1018086,29/05/2026 02:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1018086,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1018086,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1018086,30/05/2026 02:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1018086,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1018086,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+892340,28/05/2026 03:30 pm,28/05/2026 08:30 pm,0,Personal Care,217,,Peter Jory,,Plan Managed,0
+783659,26/05/2026 09:30 am,26/05/2026 02:00 pm,0,Personal Care,217,,Beatriz Gobalesa,,Plan Managed,0
+783659,26/05/2026 09:30 am,26/05/2026 09:30 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+783659,26/05/2026 09:30 am,26/05/2026 09:30 am,,Mileage,3643,24,Mileage,,Plan Managed,
+783659,28/05/2026 09:30 am,28/05/2026 02:00 pm,0,Personal Care,217,,Beatriz Gobalesa,,Plan Managed,0
+783659,28/05/2026 09:30 am,28/05/2026 09:30 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+783659,28/05/2026 09:30 am,28/05/2026 09:30 am,,Mileage,3643,3,Mileage,,Plan Managed,
+783659,29/05/2026 09:30 am,29/05/2026 04:00 pm,0,Personal Care,217,,Beatriz Gobalesa,,Plan Managed,0
+783659,29/05/2026 09:30 am,29/05/2026 09:30 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+783659,29/05/2026 09:30 am,29/05/2026 09:30 am,,Mileage,3643,45,Mileage,,Plan Managed,
+783659,25/05/2026 04:00 pm,25/05/2026 08:00 pm,0,Personal Care,217,,Beatriz Gobalesa,,Plan Managed,0
+783659,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+783659,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Mileage,3643,2,Mileage,,Plan Managed,
+922704,30/05/2026 09:00 am,30/05/2026 12:00 pm,0,Personal Care,217,,Timothy William Brown,,Plan Managed,0
+922704,30/05/2026 09:00 am,30/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+922704,30/05/2026 09:00 am,30/05/2026 09:00 am,,Mileage,3643,14,Mileage,,Plan Managed,
+922704,31/05/2026 10:00 am,31/05/2026 02:00 pm,0,Personal Care,217,,Alexandre Noskoff,,Ndis Managed,0
+922704,31/05/2026 10:00 am,31/05/2026 10:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+922704,31/05/2026 10:00 am,31/05/2026 10:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+406390,28/05/2026 02:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+406390,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+406390,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+406390,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+406390,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+406390,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+406390,31/05/2026 02:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+406390,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+406390,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+406390,30/05/2026 06:00 am,30/05/2026 02:15 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+406390,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+406390,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+406390,26/05/2026 02:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+406390,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+406390,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+406390,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+406390,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+406390,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+406390,27/05/2026 02:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+406390,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+406390,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+406390,29/05/2026 06:00 am,29/05/2026 06:15 am,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+406390,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+406390,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1039505,29/05/2026 05:00 pm,29/05/2026 08:00 pm,0,Personal Care,217,,Timothy William Brown,,Plan Managed,0
+1039505,29/05/2026 05:00 pm,29/05/2026 05:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1039505,29/05/2026 05:00 pm,29/05/2026 05:00 pm,,Mileage,3643,3,Mileage,,Plan Managed,
+1039505,25/05/2026 08:00 am,25/05/2026 12:00 pm,0,Personal Care,217,,"Timothy William Brown, Timothy William Brown",,Plan Managed,0
+1039505,25/05/2026 08:00 am,25/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1039505,25/05/2026 08:00 am,25/05/2026 08:00 am,,Mileage,3643,4,Mileage,,Plan Managed,
+1039505,25/05/2026 11:00 pm,26/05/2026 06:00 am,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+1039505,25/05/2026 11:00 pm,25/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1039505,25/05/2026 11:00 pm,25/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1039505,26/05/2026 05:00 pm,26/05/2026 08:00 pm,0,Personal Care,217,,Timothy William Brown,,Plan Managed,0
+1039505,26/05/2026 05:00 pm,26/05/2026 05:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1039505,26/05/2026 05:00 pm,26/05/2026 05:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1039505,27/05/2026 08:45 am,27/05/2026 02:00 pm,0,Personal Care,217,,"Timothy William Brown, Timothy William Brown, Timothy William Brown",,Plan Managed,0
+1039505,27/05/2026 08:45 am,27/05/2026 08:45 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1039505,27/05/2026 08:45 am,27/05/2026 08:45 am,,Mileage,3643,33,Mileage,,Plan Managed,
+1039505,28/05/2026 10:00 pm,29/05/2026 06:00 am,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+1039505,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1039505,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1039505,27/05/2026 06:45 am,27/05/2026 08:45 am,0,Personal Care,217,,George Egglesfield,,Self Managed,0
+1039505,27/05/2026 06:45 am,27/05/2026 06:45 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1039505,27/05/2026 06:45 am,27/05/2026 06:45 am,,Mileage,3643,65,Mileage,,Self Managed,
+926600,30/05/2026 08:00 am,30/05/2026 01:00 pm,0,Personal Care,217,,"Susan Gillespie, Susan Gillespie",,Self Managed,0
+926600,30/05/2026 08:00 am,30/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+926600,30/05/2026 08:00 am,30/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+926600,31/05/2026 08:00 am,31/05/2026 01:00 pm,0,Personal Care,217,,"Susan Gillespie, Susan Gillespie",,Self Managed,0
+926600,31/05/2026 08:00 am,31/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+926600,31/05/2026 08:00 am,31/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+188079,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+188079,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+188079,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+188079,31/05/2026 06:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Martin Scott",,Ndis Managed,0
+188079,31/05/2026 06:00 pm,31/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+188079,31/05/2026 06:00 pm,31/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+188079,28/05/2026 02:30 pm,28/05/2026 07:30 pm,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+188079,28/05/2026 02:30 pm,28/05/2026 02:30 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+188079,28/05/2026 02:30 pm,28/05/2026 02:30 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+188079,30/05/2026 06:00 am,30/05/2026 02:30 pm,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+188079,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+188079,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+188079,25/05/2026 06:00 am,25/05/2026 08:30 am,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+188079,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+188079,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+188079,27/05/2026 12:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,"Joanne Moore, Joanne Moore",,Plan Managed,0
+188079,27/05/2026 12:00 pm,27/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+188079,27/05/2026 12:00 pm,27/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+621594,29/05/2026 08:00 am,29/05/2026 12:00 pm,0,Personal Care,217,,"Timothy William Brown, Timothy William Brown",,Plan Managed,0
+621594,29/05/2026 08:00 am,29/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+621594,29/05/2026 08:00 am,29/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+621594,30/05/2026 05:00 pm,30/05/2026 08:00 pm,0,Personal Care,217,,"Timothy William Brown, Timothy William Brown",,Plan Managed,0
+621594,30/05/2026 05:00 pm,30/05/2026 05:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+621594,30/05/2026 05:00 pm,30/05/2026 05:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+621594,31/05/2026 09:00 am,31/05/2026 12:00 pm,0,Personal Care,217,,Timothy William Brown,,Plan Managed,0
+621594,31/05/2026 09:00 am,31/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+621594,31/05/2026 09:00 am,31/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+621594,28/05/2026 05:00 pm,28/05/2026 08:00 pm,0,Personal Care,217,,Timothy William Brown,,Plan Managed,0
+621594,28/05/2026 05:00 pm,28/05/2026 05:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+621594,28/05/2026 05:00 pm,28/05/2026 05:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+283035,26/05/2026 06:00 pm,26/05/2026 11:00 pm,0,Personal Care,217,,Billie Michiko,,Plan Managed,0
+283035,26/05/2026 06:00 pm,26/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+283035,26/05/2026 06:00 pm,26/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+283035,27/05/2026 06:00 pm,27/05/2026 11:00 pm,0,Personal Care,217,,Billie Michiko,,Plan Managed,0
+283035,27/05/2026 06:00 pm,27/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+283035,27/05/2026 06:00 pm,27/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+283035,28/05/2026 06:00 pm,28/05/2026 11:00 pm,0,Personal Care,217,,Billie Michiko,,Plan Managed,0
+283035,28/05/2026 06:00 pm,28/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+283035,28/05/2026 06:00 pm,28/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+283035,29/05/2026 06:00 pm,29/05/2026 09:00 pm,0,Personal Care,217,,Billie Michiko,,Plan Managed,0
+283035,29/05/2026 06:00 pm,29/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+283035,29/05/2026 06:00 pm,29/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+283035,30/05/2026 06:00 pm,30/05/2026 09:00 pm,0,Personal Care,217,,Billie Michiko,,Plan Managed,0
+283035,30/05/2026 06:00 pm,30/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+283035,30/05/2026 06:00 pm,30/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+283035,31/05/2026 06:00 pm,31/05/2026 09:00 pm,0,Personal Care,217,,Billie Michiko,,Plan Managed,0
+283035,31/05/2026 06:00 pm,31/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+283035,31/05/2026 06:00 pm,31/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+458527,27/05/2026 12:00 pm,27/05/2026 07:30 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+458527,27/05/2026 12:00 pm,27/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+458527,27/05/2026 12:00 pm,27/05/2026 12:00 pm,,Mileage,3643,16,Mileage,,Ndis Managed,
+458527,28/05/2026 06:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Martin Scott",,Ndis Managed,0
+458527,28/05/2026 06:00 pm,28/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+458527,28/05/2026 06:00 pm,28/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+458527,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+458527,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+458527,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+458527,31/05/2026 06:00 am,31/05/2026 02:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+458527,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+458527,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+458527,29/05/2026 06:00 am,29/05/2026 08:30 am,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+458527,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+458527,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+128508,30/05/2026 08:00 am,30/05/2026 05:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+128508,30/05/2026 08:00 am,30/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+128508,30/05/2026 08:00 am,30/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+128508,31/05/2026 02:00 pm,31/05/2026 08:00 pm,0,Personal Care,217,,Susan Gillespie,,Self Managed,0
+128508,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+128508,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+128508,29/05/2026 02:00 pm,29/05/2026 08:00 pm,0,Personal Care,217,,Susan Gillespie,,Self Managed,0
+128508,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+128508,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+946561,25/05/2026 02:00 pm,25/05/2026 11:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Alexandre Noskoff, Alexandre Noskoff, Danny Barsby, Danny Barsby",,Ndis Managed,0
+946561,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+946561,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+946561,27/05/2026 02:00 pm,27/05/2026 08:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+946561,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+946561,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+946561,28/05/2026 06:00 am,28/05/2026 04:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby, Danny Barsby, Danny Barsby",,Ndis Managed,0
+946561,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+946561,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+946561,30/05/2026 06:00 am,30/05/2026 02:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby, Danny Barsby",,Ndis Managed,0
+946561,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+946561,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+946561,31/05/2026 02:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+946561,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+946561,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+761013,25/05/2026 08:00 am,25/05/2026 01:00 pm,0,Personal Care,217,,"Susan Gillespie, Susan Gillespie",,Self Managed,0
+761013,25/05/2026 08:00 am,25/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+761013,25/05/2026 08:00 am,25/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+761013,27/05/2026 08:00 am,27/05/2026 05:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+761013,27/05/2026 08:00 am,27/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+761013,27/05/2026 08:00 am,27/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+761013,26/05/2026 08:00 am,26/05/2026 05:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+761013,26/05/2026 08:00 am,26/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+761013,26/05/2026 08:00 am,26/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+761013,28/05/2026 08:00 am,28/05/2026 01:00 pm,0,Personal Care,217,,Susan Gillespie,,Self Managed,0
+761013,28/05/2026 08:00 am,28/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+761013,28/05/2026 08:00 am,28/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+761013,29/05/2026 08:00 am,29/05/2026 01:00 pm,0,Personal Care,217,,"Susan Gillespie, Susan Gillespie",,Self Managed,0
+761013,29/05/2026 08:00 am,29/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+761013,29/05/2026 08:00 am,29/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+712794,25/05/2026 10:00 pm,26/05/2026 06:00 am,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+712794,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+712794,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+712794,28/05/2026 06:00 am,28/05/2026 02:00 pm,0,Personal Care,217,,"Beven Jarmey, Beven Jarmey",,Plan Managed,0
+712794,31/05/2026 06:00 am,31/05/2026 02:00 pm,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+712794,29/05/2026 06:00 am,29/05/2026 02:00 pm,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+712794,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+712794,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+977843,26/05/2026 06:00 am,26/05/2026 10:00 am,0,Personal Care,217,,David Deas,,Plan Managed,0
+977843,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+977843,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+977843,30/05/2026 03:30 pm,30/05/2026 08:00 pm,0,Personal Care,217,,Richie Xiao ( Jacky ),,Plan Managed,0
+977843,30/05/2026 03:30 pm,30/05/2026 03:30 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+977843,30/05/2026 03:30 pm,30/05/2026 03:30 pm,,Mileage,3643,14,Mileage,,Plan Managed,
+977843,31/05/2026 06:00 am,31/05/2026 01:30 pm,0,Personal Care,217,,"David Deas, David Deas, Richie Xiao ( Jacky )",,Plan Managed,0
+977843,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+977843,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+977843,28/05/2026 03:30 pm,28/05/2026 08:00 pm,0,Personal Care,217,,"Richie Xiao ( Jacky ), Richie Xiao ( Jacky )",,Plan Managed,0
+977843,28/05/2026 03:30 pm,28/05/2026 03:30 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+977843,28/05/2026 03:30 pm,28/05/2026 03:30 pm,,Mileage,3643,20,Mileage,,Plan Managed,
+907169,25/05/2026 06:00 am,25/05/2026 12:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+907169,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+907169,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+907169,26/05/2026 06:00 am,26/05/2026 12:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+907169,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+907169,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+886192,25/05/2026 06:00 am,25/05/2026 02:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman",,Plan Managed,0
+886192,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+886192,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,29,Mileage,,Plan Managed,
+886192,27/05/2026 06:00 am,27/05/2026 02:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman, Paul Bowman",,Plan Managed,0
+886192,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+886192,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,21,Mileage,,Plan Managed,
+886192,31/05/2026 06:00 am,31/05/2026 02:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman",,Plan Managed,0
+886192,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+886192,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,27,Mileage,,Plan Managed,
+1022427,30/05/2026 06:00 am,30/05/2026 03:00 pm,0,Personal Care,217,,Kyle Warne,,Self Managed,0
+1022427,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1022427,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,50,Mileage,,Self Managed,
+1022998,26/05/2026 10:00 am,26/05/2026 03:00 pm,0,Personal Care,217,,Susan Paterson,,Ndis Managed,0
+1022998,26/05/2026 10:00 am,26/05/2026 10:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1022998,26/05/2026 10:00 am,26/05/2026 10:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1022998,27/05/2026 10:00 am,27/05/2026 04:00 pm,0,Personal Care,217,,Susan Paterson,,Ndis Managed,0
+1022998,27/05/2026 10:00 am,27/05/2026 10:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1022998,27/05/2026 10:00 am,27/05/2026 10:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1022998,28/05/2026 10:00 am,28/05/2026 03:00 pm,0,Personal Care,217,,Susan Paterson,,Ndis Managed,0
+1022998,28/05/2026 10:00 am,28/05/2026 10:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1022998,28/05/2026 10:00 am,28/05/2026 10:00 am,,Mileage,3643,19,Mileage,,Ndis Managed,
+1022998,29/05/2026 08:00 am,29/05/2026 01:00 pm,0,Personal Care,217,,Susan Paterson,,Ndis Managed,0
+1022998,29/05/2026 08:00 am,29/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1022998,29/05/2026 08:00 am,29/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1022998,25/05/2026 10:00 am,25/05/2026 03:00 pm,0,Personal Care,217,,Susan Paterson,,Ndis Managed,0
+1022998,25/05/2026 10:00 am,25/05/2026 10:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1022998,25/05/2026 10:00 am,25/05/2026 10:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1022998,28/05/2026 04:00 pm,28/05/2026 07:00 pm,0,Personal Care,217,,Garth Daniels,,Plan Managed,0
+1022998,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1022998,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Mileage,3643,8,Mileage,,Plan Managed,
+838100,28/05/2026 06:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,David Deas,,Plan Managed,0
+838100,28/05/2026 06:00 pm,28/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+838100,28/05/2026 06:00 pm,28/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+838100,30/05/2026 06:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,David Deas,,Plan Managed,0
+838100,30/05/2026 06:00 pm,30/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+838100,30/05/2026 06:00 pm,30/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+838100,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+838100,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+838100,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+838100,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+838100,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+838100,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+838100,29/05/2026 05:30 pm,29/05/2026 10:00 pm,0,Personal Care,217,,David Deas,,Plan Managed,0
+838100,29/05/2026 05:30 pm,29/05/2026 05:30 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+838100,29/05/2026 05:30 pm,29/05/2026 05:30 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+838100,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+838100,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+838100,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+967788,28/05/2026 06:00 am,28/05/2026 08:00 am,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+967788,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+967788,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+967788,29/05/2026 08:00 am,29/05/2026 04:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+967788,29/05/2026 08:00 am,29/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+967788,29/05/2026 08:00 am,29/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+967788,27/05/2026 04:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+967788,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+967788,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+967788,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed, Ndis Managed",
+1028972,25/05/2026 06:00 am,25/05/2026 04:15 pm,0,Personal Care,217,,Kyle Warne,,Self Managed,0
+1028972,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1028972,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+787593,27/05/2026 10:00 pm,28/05/2026 06:00 am,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+787593,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+787593,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+787593,28/05/2026 10:00 pm,29/05/2026 06:00 am,0,Personal Care,217,,Jennifer Knapasjo,,Ndis Managed,0
+787593,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+787593,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+787593,25/05/2026 10:00 pm,26/05/2026 06:00 am,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+787593,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+787593,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1011705,27/05/2026 04:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+1011705,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1011705,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1011705,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1011705,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1011705,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed",
+1011705,31/05/2026 04:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+1011705,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1011705,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1011705,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1011705,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1011705,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed",
+1037884,25/05/2026 06:00 am,25/05/2026 02:00 pm,0,Personal Care,217,,Joanne Moore,,Plan Managed,0
+1037884,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1037884,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1037884,27/05/2026 10:00 pm,28/05/2026 06:00 am,0,Personal Care,217,,Joanne Moore,,Plan Managed,0
+1037884,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1037884,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1037884,30/05/2026 12:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,"Joanne Moore, Joanne Moore",,Plan Managed,0
+1037884,30/05/2026 12:00 pm,30/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1037884,30/05/2026 12:00 pm,30/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1011630,25/05/2026 09:00 am,25/05/2026 01:00 pm,0,Personal Care,217,,Sharon Kynaston,,Plan Managed,0
+1011630,25/05/2026 09:00 am,25/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1011630,25/05/2026 09:00 am,25/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1011630,26/05/2026 09:00 am,26/05/2026 01:00 pm,0,Personal Care,217,,Sharon Kynaston,,Plan Managed,0
+1011630,26/05/2026 09:00 am,26/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1011630,26/05/2026 09:00 am,26/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1011630,28/05/2026 09:00 am,28/05/2026 01:00 pm,0,Personal Care,217,,Sharon Kynaston,,Plan Managed,0
+1011630,28/05/2026 09:00 am,28/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1011630,28/05/2026 09:00 am,28/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1011630,29/05/2026 09:00 am,29/05/2026 01:00 pm,0,Personal Care,217,,Sharon Kynaston,,Plan Managed,0
+1011630,29/05/2026 09:00 am,29/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1011630,29/05/2026 09:00 am,29/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1011630,31/05/2026 09:00 am,31/05/2026 01:00 pm,0,Personal Care,217,,Sharon Kynaston,,Plan Managed,0
+1011630,31/05/2026 09:00 am,31/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1011630,31/05/2026 09:00 am,31/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+886190,26/05/2026 02:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman, Paul Bowman",,Plan Managed,0
+886190,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+886190,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+886190,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+886190,28/05/2026 06:00 am,28/05/2026 02:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman, Paul Bowman",,Plan Managed,0
+886190,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+886190,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,10,Mileage,,Plan Managed,
+886190,30/05/2026 06:00 am,30/05/2026 02:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman",,Plan Managed,0
+886190,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+886190,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,10,Mileage,,Plan Managed,
+886190,31/05/2026 02:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman",,Plan Managed,0
+886190,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+886190,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Mileage,3643,7,Mileage,,Plan Managed,
+886190,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+886190,29/05/2026 07:00 am,29/05/2026 01:15 pm,0,Personal Care,217,,Garth Daniels,,Plan Managed,0
+886190,29/05/2026 07:00 am,29/05/2026 07:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+886190,29/05/2026 07:00 am,29/05/2026 07:00 am,,Mileage,3643,15,Mileage,,Plan Managed,
+1011632,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1011632,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1011632,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1011632,31/05/2026 05:30 pm,31/05/2026 10:00 pm,0,Personal Care,217,,David Deas,,Plan Managed,0
+1011632,31/05/2026 05:30 pm,31/05/2026 05:30 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1011632,31/05/2026 05:30 pm,31/05/2026 05:30 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1011632,27/05/2026 09:00 am,27/05/2026 04:00 pm,0,Personal Care,217,,"Sharon Kynaston, Sharon Kynaston",,Plan Managed,0
+1011632,27/05/2026 09:00 am,27/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1011632,27/05/2026 09:00 am,27/05/2026 09:00 am,,Mileage,3643,5,Mileage,,Plan Managed,
+1011632,30/05/2026 09:00 am,30/05/2026 04:00 pm,0,Personal Care,217,,"Sharon Kynaston, Sharon Kynaston",,Plan Managed,0
+1011632,30/05/2026 09:00 am,30/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1011632,30/05/2026 09:00 am,30/05/2026 09:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1011632,25/05/2026 11:00 am,25/05/2026 08:00 pm,0,Personal Care,217,,"David Deas, David Deas, Richie Xiao ( Jacky )",,Plan Managed,0
+1011632,25/05/2026 11:00 am,25/05/2026 11:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1011632,25/05/2026 11:00 am,25/05/2026 11:00 am,,Mileage,3643,19,Mileage,,Plan Managed,
+886283,28/05/2026 02:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,"Garth Daniels, Garth Daniels, Paul Bowman, Paul Bowman",,Plan Managed,0
+886283,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+886283,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+886283,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+886283,29/05/2026 02:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman",,Plan Managed,0
+886283,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+886283,29/05/2026 02:00 pm,29/05/2026 02:00 pm,,Mileage,3643,15,Mileage,,Plan Managed,
+886283,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1002008,30/05/2026 08:00 am,30/05/2026 01:00 pm,0,Personal Care,217,,Darren Aurisch,,Plan Managed,0
+1002008,30/05/2026 08:00 am,30/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1002008,30/05/2026 08:00 am,30/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1002008,31/05/2026 08:00 am,31/05/2026 01:00 pm,0,Personal Care,217,,Darren Aurisch,,Plan Managed,0
+1002008,31/05/2026 08:00 am,31/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1002008,31/05/2026 08:00 am,31/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1002008,29/05/2026 08:00 am,29/05/2026 01:00 pm,0,Personal Care,217,,"Darren Aurisch, Darren Aurisch",,Plan Managed,0
+1002008,29/05/2026 08:00 am,29/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1002008,29/05/2026 08:00 am,29/05/2026 08:00 am,,Mileage,3643,5,Mileage,,Plan Managed,
+968381,29/05/2026 06:00 am,29/05/2026 08:00 am,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+968381,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+968381,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+968381,27/05/2026 08:00 am,27/05/2026 04:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+968381,27/05/2026 08:00 am,27/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+968381,27/05/2026 08:00 am,27/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+968381,30/05/2026 08:00 am,30/05/2026 04:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+968381,30/05/2026 08:00 am,30/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+968381,30/05/2026 08:00 am,30/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+968381,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed, Ndis Managed",
+968381,26/05/2026 11:00 am,26/05/2026 03:00 pm,0,Personal Care,217,,Rebecca Harmon,,Ndis Managed,0
+968381,26/05/2026 11:00 am,26/05/2026 11:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+968381,26/05/2026 11:00 am,26/05/2026 11:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+968381,31/05/2026 08:00 am,31/05/2026 04:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+968381,31/05/2026 08:00 am,31/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+968381,31/05/2026 08:00 am,31/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+968381,28/05/2026 04:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+968381,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+968381,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+983824,26/05/2026 02:00 pm,26/05/2026 08:00 pm,0,Personal Care,217,,Susan Gillespie,,Self Managed,0
+983824,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+983824,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Mileage,3643,40,Mileage,,Self Managed,
+983824,27/05/2026 02:00 pm,27/05/2026 08:00 pm,0,Personal Care,217,,Susan Gillespie,,Self Managed,0
+983824,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+983824,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+522158,29/05/2026 04:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+522158,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+522158,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+522158,30/05/2026 02:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+522158,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+522158,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+522158,25/05/2026 06:00 am,25/05/2026 02:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+522158,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+522158,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+522158,27/05/2026 06:00 am,27/05/2026 02:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+522158,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+522158,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1032144,27/05/2026 06:00 am,27/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+1032144,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1032144,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1032144,28/05/2026 02:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+1032144,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1032144,28/05/2026 02:00 pm,28/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1032144,30/05/2026 01:30 pm,30/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+1032144,30/05/2026 01:30 pm,30/05/2026 01:30 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1032144,30/05/2026 01:30 pm,30/05/2026 01:30 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1032144,29/05/2026 02:30 pm,29/05/2026 07:30 pm,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+1032144,29/05/2026 02:30 pm,29/05/2026 02:30 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1032144,29/05/2026 02:30 pm,29/05/2026 02:30 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1020311,26/05/2026 11:00 pm,27/05/2026 09:00 am,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1020311,26/05/2026 11:00 pm,26/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1020311,26/05/2026 11:00 pm,26/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1020311,27/05/2026 11:00 pm,28/05/2026 09:00 am,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1020311,27/05/2026 11:00 pm,27/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1020311,27/05/2026 11:00 pm,27/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1020311,30/05/2026 11:00 pm,31/05/2026 09:00 am,0,Personal Care,217,,"Teresa Zajdlewicz, Teresa Zajdlewicz",,Plan Managed,0
+1020311,30/05/2026 11:00 pm,30/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1020311,30/05/2026 11:00 pm,30/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1028966,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1028966,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1028966,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1028966,26/05/2026 04:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith",,Plan Managed,0
+1028966,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1028966,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1028966,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1028966,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1028966,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1028966,30/05/2026 04:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith",,Plan Managed,0
+1028966,30/05/2026 04:00 pm,30/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1028966,30/05/2026 04:00 pm,30/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1028966,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1028966,25/05/2026 04:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith",,Plan Managed,0
+1028966,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1028966,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+467585,26/05/2026 06:00 am,26/05/2026 02:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+467585,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+467585,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,15,Mileage,,Ndis Managed,
+467585,29/05/2026 12:00 pm,29/05/2026 07:30 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+467585,29/05/2026 12:00 pm,29/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+467585,29/05/2026 12:00 pm,29/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+467585,30/05/2026 12:00 pm,30/05/2026 07:30 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+467585,30/05/2026 12:00 pm,30/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+467585,30/05/2026 12:00 pm,30/05/2026 12:00 pm,,Mileage,3643,15,Mileage,,Ndis Managed,
+467585,28/05/2026 06:00 am,28/05/2026 08:30 am,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+467585,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+467585,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+338640,26/05/2026 04:00 pm,26/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+338640,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+338640,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+338640,27/05/2026 04:00 pm,27/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+338640,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+338640,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+338640,29/05/2026 04:00 pm,29/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+338640,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+338640,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+338640,31/05/2026 03:00 pm,31/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+338640,31/05/2026 03:00 pm,31/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+338640,31/05/2026 03:00 pm,31/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+336430,25/05/2026 04:00 pm,25/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+336430,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+336430,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+336430,27/05/2026 04:00 pm,27/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+336430,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+336430,27/05/2026 04:00 pm,27/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+336430,28/05/2026 04:00 pm,28/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+336430,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+336430,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+336430,31/05/2026 07:00 am,31/05/2026 03:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+336430,31/05/2026 07:00 am,31/05/2026 07:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+336430,31/05/2026 07:00 am,31/05/2026 07:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+781607,25/05/2026 02:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+781607,26/05/2026 02:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+781607,27/05/2026 10:00 pm,28/05/2026 06:00 am,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+781607,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+781607,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+781607,28/05/2026 10:00 pm,29/05/2026 06:00 am,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+781607,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+781607,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+781607,31/05/2026 02:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+1005804,30/05/2026 06:00 am,30/05/2026 01:30 pm,0,Personal Care,217,,"David Deas, David Deas, Richie Xiao ( Jacky )",,Plan Managed,0
+1005804,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1005804,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+607814,26/05/2026 07:00 am,26/05/2026 03:00 pm,0,Personal Care,217,,Ralph Carmona,,Plan Managed,0
+607814,26/05/2026 07:00 am,26/05/2026 07:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+607814,26/05/2026 07:00 am,26/05/2026 07:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+607814,28/05/2026 07:00 am,28/05/2026 03:00 pm,0,Personal Care,217,,Ralph Carmona,,Plan Managed,0
+607814,28/05/2026 07:00 am,28/05/2026 07:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+607814,28/05/2026 07:00 am,28/05/2026 07:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+886339,26/05/2026 06:00 am,26/05/2026 02:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman, Paul Bowman",,Plan Managed,0
+886339,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+886339,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+886339,30/05/2026 02:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman",,Plan Managed,0
+886339,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+886339,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+886339,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+994846,27/05/2026 08:30 am,27/05/2026 02:00 pm,0,Personal Care,217,,Carmel Young,,Self Managed,0
+994846,27/05/2026 08:30 am,27/05/2026 08:30 am,,Expense,Expense,0.0,Expense,,Self Managed,
+994846,27/05/2026 08:30 am,27/05/2026 08:30 am,,Mileage,3643,0,Mileage,,Self Managed,
+994846,25/05/2026 08:00 am,25/05/2026 04:30 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+994846,25/05/2026 08:00 am,25/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+994846,25/05/2026 08:00 am,25/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+994846,26/05/2026 08:00 am,26/05/2026 04:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+994846,26/05/2026 08:00 am,26/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+994846,26/05/2026 08:00 am,26/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+994846,28/05/2026 08:00 am,28/05/2026 04:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+994846,28/05/2026 08:00 am,28/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+994846,28/05/2026 08:00 am,28/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+917947,25/05/2026 06:00 am,25/05/2026 01:30 pm,0,Personal Care,217,,"David Deas, David Deas, Richie Xiao ( Jacky )",,Plan Managed,0
+917947,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+917947,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,16,Mileage,,Plan Managed,
+917947,26/05/2026 09:30 am,26/05/2026 12:30 pm,0,Personal Care,217,,Richie Xiao ( Jacky ),,Plan Managed,0
+917947,26/05/2026 09:30 am,26/05/2026 09:30 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+917947,26/05/2026 09:30 am,26/05/2026 09:30 am,,Mileage,3643,6,Mileage,,Plan Managed,
+1000826,29/05/2026 06:15 am,29/05/2026 03:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+1000826,29/05/2026 06:15 am,29/05/2026 06:15 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1000826,29/05/2026 06:15 am,29/05/2026 06:15 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1000826,25/05/2026 06:00 am,25/05/2026 03:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+1000826,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1000826,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1000826,28/05/2026 06:00 am,28/05/2026 02:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+1000826,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1000826,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1032135,25/05/2026 04:00 pm,25/05/2026 07:00 pm,0,Personal Care,217,,Timothy William Brown,,Plan Managed,0
+1032135,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1032135,25/05/2026 04:00 pm,25/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1032135,27/05/2026 06:00 am,27/05/2026 04:00 pm,0,Personal Care,217,,Brendan Lesslie,,Self Managed,0
+1032135,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1032135,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1032135,30/05/2026 03:00 pm,30/05/2026 07:00 pm,0,Personal Care,217,,George Egglesfield,,Self Managed,0
+1032135,30/05/2026 03:00 pm,30/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1032135,30/05/2026 03:00 pm,30/05/2026 03:00 pm,,Mileage,3643,3,Mileage,,Self Managed,
+1032135,25/05/2026 09:00 am,25/05/2026 04:00 pm,0,Personal Care,217,,George Egglesfield,,Self Managed,0
+1032135,25/05/2026 09:00 am,25/05/2026 09:00 am,,Expense,Expense,5.0,Expense,,Self Managed,
+1032135,25/05/2026 09:00 am,25/05/2026 09:00 am,,Mileage,3643,29,Mileage,,Self Managed,
+1032135,26/05/2026 12:30 pm,26/05/2026 05:00 pm,0,Personal Care,217,,George Egglesfield,,Self Managed,0
+1032135,26/05/2026 12:30 pm,26/05/2026 12:30 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1032135,26/05/2026 12:30 pm,26/05/2026 12:30 pm,,Mileage,3643,31,Mileage,,Self Managed,
+1032135,28/05/2026 09:00 am,28/05/2026 04:00 pm,0,Personal Care,217,,George Egglesfield,,Self Managed,0
+1032135,28/05/2026 09:00 am,28/05/2026 09:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1032135,28/05/2026 09:00 am,28/05/2026 09:00 am,,Mileage,3643,22,Mileage,,Self Managed,
+1032142,27/05/2026 07:00 pm,27/05/2026 08:00 pm,0,Personal Care,217,,Timothy William Brown,,Plan Managed,0
+1032142,27/05/2026 07:00 pm,27/05/2026 07:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1032142,27/05/2026 07:00 pm,27/05/2026 07:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1032142,27/05/2026 03:00 pm,27/05/2026 07:00 pm,0,Personal Care,217,,George Egglesfield,,Self Managed,0
+1032142,27/05/2026 03:00 pm,27/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1032142,27/05/2026 03:00 pm,27/05/2026 03:00 pm,,Mileage,3643,29,Mileage,,Self Managed,
+1032142,29/05/2026 10:30 am,29/05/2026 03:30 pm,0,Personal Care,217,,George Egglesfield,,Self Managed,0
+1032142,29/05/2026 10:30 am,29/05/2026 10:30 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1032142,29/05/2026 10:30 am,29/05/2026 10:30 am,,Mileage,3643,11,Mileage,,Self Managed,
+1018080,28/05/2026 06:00 am,28/05/2026 02:00 pm,0,Personal Care,217,,"Kay Duval, Kay Duval",,Self Managed,0
+1018080,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1018080,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+219269,28/05/2026 03:00 pm,28/05/2026 05:00 pm,0,Nursing Support,452140,,Mohammed Sunny Manikam,,Plan Managed,1000
+219269,28/05/2026 03:00 pm,28/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+219269,28/05/2026 03:00 pm,28/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+219269,29/05/2026 03:00 pm,29/05/2026 05:00 pm,0,Nursing Support,452140,,Mohammed Sunny Manikam,,Plan Managed,1000
+219269,29/05/2026 03:00 pm,29/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+219269,29/05/2026 03:00 pm,29/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+219269,26/05/2026 03:00 pm,26/05/2026 05:00 pm,0,Nursing Support,452140,,Mohammed Sunny Manikam,,Plan Managed,1000
+219269,26/05/2026 03:00 pm,26/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+219269,26/05/2026 03:00 pm,26/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+219269,27/05/2026 03:00 pm,27/05/2026 05:00 pm,0,Nursing Support,452140,,Mohammed Sunny Manikam,,Plan Managed,1000
+219269,27/05/2026 03:00 pm,27/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+219269,27/05/2026 03:00 pm,27/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+945228,25/05/2026 06:00 am,25/05/2026 04:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby, Danny Barsby, Danny Barsby",,Ndis Managed,0
+945228,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+945228,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,93,Mileage,,Ndis Managed,
+945228,26/05/2026 06:00 am,26/05/2026 04:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby, Danny Barsby, Danny Barsby",,Ndis Managed,0
+945228,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+945228,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+945228,28/05/2026 06:00 am,28/05/2026 12:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+945228,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+945228,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,16,Mileage,,Plan Managed,
+945228,27/05/2026 06:00 am,27/05/2026 12:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+945228,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+945228,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,15,Mileage,,Plan Managed,
+520037,26/05/2026 02:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+520037,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+520037,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1011687,26/05/2026 12:00 pm,26/05/2026 07:30 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+1011687,26/05/2026 12:00 pm,26/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1011687,26/05/2026 12:00 pm,26/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1011398,29/05/2026 08:00 pm,30/05/2026 06:00 am,0,Personal Care,217,,"Brendan Lesslie, Brendan Lesslie",,Self Managed,0
+1011398,29/05/2026 08:00 pm,29/05/2026 08:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1011398,29/05/2026 08:00 pm,29/05/2026 08:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+168003,29/05/2026 08:00 am,29/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+168003,29/05/2026 08:00 am,29/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+168003,29/05/2026 08:00 am,29/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+168003,31/05/2026 10:00 pm,01/06/2026 06:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+168003,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+168003,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+168003,26/05/2026 10:00 pm,27/05/2026 06:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+168003,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+168003,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+168003,25/05/2026 10:00 pm,26/05/2026 06:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+168003,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+168003,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1015352,25/05/2026 02:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,Mohammed Sunny Manikam,,Plan Managed,0
+1015352,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1015352,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1015352,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1015352,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1015352,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1015352,28/05/2026 05:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith",,Plan Managed,0
+1015352,28/05/2026 05:00 pm,28/05/2026 05:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1015352,28/05/2026 05:00 pm,28/05/2026 05:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1015352,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1015352,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1015352,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1015352,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1015352,31/05/2026 04:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith",,Plan Managed,0
+1015352,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1015352,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+482395,29/05/2026 06:00 am,29/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+482395,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+482395,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+482395,26/05/2026 06:00 am,26/05/2026 02:00 pm,0,Personal Care,217,,Joanne Moore,,Plan Managed,0
+482395,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+482395,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,2,Mileage,,Plan Managed,
+482395,27/05/2026 06:00 am,27/05/2026 02:00 pm,0,Personal Care,217,,Joanne Moore,,Plan Managed,0
+482395,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+482395,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1017749,28/05/2026 11:00 pm,29/05/2026 09:00 am,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1017749,28/05/2026 11:00 pm,28/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1017749,28/05/2026 11:00 pm,28/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1017749,29/05/2026 11:00 pm,30/05/2026 09:00 am,0,Personal Care,217,,"Teresa Zajdlewicz, Teresa Zajdlewicz",,Plan Managed,0
+1017749,29/05/2026 11:00 pm,29/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1017749,29/05/2026 11:00 pm,29/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1017749,31/05/2026 11:00 pm,01/06/2026 06:00 am,0,Personal Care,217,,"Teresa Zajdlewicz, Teresa Zajdlewicz",,Plan Managed,0
+1017749,31/05/2026 11:00 pm,31/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1017749,31/05/2026 11:00 pm,31/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+791340,31/05/2026 12:00 pm,31/05/2026 07:30 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+791340,31/05/2026 12:00 pm,31/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+791340,31/05/2026 12:00 pm,31/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+181868,29/05/2026 10:00 pm,30/05/2026 06:00 am,0,Personal Care,217,,"Mohammed Sunny Manikam, Mohammed Sunny Manikam",,Plan Managed,0
+181868,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+181868,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+181868,30/05/2026 10:00 pm,31/05/2026 06:00 am,0,Personal Care,217,,"Mohammed Sunny Manikam, Mohammed Sunny Manikam",,Plan Managed,0
+181868,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+181868,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+181868,28/05/2026 10:00 pm,29/05/2026 08:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+181868,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+181868,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1035785,31/05/2026 12:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+1035785,31/05/2026 12:00 pm,31/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1035785,31/05/2026 12:00 pm,31/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1035785,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1035785,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1035785,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+1035785,28/05/2026 09:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+1035785,28/05/2026 09:00 pm,28/05/2026 09:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1035785,28/05/2026 09:00 pm,28/05/2026 09:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1035785,29/05/2026 06:00 am,29/05/2026 02:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+1035785,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1035785,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1035785,25/05/2026 06:00 am,25/05/2026 12:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+1035785,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1035785,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1035785,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1035785,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1035785,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+343527,25/05/2026 06:00 am,25/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+343527,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+343527,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+343527,26/05/2026 02:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+343527,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+343527,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+343527,30/05/2026 10:00 pm,31/05/2026 06:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+343527,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+343527,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+343527,27/05/2026 10:00 pm,28/05/2026 06:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+343527,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+343527,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+874169,25/05/2026 01:00 pm,25/05/2026 07:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+874169,25/05/2026 01:00 pm,25/05/2026 01:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+874169,25/05/2026 01:00 pm,25/05/2026 01:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+874169,26/05/2026 12:00 pm,26/05/2026 06:30 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+874169,26/05/2026 12:00 pm,26/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+874169,26/05/2026 12:00 pm,26/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+874169,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+874169,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+874169,31/05/2026 12:00 pm,31/05/2026 06:30 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+874169,31/05/2026 12:00 pm,31/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+874169,31/05/2026 12:00 pm,31/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+874169,27/05/2026 06:45 pm,27/05/2026 10:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly",,Ndis Managed,0
+874169,27/05/2026 06:45 pm,27/05/2026 06:45 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+874169,27/05/2026 06:45 pm,27/05/2026 06:45 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+874169,29/05/2026 07:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,Ross Daly,,Ndis Managed,0
+874169,29/05/2026 07:00 pm,29/05/2026 07:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+874169,29/05/2026 07:00 pm,29/05/2026 07:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+874169,28/05/2026 06:00 am,28/05/2026 06:30 am,0,Personal Care,217,,Ross Daly,,Ndis Managed,0
+874169,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+874169,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+874169,30/05/2026 06:00 am,30/05/2026 06:30 am,0,Personal Care,217,,Ross Daly,,Ndis Managed,0
+874169,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+874169,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+197765,31/05/2026 11:00 pm,01/06/2026 09:00 am,0,Personal Care,217,,"Luke Taylor, Luke Taylor",,Ndis Managed,0
+197765,31/05/2026 11:00 pm,31/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+197765,31/05/2026 11:00 pm,31/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+197765,26/05/2026 04:00 pm,26/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+197765,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+197765,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+197765,28/05/2026 04:00 pm,28/05/2026 11:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+197765,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+197765,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+197765,29/05/2026 11:00 pm,30/05/2026 09:00 am,0,Personal Care,217,,"Luke Taylor, Luke Taylor",,Ndis Managed,0
+197765,29/05/2026 11:00 pm,29/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+197765,29/05/2026 11:00 pm,29/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+169080,28/05/2026 12:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,"Joanne Moore, Joanne Moore",,Plan Managed,0
+169080,28/05/2026 12:00 pm,28/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+169080,28/05/2026 12:00 pm,28/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+169080,26/05/2026 09:45 am,26/05/2026 01:45 pm,0,Personal Care,217,,"Timothy William Brown, Timothy William Brown",,Plan Managed,0
+169080,26/05/2026 09:45 am,26/05/2026 09:45 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+169080,26/05/2026 09:45 am,26/05/2026 09:45 am,,Mileage,3643,0,Mileage,,Plan Managed,
+169080,31/05/2026 06:00 am,31/05/2026 02:00 pm,0,Personal Care,217,,Joanne Moore,,Plan Managed,0
+169080,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+169080,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+169080,25/05/2026 08:00 am,25/05/2026 05:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+169080,25/05/2026 08:00 am,25/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+169080,25/05/2026 08:00 am,25/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+169080,29/05/2026 08:00 am,29/05/2026 05:00 pm,0,Personal Care,217,,"Darren Aurisch, Mark David Smith, Mark David Smith, Mark David Smith",,Plan Managed,0
+169080,29/05/2026 08:00 am,29/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+169080,29/05/2026 08:00 am,29/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+169080,27/05/2026 08:00 am,27/05/2026 01:00 pm,0,Personal Care,217,,"Darren Aurisch, Darren Aurisch",,Plan Managed,0
+169080,27/05/2026 08:00 am,27/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+169080,27/05/2026 08:00 am,27/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+797440,25/05/2026 06:00 am,25/05/2026 02:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+797440,25/05/2026 06:00 am,25/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+797440,25/05/2026 06:00 am,25/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+797440,28/05/2026 06:00 am,28/05/2026 02:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+797440,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+797440,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1037567,27/05/2026 06:00 am,27/05/2026 04:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby, Danny Barsby, Danny Barsby",,Ndis Managed,0
+1037567,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1037567,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1037567,30/05/2026 02:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+1037567,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1037567,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1037567,28/05/2026 07:00 am,28/05/2026 03:00 pm,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+1037567,29/05/2026 07:00 am,29/05/2026 03:00 pm,0,Personal Care,217,,"Beven Jarmey, Beven Jarmey",,Plan Managed,0
+786113,25/05/2026 06:00 am,25/05/2026 02:00 pm,0,Personal Care,217,,"Beven Jarmey, Beven Jarmey",,Plan Managed,0
+786113,29/05/2026 02:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+786113,30/05/2026 02:00 pm,30/05/2026 10:30 pm,0,Personal Care,217,,Beven Jarmey,,Plan Managed,0
+1021459,30/05/2026 04:00 pm,30/05/2026 10:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+1021459,30/05/2026 04:00 pm,30/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1021459,30/05/2026 04:00 pm,30/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1021459,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1021459,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1021459,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed",
+1021459,29/05/2026 12:00 pm,29/05/2026 07:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+1021459,29/05/2026 12:00 pm,29/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1021459,29/05/2026 12:00 pm,29/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1021459,26/05/2026 06:00 am,26/05/2026 01:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly, Ross Daly",,Ndis Managed,0
+1021459,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1021459,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1021459,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+1021459,31/05/2026 06:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly",,Ndis Managed,0
+1021459,31/05/2026 06:00 pm,31/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1021459,31/05/2026 06:00 pm,31/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+855786,27/05/2026 06:00 am,27/05/2026 08:00 am,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+855786,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+855786,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+855786,30/05/2026 06:00 am,30/05/2026 08:00 am,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+855786,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+855786,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+855786,26/05/2026 04:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+855786,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+855786,26/05/2026 04:00 pm,26/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+855786,29/05/2026 04:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+855786,31/05/2026 04:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,"Amy Hamerslag, Carmel Young, Clare Sutton, Rebecca Atlas, Scott Kerschner, Scott Waldron, Tarlene Roca",,"Self Managed, Plan Managed, Ndis Managed",0
+855786,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed, Ndis Managed",
+855786,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed, Ndis Managed",
+855786,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed, Ndis Managed",
+855786,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed, Ndis Managed",
+855786,31/05/2026 10:00 pm,31/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed, Ndis Managed",
+886193,25/05/2026 02:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman",,Plan Managed,0
+886193,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+886193,25/05/2026 02:00 pm,25/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+886193,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+886193,27/05/2026 02:00 pm,27/05/2026 10:00 pm,0,Personal Care,217,,"Garth Daniels, Paul Bowman, Paul Bowman",,Plan Managed,0
+886193,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+886193,27/05/2026 02:00 pm,27/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+886193,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+170745,29/05/2026 06:00 am,29/05/2026 12:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+170745,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+170745,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+170745,30/05/2026 06:00 am,30/05/2026 12:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+170745,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+170745,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+170745,31/05/2026 06:00 am,31/05/2026 12:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+170745,31/05/2026 06:00 am,31/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+170745,31/05/2026 06:00 am,31/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1045812,28/05/2026 06:00 am,28/05/2026 12:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+1045812,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1045812,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1045812,27/05/2026 06:00 am,27/05/2026 03:00 pm,0,Personal Care,217,,"Kay Duval, Kay Duval",,Self Managed,0
+1045812,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1045812,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1045812,25/05/2026 08:00 am,25/05/2026 12:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti",,"Self Managed, Plan Managed",0
+1045812,25/05/2026 08:00 am,25/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1045812,25/05/2026 08:00 am,25/05/2026 08:00 am,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1006799,25/05/2026 09:30 am,25/05/2026 02:00 pm,0,Personal Care,217,,Beatriz Gobalesa,,Plan Managed,0
+1006799,25/05/2026 09:30 am,25/05/2026 09:30 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1006799,25/05/2026 09:30 am,25/05/2026 09:30 am,,Mileage,3643,0,Mileage,,Plan Managed,
+1006799,27/05/2026 09:30 am,27/05/2026 02:00 pm,0,Personal Care,217,,Beatriz Gobalesa,,Plan Managed,0
+1006799,27/05/2026 09:30 am,27/05/2026 09:30 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+1006799,27/05/2026 09:30 am,27/05/2026 09:30 am,,Mileage,3643,12,Mileage,,Plan Managed,
+1006799,25/05/2026 06:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,David Deas,,Plan Managed,0
+1006799,25/05/2026 06:00 pm,25/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1006799,25/05/2026 06:00 pm,25/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1006799,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1006799,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+1006799,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Plan Managed,
+162473,31/05/2026 02:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,Kyle Warne,,Self Managed,0
+162473,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+162473,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Mileage,3643,47,Mileage,,Self Managed,
+1011706,28/05/2026 12:00 pm,28/05/2026 07:30 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+1011706,28/05/2026 12:00 pm,28/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1011706,28/05/2026 12:00 pm,28/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1011706,29/05/2026 06:00 am,29/05/2026 02:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Dale Johnstone",,Ndis Managed,0
+1011706,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1011706,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1032620,28/05/2026 04:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+1032620,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1032620,28/05/2026 04:00 pm,28/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1032620,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1032620,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1032620,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed",
+1032620,29/05/2026 04:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,"Susan Gillespie, Tracey Cappetti, Tracey Cappetti",,"Self Managed, Plan Managed",0
+1032620,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1032620,29/05/2026 04:00 pm,29/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1032620,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,"Self Managed, Plan Managed",
+1032620,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,"Self Managed, Plan Managed",
+1032620,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,"Self Managed, Plan Managed",
+1032620,27/05/2026 08:00 am,27/05/2026 01:00 pm,0,Personal Care,217,,"Susan Gillespie, Susan Gillespie",,Self Managed,0
+1032620,27/05/2026 08:00 am,27/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1032620,27/05/2026 08:00 am,27/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Self Managed,
+1032620,25/05/2026 03:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1032620,25/05/2026 03:00 pm,25/05/2026 03:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1032620,25/05/2026 03:00 pm,25/05/2026 03:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1032620,26/05/2026 02:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1032620,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1032620,26/05/2026 02:00 pm,26/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1032620,30/05/2026 10:00 pm,31/05/2026 07:30 am,0,Personal Care,217,,"Kay Duval, Kay Duval",,Self Managed,0
+1032620,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1032620,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+837987,30/05/2026 10:00 pm,31/05/2026 06:00 am,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+837987,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+837987,30/05/2026 10:00 pm,30/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+837987,28/05/2026 10:00 pm,29/05/2026 06:00 am,0,Personal Care,217,,"Alexandre Noskoff, Danny Barsby",,Ndis Managed,0
+837987,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+837987,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+911647,26/05/2026 08:00 am,26/05/2026 06:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+911647,26/05/2026 08:00 am,26/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+911647,26/05/2026 08:00 am,26/05/2026 08:00 am,,Mileage,3643,32,Mileage,,Plan Managed,
+911647,28/05/2026 08:00 am,28/05/2026 12:00 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+911647,28/05/2026 08:00 am,28/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+911647,28/05/2026 08:00 am,28/05/2026 08:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+911647,25/05/2026 08:00 am,25/05/2026 05:00 pm,0,Personal Care,217,,Ayden Lanzafame,,Plan Managed,0
+911647,25/05/2026 08:00 am,25/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+911647,25/05/2026 08:00 am,25/05/2026 08:00 am,,Mileage,3643,393,Mileage,,Plan Managed,
+911647,27/05/2026 02:30 pm,27/05/2026 05:30 pm,0,Personal Care,217,,Ayden Lanzafame,,Plan Managed,0
+911647,27/05/2026 02:30 pm,27/05/2026 02:30 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+911647,27/05/2026 02:30 pm,27/05/2026 02:30 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+911647,28/05/2026 12:00 pm,28/05/2026 06:00 pm,0,Personal Care,217,,Ayden Lanzafame,,Plan Managed,0
+911647,28/05/2026 12:00 pm,28/05/2026 12:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+911647,28/05/2026 12:00 pm,28/05/2026 12:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+911647,27/05/2026 08:00 am,27/05/2026 02:30 pm,0,Personal Care,217,,Brandon Lanzafame,,Plan Managed,0
+911647,27/05/2026 08:00 am,27/05/2026 08:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+911647,27/05/2026 08:00 am,27/05/2026 08:00 am,,Mileage,3643,39,Mileage,,Plan Managed,
+920969,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+920969,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+920969,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,
+920969,25/05/2026 06:00 pm,25/05/2026 10:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly",,Ndis Managed,0
+920969,25/05/2026 06:00 pm,25/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+920969,25/05/2026 06:00 pm,25/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+920969,25/05/2026 06:00 pm,25/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+920969,25/05/2026 06:00 pm,25/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+920969,26/05/2026 06:00 pm,26/05/2026 10:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly",,Ndis Managed,0
+920969,26/05/2026 06:00 pm,26/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+920969,26/05/2026 06:00 pm,26/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+920969,28/05/2026 06:00 pm,28/05/2026 10:00 pm,0,Personal Care,217,,"Ross Daly, Ross Daly",,Ndis Managed,0
+920969,28/05/2026 06:00 pm,28/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+920969,28/05/2026 06:00 pm,28/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+920969,26/05/2026 06:00 am,26/05/2026 06:30 am,0,Personal Care,217,,Ross Daly,,Ndis Managed,0
+920969,26/05/2026 06:00 am,26/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+920969,26/05/2026 06:00 am,26/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+920969,27/05/2026 06:00 am,27/05/2026 06:30 am,0,Personal Care,217,,Ross Daly,,Ndis Managed,0
+920969,27/05/2026 06:00 am,27/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+920969,27/05/2026 06:00 am,27/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+920969,29/05/2026 06:00 am,29/05/2026 06:30 am,0,Personal Care,217,,Ross Daly,,Ndis Managed,0
+920969,29/05/2026 06:00 am,29/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+920969,29/05/2026 06:00 am,29/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+742432,30/05/2026 06:00 am,30/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+742432,30/05/2026 06:00 am,30/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+742432,30/05/2026 06:00 am,30/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+742432,31/05/2026 02:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+742432,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+742432,31/05/2026 02:00 pm,31/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+742432,25/05/2026 10:00 pm,26/05/2026 06:00 am,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+742432,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+742432,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+742432,29/05/2026 07:00 am,29/05/2026 03:00 pm,0,Personal Care,217,,Ralph Carmona,,Plan Managed,0
+742432,29/05/2026 07:00 am,29/05/2026 07:00 am,,Expense,Expense,0.0,Expense,,Plan Managed,
+742432,29/05/2026 07:00 am,29/05/2026 07:00 am,,Mileage,3643,0,Mileage,,Plan Managed,
+742432,28/05/2026 06:00 am,28/05/2026 02:00 pm,0,Personal Care,217,,Duy Nguyen,,Ndis Managed,0
+742432,28/05/2026 06:00 am,28/05/2026 06:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+742432,28/05/2026 06:00 am,28/05/2026 06:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1015782,25/05/2026 10:00 pm,26/05/2026 06:00 am,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1015782,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1015782,25/05/2026 10:00 pm,25/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1015782,26/05/2026 10:00 pm,27/05/2026 06:00 am,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1015782,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1015782,26/05/2026 10:00 pm,26/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1015782,28/05/2026 10:00 pm,29/05/2026 06:00 am,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1015782,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1015782,28/05/2026 10:00 pm,28/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1015782,27/05/2026 10:00 pm,28/05/2026 06:00 am,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1015782,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1015782,27/05/2026 10:00 pm,27/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1015782,29/05/2026 10:00 pm,30/05/2026 06:00 am,0,Personal Care,217,,"Kay Duval, Kay Duval",,Self Managed,0
+1015782,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1015782,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1015782,31/05/2026 04:00 pm,31/05/2026 10:00 pm,0,Personal Care,217,,Kay Duval,,Self Managed,0
+1015782,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Expense,Expense,0.0,Expense,,Self Managed,
+1015782,31/05/2026 04:00 pm,31/05/2026 04:00 pm,,Mileage,3643,0,Mileage,,Self Managed,
+1016748,30/05/2026 02:00 pm,30/05/2026 11:00 pm,0,Personal Care,217,,Teresa Zajdlewicz,,Plan Managed,0
+1016748,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Expense,Expense,0.0,Expense,,Plan Managed,
+1016748,30/05/2026 02:00 pm,30/05/2026 02:00 pm,,Mileage,3643,0,Mileage,,Plan Managed,
+336498,27/05/2026 11:00 pm,28/05/2026 09:00 am,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+336498,27/05/2026 11:00 pm,27/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+336498,27/05/2026 11:00 pm,27/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+336498,28/05/2026 11:00 pm,29/05/2026 09:00 am,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+336498,28/05/2026 11:00 pm,28/05/2026 11:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+336498,28/05/2026 11:00 pm,28/05/2026 11:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+336498,31/05/2026 07:00 am,31/05/2026 03:00 pm,0,Personal Care,217,,Luke Taylor,,Ndis Managed,0
+336498,31/05/2026 07:00 am,31/05/2026 07:00 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+336498,31/05/2026 07:00 am,31/05/2026 07:00 am,,Mileage,3643,0,Mileage,,Ndis Managed,
+1023407,28/05/2026 08:30 am,28/05/2026 01:30 pm,0,Personal Care,217,,Rebecca Harmon,,Ndis Managed,0
+1023407,28/05/2026 08:30 am,28/05/2026 08:30 am,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1023407,28/05/2026 08:30 am,28/05/2026 08:30 am,,Mileage,3643,32,Mileage,,Ndis Managed,
+1021413,25/05/2026 10:00 am,25/05/2026 03:00 pm,0,Personal Care,217,,"Kay Duval, Kay Duval",,Self Managed,0
+1021413,25/05/2026 10:00 am,25/05/2026 10:00 am,,Expense,Expense,0.0,Expense,,Self Managed,
+1021413,25/05/2026 10:00 am,25/05/2026 10:00 am,,Mileage,3643,34,Mileage,,Self Managed,
+1011709,30/05/2026 02:30 pm,30/05/2026 07:30 pm,0,Personal Care,217,,Martin Scott,,Ndis Managed,0
+1011709,30/05/2026 02:30 pm,30/05/2026 02:30 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1011709,30/05/2026 02:30 pm,30/05/2026 02:30 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1011709,29/05/2026 06:00 pm,29/05/2026 10:00 pm,0,Personal Care,217,,"Dale Johnstone, Dale Johnstone, Martin Scott",,Ndis Managed,0
+1011709,29/05/2026 06:00 pm,29/05/2026 06:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1011709,29/05/2026 06:00 pm,29/05/2026 06:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1011709,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Expense,Expense,0.0,Expense,,Ndis Managed,
+1011709,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Mileage,3643,0,Mileage,,Ndis Managed,
+1011709,29/05/2026 10:00 pm,29/05/2026 10:00 pm,,Sleepover,3650,1.0,Sleepover,,Ndis Managed,

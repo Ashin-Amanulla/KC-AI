@@ -40,6 +40,8 @@ const COLUMN_ALIASES = {
   'clockin datetime': 'clockin datetime',
   'clockout datetime': 'clockout datetime',
   'shiftcare id': 'shiftcare id',
+  'duration': 'hours',
+  'rate groups': 'rate groups',
 };
 
 // Shift type mapping (case-insensitive)
@@ -102,6 +104,8 @@ function parseDatetimeWithOffset(dtStr) {
   if (!offsetMatch) {
     const naive = parseNaiveLocalDatetime(s, DEFAULT_SHIFT_OFFSET);
     if (naive) return naive;
+    const aus = parseAusDayMonthDatetime(s, DEFAULT_SHIFT_OFFSET);
+    if (aus) return aus;
   }
 
   try {
@@ -144,6 +148,29 @@ function parseNaiveLocalDatetime(raw, offsetStr) {
   return { date: new Date(utcMs), offsetStr };
 }
 
+/** DD/MM/YYYY HH:MM am/pm — Cost Breakdown Raw and some ShiftCare billing exports. */
+function parseAusDayMonthDatetime(raw, offsetStr) {
+  const m = raw.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+  if (!m) return null;
+  let hour = parseInt(m[4], 10);
+  const minute = parseInt(m[5], 10);
+  const pm = m[6].toLowerCase() === 'pm';
+  if (pm && hour !== 12) hour += 12;
+  if (!pm && hour === 12) hour = 0;
+  const day = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  const year = parseInt(m[3], 10);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const sign = offsetStr[0] === '+' ? 1 : -1;
+  const clean = offsetStr.slice(1).replace(':', '');
+  const oh = parseInt(clean.slice(0, 2), 10);
+  const om = parseInt(clean.slice(2, 4), 10);
+  const offsetMinutes = sign * (oh * 60 + om);
+  const utcMs = Date.UTC(year, month - 1, day, hour, minute, 0) - offsetMinutes * 60000;
+  return { date: new Date(utcMs), offsetStr };
+}
+
 /**
  * Parse a decimal value from a string; returns null for empty/invalid.
  */
@@ -151,6 +178,49 @@ function parseDecimal(value) {
   if (!value || !value.trim()) return null;
   const n = parseFloat(value.trim());
   return isNaN(n) ? null : Math.round(n * 100) / 100;
+}
+
+/** Parse hour fields like "8.0", "8.0 hrs", "8h". */
+function parseHoursField(value) {
+  if (!value || !String(value).trim()) return null;
+  const n = parseFloat(String(value).replace(/[^\d.]/g, ''));
+  return isNaN(n) ? null : Math.round(n * 100) / 100;
+}
+
+/**
+ * Detect common ShiftCare exports that are not per-shift roster CSVs.
+ * Returns a user-facing error string or null if format looks OK to try.
+ */
+function detectUnsupportedCsvFormat(headers) {
+  const normalized = new Set(headers.map((h) => normalizeColumnName(h)));
+  const rawLower = new Set(headers.map((h) => h.trim().toLowerCase()));
+
+  const isAllHoursSummary =
+    rawLower.has('total') &&
+    rawLower.has('name') &&
+    rawLower.has('id') &&
+    [...rawLower].some((h) => h.startsWith('weekday')) &&
+    !normalized.has('start time') &&
+    !normalized.has('end time');
+
+  if (isAllHoursSummary) {
+    return (
+      'This file is a Timesheet "all hours" summary (Name, Total, WeekDay columns), not a shift roster. ' +
+      'In ShiftCare, export the Scheduler timesheet CSV with Staff, Start Date Time, End Date Time, and Shift Type ' +
+      '(filename like Scheduler_Timesheet_Export_*.csv).'
+    );
+  }
+
+  const isCostSummary =
+    rawLower.has('booked') && rawLower.has('pending') && rawLower.has('cancelled');
+  if (isCostSummary) {
+    return (
+      'This file is a Cost Breakdown summary (client totals), not a shift roster. ' +
+      'Use Scheduler_Timesheet_Export_*.csv for pay hours, or Cost_Breakdown_Raw_Export_*.csv for billing analysis.'
+    );
+  }
+
+  return null;
 }
 
 /**
@@ -195,6 +265,12 @@ export function parseShiftCsvBuffer(buffer, uploadedBy = null) {
 
   const headers = parseCsvLine(headerLine);
 
+  const unsupported = detectUnsupportedCsvFormat(headers);
+  if (unsupported) {
+    result.errors.push(unsupported);
+    return result;
+  }
+
   // Build normalised column map: normalizedName → originalHeader
   const normalizedColumns = new Map();
   for (const h of headers) {
@@ -210,7 +286,10 @@ export function parseShiftCsvBuffer(buffer, uploadedBy = null) {
     }
   }
   if (missingColumns.length > 0) {
-    result.errors.push(`Missing required columns: ${missingColumns.join(', ')}`);
+    result.errors.push(
+      `Missing required columns: ${missingColumns.join(', ')}. ` +
+        'Expected a ShiftCare Scheduler export with Staff (or Staff Name), Start Date Time, End Date Time, and Shift Type.'
+    );
     return result;
   }
 
@@ -265,6 +344,7 @@ function processCsvRow(row, rowNum, normalizedColumns, uploadedBy) {
   const shiftcareStaffIdRaw = get('staff id');
   const shiftStatus = get('shift status') || null;
   const absentStr = get('absent');
+  const rateGroupRaw = get('rate groups');
 
   // Staff name is required
   if (!staffName) {
@@ -290,14 +370,20 @@ function processCsvRow(row, rowNum, normalizedColumns, uploadedBy) {
   // Compute hours from timestamps; only trust CSV hours when it closely matches.
   // This avoids phantom-hour inflation from malformed/mis-mapped Hours columns.
   const derivedHours = Math.round(((endParsed.date - startParsed.date) / 3600000) * 100) / 100;
-  const parsedHours = hoursStr ? parseDecimal(hoursStr) : null;
+  const parsedHours = hoursStr ? parseHoursField(hoursStr) : null;
   let hours = derivedHours;
-  if (parsedHours != null && parsedHours > 0 && Math.abs(parsedHours - derivedHours) <= 0.05) {
-    hours = parsedHours;
+  if (parsedHours != null && parsedHours > 0) {
+    if (Math.abs(parsedHours - derivedHours) <= 0.05 || derivedHours <= 0) {
+      hours = parsedHours;
+    }
   }
 
-  // Parse shift type
-  const shiftType = SHIFT_TYPE_MAP[shiftTypeStr.toLowerCase()];
+  // Parse shift type (billing raw often marks sleepovers via rate group)
+  const rateGroupLower = (rateGroupRaw || '').toLowerCase();
+  let shiftType = SHIFT_TYPE_MAP[shiftTypeStr.toLowerCase()];
+  if (rateGroupLower.includes('sleepover')) {
+    shiftType = 'sleepover';
+  }
   if (!shiftType) {
     return { shift: null, error: `Row ${rowNum}: Invalid shift type '${shiftTypeStr}'` };
   }

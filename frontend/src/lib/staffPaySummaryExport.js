@@ -1,4 +1,4 @@
-import { staffTotalHours } from './schadsWageCalc';
+import { staffTotalHours } from './schadsWageCalc.js';
 
 function csvEscape(val) {
   if (val === null || val === undefined) return '';
@@ -14,9 +14,9 @@ function n(v) {
 }
 
 /**
- * Download Staff Pay Summary table as CSV (matches award calculator columns + total hours & gross).
+ * Build Staff Pay Summary CSV text (matches award calculator columns + total hours & gross).
  */
-export function downloadStaffPaySummaryCsv(rows, { getMergedRow, getGrossPay }) {
+export function buildStaffPaySummaryCsvContent(rows, { getMergedRow, getGrossPay }) {
   const headers = [
     'Employee',
     'Total Hours',
@@ -73,7 +73,11 @@ export function downloadStaffPaySummaryCsv(rows, { getMergedRow, getGrossPay }) 
     );
   }
 
-  const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  return '\uFEFF' + lines.join('\n');
+}
+
+export function downloadStaffPaySummaryCsv(rows, options) {
+  const blob = new Blob([buildStaffPaySummaryCsvContent(rows, options)], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const stamp = new Date().toISOString().slice(0, 10);
