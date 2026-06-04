@@ -1,42 +1,11 @@
 /**
- * Role-based access control permissions.
- * Defines which roles can access which routes/features.
+ * @deprecated Use permissionCatalog.js directly.
  */
-
-export const ROLES = {
-  SUPER_ADMIN: 'super_admin',
-  FINANCE: 'finance',
-  VIEWER: 'viewer',
-  SHIFTS_VIEWER: 'shifts_viewer',
-};
-
-/**
- * Route permissions: route path pattern -> allowed roles
- */
-export const ROUTE_PERMISSIONS = {
-  // ShiftCare proxy - read-only shifts, staff, clients
-  shifts: [ROLES.SUPER_ADMIN, ROLES.VIEWER, ROLES.SHIFTS_VIEWER],
-  staff: [ROLES.SUPER_ADMIN, ROLES.VIEWER],
-  clients: [ROLES.SUPER_ADMIN, ROLES.VIEWER],
-  // Timesheets and CSV analysis
-  timesheets: [ROLES.SUPER_ADMIN, ROLES.FINANCE],
-  'analyze-shift-report': [ROLES.SUPER_ADMIN, ROLES.FINANCE],
-  'forecast-actuals': [ROLES.SUPER_ADMIN, ROLES.FINANCE],
-  'standard-forecast': [ROLES.SUPER_ADMIN, ROLES.FINANCE],
-  // Pay hours
-  'pay-hours': [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.SHIFTS_VIEWER],
-  // User management - super admin only
-  users: [ROLES.SUPER_ADMIN],
-};
-
-/**
- * Check if a role has access to a given route/resource
- * @param {string} role - User role
- * @param {string} resource - Resource/route key (e.g. 'shifts', 'users')
- * @returns {boolean}
- */
-export const canAccess = (role, resource) => {
-  const allowed = ROUTE_PERMISSIONS[resource];
-  if (!allowed) return false;
-  return allowed.includes(role);
-};
+export {
+  PERMISSIONS,
+  PERMISSION_CATALOG,
+  ALL_PERMISSION_KEYS,
+  roleHasPermission,
+  canAccessPathWithPermissions,
+  getDefaultLanding,
+} from './permissionCatalog.js';

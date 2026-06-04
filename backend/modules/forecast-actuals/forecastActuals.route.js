@@ -1,8 +1,8 @@
 import express from 'express';
-import { authenticateJWT, authorizeRoles } from '../../middlewares/auth.middleware.js';
+import { authenticateJWT, authorizePermission } from '../../middlewares/auth.middleware.js';
+import { PERMISSIONS } from '../../config/permissionCatalog.js';
 import { tabularUpload } from '../../middlewares/tabularUpload.middleware.js';
 import {
-  financeRoles,
   deleteActualsRow,
   deleteForecastRow,
   getActualsExport,
@@ -26,7 +26,7 @@ import {
 
 const router = express.Router();
 
-const authFinance = [authenticateJWT, authorizeRoles(...financeRoles)];
+const authFinance = [authenticateJWT, authorizePermission(PERMISSIONS.FORECAST_ANALYSIS_VIEW)];
 
 router.get('/forecast-actuals/directory', ...authFinance, getDirectory);
 

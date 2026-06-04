@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
-import { defaultLandingByRole } from "../config/nav";
+import { getDefaultLanding } from "../config/nav";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -22,7 +22,7 @@ export const LoginForm = () => {
     e.preventDefault();
     try {
       const data = await login(email, password);
-      const path = defaultLandingByRole[data?.user?.role] || "/";
+      const path = getDefaultLanding(data?.user?.permissions) || "/";
       navigate(path);
     } catch (err) {
       // Error is handled by the store

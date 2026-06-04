@@ -2,7 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import multer from 'multer';
 import { config } from '../../config/index.js';
-import { authenticateJWT, authorizeRoles } from '../../middlewares/auth.middleware.js';
+import { authenticateJWT, authorizePermission } from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { getJobByIdSchema } from '../../validators/analysisJobs.validator.js';
 import {
@@ -12,6 +12,7 @@ import {
   listJobs,
   cancelJob,
 } from './csvAnalysis.controller.js';
+import { PERMISSIONS } from '../../config/permissionCatalog.js';
 
 const router = express.Router();
 const uploadDir = 'uploads';
@@ -48,7 +49,7 @@ const upload = multer({
   },
 });
 
-const csvAuth = [authenticateJWT, authorizeRoles('super_admin', 'finance')];
+const csvAuth = [authenticateJWT, authorizePermission(PERMISSIONS.SHIFT_ANALYSIS_VIEW)];
 
 router.post(
   '/analyze-shift-report',

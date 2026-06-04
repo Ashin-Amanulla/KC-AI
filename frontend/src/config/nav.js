@@ -1,75 +1,70 @@
 /**
- * Navigation config with role-based visibility.
- * Matches backend permissions: super_admin, finance, viewer
+ * Navigation config with permission-based visibility.
  */
-export const ROLES = {
-  SUPER_ADMIN: 'super_admin',
-  FINANCE: 'finance',
-  VIEWER: 'viewer',
-  SHIFTS_VIEWER: 'shifts_viewer',
-};
+import { PERMISSIONS } from './permissions';
 
 export const NAV_ITEMS = [
-  { path: '/', label: 'Dashboard', icon: 'LayoutDashboard', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.VIEWER] },
-  { path: '/staff', label: 'Staff', icon: 'Users', roles: [ROLES.SUPER_ADMIN, ROLES.VIEWER] },
-  { path: '/clients', label: 'Clients', icon: 'UserCheck', roles: [ROLES.SUPER_ADMIN, ROLES.VIEWER] },
-  { path: '/timesheets', label: 'Timesheets', icon: 'Clock', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
-  { path: '/workforce', label: 'Workforce', icon: 'Layers', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
-  { path: '/pay-hours-tests', label: 'Pay Hours Tests', icon: 'Calculator', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
-  { path: '/shift-analysis', label: 'Shift Analysis', icon: 'FileBarChart', roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE] },
+  { path: '/', label: 'Dashboard', icon: 'LayoutDashboard', permission: PERMISSIONS.DASHBOARD_VIEW },
+  { path: '/staff', label: 'Staff', icon: 'Users', permission: PERMISSIONS.STAFF_VIEW },
+  { path: '/clients', label: 'Clients', icon: 'UserCheck', permission: PERMISSIONS.CLIENTS_VIEW },
+  { path: '/timesheets', label: 'Timesheets', icon: 'Clock', permission: PERMISSIONS.TIMESHEETS_VIEW },
+  { path: '/workforce', label: 'Workforce', icon: 'Layers', permission: PERMISSIONS.WORKFORCE_VIEW },
+  {
+    path: '/pay-hours-tests',
+    label: 'Pay Hours Tests',
+    icon: 'Calculator',
+    permission: PERMISSIONS.PAY_HOURS_TESTS_VIEW,
+  },
+  {
+    path: '/shift-analysis',
+    label: 'Shift Analysis',
+    icon: 'FileBarChart',
+    permission: PERMISSIONS.SHIFT_ANALYSIS_VIEW,
+  },
   {
     path: '/forecast-analysis',
     label: 'Forecast analysis',
     icon: 'TrendingDown',
-    roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE],
+    permission: PERMISSIONS.FORECAST_ANALYSIS_VIEW,
   },
   {
     path: '/roster-coverage',
     label: 'Roster coverage',
     icon: 'CalendarDays',
-    roles: [ROLES.SUPER_ADMIN, ROLES.FINANCE, ROLES.VIEWER],
+    permission: PERMISSIONS.ROSTER_VIEW,
   },
   {
     path: '/roster-coverage/shift-log',
     label: 'Shift log',
     icon: 'CalendarDays',
-    roles: [ROLES.SHIFTS_VIEWER],
+    permission: PERMISSIONS.ROSTER_SHIFT_LOG_VIEW,
+    hideIfHas: PERMISSIONS.ROSTER_VIEW,
   },
-  { path: '/users', label: 'User Management', icon: 'Shield', roles: [ROLES.SUPER_ADMIN] },
+  {
+    path: '/admin/access',
+    label: 'Access management',
+    icon: 'Shield',
+    anyOf: [PERMISSIONS.USERS_MANAGE, PERMISSIONS.ROLES_MANAGE],
+  },
 ];
 
-/** Post-login / unauthorized-route fallback */
-export const defaultLandingByRole = {
-  [ROLES.SUPER_ADMIN]: '/',
-  [ROLES.FINANCE]: '/timesheets',
-  [ROLES.VIEWER]: '/',
-  [ROLES.SHIFTS_VIEWER]: '/roster-coverage/shift-log',
+export { getDefaultLanding, canAccessPath, hasPermission, hasAnyPermission } from './permissions';
+
+export const getNavItemsForPermissions = (permissions = []) => {
+  if (!permissions?.length) return [];
+
+  const has = (key) => permissions.includes(key);
+  const hasAny = (keys) => keys.some((k) => permissions.includes(k));
+
+  return NAV_ITEMS.filter((item) => {
+    if (item.hideIfHas && has(item.hideIfHas)) return false;
+    if (item.anyOf) return hasAny(item.anyOf);
+    return has(item.permission);
+  });
 };
 
-export const getNavItemsForRole = (role) => {
-  if (!role) return [];
-  return NAV_ITEMS.filter((item) => item.roles.includes(role));
-};
-
-const WORKFORCE_LEGACY_PATHS = ['/shifts', '/pay-hours', '/cost-analysis'];
-const FORECAST_LEGACY_PATHS = ['/forecast-actuals', '/standard-forecast', '/standard-vs-forecast'];
-
-export const canAccessPath = (role, path) => {
-  if (role === ROLES.SHIFTS_VIEWER) {
-    return path === '/roster-coverage/shift-log' || path === '/roster-coverage/find-cover';
-  }
-  if (path === '/workforce' || WORKFORCE_LEGACY_PATHS.includes(path)) {
-    const wf = NAV_ITEMS.find((i) => i.path === '/workforce');
-    return wf ? wf.roles.includes(role) : false;
-  }
-  if (path === '/forecast-analysis' || FORECAST_LEGACY_PATHS.includes(path)) {
-    const fa = NAV_ITEMS.find((i) => i.path === '/forecast-analysis');
-    return fa ? fa.roles.includes(role) : false;
-  }
-  if (path.startsWith('/roster-coverage')) {
-    const rc = NAV_ITEMS.find((i) => i.path === '/roster-coverage');
-    return rc ? rc.roles.includes(role) : false;
-  }
-  const item = NAV_ITEMS.find((i) => i.path === path);
-  return item ? item.roles.includes(role) : false;
+/** @deprecated use getNavItemsForPermissions */
+export const getNavItemsForRole = (role, user) => {
+  const permissions = user?.permissions ?? [];
+  return getNavItemsForPermissions(permissions.length ? permissions : []);
 };

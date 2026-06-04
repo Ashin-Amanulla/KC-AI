@@ -6,6 +6,8 @@ import { connectDB, markMongoShutdown } from './config/db.js';
 import authRoutes from './modules/auth/auth.route.js';
 import shiftcareRoutes from './modules/shiftcare/shiftcare.route.js';
 import userRoutes from './modules/user/user.route.js';
+import roleRoutes from './modules/role/role.route.js';
+import { ensureDefaultRoles } from './modules/role/ensureDefaultRoles.js';
 import csvAnalysisRoutes from './modules/csv-analysis/csvAnalysis.route.js';
 import { startCsvAnalysisWorker } from './jobs/csvAnalysisWorker.js';
 import { startPayHoursWorker } from './jobs/payHoursWorker.js';
@@ -68,6 +70,7 @@ app.get('/config-check', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
 app.use('/api', locationsRoutes);
 app.use('/api', shiftsRoutes);
 app.use('/api', holidaysRoutes);
@@ -112,6 +115,7 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   try {
     await connectDB();
+    await ensureDefaultRoles();
     try {
       await Holiday.syncIndexes();
     } catch (idxErr) {

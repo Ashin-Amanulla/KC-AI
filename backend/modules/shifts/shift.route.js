@@ -2,7 +2,8 @@ import express from 'express';
 import fs from 'fs';
 import multer from 'multer';
 import { config } from '../../config/index.js';
-import { authenticateJWT, authorizeRoles } from '../../middlewares/auth.middleware.js';
+import { authenticateJWT, authorizePermission } from '../../middlewares/auth.middleware.js';
+import { PERMISSIONS } from '../../config/permissionCatalog.js';
 import {
   uploadShifts,
   listShifts,
@@ -39,12 +40,19 @@ const upload = multer({
   limits: { fileSize: config.upload.maxFileSizeBytes },
 });
 
-const authFinance = [authenticateJWT, authorizeRoles('super_admin', 'finance', 'viewer', 'shifts_viewer')];
+const authWorkforce = [
+  authenticateJWT,
+  authorizePermission(
+    PERMISSIONS.WORKFORCE_VIEW,
+    PERMISSIONS.ROSTER_VIEW,
+    PERMISSIONS.ROSTER_SHIFT_LOG_VIEW
+  ),
+];
 const authAll = [authenticateJWT];
 
-router.post('/shifts/upload', ...authFinance, upload.single('file'), uploadShifts);
+router.post('/shifts/upload', ...authWorkforce, upload.single('file'), uploadShifts);
 router.get('/shifts', ...authAll, listShifts);
 router.get('/shifts/date-range', ...authAll, getDateRange);
-router.get('/shifts/export', ...authFinance, exportShiftsCsv);
+router.get('/shifts/export', ...authWorkforce, exportShiftsCsv);
 
 export default router;

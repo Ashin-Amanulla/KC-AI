@@ -11,7 +11,7 @@ import { Clients } from './pages/Clients';
 import { Timesheets } from './pages/Timesheets';
 import { ShiftAnalysis } from './pages/ShiftAnalysis';
 import { ForecastAnalysis } from './pages/ForecastAnalysis';
-import { UserManagement } from './pages/UserManagement';
+import { AccessManagement } from './pages/admin/AccessManagement';
 import { WorkforceHub } from './pages/WorkforceHub';
 import { PayHoursTests } from './pages/PayHoursTests';
 import { RosterCoverageLayout } from './pages/roster-coverage/RosterCoverageLayout';
@@ -23,7 +23,7 @@ import { RosterStaffProfile } from './pages/roster-coverage/RosterStaffProfile';
 import { RosterTimesheetUpload } from './pages/roster-coverage/RosterTimesheetUpload';
 import { RosterReports } from './pages/roster-coverage/RosterReports';
 import { RosterShiftLog } from './pages/roster-coverage/RosterShiftLog';
-import { canAccessPath, defaultLandingByRole } from './config/nav';
+import { canAccessPath, getDefaultLanding } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
 const queryClient = new QueryClient({
@@ -56,9 +56,9 @@ const ProtectedRoute = ({ children }) => {
   }
 
   const path = location.pathname;
-  const role = user?.role || 'viewer';
-  if (!canAccessPath(role, path)) {
-    const defaultPath = defaultLandingByRole[role] || '/';
+  const permissions = user?.permissions ?? [];
+  if (!canAccessPath(permissions, path)) {
+    const defaultPath = getDefaultLanding(permissions);
     return <Navigate to={defaultPath} replace />;
   }
 
@@ -144,10 +144,18 @@ function App() {
             }
           />
           <Route
+            path="/admin/access"
+            element={
+              <ProtectedRoute>
+                <AccessManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/users"
             element={
               <ProtectedRoute>
-                <UserManagement />
+                <Navigate to="/admin/access" replace />
               </ProtectedRoute>
             }
           />

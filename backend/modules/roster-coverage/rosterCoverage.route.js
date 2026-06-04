@@ -2,7 +2,8 @@ import express from 'express';
 import fs from 'fs';
 import multer from 'multer';
 import { config } from '../../config/index.js';
-import { authenticateJWT, authorizeRoles } from '../../middlewares/auth.middleware.js';
+import { authenticateJWT, authorizePermission } from '../../middlewares/auth.middleware.js';
+import { PERMISSIONS } from '../../config/permissionCatalog.js';
 import {
   listRosterStaff,
   createRosterStaff,
@@ -56,8 +57,10 @@ const upload = multer({
   limits: { fileSize: config.upload.maxFileSizeBytes },
 });
 
-const rosterRoles = ['super_admin', 'finance', 'viewer', 'shifts_viewer'];
-const authRoster = [authenticateJWT, authorizeRoles(...rosterRoles)];
+const authRoster = [
+  authenticateJWT,
+  authorizePermission(PERMISSIONS.ROSTER_VIEW, PERMISSIONS.ROSTER_SHIFT_LOG_VIEW),
+];
 const authAll = [authenticateJWT];
 
 router.get('/roster-coverage/dashboard', ...authAll, getDashboardSummary);

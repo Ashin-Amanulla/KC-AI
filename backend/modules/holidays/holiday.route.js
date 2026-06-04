@@ -1,14 +1,22 @@
 import express from 'express';
-import { authenticateJWT, authorizeRoles } from '../../middlewares/auth.middleware.js';
+import { authenticateJWT, authorizePermission } from '../../middlewares/auth.middleware.js';
 import { listHolidays, createHoliday, deleteHoliday } from './holiday.controller.js';
+import { PERMISSIONS } from '../../config/permissionCatalog.js';
 
 const router = express.Router();
 
 const authAll = [authenticateJWT];
-const authFinance = [authenticateJWT, authorizeRoles('super_admin', 'finance', 'viewer', 'shifts_viewer')];
+const authWrite = [
+  authenticateJWT,
+  authorizePermission(
+    PERMISSIONS.WORKFORCE_VIEW,
+    PERMISSIONS.ROSTER_VIEW,
+    PERMISSIONS.ROSTER_SHIFT_LOG_VIEW
+  ),
+];
 
 router.get('/holidays', ...authAll, listHolidays);
-router.post('/holidays', ...authFinance, createHoliday);
-router.delete('/holidays/:id', ...authFinance, deleteHoliday);
+router.post('/holidays', ...authWrite, createHoliday);
+router.delete('/holidays/:id', ...authWrite, deleteHoliday);
 
 export default router;

@@ -19,7 +19,8 @@ import {
   Layers,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
-import { getNavItemsForRole } from '../config/nav';
+import { getNavItemsForPermissions } from '../config/nav';
+import { PERMISSIONS } from '../config/permissions';
 import { Button } from '../ui/button';
 import { cn } from '../lib/utils';
 
@@ -59,8 +60,9 @@ export function Sidebar() {
     } catch {}
   }, [collapsed]);
 
-  const role = user?.role || 'viewer';
-  const navItems = getNavItemsForRole(role);
+  const permissions = user?.permissions ?? [];
+  const navItems = getNavItemsForPermissions(permissions);
+  const hasFullRoster = permissions.includes(PERMISSIONS.ROSTER_VIEW);
 
   const handleLogout = async () => {
     setMobileOpen(false);
@@ -87,7 +89,7 @@ export function Sidebar() {
             location.pathname === item.path ||
             (item.path === '/roster-coverage' &&
               location.pathname.startsWith('/roster-coverage') &&
-              role !== 'shifts_viewer');
+              hasFullRoster);
           const link = (
             <Link
               key={item.path}

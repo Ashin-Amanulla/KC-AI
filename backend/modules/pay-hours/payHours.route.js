@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateJWT, authorizeRoles } from '../../middlewares/auth.middleware.js';
+import { authenticateJWT, authorizePermission } from '../../middlewares/auth.middleware.js';
 import {
   computePayHours,
   getJobStatus,
@@ -8,16 +8,24 @@ import {
   exportPayHoursCsv,
   runPayHoursEngineTests,
 } from './payHours.controller.js';
+import { PERMISSIONS } from '../../config/permissionCatalog.js';
 
 const router = express.Router();
 
 const authAll = [authenticateJWT];
-const authFinance = [authenticateJWT, authorizeRoles('super_admin', 'finance', 'viewer', 'shifts_viewer')];
+const authPayHours = [
+  authenticateJWT,
+  authorizePermission(
+    PERMISSIONS.WORKFORCE_VIEW,
+    PERMISSIONS.PAY_HOURS_TESTS_VIEW,
+    PERMISSIONS.ROSTER_SHIFT_LOG_VIEW
+  ),
+];
 
-router.post('/pay-hours/compute', ...authFinance, computePayHours);
-router.post('/pay-hours/tests/run', ...authFinance, runPayHoursEngineTests);
-router.get('/pay-hours/jobs/:id/status', ...authFinance, getJobStatus);
-router.get('/pay-hours/export', ...authFinance, exportPayHoursCsv);
+router.post('/pay-hours/compute', ...authPayHours, computePayHours);
+router.post('/pay-hours/tests/run', ...authPayHours, runPayHoursEngineTests);
+router.get('/pay-hours/jobs/:id/status', ...authPayHours, getJobStatus);
+router.get('/pay-hours/export', ...authPayHours, exportPayHoursCsv);
 router.get('/pay-hours/:id/shifts', ...authAll, getShiftPayHours);
 router.get('/pay-hours', ...authAll, listPayHours);
 

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+import { Role } from '../role/role.model.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -21,9 +22,10 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['super_admin', 'finance', 'viewer', 'shifts_viewer'],
       default: 'viewer',
       required: true,
+      trim: true,
+      lowercase: true,
     },
     isActive: {
       type: Boolean,
@@ -35,8 +37,14 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Hash password before saving
 userSchema.pre('save', async function (next) {
+  if (this.isModified('role')) {
+    const roleDoc = await Role.findOne({ slug: this.role, isActive: true });
+    if (!roleDoc) {
+      return next(new Error(`Invalid or inactive role: ${this.role}`));
+    }
+  }
+
   if (!this.isModified('password')) {
     return next();
   }
@@ -50,7 +58,6 @@ userSchema.pre('save', async function (next) {
   }
 });
 
-// Method to compare password
 userSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };

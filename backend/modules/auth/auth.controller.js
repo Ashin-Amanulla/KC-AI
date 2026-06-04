@@ -1,6 +1,19 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../user/user.model.js';
 import { config } from '../../config/index.js';
+import { loadRolePermissions } from '../../middlewares/auth.middleware.js';
+
+const buildUserPayload = async (userDoc) => {
+  const role = userDoc.role || 'viewer';
+  const permissions = await loadRolePermissions(role);
+  return {
+    id: userDoc._id,
+    email: userDoc.email,
+    name: userDoc.name || userDoc.email,
+    role,
+    permissions,
+  };
+};
 
 export const login = async (req, res, next) => {
   try {
@@ -12,7 +25,6 @@ export const login = async (req, res, next) => {
       });
     }
 
-    // Find user by email (exclude only explicitly deactivated users)
     const user = await User.findOne({
       email: email.toLowerCase(),
       $or: [{ isActive: true }, { isActive: { $exists: false } }],
@@ -24,7 +36,6 @@ export const login = async (req, res, next) => {
       });
     }
 
-    // Compare password
     const isPasswordValid = await user.comparePassword(password);
 
     if (!isPasswordValid) {
@@ -33,8 +44,8 @@ export const login = async (req, res, next) => {
       });
     }
 
-    // Generate JWT token (include role for RBAC)
     const role = user.role || 'viewer';
+    const permissions = await loadRolePermissions(role);
     const token = jwt.sign(
       { userId: user._id, email: user.email, role },
       config.jwt.secret,
@@ -49,7 +60,8 @@ export const login = async (req, res, next) => {
         id: user._id,
         email: user.email,
         name: user.name || user.email,
-        role: user.role || 'viewer',
+        role,
+        permissions,
       },
     });
   } catch (error) {
@@ -59,8 +71,6 @@ export const login = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
   try {
-    // JWT is stateless, so logout is handled client-side
-    // This endpoint is kept for consistency
     res.json({
       success: true,
       message: 'Logged out successfully',
@@ -75,14 +85,15 @@ export const getAuthStatus = async (req, res, next) => {
     const userDoc = await User.findById(req.user.userId)
       .select('email name role')
       .lean();
+
+    if (!userDoc) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const user = await buildUserPayload(userDoc);
     res.json({
       authenticated: true,
-      user: {
-        id: req.user.userId,
-        email: userDoc?.email ?? req.user.email,
-        name: userDoc?.name,
-        role: userDoc?.role ?? req.user.role,
-      },
+      user,
     });
   } catch (error) {
     next(error);

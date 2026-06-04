@@ -1,9 +1,18 @@
 import { User } from './user.model.js';
+import { getActiveRoleBySlug } from '../role/role.service.js';
 
 const toUserResponse = (user) => {
   const obj = user.toObject ? user.toObject() : user;
   const { password, ...rest } = obj;
   return rest;
+};
+
+const validateRoleSlug = async (slug) => {
+  const role = await getActiveRoleBySlug(slug);
+  if (!role) {
+    throw new Error(`Invalid or inactive role: ${slug}`);
+  }
+  return role;
 };
 
 export const listUsers = async (req, res, next) => {
@@ -25,8 +34,12 @@ export const createUser = async (req, res, next) => {
       });
     }
 
-    const allowedRoles = ['super_admin', 'finance', 'viewer', 'shifts_viewer'];
-    const userRole = role && allowedRoles.includes(role) ? role : 'viewer';
+    const userRole = role || 'viewer';
+    try {
+      await validateRoleSlug(userRole);
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
 
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
@@ -43,6 +56,9 @@ export const createUser = async (req, res, next) => {
 
     res.status(201).json({ user: toUserResponse(user) });
   } catch (error) {
+    if (error.message?.includes('role')) {
+      return res.status(400).json({ error: error.message });
+    }
     next(error);
   }
 };
@@ -59,8 +75,12 @@ export const updateUser = async (req, res, next) => {
 
     if (name !== undefined) user.name = name.trim();
     if (role !== undefined) {
-      const allowedRoles = ['super_admin', 'finance', 'viewer', 'shifts_viewer'];
-      if (allowedRoles.includes(role)) user.role = role;
+      try {
+        await validateRoleSlug(role);
+        user.role = role;
+      } catch (err) {
+        return res.status(400).json({ error: err.message });
+      }
     }
     if (isActive !== undefined) user.isActive = Boolean(isActive);
     if (password !== undefined && password.length > 0) user.password = password;
@@ -68,6 +88,9 @@ export const updateUser = async (req, res, next) => {
     await user.save();
     res.json({ user: toUserResponse(user) });
   } catch (error) {
+    if (error.message?.includes('role')) {
+      return res.status(400).json({ error: error.message });
+    }
     next(error);
   }
 };

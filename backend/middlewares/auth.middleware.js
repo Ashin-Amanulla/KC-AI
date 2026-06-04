@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/index.js';
+import { Role } from '../modules/role/role.model.js';
+import { roleHasAnyPermission } from '../config/permissionCatalog.js';
 
 /**
  * Middleware to get ShiftCare API credentials from environment variables
@@ -68,9 +70,8 @@ export const requireAuth = (req, res, next) => {
 };
 
 /**
- * RBAC: Allow only specified roles to access the route
- * Must be used after authenticateJWT (or requireAuth for ShiftCare routes)
- * @param {...string} allowedRoles - Roles that can access (e.g. 'super_admin', 'viewer')
+ * RBAC: Allow only specified roles to access the route (legacy)
+ * @deprecated Use authorizePermission
  */
 export const authorizeRoles =
   (...allowedRoles) =>
@@ -82,3 +83,32 @@ export const authorizeRoles =
     }
     next();
   };
+
+/**
+ * RBAC: user must have at least one of the required permissions (from Role document).
+ * Must be used after authenticateJWT (or requireAuth for ShiftCare routes).
+ */
+export const authorizePermission =
+  (...requiredPermissions) =>
+  async (req, res, next) => {
+    try {
+      if (!req.user?.role) {
+        return res.status(403).json({ error: 'Forbidden: insufficient permissions' });
+      }
+
+      const roleDoc = await Role.findOne({ slug: req.user.role, isActive: true }).lean();
+      if (!roleHasAnyPermission(roleDoc, requiredPermissions)) {
+        return res.status(403).json({ error: 'Forbidden: insufficient permissions' });
+      }
+
+      req.rolePermissions = roleDoc?.permissions ?? [];
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+
+export const loadRolePermissions = async (roleSlug) => {
+  const roleDoc = await Role.findOne({ slug: roleSlug, isActive: true }).lean();
+  return roleDoc?.permissions ?? [];
+};
