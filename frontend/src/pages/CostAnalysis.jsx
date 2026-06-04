@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { usePayHours } from '../api/payHours';
-import { useStaffRates, staffRatesArrayToMap } from '../api/staffRates';
+import { useStaffRates, staffRatesArrayToMap, enrichCostMapWithStaffRateAliases } from '../api/staffRates';
 import { buildAwardCostMapFromPayHours, r2 as r2Schads, VEHICLE_RATE, normName } from '../lib/schadsWageCalc';
 import { nameMatchKeys } from '../lib/staffNameNorm';
 import { useDropzone } from 'react-dropzone';
@@ -1458,8 +1458,19 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
       defaultEmpType: awardEmpType,
       superPct,
     });
-    return map.size > 0 ? enrichCostMapWithNameKeys(map) : null;
-  }, [wageSource, payHoursRows, hubXlsxRatesMerge, awardDefaultRate, awardEmpType, superPct]);
+    if (map.size === 0) return null;
+    enrichCostMapWithNameKeys(map);
+    enrichCostMapWithStaffRateAliases(map, staffRatesApiData?.staffRates);
+    return map;
+  }, [
+    wageSource,
+    payHoursRows,
+    hubXlsxRatesMerge,
+    awardDefaultRate,
+    awardEmpType,
+    superPct,
+    staffRatesApiData?.staffRates,
+  ]);
 
   const effectiveCostMap = useMemo(() => {
     const raw = wageSource === 'award' ? awardCostMap : payrollMap;

@@ -33,6 +33,8 @@ export function staffRatesArrayToMap(rows) {
   return m;
 }
 
+export { enrichCostMapWithStaffRateAliases } from '../lib/staffCostMapEnrich';
+
 export const useStaffRates = (locationId) => {
   return useQuery({
     queryKey: [STAFF_RATES_KEY, locationId],
