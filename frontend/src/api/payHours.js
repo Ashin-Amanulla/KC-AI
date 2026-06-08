@@ -69,3 +69,62 @@ export const useRunPayHoursTests = () => {
 export async function exportPayHoursCsv(params = {}) {
   await downloadBlobGet('/api/pay-hours/export', params, 'pay_hours.csv');
 }
+
+export async function patchPayHoursManual(payHoursId, payload) {
+  const response = await api.patch(`/api/pay-hours/${payHoursId}`, payload);
+  return response.data;
+}
+
+export async function clearPayHoursManual(payHoursId) {
+  const response = await api.delete(`/api/pay-hours/${payHoursId}/manual`);
+  return response.data;
+}
+
+export async function patchShiftPayHoursManual(payHoursId, shiftPayHoursId, fields) {
+  const response = await api.patch(`/api/pay-hours/${payHoursId}/shifts/${shiftPayHoursId}`, {
+    fields,
+  });
+  return response.data;
+}
+
+export async function clearShiftPayHoursManual(payHoursId, shiftPayHoursId) {
+  const response = await api.delete(
+    `/api/pay-hours/${payHoursId}/shifts/${shiftPayHoursId}/manual`
+  );
+  return response.data;
+}
+
+export const usePatchPayHoursManual = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ payHoursId, fields, unset }) =>
+      patchPayHoursManual(payHoursId, { fields, unset }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [PAY_HOURS_QUERY_KEY] });
+    },
+  });
+};
+
+export const useClearPayHoursManual = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payHoursId) => clearPayHoursManual(payHoursId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [PAY_HOURS_QUERY_KEY] });
+    },
+  });
+};
+
+export const usePatchShiftPayHoursManual = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ payHoursId, shiftPayHoursId, fields }) =>
+      patchShiftPayHoursManual(payHoursId, shiftPayHoursId, fields),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: [PAY_HOURS_QUERY_KEY] });
+      queryClient.invalidateQueries({
+        queryKey: [PAY_HOURS_QUERY_KEY, 'shifts', vars.payHoursId],
+      });
+    },
+  });
+};

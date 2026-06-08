@@ -8,12 +8,14 @@ import { useDropzone } from 'react-dropzone';
 import {
   Upload, TrendingDown, DollarSign, Clock, Users, AlertTriangle,
   ChevronDown, ChevronUp, Info, BarChart2, Calendar, UserX,
-  FileSpreadsheet, TrendingUp,
+  FileSpreadsheet, TrendingUp, Download,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { toast } from 'sonner';
+import { downloadClientRevenueVsWagesXlsx } from '../lib/clientRevenueExport';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const r2 = (n) => Math.round(n * 100) / 100;
@@ -886,6 +888,7 @@ function StaffProfitabilitySection({
   payHoursCount,
   payHoursPeriodText,
   usingHubRates,
+  locationCode = 'loc',
 }) {
   const [expanded, setExpanded] = useState(new Set());
   const [expandedClients, setExpandedClients] = useState(new Set());
@@ -1268,6 +1271,36 @@ function StaffProfitabilitySection({
                   <p className="text-xs text-gray-500">Staff cost allocated by worked hours per client</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={!sa?.clientRows?.length}
+                    onClick={() => {
+                      try {
+                        downloadClientRevenueVsWagesXlsx({
+                          clientRows: sa.clientRows,
+                          matchedTotals: {
+                            matchedRevenue: sa.matchedRevenue,
+                            matchedWages: sa.matchedWages,
+                            matchedSuper: sa.matchedSuper,
+                            matchedEmployerCost: sa.matchedEmployerCost,
+                            matchedMargin: sa.matchedMargin,
+                            matchedMarginPct: sa.matchedMarginPct,
+                            matchedCount: sa.matchedCount,
+                          },
+                          locationCode,
+                          periodLabel: payHoursPeriodText || new Date().toISOString().slice(0, 10),
+                        });
+                        toast.success('Client revenue vs wages exported');
+                      } catch (e) {
+                        toast.error(e?.message || 'Export failed');
+                      }
+                    }}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Excel
+                  </Button>
                   <button
                     type="button"
                     onClick={() => setExpandedClients(new Set(sa.clientRows.map(c => c.name)))}
@@ -1950,6 +1983,7 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
         payHoursCount={payHoursRows.length}
         payHoursPeriodText={payHoursPeriodText}
         usingHubRates={usingHubRates}
+        locationCode={locationId || 'loc'}
       />
 
       {/* Recommendations Summary */}

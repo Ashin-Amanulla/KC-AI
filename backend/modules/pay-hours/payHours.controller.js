@@ -1,7 +1,16 @@
+import mongoose from 'mongoose';
 import { PayHours } from './payHours.model.js';
 import { ShiftPayHours } from './shiftPayHours.model.js';
 import { PayHoursJob } from './payHoursJob.model.js';
 import { addPayHoursJob } from '../../jobs/payHoursQueue.js';
+import {
+  manualFieldsToObject,
+  pickManualFields,
+  serializePayHoursRecord,
+  serializeShiftPayHoursRecord,
+  SHIFT_MANUAL_FIELD_KEYS,
+  STAFF_MANUAL_FIELD_KEYS,
+} from './payHoursManualFields.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
@@ -64,7 +73,12 @@ export const listPayHours = async (req, res, next) => {
       periodEnd = payHours.reduce((max, p) => p.periodEnd > max ? p.periodEnd : max, payHours[0].periodEnd);
     }
 
-    res.json({ payHours, periodStart, periodEnd, total: payHours.length });
+    res.json({
+      payHours: payHours.map(serializePayHoursRecord),
+      periodStart,
+      periodEnd,
+      total: payHours.length,
+    });
   } catch (error) {
     next(error);
   }
@@ -83,7 +97,121 @@ export const getShiftPayHours = async (req, res, next) => {
       .sort({ shiftStart: 1 })
       .lean();
 
-    res.json({ payHours, shifts });
+    res.json({
+      payHours: serializePayHoursRecord(payHours),
+      shifts: shifts.map(serializeShiftPayHoursRecord),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const patchPayHoursManual = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid pay hours id' });
+    }
+
+    const payHours = await PayHours.findById(id);
+    if (!payHours) return res.status(404).json({ error: 'Pay hours record not found' });
+
+    const incoming = pickManualFields(req.body?.fields ?? {}, STAFF_MANUAL_FIELD_KEYS);
+    const unset = Array.isArray(req.body?.unset)
+      ? req.body.unset.filter((k) => STAFF_MANUAL_FIELD_KEYS.has(k))
+      : [];
+    if (!Object.keys(incoming).length && !unset.length) {
+      return res.status(400).json({ error: 'No valid manual fields provided' });
+    }
+
+    const merged = { ...manualFieldsToObject(payHours.manualFields), ...incoming };
+    for (const key of unset) delete merged[key];
+    payHours.manualFields = merged;
+    payHours.isManuallyAdjusted = Object.keys(merged).length > 0;
+    payHours.adjustedAt = new Date();
+    payHours.adjustedBy = req.user?.userId ?? null;
+    await payHours.save();
+
+    res.json(serializePayHoursRecord(payHours));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const clearPayHoursManual = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid pay hours id' });
+    }
+
+    const payHours = await PayHours.findById(id);
+    if (!payHours) return res.status(404).json({ error: 'Pay hours record not found' });
+
+    payHours.manualFields = new Map();
+    payHours.isManuallyAdjusted = false;
+    payHours.adjustedAt = new Date();
+    payHours.adjustedBy = req.user?.userId ?? null;
+    await payHours.save();
+
+    res.json(serializePayHoursRecord(payHours));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const patchShiftPayHoursManual = async (req, res, next) => {
+  try {
+    const { id, shiftPayHoursId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(shiftPayHoursId)) {
+      return res.status(400).json({ error: 'Invalid id' });
+    }
+
+    const payHours = await PayHours.findById(id).lean();
+    if (!payHours) return res.status(404).json({ error: 'Pay hours record not found' });
+
+    const shiftDoc = await ShiftPayHours.findOne({ _id: shiftPayHoursId, payHoursId: id });
+    if (!shiftDoc) return res.status(404).json({ error: 'Shift pay hours record not found' });
+
+    const incoming = pickManualFields(req.body?.fields ?? {}, SHIFT_MANUAL_FIELD_KEYS);
+    const unset = Array.isArray(req.body?.unset)
+      ? req.body.unset.filter((k) => SHIFT_MANUAL_FIELD_KEYS.has(k))
+      : [];
+    if (!Object.keys(incoming).length && !unset.length) {
+      return res.status(400).json({ error: 'No valid manual fields provided' });
+    }
+
+    const merged = { ...manualFieldsToObject(shiftDoc.manualFields), ...incoming };
+    for (const key of unset) delete merged[key];
+    shiftDoc.manualFields = merged;
+    shiftDoc.isManuallyAdjusted = Object.keys(merged).length > 0;
+    shiftDoc.adjustedAt = new Date();
+    shiftDoc.adjustedBy = req.user?.userId ?? null;
+    await shiftDoc.save();
+
+    res.json(serializeShiftPayHoursRecord(shiftDoc));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const clearShiftPayHoursManual = async (req, res, next) => {
+  try {
+    const { id, shiftPayHoursId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(shiftPayHoursId)) {
+      return res.status(400).json({ error: 'Invalid id' });
+    }
+
+    const shiftDoc = await ShiftPayHours.findOne({ _id: shiftPayHoursId, payHoursId: id });
+    if (!shiftDoc) return res.status(404).json({ error: 'Shift pay hours record not found' });
+
+    shiftDoc.manualFields = new Map();
+    shiftDoc.isManuallyAdjusted = false;
+    shiftDoc.adjustedAt = new Date();
+    shiftDoc.adjustedBy = req.user?.userId ?? null;
+    await shiftDoc.save();
+
+    res.json(serializeShiftPayHoursRecord(shiftDoc));
   } catch (error) {
     next(error);
   }
@@ -127,26 +255,27 @@ export const exportPayHoursCsv = async (req, res, next) => {
     res.write(headers.join(',') + '\n');
 
     for (const ph of payHours) {
+      const effective = serializePayHoursRecord(ph);
       const row = [
         csvEscape(ph.staffName),
-        ph.morningHours ?? 0,
-        ph.afternoonHours ?? 0,
-        ph.nightHours ?? 0,
-        ph.weekdayOtUpto2 ?? 0,
-        ph.weekdayOtAfter2 ?? 0,
-        ph.saturdayHours ?? 0,
-        ph.saturdayOtUpto2 ?? 0,
-        ph.saturdayOtAfter2 ?? 0,
-        ph.sundayHours ?? 0,
-        ph.sundayOtUpto2 ?? 0,
-        ph.sundayOtAfter2 ?? 0,
-        ph.holidayHours ?? 0,
-        ph.holidayOtUpto2 ?? 0,
-        ph.holidayOtAfter2 ?? 0,
-        ph.nursingCareHours ?? 0,
-        ph.brokenShiftCount ?? 0,
-        ph.sleepoversCount ?? 0,
-        ph.otAfter76Hours ?? 0,
+        effective.morningHours ?? 0,
+        effective.afternoonHours ?? 0,
+        effective.nightHours ?? 0,
+        effective.weekdayOtUpto2 ?? 0,
+        effective.weekdayOtAfter2 ?? 0,
+        effective.saturdayHours ?? 0,
+        effective.saturdayOtUpto2 ?? 0,
+        effective.saturdayOtAfter2 ?? 0,
+        effective.sundayHours ?? 0,
+        effective.sundayOtUpto2 ?? 0,
+        effective.sundayOtAfter2 ?? 0,
+        effective.holidayHours ?? 0,
+        effective.holidayOtUpto2 ?? 0,
+        effective.holidayOtAfter2 ?? 0,
+        effective.nursingCareHours ?? 0,
+        effective.brokenShiftCount ?? 0,
+        effective.sleepoversCount ?? 0,
+        effective.otAfter76Hours ?? 0,
       ];
       res.write(row.join(',') + '\n');
     }

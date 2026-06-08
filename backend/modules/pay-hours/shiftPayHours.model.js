@@ -46,6 +46,18 @@ const shiftPayHoursSchema = new mongoose.Schema(
     isSleepover: { type: Boolean, default: false },
     minimumEngagementException: { type: Boolean, default: false },
     mileage: { type: Number, default: null },
+    manualFields: {
+      type: Map,
+      of: Number,
+      default: undefined,
+    },
+    isManuallyAdjusted: { type: Boolean, default: false },
+    adjustedAt: { type: Date, default: null },
+    adjustedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
   {
     timestamps: true,

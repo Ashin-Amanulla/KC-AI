@@ -67,6 +67,18 @@ const payHoursSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    manualFields: {
+      type: Map,
+      of: Number,
+      default: undefined,
+    },
+    isManuallyAdjusted: { type: Boolean, default: false },
+    adjustedAt: { type: Date, default: null },
+    adjustedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
   {
     timestamps: true,

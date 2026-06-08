@@ -28,6 +28,7 @@ import { ForecastRecord } from './forecastRecord.model.js';
 import { ActualsRecord } from './actualsRecord.model.js';
 import { buildSummaryPdf } from './summaryPdf.js';
 import { normalizeRatio } from '../../utils/normalizeRatio.js';
+import { buildVarianceExportRowList } from './varianceExportRows.js';
 import { applyShiftDateRange } from './shiftDateRange.js';
 import { compareShiftDateRows } from '../../utils/weekdaySort.js';
 
@@ -1376,34 +1377,23 @@ export async function exportVarianceCsv({
     'Ratio',
   ];
 
-  const exportRows = [];
-
-  function pushRecord(record, typeLabel) {
-    exportRows.push([
-      typeLabel,
-      formatUtcDateForCsv(record.shiftDate),
-      record.clientName || '',
-      formatUtcDateTimeForCsv(record.startDatetime),
-      formatUtcDateTimeForCsv(record.endDatetime),
-      record.duration,
-      record.totalCost,
-      record.shiftcareId || '',
-      record.rateGroups || '',
-      record.shiftType || '',
-      normalizeRatio(record.ratio || ''),
-    ]);
-  }
-
-  for (const record of deletedRecords) {
-    pushRecord(record, 'Deleted');
-  }
-  for (const record of additionalRecords) {
-    pushRecord(record, 'Additional');
-  }
-  for (const record of varianceRecords) {
-    const label = record.source === 'forecast' ? 'Variance - Forecast' : 'Variance - Actuals';
-    pushRecord(record, label);
-  }
+  const exportRows = buildVarianceExportRowList(
+    deletedRecords,
+    additionalRecords,
+    varianceRecords
+  ).map(({ record, typeLabel }) => [
+    typeLabel,
+    formatUtcDateForCsv(record.shiftDate),
+    record.clientName || '',
+    formatUtcDateTimeForCsv(record.startDatetime),
+    formatUtcDateTimeForCsv(record.endDatetime),
+    record.duration,
+    record.totalCost,
+    record.shiftcareId || '',
+    record.rateGroups || '',
+    record.shiftType || '',
+    normalizeRatio(record.ratio || ''),
+  ]);
 
   const code = (loc?.code || 'loc').toLowerCase();
   const ts = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);

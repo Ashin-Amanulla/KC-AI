@@ -5,6 +5,10 @@ import {
   getJobStatus,
   listPayHours,
   getShiftPayHours,
+  patchPayHoursManual,
+  clearPayHoursManual,
+  patchShiftPayHoursManual,
+  clearShiftPayHoursManual,
   exportPayHoursCsv,
   runPayHoursEngineTests,
 } from './payHours.controller.js';
@@ -26,6 +30,10 @@ router.post('/pay-hours/compute', ...authPayHours, computePayHours);
 router.post('/pay-hours/tests/run', ...authPayHours, runPayHoursEngineTests);
 router.get('/pay-hours/jobs/:id/status', ...authPayHours, getJobStatus);
 router.get('/pay-hours/export', ...authPayHours, exportPayHoursCsv);
+router.patch('/pay-hours/:id', ...authPayHours, patchPayHoursManual);
+router.delete('/pay-hours/:id/manual', ...authPayHours, clearPayHoursManual);
+router.patch('/pay-hours/:id/shifts/:shiftPayHoursId', ...authPayHours, patchShiftPayHoursManual);
+router.delete('/pay-hours/:id/shifts/:shiftPayHoursId/manual', ...authPayHours, clearShiftPayHoursManual);
 router.get('/pay-hours/:id/shifts', ...authAll, getShiftPayHours);
 router.get('/pay-hours', ...authAll, listPayHours);
 

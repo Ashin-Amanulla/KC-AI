@@ -11,7 +11,13 @@ import { Input } from '../ui/input';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../ui/table';
-import { usePayHours, useShiftPayHours } from '../api/payHours';
+import {
+  usePayHours,
+  useShiftPayHours,
+  usePatchPayHoursManual,
+  useClearPayHoursManual,
+  usePatchShiftPayHoursManual,
+} from '../api/payHours';
 import { useStaffRates, staffRatesArrayToMap, useUpsertStaffRate } from '../api/staffRates';
 import { STAFF_RATES_TABLE_FIELDS } from '../lib/staffRateFieldMeta';
 import { LoadingScreen } from '../ui/LoadingSpinner';
@@ -418,7 +424,7 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
 };
 
 /** Per-shift rows from the same pay-hours job that produced the summary (lazy-fetch when expanded). */
-const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow }) => {
+const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onShiftCtx }) => {
   const enabled = Boolean(payHoursId && expanded && !isManualOnly);
   const { data, isLoading, isError, error } = useShiftPayHours(payHoursId, enabled);
 
@@ -452,6 +458,22 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow }) =
     return `${adjusted.getUTCDate()} ${months[adjusted.getUTCMonth()]} ${adjusted.getUTCFullYear()}`;
   };
   const h = (v) => (v != null && v > 0 ? v.toFixed(2) : '—');
+  const shiftOv = (shift, field, val, cls = '') => {
+    const isOv = shift.manualFields?.[field] != null;
+    return (
+      <TableCell
+        className={`text-right font-mono cursor-context-menu ${cls} ${isOv ? 'ring-1 ring-inset ring-blue-400 bg-blue-50/50' : ''}`}
+        onContextMenu={
+          onShiftCtx
+            ? (e) => onShiftCtx(e, payHoursId, shift._id, field, val ?? 0)
+            : undefined
+        }
+        title={onShiftCtx ? 'Right-click to edit' : undefined}
+      >
+        {h(val)}
+      </TableCell>
+    );
+  };
 
   const shifts = data?.shifts || [];
 
@@ -528,9 +550,9 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow }) =
                     )
                   )}
                 </TableCell>
-                <TableCell className="text-right font-mono text-yellow-800">{h(shift.morningHours)}</TableCell>
-                <TableCell className="text-right font-mono text-orange-800">{h(shift.afternoonHours)}</TableCell>
-                <TableCell className="text-right font-mono text-indigo-800">{h(shift.nightHours)}</TableCell>
+                {shiftOv(shift, 'morningHours', shift.morningHours, 'text-yellow-800')}
+                {shiftOv(shift, 'afternoonHours', shift.afternoonHours, 'text-orange-800')}
+                {shiftOv(shift, 'nightHours', shift.nightHours, 'text-indigo-800')}
                 <TableCell className="text-right font-mono text-cyan-800">
                   {h(r2((shift.saturdayHours || 0) + (shift.saturdayOtUpto2 || 0) + (shift.saturdayOtAfter2 || 0)))}
                 </TableCell>
@@ -731,8 +753,38 @@ const EDITABLE_FIELDS = {
   additionalAllowance: 'Additional allowance ($)',
 };
 
+const SHIFT_EDITABLE_FIELDS = {
+  morningHours: 'Day Hours',
+  afternoonHours: 'Eve Hours',
+  nightHours: 'Night Hours',
+  saturdayHours: 'Saturday',
+  sundayHours: 'Sunday',
+  holidayHours: 'Holiday',
+  nursingCareHours: 'Nursing',
+  shortTurnaroundHours: 'Short Turnaround',
+  weekdayOtUpto2: 'WD OT ≤2h',
+  weekdayOtAfter2: 'WD OT >2h',
+  saturdayOtUpto2: 'Sat OT ≤2h',
+  saturdayOtAfter2: 'Sat OT >2h',
+  sundayOtUpto2: 'Sun OT ≤2h',
+  sundayOtAfter2: 'Sun OT >2h',
+  holidayOtUpto2: 'Hol OT ≤2h',
+  holidayOtAfter2: 'Hol OT >2h',
+};
+
+function overridesFromPayHoursRows(rows) {
+  const out = {};
+  for (const row of rows) {
+    const mf = row.manualFields || {};
+    for (const [field, val] of Object.entries(mf)) {
+      out[`${row.staffName}:${field}`] = val;
+    }
+  }
+  return out;
+}
+
 // ── Floating context-menu editor ─────────────────────────────────────
-const CellContextMenu = ({ menu, overrides, onSave, onClear, onClose }) => {
+const CellContextMenu = ({ menu, overrides, onSave, onClear, onClose, fieldLabels = EDITABLE_FIELDS }) => {
   const ref      = useRef(null);
   const inputRef = useRef(null);
   const overrideKey = menu ? `${menu.staffName}:${menu.field}` : null;
@@ -777,7 +829,7 @@ const CellContextMenu = ({ menu, overrides, onSave, onClear, onClose }) => {
       className="bg-popover border border-border rounded-lg shadow-xl p-3 space-y-2"
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-foreground">{EDITABLE_FIELDS[menu.field]}</p>
+        <p className="text-xs font-semibold text-foreground">{fieldLabels[menu.field] || menu.field}</p>
         {isOverridden && (
           <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">overridden</span>
         )}
@@ -948,6 +1000,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   // ── Cell override state ──────────────────────────────────────────
   // key: `${staffName}:${field}`, value: number
   const [overrides, setOverrides] = useState({});
+  const [shiftCtxMenu, setShiftCtxMenu] = useState(null);
   const [ctxMenu, setCtxMenu]     = useState(null); // { x, y, staffName, field, original }
   const [ratesEdit, setRatesEdit] = useState(null); // { key, row } — popup for rates section
 
@@ -958,13 +1011,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   const [ratesAddBase, setRatesAddBase] = useState('');
   const unifiedDocRef = useRef(null);
 
-  const saveOverride  = useCallback((staffName, field, value) => {
-    setOverrides(prev => ({ ...prev, [`${staffName}:${field}`]: value }));
-  }, []);
-  const clearOverride = useCallback((staffName, field) => {
-    setOverrides(prev => { const n = { ...prev }; delete n[`${staffName}:${field}`]; return n; });
-  }, []);
   const closeCtx = useCallback(() => setCtxMenu(null), []);
+  const closeShiftCtx = useCallback(() => setShiftCtxMenu(null), []);
 
   // Merge backend row with any manual overrides before passing to calculators
   const getMergedRow = useCallback((row) => {
@@ -989,11 +1037,75 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
   }, [locationIdProp]);
 
   const { data: payHoursData, isLoading: phLoading, error: phError } = usePayHours(payHoursQueryParams);
-
+  const patchPayHoursM = usePatchPayHoursManual();
+  const clearPayHoursM = useClearPayHoursManual();
+  const patchShiftPayHoursM = usePatchShiftPayHoursManual();
   const apiRows = useMemo(
     () => (payHoursData?.payHours || []).slice().sort((a, b) => a.staffName.localeCompare(b.staffName)),
     [payHoursData]
   );
+
+  const saveOverride = useCallback(
+    async (staffName, field, value) => {
+      setOverrides((prev) => ({ ...prev, [`${staffName}:${field}`]: value }));
+      const row = apiRows.find((r) => r.staffName === staffName);
+      if (!row?._id) return;
+      try {
+        await patchPayHoursM.mutateAsync({ payHoursId: row._id, fields: { [field]: value } });
+      } catch (e) {
+        toast.error(e?.response?.data?.error || 'Failed to save pay hours override');
+      }
+    },
+    [apiRows, patchPayHoursM]
+  );
+  const clearOverride = useCallback(
+    async (staffName, field) => {
+      const row = apiRows.find((r) => r.staffName === staffName);
+      if (!row?._id) {
+        setOverrides((prev) => {
+          const n = { ...prev };
+          delete n[`${staffName}:${field}`];
+          return n;
+        });
+        return;
+      }
+      try {
+        const remaining = { ...(row.manualFields || {}) };
+        delete remaining[field];
+        if (Object.keys(remaining).length === 0) {
+          await clearPayHoursM.mutateAsync(row._id);
+        } else {
+          await patchPayHoursM.mutateAsync({ payHoursId: row._id, unset: [field] });
+        }
+        setOverrides((prev) => {
+          const n = { ...prev };
+          delete n[`${staffName}:${field}`];
+          return n;
+        });
+      } catch (e) {
+        toast.error(e?.response?.data?.error || 'Failed to clear override');
+      }
+    },
+    [apiRows, patchPayHoursM, clearPayHoursM]
+  );
+  const saveShiftOverride = useCallback(
+    async (payHoursId, shiftPayHoursId, field, value) => {
+      try {
+        await patchShiftPayHoursM.mutateAsync({
+          payHoursId,
+          shiftPayHoursId,
+          fields: { [field]: value },
+        });
+      } catch (e) {
+        toast.error(e?.response?.data?.error || 'Failed to save shift override');
+      }
+    },
+    [patchShiftPayHoursM]
+  );
+  const handleShiftCtx = useCallback((e, payHoursId, shiftPayHoursId, field, original) => {
+    e.preventDefault();
+    setShiftCtxMenu({ x: e.clientX, y: e.clientY, payHoursId, shiftPayHoursId, field, original });
+  }, []);
 
   const staffRows = useMemo(() => {
     const byNorm = new Map();
@@ -1232,20 +1344,6 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           if (s.ratesFileName) onStaffRatesMapChange?.(m, s.ratesFileName);
         }
         if (s.ratesFileName) setRatesFileName(s.ratesFileName);
-        if (s.overrides && typeof s.overrides === 'object') {
-          // Prevent stale cached overrides from being applied to newly computed pay-hours rows.
-          if (!s.payHoursRowsSignature || s.payHoursRowsSignature === payHoursRowsSignature) {
-            setOverrides(s.overrides);
-          } else {
-            setOverrides({});
-            const count = Object.keys(s.overrides).length;
-            if (count > 0) {
-              setOverrideResetNotice(
-                `Shift results changed since last session. Cleared ${count} saved manual overrides to prevent stale payroll values.`
-              );
-            }
-          }
-        }
       }
     } catch (_) { /* ignore */ }
     setSchadsHydrated(true);
@@ -1268,33 +1366,20 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           hiddenNormNames,
           staffRatesEntries,
           ratesFileName,
-          overrides,
           payHoursRowsSignature,
         })
       );
     } catch (_) { /* ignore */ }
-  }, [schadsHydrated, storageKey, baseRates, empTypes, defaultRate, defaultEmpType, manualStaffNames, hiddenNormNames, staffRatesMap, ratesFileName, overrides, payHoursRowsSignature]);
+  }, [schadsHydrated, storageKey, baseRates, empTypes, defaultRate, defaultEmpType, manualStaffNames, hiddenNormNames, staffRatesMap, ratesFileName, payHoursRowsSignature]);
 
-  // Hard-stop stale manual overrides whenever upstream pay-hours payload changes.
   useEffect(() => {
-    if (!schadsHydrated) return;
-    if (!payHoursRowsSignature) return;
-    if (lastAppliedRowsSigRef.current === null) {
-      lastAppliedRowsSigRef.current = payHoursRowsSignature;
+    if (!apiRows.length) {
+      setOverrides({});
       return;
     }
-    if (lastAppliedRowsSigRef.current === payHoursRowsSignature) return;
+    setOverrides(overridesFromPayHoursRows(apiRows));
     lastAppliedRowsSigRef.current = payHoursRowsSignature;
-    setOverrides((prev) => {
-      const count = Object.keys(prev || {}).length;
-      if (count > 0) {
-        setOverrideResetNotice(
-          `Roster data changed. Cleared ${count} manual overrides to prevent stale OT/allowance carryover.`
-        );
-      }
-      return {};
-    });
-  }, [schadsHydrated, payHoursRowsSignature]);
+  }, [apiRows, payHoursRowsSignature]);
 
   const ingestRatesWorkbook = useCallback((wb, fileLabel) => {
     const ws = wb.Sheets[wb.SheetNames[0]];
@@ -1679,6 +1764,32 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
         onSave={saveOverride}
         onClear={clearOverride}
         onClose={closeCtx}
+      />
+      <CellContextMenu
+        menu={
+          shiftCtxMenu
+            ? {
+                x: shiftCtxMenu.x,
+                y: shiftCtxMenu.y,
+                staffName: '_shift_',
+                field: shiftCtxMenu.field,
+                original: shiftCtxMenu.original,
+              }
+            : null
+        }
+        overrides={{}}
+        fieldLabels={SHIFT_EDITABLE_FIELDS}
+        onSave={(_staffName, field, value) => {
+          if (!shiftCtxMenu) return;
+          saveShiftOverride(
+            shiftCtxMenu.payHoursId,
+            shiftCtxMenu.shiftPayHoursId,
+            field,
+            value
+          );
+        }}
+        onClear={() => closeShiftCtx()}
+        onClose={closeShiftCtx}
       />
 
       {/* Staff rates edit popup (right-click on rates table rows) */}
@@ -2211,6 +2322,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                     expanded={!!expandedBreakdown[row.staffName]}
                                     isManualOnly={isManualOnly}
                                     mrow={mrow}
+                                    onShiftCtx={handleShiftCtx}
                                   />
                                 </div>
                               </div>
@@ -2293,10 +2405,24 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 </div>
               )}
               <p className="text-[11px] text-muted-foreground/70 text-center">
-                Right-click any hour cell or the <strong>Add’l $</strong> allowance column to override. Overridden cells are highlighted in blue and recalculate gross pay instantly.
+                Right-click any hour cell or the <strong>Add’l $</strong> allowance column to override (saved to server). Expand a staff row to edit per-shift buckets. Overridden cells are highlighted in blue.
                 {Object.keys(overrides).length > 0 && (
                   <button
-                    onClick={() => setOverrides({})}
+                    type="button"
+                    onClick={async () => {
+                      const adjusted = apiRows.filter(
+                        (r) => r.isManuallyAdjusted || Object.keys(r.manualFields || {}).length > 0
+                      );
+                      try {
+                        for (const row of adjusted) {
+                          await clearPayHoursM.mutateAsync(row._id);
+                        }
+                        setOverrides({});
+                        toast.success('Cleared all pay hours overrides');
+                      } catch (e) {
+                        toast.error(e?.response?.data?.error || 'Failed to clear overrides');
+                      }
+                    }}
                     className="ml-2 underline text-blue-600 hover:text-blue-800"
                   >
                     Clear all {Object.keys(overrides).length} overrides

@@ -14,7 +14,25 @@ import { PayHours } from '../payHours.model.js';
 import { ShiftPayHours } from '../shiftPayHours.model.js';
 import { PayHoursJob } from '../payHoursJob.model.js';
 import { computePayHoursForStaff } from './payHoursCalculator.js';
+import { manualFieldsToObject } from '../payHoursManualFields.js';
 import mongoose from 'mongoose';
+
+function preserveManualMeta(existing) {
+  if (!existing) {
+    return {
+      manualFields: {},
+      isManuallyAdjusted: false,
+      adjustedAt: null,
+      adjustedBy: null,
+    };
+  }
+  return {
+    manualFields: manualFieldsToObject(existing.manualFields),
+    isManuallyAdjusted: !!existing.isManuallyAdjusted,
+    adjustedAt: existing.adjustedAt ?? null,
+    adjustedBy: existing.adjustedBy ?? null,
+  };
+}
 
 /**
  * Compute all pay hours for all staff (optionally filtered by location).
@@ -93,8 +111,25 @@ export async function computeAllPayHours(jobId, locationId = null) {
     }
 
     const totalStaff = staffEntries.length;
-    const payHoursDocs    = [];
+    const payHoursDocs = [];
     const shiftPayHoursDocs = [];
+
+    const deleteFilter = locationId ? { location: new mongoose.Types.ObjectId(locationId) } : {};
+    const existingPayHours = await PayHours.find(deleteFilter)
+      .select('staffName manualFields isManuallyAdjusted adjustedAt adjustedBy')
+      .lean();
+    const staffManualByName = new Map(existingPayHours.map((p) => [p.staffName, p]));
+
+    const oldPayHoursIds = existingPayHours.map((p) => p._id);
+    const existingShiftRows =
+      oldPayHoursIds.length > 0
+        ? await ShiftPayHours.find({ payHoursId: { $in: oldPayHoursIds } })
+            .select('shiftId manualFields isManuallyAdjusted adjustedAt adjustedBy')
+            .lean()
+        : [];
+    const shiftManualByShiftId = new Map(
+      existingShiftRows.map((s) => [String(s.shiftId), s])
+    );
 
     for (let i = 0; i < staffEntries.length; i++) {
       const { staffName, locationId: locKey, shifts: staffShifts } = staffEntries[i];
@@ -111,50 +146,54 @@ export async function computeAllPayHours(jobId, locationId = null) {
         const minimumEngagementExceptionCount = [...shiftBreakdowns.values()].filter(
           (bd) => bd.minimumEngagementException
         ).length;
+        const preservedStaff = preserveManualMeta(staffManualByName.get(staffName));
         payHoursDocs.push({
           _id: payHoursId,
           location: locKey ? new mongoose.Types.ObjectId(locKey) : null,
           staffName,
           periodStart: staffStart,
-          periodEnd:   staffEnd,
+          periodEnd: staffEnd,
           ...data,
           minimumEngagementExceptionCount,
           totalKm,
           computedAt: new Date(),
+          ...preservedStaff,
         });
 
         for (const [shiftId, bd] of shiftBreakdowns) {
+          const preservedShift = preserveManualMeta(shiftManualByShiftId.get(String(shiftId)));
           shiftPayHoursDocs.push({
             payHoursId,
-            shiftId:          new mongoose.Types.ObjectId(shiftId),
+            shiftId: new mongoose.Types.ObjectId(shiftId),
             staffName,
-            shiftDate:        bd.shiftDate,
-            shiftStart:       bd.shiftStart,
-            shiftEnd:         bd.shiftEnd,
-            timezoneOffset:   bd.timezoneOffset || '+10:00',
-            shiftType:        bd.shiftType,
-            clientName:       bd.clientName,
-            totalHours:       bd.totalHours,
-            morningHours:     bd.morningHours,
-            afternoonHours:   bd.afternoonHours,
-            nightHours:       bd.nightHours,
-            saturdayHours:    bd.saturdayHours,
-            sundayHours:      bd.sundayHours,
-            holidayHours:     bd.holidayHours,
+            shiftDate: bd.shiftDate,
+            shiftStart: bd.shiftStart,
+            shiftEnd: bd.shiftEnd,
+            timezoneOffset: bd.timezoneOffset || '+10:00',
+            shiftType: bd.shiftType,
+            clientName: bd.clientName,
+            totalHours: bd.totalHours,
+            morningHours: bd.morningHours,
+            afternoonHours: bd.afternoonHours,
+            nightHours: bd.nightHours,
+            saturdayHours: bd.saturdayHours,
+            sundayHours: bd.sundayHours,
+            holidayHours: bd.holidayHours,
             nursingCareHours: bd.nursingCareHours,
             shortTurnaroundHours: bd.shortTurnaroundHours || 0,
-            weekdayOtUpto2:   bd.weekdayOtUpto2  || 0,
-            weekdayOtAfter2:  bd.weekdayOtAfter2 || 0,
-            saturdayOtUpto2:  bd.saturdayOtUpto2  || 0,
+            weekdayOtUpto2: bd.weekdayOtUpto2 || 0,
+            weekdayOtAfter2: bd.weekdayOtAfter2 || 0,
+            saturdayOtUpto2: bd.saturdayOtUpto2 || 0,
             saturdayOtAfter2: bd.saturdayOtAfter2 || 0,
-            sundayOtUpto2:    bd.sundayOtUpto2    || 0,
-            sundayOtAfter2:   bd.sundayOtAfter2   || 0,
-            holidayOtUpto2:   bd.holidayOtUpto2   || 0,
-            holidayOtAfter2:  bd.holidayOtAfter2  || 0,
-            isBrokenShift:    bd.isBrokenShift,
-            isSleepover:      bd.isSleepover,
+            sundayOtUpto2: bd.sundayOtUpto2 || 0,
+            sundayOtAfter2: bd.sundayOtAfter2 || 0,
+            holidayOtUpto2: bd.holidayOtUpto2 || 0,
+            holidayOtAfter2: bd.holidayOtAfter2 || 0,
+            isBrokenShift: bd.isBrokenShift,
+            isSleepover: bd.isSleepover,
             minimumEngagementException: bd.minimumEngagementException,
-            mileage:          bd.mileage ?? null,
+            mileage: bd.mileage ?? null,
+            ...preservedShift,
           });
         }
       } catch (err) {
@@ -170,11 +209,7 @@ export async function computeAllPayHours(jobId, locationId = null) {
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {
-        const deleteFilter = locationId ? { location: new mongoose.Types.ObjectId(locationId) } : {};
-
-        // For ShiftPayHours we need to find the payHoursIds that belong to this location
         if (locationId) {
-          const oldPayHoursIds = await PayHours.find(deleteFilter).distinct('_id').session(session);
           await ShiftPayHours.deleteMany({ payHoursId: { $in: oldPayHoursIds } }, { session });
         } else {
           await ShiftPayHours.deleteMany({}, { session });
