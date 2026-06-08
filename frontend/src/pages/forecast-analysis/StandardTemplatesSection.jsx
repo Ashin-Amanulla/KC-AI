@@ -91,9 +91,24 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
     }
     try {
       const res = await uploadM.mutateAsync({ locationId, file: f });
-      toast.success(`Standard upload: ${res.recordsCreated} rows created`);
+      if (res.errors?.length) {
+        const preview = res.errors.slice(0, 5).join('; ');
+        const suffix = res.errors.length > 5 ? ` (+${res.errors.length - 5} more)` : '';
+        toast.warning(
+          `Standard upload: ${res.recordsCreated} rows created, ${res.recordsSkipped} skipped. ${preview}${suffix}`
+        );
+      } else {
+        toast.success(`Standard upload: ${res.recordsCreated} rows created`);
+      }
     } catch (e) {
-      toast.error(getErrorMessage(e));
+      const rowErrors = e?.response?.data?.errors;
+      if (Array.isArray(rowErrors) && rowErrors.length) {
+        const preview = rowErrors.slice(0, 5).join('; ');
+        const suffix = rowErrors.length > 5 ? ` (+${rowErrors.length - 5} more)` : '';
+        toast.error(`Standard upload failed: ${preview}${suffix}`);
+      } else {
+        toast.error(getErrorMessage(e));
+      }
     }
   };
 

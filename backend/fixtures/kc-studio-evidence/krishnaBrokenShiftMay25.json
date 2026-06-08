@@ -1,0 +1,38 @@
+[
+  {
+    "_id": "krishna-1",
+    "staffName": "Krishna jith",
+    "clientName": "Timothy William Brown",
+    "startDatetime": "2026-05-24T22:00:00.000Z",
+    "endDatetime": "2026-05-25T00:00:00.000Z",
+    "hours": 2,
+    "shiftType": "personal_care",
+    "timezoneOffset": "+10:00",
+    "shiftcareId": "133587601",
+    "mileage": null
+  },
+  {
+    "_id": "krishna-2",
+    "staffName": "Krishna jith",
+    "clientName": "Timothy William Brown",
+    "startDatetime": "2026-05-25T00:00:00.000Z",
+    "endDatetime": "2026-05-25T02:00:00.000Z",
+    "hours": 2,
+    "shiftType": "personal_care",
+    "timezoneOffset": "+10:00",
+    "shiftcareId": "133587601",
+    "mileage": null
+  },
+  {
+    "_id": "krishna-3",
+    "staffName": "Krishna jith",
+    "clientName": "Alexandre Noskoff",
+    "startDatetime": "2026-05-25T12:00:00.000Z",
+    "endDatetime": "2026-05-25T20:00:00.000Z",
+    "hours": 8,
+    "shiftType": "sleepover",
+    "timezoneOffset": "+10:00",
+    "shiftcareId": "139536748",
+    "mileage": null
+  }
+]

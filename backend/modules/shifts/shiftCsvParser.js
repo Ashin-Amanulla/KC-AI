@@ -316,7 +316,35 @@ export function parseShiftCsvBuffer(buffer, uploadedBy = null) {
     }
   }
 
+  result.shifts = collapseDuplicateShifts(result.shifts);
   return result;
+}
+
+/**
+ * ShiftCare cost/billing exports often emit one row per ratio slice for the same shift.
+ * Payroll and broken-shift logic need one record per (staff, shift id, start, end).
+ */
+export function collapseDuplicateShifts(shifts) {
+  const byKey = new Map();
+  for (const shift of shifts) {
+    const startMs = shift.startDatetime?.getTime?.() ?? shift.startDatetime;
+    const endMs = shift.endDatetime?.getTime?.() ?? shift.endDatetime;
+    const key = [
+      String(shift.staffName || '').trim().toLowerCase(),
+      String(shift.shiftcareId || ''),
+      startMs,
+      endMs,
+    ].join('|');
+    if (!byKey.has(key)) {
+      byKey.set(key, shift);
+      continue;
+    }
+    const existing = byKey.get(key);
+    if ((shift.mileage || 0) > (existing.mileage || 0)) existing.mileage = shift.mileage;
+    if ((shift.expense || 0) > (existing.expense || 0)) existing.expense = shift.expense;
+    if (!existing.clientName && shift.clientName) existing.clientName = shift.clientName;
+  }
+  return [...byKey.values()];
 }
 
 /**
@@ -461,25 +489,41 @@ export function detectBrokenShifts(shifts) {
 /**
  * Determine if a shift is broken based on gap from previous shift.
  */
+function brokenShiftGapThresholdMs(previousShiftType) {
+  switch (previousShiftType) {
+    case 'personal_care':
+      return BROKEN_SHIFT_GAP_PERSONAL_CARE_MS;
+    case 'sleepover':
+      return BROKEN_SHIFT_GAP_SLEEPOVER_MS;
+    case 'nursing_support':
+      return BROKEN_SHIFT_GAP_NURSING_SUPPORT_MS;
+    default:
+      return null;
+  }
+}
+
 function calculateIsBrokenShift(currentShift, previousShift) {
   if (!previousShift) return false;
 
+  const offsetStr = currentShift.timezoneOffset || previousShift.timezoneOffset || '+10:00';
   const gap = currentShift.startDatetime - previousShift.endDatetime;
   if (gap <= 0) return false;
-  if (!isSameLocalDate(currentShift.startDatetime, previousShift.startDatetime, currentShift.timezoneOffset || '+10:00')) {
-    return false;
-  }
 
-  switch (previousShift.shiftType) {
-    case 'personal_care':
-      return gap < BROKEN_SHIFT_GAP_PERSONAL_CARE_MS;
-    case 'sleepover':
-      return gap < BROKEN_SHIFT_GAP_SLEEPOVER_MS;
-    case 'nursing_support':
-      return gap < BROKEN_SHIFT_GAP_NURSING_SUPPORT_MS;
-    default:
-      return false;
-  }
+  const thresholdMs = brokenShiftGapThresholdMs(previousShift.shiftType);
+  if (thresholdMs == null || gap > thresholdMs) return false;
+
+  const sameStartDay = isSameLocalDate(
+    currentShift.startDatetime,
+    previousShift.startDatetime,
+    offsetStr
+  );
+  const spansOntoCurrentDay = isSameLocalDate(
+    previousShift.endDatetime,
+    currentShift.startDatetime,
+    offsetStr
+  );
+
+  return sameStartDay || spansOntoCurrentDay;
 }
 
 function isSameLocalDate(aUtc, bUtc, offsetStr) {

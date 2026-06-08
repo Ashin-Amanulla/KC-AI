@@ -29,6 +29,131 @@ const MIN_BREAK_AFTER_SLEEPOVER_MS = 8 * 60 * 60 * 1000;
 const OT_TIER_1_MAX = 2;
 const TOTAL_HOURS_CAP = 76;
 const BROKEN_SHIFT_SHORT_SPAN = 12;
+const BROKEN_SHIFT_GAP_PERSONAL_CARE_MS = 10 * 60 * 60 * 1000;
+const BROKEN_SHIFT_GAP_SLEEPOVER_MS = 8 * 60 * 60 * 1000;
+const BROKEN_SHIFT_GAP_NURSING_SUPPORT_MS = 10 * 60 * 60 * 1000;
+
+function brokenShiftGapThresholdMs(shiftType) {
+  switch (shiftType) {
+    case 'personal_care':
+      return BROKEN_SHIFT_GAP_PERSONAL_CARE_MS;
+    case 'sleepover':
+      return BROKEN_SHIFT_GAP_SLEEPOVER_MS;
+    case 'nursing_support':
+      return BROKEN_SHIFT_GAP_NURSING_SUPPORT_MS;
+    default:
+      return null;
+  }
+}
+
+function collectBrokenShiftSpanPrevious(processedShift, processedShifts) {
+  const offsetStr = processedShift.timezoneOffset || '+10:00';
+  const previousInSpan = [];
+  let next = processedShift;
+  for (let i = processedShifts.length - 1; i >= 0; i--) {
+    const prev = processedShifts[i];
+    const gap = next.startUtc - prev.endUtc;
+    if (gap <= 0) {
+      if (prev.shiftType === 'sleepover') break;
+      if (isSameLocalDate(next.startUtc, prev.startUtc, offsetStr)) {
+        previousInSpan.unshift(prev);
+        next = prev;
+        continue;
+      }
+      break;
+    }
+    const thresholdMs = brokenShiftGapThresholdMs(prev.shiftType);
+    if (thresholdMs != null && gap <= thresholdMs) {
+      const sameStartDay = isSameLocalDate(next.startUtc, prev.startUtc, offsetStr);
+      const spansOntoCurrentDay = isSameLocalDate(prev.endUtc, next.startUtc, offsetStr);
+      if (sameStartDay || spansOntoCurrentDay) {
+        previousInSpan.unshift(prev);
+        next = prev;
+        continue;
+      }
+    }
+    break;
+  }
+  return previousInSpan;
+}
+
+function isSameLocalDate(aUtc, bUtc, offsetStr) {
+  return localDateStr(aUtc, offsetStr) === localDateStr(bUtc, offsetStr);
+}
+
+function trackBrokenShiftOtForShift(ctx, shiftId, dayType, hours, isTier1) {
+  if (!hours || hours <= 0) return;
+  if (!ctx.brokenShiftOtByShift) ctx.brokenShiftOtByShift = {};
+  if (!ctx.brokenShiftOtByShift[shiftId]) ctx.brokenShiftOtByShift[shiftId] = {};
+  if (!ctx.brokenShiftOtByShift[shiftId][dayType]) {
+    ctx.brokenShiftOtByShift[shiftId][dayType] = { tier1: 0, tier2: 0 };
+  }
+  const key = isTier1 ? 'tier1' : 'tier2';
+  ctx.brokenShiftOtByShift[shiftId][dayType][key] = r2(
+    ctx.brokenShiftOtByShift[shiftId][dayType][key] + hours
+  );
+}
+
+function applyBrokenShiftOtToBreakdown(bd, dayType, tier1, tier2) {
+  if (dayType === 'weekday') {
+    bd.weekdayOtUpto2 = r2(bd.weekdayOtUpto2 + tier1);
+    bd.weekdayOtAfter2 = r2(bd.weekdayOtAfter2 + tier2);
+  } else if (dayType === 'saturday') {
+    bd.saturdayOtUpto2 = r2(bd.saturdayOtUpto2 + tier1);
+    bd.saturdayOtAfter2 = r2(bd.saturdayOtAfter2 + tier2);
+  } else if (dayType === 'sunday') {
+    bd.sundayOtUpto2 = r2(bd.sundayOtUpto2 + tier1);
+    bd.sundayOtAfter2 = r2(bd.sundayOtAfter2 + tier2);
+  } else if (dayType === 'holiday') {
+    bd.holidayOtUpto2 = r2(bd.holidayOtUpto2 + tier1);
+    bd.holidayOtAfter2 = r2(bd.holidayOtAfter2 + tier2);
+  }
+}
+
+function shiftBreakdownPayableHours(bd) {
+  return r2(
+    (bd.morningHours || 0) +
+      (bd.afternoonHours || 0) +
+      (bd.nightHours || 0) +
+      (bd.saturdayHours || 0) +
+      (bd.sundayHours || 0) +
+      (bd.holidayHours || 0) +
+      (bd.nursingCareHours || 0) +
+      (bd.shortTurnaroundHours || 0) +
+      (bd.weekdayOtUpto2 || 0) +
+      (bd.weekdayOtAfter2 || 0) +
+      (bd.saturdayOtUpto2 || 0) +
+      (bd.saturdayOtAfter2 || 0) +
+      (bd.sundayOtUpto2 || 0) +
+      (bd.sundayOtAfter2 || 0) +
+      (bd.holidayOtUpto2 || 0) +
+      (bd.holidayOtAfter2 || 0)
+  );
+}
+
+function ensureShiftBreakdownHasPayableHours(bd, shift) {
+  if (!shift || bd.isSleepover) return;
+  const active = ctx_shiftActiveFallback(shift);
+  if (active <= 0) return;
+  if (shiftBreakdownPayableHours(bd) > 0) return;
+  const offsetStr = shift.timezoneOffset || '+10:00';
+  const startUtc = new Date(shift.startDatetime);
+  const endUtc = new Date(shift.endDatetime);
+  const dayType = getDayType(startUtc, offsetStr, new Set());
+  if (dayType === 'weekday') {
+    const tc = getTimeCategory(startUtc, endUtc, offsetStr);
+    const field = tc === 'afternoon' ? 'afternoonHours' : tc === 'night' ? 'nightHours' : 'morningHours';
+    bd[field] = r2(active);
+    return;
+  }
+  bd[`${dayType}Hours`] = r2(active);
+}
+
+function ctx_shiftActiveFallback(shift) {
+  const startUtc = new Date(shift.startDatetime);
+  const endUtc = new Date(shift.endDatetime);
+  return calculateActiveHours(normalizeShiftHours(shift, startUtc, endUtc), shift.shiftType);
+}
 /** Treat ≤ this gap between shift end/start as contiguous (rounding / CSV quirks). */
 const GAP_CONTIGUOUS_TOLERANCE_MS = 60 * 1000;
 
@@ -679,6 +804,7 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
     if (totalActive > cap) {
       const extraHours = r2(totalActive - cap);
       addBrokenShiftOtToCategory(data, dayType, extraHours, true);
+      trackBrokenShiftOtForShift(ctx, currentShift.shiftId, dayType, extraHours, true);
       // Meal allowance per broken-shift OT event
       if (extraHours > 1) data.mealAllowanceCount += 1;
       if (extraHours > 4) data.mealAllowanceCount += 1;
@@ -691,6 +817,7 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
     if (doubleTimeHours > 0) {
       ctx.reclassifiedFullDoubleTimeShiftIds.add(currentShift.shiftId);
       addBrokenShiftOtToCategory(data, dayType, doubleTimeHours, false); // false = tier 2 = 2×
+      trackBrokenShiftOtForShift(ctx, currentShift.shiftId, dayType, doubleTimeHours, false);
       // Meal allowance per broken-shift OT event
       if (doubleTimeHours > 1) data.mealAllowanceCount += 1;
       if (doubleTimeHours > 4) data.mealAllowanceCount += 1;
@@ -703,18 +830,8 @@ function handleBrokenShift(shift, processedShift, processedShifts, data, ctx) {
   if (!shift.isBrokenShift) return;
 
   const offsetStr = shift.timezoneOffset || '+10:00';
-  const previousInSpan = [];
+  const previousInSpan = collectBrokenShiftSpanPrevious(processedShift, processedShifts);
   const shiftStartDateStr = localDateStr(processedShift.startUtc, offsetStr);
-
-  for (let i = processedShifts.length - 1; i >= 0; i--) {
-    const prev = processedShifts[i];
-    const prevDateStr = localDateStr(prev.startUtc, offsetStr);
-    if (prevDateStr === shiftStartDateStr) {
-      previousInSpan.unshift(prev);
-    } else {
-      break;
-    }
-  }
 
   // Retroactive loading across broken-shift span:
   // if final segment runs past evening boundary, apply the final penalty category
@@ -1316,6 +1433,43 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
     bd.shortTurnaroundHours = r2((bd.shortTurnaroundHours || 0) + stHours);
   }
 
+  for (const [sid, otByDayType] of Object.entries(ctx.brokenShiftOtByShift || {})) {
+    if (!breakdowns.has(sid)) {
+      const shift = shiftLookup.get(sid);
+      breakdowns.set(sid, {
+        morningHours: 0, afternoonHours: 0, nightHours: 0,
+        saturdayHours: 0, sundayHours: 0, holidayHours: 0,
+        nursingCareHours: 0,
+        shortTurnaroundHours: 0,
+        weekdayOtUpto2: 0, weekdayOtAfter2: 0,
+        saturdayOtUpto2: 0, saturdayOtAfter2: 0,
+        sundayOtUpto2: 0, sundayOtAfter2: 0,
+        holidayOtUpto2: 0, holidayOtAfter2: 0,
+        isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
+        isSleepover: shift?.shiftType === 'sleepover' || false,
+        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
+        clientName: shift?.clientName || null,
+        mileage: shift?.mileage ?? null,
+        totalHours: computeShiftDurationHours(shift),
+        shiftDate: shift?.startDatetime || null,
+        shiftStart: shift?.startDatetime || null,
+        shiftEnd: shift?.endDatetime || null,
+        shiftType: shift?.shiftType || '',
+        timezoneOffset: shift?.timezoneOffset || '+10:00',
+      });
+    }
+    const bd = breakdowns.get(sid);
+    for (const [dayType, tiers] of Object.entries(otByDayType)) {
+      applyBrokenShiftOtToBreakdown(bd, dayType, tiers.tier1 || 0, tiers.tier2 || 0);
+    }
+  }
+
+  for (const shift of shifts) {
+    const sid = String(shift._id);
+    if (!breakdowns.has(sid)) continue;
+    ensureShiftBreakdownHasPayableHours(breakdowns.get(sid), shift);
+  }
+
   return breakdowns;
 }
 
@@ -1515,6 +1669,7 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     shiftMinimumEngagementException: new Map(),
     reclassifiedFullDoubleTimeShiftIds: new Set(),
     shortTurnaroundByShift: {},
+    brokenShiftOtByShift: {},
   };
 
   for (let i = 0; i < shifts.length; i++) {

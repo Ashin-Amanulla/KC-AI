@@ -1,0 +1,26 @@
+[
+  {
+    "_id": "rahul-1",
+    "staffName": "Rahul Rahul",
+    "clientName": "Brendan Lesslie",
+    "startDatetime": "2026-05-21T12:00:00.000Z",
+    "endDatetime": "2026-05-21T20:00:00.000Z",
+    "hours": 8,
+    "shiftType": "personal_care",
+    "timezoneOffset": "+10:00",
+    "shiftcareId": "145187017",
+    "mileage": null
+  },
+  {
+    "_id": "rahul-2",
+    "staffName": "Rahul Rahul",
+    "clientName": "Jennifer Knapasjo",
+    "startDatetime": "2026-05-22T04:00:00.000Z",
+    "endDatetime": "2026-05-22T12:00:00.000Z",
+    "hours": 8,
+    "shiftType": "personal_care",
+    "timezoneOffset": "+10:00",
+    "shiftcareId": "139754900",
+    "mileage": null
+  }
+]

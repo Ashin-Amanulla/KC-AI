@@ -926,6 +926,143 @@ function computeDiffFields(fRec, aRec) {
   return diff;
 }
 
+async function buildVarianceExportRecords({ locationId, staffId, clientId, dateFrom, dateTo }) {
+  const { forecastKeys, actualsKeys } = await getVariancePairKeySets(
+    locationId,
+    staffId,
+    clientId,
+    dateFrom,
+    dateTo
+  );
+  const deletedKeys = new Set([...forecastKeys].filter((k) => !actualsKeys.has(k)));
+  const additionalKeys = new Set([...actualsKeys].filter((k) => !forecastKeys.has(k)));
+  const commonKeys = new Set([...forecastKeys].filter((k) => actualsKeys.has(k)));
+
+  const varianceKeys = new Set();
+  let commonForecastAgg = new Map();
+  let commonActualsAgg = new Map();
+  if (commonKeys.size) {
+    commonForecastAgg = await buildVarianceRowMap(
+      ForecastRecord,
+      locationId,
+      commonKeys,
+      staffId,
+      clientId,
+      'forecast',
+      dateFrom,
+      dateTo
+    );
+    commonActualsAgg = await buildVarianceRowMap(
+      ActualsRecord,
+      locationId,
+      commonKeys,
+      staffId,
+      clientId,
+      'actuals',
+      dateFrom,
+      dateTo
+    );
+    for (const pairKey of commonKeys) {
+      const f = commonForecastAgg.get(pairKey);
+      const a = commonActualsAgg.get(pairKey);
+      if (f && a && computeDiffFields(f, a).length > 0) {
+        varianceKeys.add(pairKey);
+      }
+    }
+  }
+
+  const [deletedAgg, additionalAgg, vF, vA] = await Promise.all([
+    buildVarianceRowMap(
+      ForecastRecord,
+      locationId,
+      deletedKeys,
+      staffId,
+      clientId,
+      'forecast',
+      dateFrom,
+      dateTo
+    ),
+    buildVarianceRowMap(
+      ActualsRecord,
+      locationId,
+      additionalKeys,
+      staffId,
+      clientId,
+      'actuals',
+      dateFrom,
+      dateTo
+    ),
+    buildVarianceRowMap(
+      ForecastRecord,
+      locationId,
+      varianceKeys,
+      staffId,
+      clientId,
+      'forecast',
+      dateFrom,
+      dateTo
+    ),
+    buildVarianceRowMap(
+      ActualsRecord,
+      locationId,
+      varianceKeys,
+      staffId,
+      clientId,
+      'actuals',
+      dateFrom,
+      dateTo
+    ),
+  ]);
+
+  const deletedRecords = [];
+  for (const pairKey of deletedKeys) {
+    const rec = deletedAgg.get(pairKey);
+    if (rec) {
+      rec.recordType = 'deleted';
+      deletedRecords.push(rec);
+    }
+  }
+  deletedRecords.sort(compareShiftDateRows);
+
+  const additionalRecords = [];
+  for (const pairKey of additionalKeys) {
+    const rec = additionalAgg.get(pairKey);
+    if (rec) {
+      rec.recordType = 'additional';
+      additionalRecords.push(rec);
+    }
+  }
+  additionalRecords.sort(compareShiftDateRows);
+
+  const varianceRecords = [];
+  for (const pairKey of varianceKeys) {
+    const fRec = vF.get(pairKey);
+    const aRec = vA.get(pairKey);
+    if (fRec) {
+      fRec.recordType = 'variance';
+      varianceRecords.push(fRec);
+    }
+    if (aRec && fRec) {
+      aRec.recordType = 'variance';
+      aRec.diffFields = computeDiffFields(fRec, aRec);
+      varianceRecords.push(aRec);
+    } else if (aRec) {
+      aRec.recordType = 'variance';
+      varianceRecords.push(aRec);
+    }
+  }
+  varianceRecords.sort(compareShiftDateRows);
+
+  return {
+    deletedRecords,
+    additionalRecords,
+    varianceRecords,
+    deletedCount: deletedKeys.size,
+    additionalCount: additionalKeys.size,
+    varianceCount: varianceKeys.size,
+  };
+}
+
 
 export async function listVariance({ locationId, tab, staffId, clientId, page, dateFrom, dateTo }) {
   const pageSize = PAGE_SIZE();
@@ -1217,64 +1354,13 @@ export async function exportVarianceCsv({
   format = 'csv',
 }) {
   const loc = await Location.findById(locationId).select('code timezone').lean();
-  const varianceListArgs = { locationId, staffId, clientId, dateFrom, dateTo };
-
-  const deletedResult = await listVariance({
-    ...varianceListArgs,
-    tab: 'deleted',
-    page: 1,
+  const { deletedRecords, additionalRecords, varianceRecords } = await buildVarianceExportRecords({
+    locationId,
+    staffId,
+    clientId,
+    dateFrom,
+    dateTo,
   });
-  let deletedRecords = deletedResult.records;
-  if (deletedResult.totalPages > 1) {
-    const all = [];
-    for (let i = 1; i <= deletedResult.totalPages; i += 1) {
-      const vr = await listVariance({
-        ...varianceListArgs,
-        tab: 'deleted',
-        page: i,
-      });
-      all.push(...vr.records);
-    }
-    deletedRecords = all;
-  }
-
-  const additionalResult = await listVariance({
-    ...varianceListArgs,
-    tab: 'additional',
-    page: 1,
-  });
-  let additionalRecords = additionalResult.records;
-  if (additionalResult.totalPages > 1) {
-    const all = [];
-    for (let i = 1; i <= additionalResult.totalPages; i += 1) {
-      const vr = await listVariance({
-        ...varianceListArgs,
-        tab: 'additional',
-        page: i,
-      });
-      all.push(...vr.records);
-    }
-    additionalRecords = all;
-  }
-
-  const varianceResult = await listVariance({
-    ...varianceListArgs,
-    tab: 'all',
-    page: 1,
-  });
-  let varianceRecords = varianceResult.records.filter((r) => r.recordType === 'variance');
-  if (varianceResult.totalPages > 1) {
-    const all = [];
-    for (let i = 1; i <= varianceResult.totalPages; i += 1) {
-      const vr = await listVariance({
-        ...varianceListArgs,
-        tab: 'all',
-        page: i,
-      });
-      all.push(...vr.records.filter((r) => r.recordType === 'variance'));
-    }
-    varianceRecords = all;
-  }
 
   const headers = [
     'Type',

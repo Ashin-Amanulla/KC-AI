@@ -1,4 +1,5 @@
 import { createShiftCareAxios } from './shiftcareFetch.js';
+import { normClientNameForMatch } from '../../utils/clientNameNorm.js';
 
 const PER_PAGE = 100;
 
@@ -113,7 +114,10 @@ export async function fetchAllStaff(credentials) {
 export function buildLookupMaps(clients, staff) {
   const clientMap = new Map();
   for (const c of clients) {
-    clientMap.set(c.key, { id: c.id, displayName: c.displayName });
+    const entry = { id: c.id, displayName: c.displayName };
+    clientMap.set(c.key, entry);
+    const collapsed = normClientNameForMatch(c.displayName);
+    if (collapsed && !clientMap.has(collapsed)) clientMap.set(collapsed, entry);
   }
   const staffMap = new Map();
   for (const s of staff) {

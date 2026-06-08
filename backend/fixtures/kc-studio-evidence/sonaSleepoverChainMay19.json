@@ -1,0 +1,38 @@
+[
+  {
+    "_id": "sona-m19-1",
+    "staffName": "Sona Sara Paul",
+    "clientName": "Amy Hamerslag",
+    "startDatetime": "2026-05-19T06:00:00.000Z",
+    "endDatetime": "2026-05-19T12:00:00.000Z",
+    "hours": 6,
+    "shiftType": "personal_care",
+    "timezoneOffset": "+10:00",
+    "shiftcareId": "139568300",
+    "mileage": null
+  },
+  {
+    "_id": "sona-m19-2",
+    "staffName": "Sona Sara Paul",
+    "clientName": "Amy Hamerslag",
+    "startDatetime": "2026-05-19T12:00:00.000Z",
+    "endDatetime": "2026-05-19T20:00:00.000Z",
+    "hours": 8,
+    "shiftType": "sleepover",
+    "timezoneOffset": "+10:00",
+    "shiftcareId": "139570704",
+    "mileage": null
+  },
+  {
+    "_id": "sona-m19-3",
+    "staffName": "Sona Sara Paul",
+    "clientName": "Amy Hamerslag",
+    "startDatetime": "2026-05-19T20:00:00.000Z",
+    "endDatetime": "2026-05-19T22:00:00.000Z",
+    "hours": 2,
+    "shiftType": "personal_care",
+    "timezoneOffset": "+10:00",
+    "shiftcareId": "139564764",
+    "mileage": null
+  }
+]

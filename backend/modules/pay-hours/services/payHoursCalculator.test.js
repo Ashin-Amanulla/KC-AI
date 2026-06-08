@@ -1,6 +1,22 @@
 import assert from 'node:assert';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test, { describe } from 'node:test';
 import { computePayHoursForStaff, computeSleepovernAttachedNight } from './payHoursCalculator.js';
+import { detectBrokenShifts } from '../../shifts/shiftCsvParser.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const EVIDENCE_FIXTURES = path.join(__dirname, '../../../fixtures/kc-studio-evidence');
+
+function loadEvidenceFixture(name) {
+  const raw = fs.readFileSync(path.join(EVIDENCE_FIXTURES, `${name}.json`), 'utf8');
+  return JSON.parse(raw).map((row) => ({
+    ...row,
+    startDatetime: new Date(row.startDatetime),
+    endDatetime: new Date(row.endDatetime),
+  }));
+}
 
 function r2(n) {
   return Math.round(n * 100) / 100;
@@ -930,5 +946,61 @@ describe('hours normalization from timestamps', () => {
     assert.strictEqual(data.saturdayOtUpto2, 1);
     assert.strictEqual(data.weekdayOtUpto2, 2);
     assert.strictEqual(data.weekdayOtAfter2, 2);
+  });
+});
+
+describe('KC Studio evidence fixtures (May 2026 FN)', () => {
+  test('Rahul Rahul: cross-midnight gap marks Jennifer shift broken with 2× OT', () => {
+    const shifts = loadEvidenceFixture('rahulBrokenShiftMay22');
+    detectBrokenShifts(shifts);
+    const jennifer = shifts.find((s) => s.clientName.includes('Jennifer'));
+    assert.strictEqual(jennifer?.isBrokenShift, true);
+    const { data, shiftBreakdowns } = computePayHoursForStaff(shifts, new Set());
+    assert.ok(data.brokenShiftCount >= 1);
+    assert.strictEqual(data.shortTurnaroundHours || 0, 0);
+    assert.strictEqual(data.weekdayOtAfter2, 8);
+    const bd = shiftBreakdowns.get(String(jennifer._id));
+    assert.strictEqual(bd?.weekdayOtAfter2, 8);
+    assert.strictEqual(bd?.afternoonHours || 0, 0);
+  });
+
+  test('Krishna jith: evidence chain marks broken shift after inadequate rest', () => {
+    const shifts = loadEvidenceFixture('krishnaBrokenShiftMay25');
+    detectBrokenShifts(shifts);
+    const broken = shifts.filter((s) => s.isBrokenShift);
+    assert.ok(broken.length >= 1);
+    const { data } = computePayHoursForStaff(shifts, new Set());
+    assert.ok(data.brokenShiftCount >= 1 || data.brokenShift2BreakCount >= 1);
+  });
+
+  test('Sona Sara Paul: post-sleepover PC on May 22 lands in payable bucket', () => {
+    const shifts = loadEvidenceFixture('sonaSleepoverChainMay22');
+    detectBrokenShifts(shifts);
+    const { shiftBreakdowns } = computePayHoursForStaff(shifts, new Set());
+    const postSleepover = shifts.find(
+      (s) => s.shiftType === 'personal_care' && s.startDatetime.getUTCHours() === 20
+    );
+    const bd = shiftBreakdowns.get(String(postSleepover._id));
+    assert.strictEqual(bd?.totalHours, 2);
+    assert.ok(
+      (bd?.saturdayHours || 0) + (bd?.afternoonHours || 0) + (bd?.nightHours || 0) >= 2,
+      'post-sleepover hours must appear in a payable bucket'
+    );
+  });
+
+  test('Sona Sara Paul: May 19 sleepover chain keeps pre/post PC hours payable', () => {
+    const shifts = loadEvidenceFixture('sonaSleepoverChainMay19');
+    detectBrokenShifts(shifts);
+    const { shiftBreakdowns } = computePayHoursForStaff(shifts, new Set());
+    for (const shift of shifts.filter((s) => s.shiftType === 'personal_care')) {
+      const bd = shiftBreakdowns.get(String(shift._id));
+      const payable =
+        (bd?.morningHours || 0) +
+        (bd?.afternoonHours || 0) +
+        (bd?.nightHours || 0) +
+        (bd?.saturdayHours || 0) +
+        (bd?.sundayHours || 0);
+      assert.ok(payable > 0, `PC shift ${shift._id} should have payable hours`);
+    }
   });
 });

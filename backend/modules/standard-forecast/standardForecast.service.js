@@ -5,6 +5,7 @@ import { buildTabularExport } from '../../utils/tabularExport.js';
 import { Location } from '../locations/location.model.js';
 import { ForecastRecord } from '../forecast-actuals/forecastRecord.model.js';
 import { buildLookupMaps, fetchAllClients } from '../forecast-actuals/directory.service.js';
+import { normClientNameForMatch, resolveClientEntry } from '../../utils/clientNameNorm.js';
 import { buildSummaryPdf } from '../forecast-actuals/summaryPdf.js';
 import { StandardForecast } from './standardForecast.model.js';
 import {
@@ -130,8 +131,12 @@ function processStandardRow(row, normalizedColumns, clientMap, rowNum) {
   const getVal = (col) => getRowValue(row, col, normalizedColumns);
   const clientName = getVal('client name');
   if (!clientName) return { error: `Row ${rowNum}: Client name is required` };
-  const clientEntry = clientMap.get(clientName.toLowerCase());
-  if (!clientEntry) return { error: `Row ${rowNum}: Client '${clientName}' not found` };
+  const clientEntry = resolveClientEntry(clientName, clientMap);
+  if (!clientEntry) {
+    return {
+      error: `Row ${rowNum}: Client '${clientName.trim()}' not found (lookup: ${normClientNameForMatch(clientName)})`,
+    };
+  }
 
   return buildStandardDocFromFields(
     {
@@ -875,6 +880,92 @@ async function getForecastRangeAndClients(locationId, clientId, credentials, dat
   return { forecastStart, forecastEnd, clientNameMap };
 }
 
+async function buildStandardVarianceExportRecords({
+  locationId,
+  clientId,
+  credentials,
+  dateFrom,
+  dateTo,
+}) {
+  const { forecastStart, forecastEnd, clientNameMap } = await getForecastRangeAndClients(
+    locationId,
+    clientId,
+    credentials,
+    dateFrom,
+    dateTo
+  );
+  if (!forecastStart || !forecastEnd) {
+    return { deletedRecords: [], additionalRecords: [], varianceRecords: [] };
+  }
+
+  const dayCounts = countDaysInRange(forecastStart, forecastEnd);
+  const stdFilter = listFilter(locationId, clientId);
+  const stdRows = await StandardForecast.find(stdFilter).lean();
+
+  const standardMap = new Map();
+  for (const r of stdRows) {
+    const dayKey = String(r.day || '').trim().toLowerCase();
+    const dayCount = dayCounts[dayKey] || 0;
+    if (dayCount <= 0) continue;
+    const tplKey = buildTemplateKey({
+      clientDirectoryId: r.clientDirectoryId,
+      day: r.day,
+      startTime: r.startTime,
+    });
+    if (!standardMap.has(tplKey)) {
+      standardMap.set(tplKey, serializeStandardTemplateRow(r, dayCount));
+    } else {
+      const cur = standardMap.get(tplKey);
+      cur.totalCost = roundMoney(cur.totalCost + roundMoney((r.totalCost || 0) * dayCount));
+    }
+  }
+
+  const fBuckets = await getForecastTemplateBuckets(locationId, clientId, forecastStart, forecastEnd);
+  const forecastMap = new Map();
+  for (const b of fBuckets) {
+    const row = serializeForecastBucketRow(b, clientNameMap);
+    forecastMap.set(row.templateKey, row);
+  }
+
+  const standardKeys = new Set(standardMap.keys());
+  const forecastKeys = new Set(forecastMap.keys());
+
+  const deletedRecords = [];
+  for (const k of standardKeys) {
+    if (forecastKeys.has(k)) continue;
+    const row = { ...standardMap.get(k) };
+    row.recordType = 'deleted';
+    deletedRecords.push(row);
+  }
+  deletedRecords.sort((a, b) => compareTemplateKeys(a.templateKey, b.templateKey));
+
+  const additionalRecords = [];
+  for (const k of forecastKeys) {
+    if (standardKeys.has(k)) continue;
+    const row = { ...forecastMap.get(k) };
+    row.recordType = 'additional';
+    additionalRecords.push(row);
+  }
+  additionalRecords.sort((a, b) => compareTemplateKeys(a.templateKey, b.templateKey));
+
+  const varianceRecords = [];
+  for (const k of standardKeys) {
+    if (!forecastKeys.has(k)) continue;
+    const s = { ...standardMap.get(k) };
+    const f = { ...forecastMap.get(k) };
+    const diff = computeStandardVarianceDiff(s, f);
+    if (diff.length === 0) continue;
+    f.diffFields = diff;
+    s.recordType = 'variance';
+    f.recordType = 'variance';
+    varianceRecords.push(s);
+    varianceRecords.push(f);
+  }
+  varianceRecords.sort((a, b) => compareTemplateKeys(a.templateKey, b.templateKey));
+
+  return { deletedRecords, additionalRecords, varianceRecords };
+}
+
 export async function listStandardVsForecastVariance({
   locationId,
   clientId,
@@ -1080,14 +1171,12 @@ function formatStandardVarianceEndForCsv(record) {
 }
 
 async function fetchAllStandardVarianceTabRecords(args, tab) {
-  const first = await listStandardVsForecastVariance({ ...args, tab, page: 1 });
-  let records = [...first.records];
-  const totalPages = first.pageSize > 0 ? Math.ceil(first.total / first.pageSize) : 1;
-  for (let i = 2; i <= totalPages; i += 1) {
-    const page = await listStandardVsForecastVariance({ ...args, tab, page: i });
-    records.push(...page.records);
-  }
-  return records;
+  const { deletedRecords, additionalRecords, varianceRecords } =
+    await buildStandardVarianceExportRecords(args);
+  if (tab === 'deleted') return deletedRecords;
+  if (tab === 'additional') return additionalRecords;
+  if (tab === 'variance') return varianceRecords;
+  return [...deletedRecords, ...additionalRecords, ...varianceRecords];
 }
 
 export async function exportStandardVsForecastVarianceCsv({
@@ -1100,10 +1189,8 @@ export async function exportStandardVsForecastVarianceCsv({
 }) {
   const loc = await Location.findById(locationId).select('code').lean();
   const listArgs = { locationId, clientId, credentials, dateFrom, dateTo };
-
-  const deletedRecords = await fetchAllStandardVarianceTabRecords(listArgs, 'deleted');
-  const additionalRecords = await fetchAllStandardVarianceTabRecords(listArgs, 'additional');
-  const varianceRecords = await fetchAllStandardVarianceTabRecords(listArgs, 'variance');
+  const { deletedRecords, additionalRecords, varianceRecords } =
+    await buildStandardVarianceExportRecords(listArgs);
 
   const headers = [
     'Type',
