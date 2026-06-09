@@ -51,6 +51,13 @@ const rosterVacantShiftSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    shiftcareShiftId: {
+      type: String,
+      trim: true,
+      sparse: true,
+      unique: true,
+      index: true,
+    },
   },
   { timestamps: true }
 );

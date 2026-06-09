@@ -160,6 +160,30 @@ export function useFindCover() {
   });
 }
 
+export function useUploadVacantShifts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (file) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      return (
+        await api.post('/api/roster-coverage/vacant-shifts/upload', fd, {
+          transformRequest: (data, headers) => {
+            delete headers['Content-Type'];
+            return data;
+          },
+        })
+      ).data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: Q.shiftDashboard });
+      qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: Q.vacant('open') });
+      qc.invalidateQueries({ queryKey: Q.audit });
+    },
+  });
+}
+
 export function useUploadRosterTimesheet() {
   const qc = useQueryClient();
   return useMutation({
