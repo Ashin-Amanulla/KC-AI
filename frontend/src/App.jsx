@@ -23,6 +23,13 @@ import { RosterStaffProfile } from './pages/roster-coverage/RosterStaffProfile';
 import { RosterTimesheetUpload } from './pages/roster-coverage/RosterTimesheetUpload';
 import { RosterReports } from './pages/roster-coverage/RosterReports';
 import { RosterShiftLog } from './pages/roster-coverage/RosterShiftLog';
+import { CrmLayout } from './pages/crm/CrmLayout';
+import { CrmDashboard } from './pages/crm/CrmDashboard';
+import { CrmSupportCoordinators } from './pages/crm/CrmSupportCoordinators';
+import { CrmLeads } from './pages/crm/CrmLeads';
+import { CrmMarketingActivities } from './pages/crm/CrmMarketingActivities';
+import { CrmStaffingRequirements } from './pages/crm/CrmStaffingRequirements';
+import { CrmImportExport } from './pages/crm/CrmImportExport';
 import { canAccessPath, getDefaultLanding } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
@@ -191,6 +198,21 @@ function App() {
             <Route path="team/:staffId" element={<RosterStaffProfile />} />
             <Route path="timesheet" element={<RosterTimesheetUpload />} />
             <Route path="reports" element={<RosterReports />} />
+          </Route>
+          <Route
+            path="/crm"
+            element={
+              <ProtectedRoute>
+                <CrmLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<CrmDashboard />} />
+            <Route path="support-coordinators" element={<CrmSupportCoordinators />} />
+            <Route path="leads" element={<CrmLeads />} />
+            <Route path="marketing" element={<CrmMarketingActivities />} />
+            <Route path="staffing" element={<CrmStaffingRequirements />} />
+            <Route path="import-export" element={<CrmImportExport />} />
           </Route>
           <Route path="/shifts" element={<ProtectedRoute><Navigate to="/workforce#workforce-roster" replace /></ProtectedRoute>} />
           <Route path="/pay-hours" element={<ProtectedRoute><Navigate to="/workforce#workforce-roster" replace /></ProtectedRoute>} />

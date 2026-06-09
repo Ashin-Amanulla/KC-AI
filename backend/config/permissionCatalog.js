@@ -15,6 +15,8 @@ export const PERMISSIONS = {
   ROSTER_SHIFT_LOG_VIEW: 'roster_shift_log:view',
   USERS_MANAGE: 'users:manage',
   ROLES_MANAGE: 'roles:manage',
+  CRM_VIEW: 'crm:view',
+  CRM_MANAGE: 'crm:manage',
 };
 
 export const ALL_PERMISSION_KEYS = Object.values(PERMISSIONS);
@@ -52,6 +54,8 @@ export const PERMISSION_CATALOG = [
   },
   { key: PERMISSIONS.USERS_MANAGE, label: 'Manage Users', category: 'Admin', path: '/admin/access' },
   { key: PERMISSIONS.ROLES_MANAGE, label: 'Manage Roles', category: 'Admin', path: '/admin/access' },
+  { key: PERMISSIONS.CRM_VIEW, label: 'CRM', category: 'CRM', path: '/crm' },
+  { key: PERMISSIONS.CRM_MANAGE, label: 'Manage CRM', category: 'CRM', path: '/crm' },
 ];
 
 /** Path -> permission required (first match wins for specialized paths) */
@@ -73,6 +77,7 @@ export const PATH_PERMISSION_MAP = [
   { prefix: '/timesheets', permission: PERMISSIONS.TIMESHEETS_VIEW },
   { prefix: '/clients', permission: PERMISSIONS.CLIENTS_VIEW },
   { prefix: '/staff', permission: PERMISSIONS.STAFF_VIEW },
+  { prefix: '/crm', permission: PERMISSIONS.CRM_VIEW },
   { prefix: '/', permission: PERMISSIONS.DASHBOARD_VIEW },
 ];
 
@@ -92,6 +97,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     PERMISSIONS.STAFF_VIEW,
     PERMISSIONS.CLIENTS_VIEW,
     PERMISSIONS.ROSTER_VIEW,
+    PERMISSIONS.CRM_VIEW,
   ],
   shifts_viewer: [PERMISSIONS.ROSTER_SHIFT_LOG_VIEW],
 };

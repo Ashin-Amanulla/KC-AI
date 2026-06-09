@@ -17,6 +17,7 @@ import {
   TrendingDown,
   GitCompare,
   Layers,
+  Briefcase,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { getNavItemsForPermissions } from '../config/nav';
@@ -39,6 +40,7 @@ const iconMap = {
   TrendingDown,
   GitCompare,
   Layers,
+  Briefcase,
 };
 
 export function Sidebar() {

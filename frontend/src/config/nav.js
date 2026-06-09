@@ -34,6 +34,12 @@ export const NAV_ITEMS = [
     permission: PERMISSIONS.ROSTER_VIEW,
   },
   {
+    path: '/crm',
+    label: 'CRM',
+    icon: 'Briefcase',
+    permission: PERMISSIONS.CRM_VIEW,
+  },
+  {
     path: '/roster-coverage/shift-log',
     label: 'Shift log',
     icon: 'CalendarDays',

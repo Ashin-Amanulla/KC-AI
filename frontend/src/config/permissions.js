@@ -11,6 +11,8 @@ export const PERMISSIONS = {
   ROSTER_SHIFT_LOG_VIEW: 'roster_shift_log:view',
   USERS_MANAGE: 'users:manage',
   ROLES_MANAGE: 'roles:manage',
+  CRM_VIEW: 'crm:view',
+  CRM_MANAGE: 'crm:manage',
 };
 
 export const hasPermission = (permissions, key) => {
@@ -52,6 +54,7 @@ export const canAccessPath = (permissions, path) => {
   if (path === '/timesheets') return hasPermission(permissions, PERMISSIONS.TIMESHEETS_VIEW);
   if (path === '/pay-hours-tests') return hasPermission(permissions, PERMISSIONS.PAY_HOURS_TESTS_VIEW);
   if (path === '/shift-analysis') return hasPermission(permissions, PERMISSIONS.SHIFT_ANALYSIS_VIEW);
+  if (path.startsWith('/crm')) return hasPermission(permissions, PERMISSIONS.CRM_VIEW);
 
   return false;
 };
