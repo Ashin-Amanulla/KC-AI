@@ -149,7 +149,7 @@ function parseNaiveLocalDatetime(raw, offsetStr) {
 }
 
 /** DD/MM/YYYY HH:MM am/pm — Cost Breakdown Raw and some ShiftCare billing exports. */
-function parseAusDayMonthDatetime(raw, offsetStr) {
+export function parseAusDayMonthDatetime(raw, offsetStr) {
   const m = raw.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*(am|pm)$/i);
   if (!m) return null;
   let hour = parseInt(m[4], 10);

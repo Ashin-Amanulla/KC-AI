@@ -3,6 +3,7 @@ import fs from 'fs';
 import multer from 'multer';
 import { config } from '../../config/index.js';
 import { authenticateJWT, authorizePermission } from '../../middlewares/auth.middleware.js';
+import { tabularUpload } from '../../middlewares/tabularUpload.middleware.js';
 import { PERMISSIONS } from '../../config/permissionCatalog.js';
 import {
   listRosterStaff,
@@ -23,6 +24,7 @@ import {
   getDashboardSummary,
   getStaffProfile,
   uploadTimesheet,
+  uploadVacantShifts,
   exportIneligibilityPdf,
   exportIneligibilityXlsx,
   patchContactStatus,
@@ -94,6 +96,12 @@ router.patch('/roster-coverage/vacant-shifts/:id', ...authRoster, patchVacantShi
 
 router.post('/roster-coverage/find-cover', ...authRoster, postFindCover);
 router.post('/roster-coverage/timesheet-upload', ...authRoster, upload.single('file'), uploadTimesheet);
+router.post(
+  '/roster-coverage/vacant-shifts/upload',
+  ...authRoster,
+  tabularUpload.single('file'),
+  uploadVacantShifts
+);
 router.post('/roster-coverage/export/ineligibility-pdf', ...authRoster, exportIneligibilityPdf);
 router.post('/roster-coverage/export/ineligibility-xlsx', ...authRoster, exportIneligibilityXlsx);
 

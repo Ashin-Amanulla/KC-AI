@@ -4,6 +4,7 @@ export const PERMISSIONS = {
   CLIENTS_VIEW: 'clients:view',
   TIMESHEETS_VIEW: 'timesheets:view',
   WORKFORCE_VIEW: 'workforce:view',
+  WORKFORCE_COST_VIEW: 'workforce:cost:view',
   PAY_HOURS_TESTS_VIEW: 'pay_hours_tests:view',
   SHIFT_ANALYSIS_VIEW: 'shift_analysis:view',
   FORECAST_ANALYSIS_VIEW: 'forecast_analysis:view',
@@ -25,7 +26,7 @@ export const hasAnyPermission = (permissions, keys) => {
   return keys.some((k) => permissions.includes(k));
 };
 
-const WORKFORCE_LEGACY_PATHS = ['/shifts', '/pay-hours', '/cost-analysis'];
+const WORKFORCE_LEGACY_PATHS = ['/shifts', '/pay-hours'];
 const FORECAST_LEGACY_PATHS = ['/forecast-actuals', '/standard-forecast', '/standard-vs-forecast'];
 
 export const canAccessPath = (permissions, path) => {
@@ -42,6 +43,12 @@ export const canAccessPath = (permissions, path) => {
     if (path.startsWith('/roster-coverage')) return false;
   }
 
+  if (path === '/cost-analysis') {
+    return (
+      hasPermission(permissions, PERMISSIONS.WORKFORCE_VIEW) &&
+      hasPermission(permissions, PERMISSIONS.WORKFORCE_COST_VIEW)
+    );
+  }
   if (path === '/workforce' || WORKFORCE_LEGACY_PATHS.includes(path)) {
     return hasPermission(permissions, PERMISSIONS.WORKFORCE_VIEW);
   }

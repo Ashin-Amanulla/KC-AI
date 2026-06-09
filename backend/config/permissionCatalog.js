@@ -8,6 +8,7 @@ export const PERMISSIONS = {
   CLIENTS_VIEW: 'clients:view',
   TIMESHEETS_VIEW: 'timesheets:view',
   WORKFORCE_VIEW: 'workforce:view',
+  WORKFORCE_COST_VIEW: 'workforce:cost:view',
   PAY_HOURS_TESTS_VIEW: 'pay_hours_tests:view',
   SHIFT_ANALYSIS_VIEW: 'shift_analysis:view',
   FORECAST_ANALYSIS_VIEW: 'forecast_analysis:view',
@@ -26,7 +27,13 @@ export const PERMISSION_CATALOG = [
   { key: PERMISSIONS.STAFF_VIEW, label: 'Staff', category: 'General', path: '/staff' },
   { key: PERMISSIONS.CLIENTS_VIEW, label: 'Clients', category: 'General', path: '/clients' },
   { key: PERMISSIONS.TIMESHEETS_VIEW, label: 'Timesheets', category: 'Finance', path: '/timesheets' },
-  { key: PERMISSIONS.WORKFORCE_VIEW, label: 'Workforce', category: 'Finance', path: '/workforce' },
+  { key: PERMISSIONS.WORKFORCE_VIEW, label: 'Workforce (setup & calculator)', category: 'Finance', path: '/workforce' },
+  {
+    key: PERMISSIONS.WORKFORCE_COST_VIEW,
+    label: 'Workforce — Billing & cost',
+    category: 'Finance',
+    path: '/workforce?step=cost',
+  },
   {
     key: PERMISSIONS.PAY_HOURS_TESTS_VIEW,
     label: 'Pay Hours Tests',
@@ -73,7 +80,7 @@ export const PATH_PERMISSION_MAP = [
   { prefix: '/workforce', permission: PERMISSIONS.WORKFORCE_VIEW },
   { prefix: '/shifts', permission: PERMISSIONS.WORKFORCE_VIEW },
   { prefix: '/pay-hours', permission: PERMISSIONS.WORKFORCE_VIEW },
-  { prefix: '/cost-analysis', permission: PERMISSIONS.WORKFORCE_VIEW },
+  { prefix: '/cost-analysis', permission: PERMISSIONS.WORKFORCE_COST_VIEW },
   { prefix: '/timesheets', permission: PERMISSIONS.TIMESHEETS_VIEW },
   { prefix: '/clients', permission: PERMISSIONS.CLIENTS_VIEW },
   { prefix: '/staff', permission: PERMISSIONS.STAFF_VIEW },
@@ -167,6 +174,10 @@ export const canAccessPathWithPermissions = (permissions, path) => {
 
   if (path === '/admin/access' || path === '/users') {
     return hasAny([PERMISSIONS.USERS_MANAGE, PERMISSIONS.ROLES_MANAGE]);
+  }
+
+  if (path === '/cost-analysis') {
+    return has(PERMISSIONS.WORKFORCE_VIEW) && has(PERMISSIONS.WORKFORCE_COST_VIEW);
   }
 
   if (permissions.includes(PERMISSIONS.ROSTER_VIEW)) {

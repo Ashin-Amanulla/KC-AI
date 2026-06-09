@@ -10,6 +10,7 @@ import { getErrorMessage } from '../utils/api';
 import { HolidayManager, PayHours } from './PayHours';
 import { SchadsCalculator } from './SchadsCalculator';
 import { CostAnalysis } from './CostAnalysis';
+import { usePermissions } from '../hooks/usePermissions';
 
 /** Canonical tabs; numeric ?step= values are legacy (1–5) and mapped on read. */
 const STEP_IDS = ['setup', 'calculator', 'cost'];
@@ -36,9 +37,14 @@ const STEPS = [
 ];
 
 export function WorkforceHub() {
+  const { canViewWorkforceCost } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const step = parseWorkforceStep(searchParams);
+  const visibleSteps = useMemo(
+    () => (canViewWorkforceCost ? STEPS : STEPS.filter((s) => s.id !== 'cost')),
+    [canViewWorkforceCost]
+  );
   const setStep = useCallback(
     (id) => {
       if (id === 'setup') setSearchParams({}, { replace: true });
@@ -97,6 +103,12 @@ export function WorkforceHub() {
   }, [locationId]);
 
   useEffect(() => {
+    if (step === 'cost' && !canViewWorkforceCost) {
+      setStep('calculator');
+    }
+  }, [step, canViewWorkforceCost, setStep]);
+
+  useEffect(() => {
     const id = (location.hash || '').replace(/^#/, '');
     if (!id || step !== 'setup') return;
     requestAnimationFrame(() => {
@@ -115,12 +127,14 @@ export function WorkforceHub() {
       <div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Workforce</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          One setup area for site, holidays, roster and pay hours — then calculator and cost.
+          {canViewWorkforceCost
+            ? 'One setup area for site, holidays, roster and pay hours — then calculator and cost.'
+            : 'One setup area for site, holidays, roster and pay hours — then the award calculator.'}
         </p>
       </div>
 
       <div className="flex flex-wrap gap-2 p-1 rounded-lg bg-muted/50 border">
-        {STEPS.map((s, i) => (
+        {visibleSteps.map((s, i) => (
           <Button
             key={s.id}
             type="button"
@@ -274,8 +288,16 @@ export function WorkforceHub() {
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
             <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-              Done with pay hours? Continue to enter <strong className="text-foreground font-medium">award rates</strong> and then{' '}
-              <strong className="text-foreground font-medium">billing &amp; cost</strong>.
+              Done with pay hours? Continue to enter{' '}
+              <strong className="text-foreground font-medium">award rates</strong>
+              {canViewWorkforceCost ? (
+                <>
+                  {' '}
+                  and then <strong className="text-foreground font-medium">billing &amp; cost</strong>.
+                </>
+              ) : (
+                <> in the award calculator.</>
+              )}
             </p>
             <Button type="button" size="lg" className="shrink-0 gap-2" onClick={() => setStep('calculator')}>
               Next: Award calculator
@@ -292,22 +314,26 @@ export function WorkforceHub() {
               <CardTitle className="text-lg">Award calculator &amp; rates</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Upload a per-staff rates workbook here; billing &amp; cost can reuse it for staff revenue vs wages. Uses the same location as Setup.
+              {canViewWorkforceCost
+                ? 'Upload a per-staff rates workbook here; billing & cost can reuse it for staff revenue vs wages. Uses the same location as Setup.'
+                : 'Upload a per-staff rates workbook here. Uses the same location as Setup.'}
             </CardContent>
           </Card>
           <SchadsCalculator locationId={locationId || undefined} onStaffRatesMapChange={setHubStaffRatesMap} />
-          <div className="flex justify-between">
+          <div className={`flex ${canViewWorkforceCost ? 'justify-between' : 'justify-start'}`}>
             <Button type="button" variant="outline" onClick={() => setStep('setup')}>
               Back
             </Button>
-            <Button type="button" onClick={() => setStep('cost')}>
-              Next: Cost analysis <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
+            {canViewWorkforceCost && (
+              <Button type="button" onClick={() => setStep('cost')}>
+                Next: Cost analysis <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            )}
           </div>
         </div>
       )}
 
-      {step === 'cost' && (
+      {step === 'cost' && canViewWorkforceCost && (
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-2">

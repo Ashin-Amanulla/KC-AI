@@ -1,12 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDropzone } from 'react-dropzone';
+import { toast } from 'sonner';
 import {
   useShiftDashboard,
   useCreateVacantShift,
   usePatchVacantShift,
   useAddVacantShiftUpdate,
   useRosterParticipants,
+  useUploadVacantShifts,
 } from '../../api/rosterCoverage';
+import { TABULAR_ACCEPT, validateTabularFile } from '../../config/upload';
+import { getErrorMessage } from '../../utils/api';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../ui/table';
+
+const VIEW_STORAGE_KEY = 'roster-shift-log-view';
 
 function shiftToFindCoverSearchParams(shift) {
   const start = new Date(shift.startDatetime);
@@ -268,6 +283,326 @@ function ShiftCard({ shift, idx, onStatus, onNote, onFindCover }) {
   );
 }
 
+function ViewToggle({ mode, onChange }) {
+  const btn = (key, label) => {
+    const active = mode === key;
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(key)}
+        style={{
+          background: active ? C.accent : 'transparent',
+          color: active ? '#fff' : C.muted,
+          border: 'none',
+          borderRadius: 7,
+          padding: '6px 14px',
+          fontSize: 12,
+          fontWeight: active ? 600 : 400,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+  return (
+    <div
+      style={{
+        display: 'flex',
+        background: C.faint,
+        border: `1.5px solid ${C.border}`,
+        borderRadius: 9,
+        padding: 3,
+        gap: 2,
+      }}
+    >
+      {btn('cards', 'Cards')}
+      {btn('table', 'Table')}
+    </div>
+  );
+}
+
+function shiftLocation(shift) {
+  const label = shift.rosterParticipantId?.locationLabel;
+  if (label) return label;
+  const notes = shift.notes || '';
+  const m = notes.match(/Address:\s*(.+)/);
+  return m ? m[1].trim() : '';
+}
+
+function ShiftLogTable({ shifts, onStatus, onNote, onFindCover }) {
+  const [expandedId, setExpandedId] = useState(null);
+  const sorted = useMemo(
+    () => [...shifts].sort((a, b) => new Date(a.startDatetime) - new Date(b.startDatetime)),
+    [shifts]
+  );
+
+  return (
+    <div
+      style={{
+        background: C.surface,
+        border: `1.5px solid ${C.border}`,
+        borderRadius: 14,
+        overflow: 'hidden',
+      }}
+    >
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-xs">Status</TableHead>
+            <TableHead className="text-xs">Priority</TableHead>
+            <TableHead className="text-xs">Participant</TableHead>
+            <TableHead className="text-xs whitespace-nowrap">Start</TableHead>
+            <TableHead className="text-xs whitespace-nowrap">End</TableHead>
+            <TableHead className="text-xs">Reason</TableHead>
+            <TableHead className="text-xs">Location</TableHead>
+            <TableHead className="text-xs">Filled by</TableHead>
+            <TableHead className="text-xs">Updates</TableHead>
+            <TableHead className="text-xs text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sorted.map((shift) => {
+            const sc = STATUS_CFG[shift.status] ?? STATUS_CFG.open;
+            const rc = REASON_CFG[shift.reason] ?? { label: shift.reason };
+            const pc = PRI_CFG[shift.priority] ?? PRI_CFG.medium;
+            const participantName = shift.rosterParticipantId?.name ?? 'Unknown';
+            const startStr = new Date(shift.startDatetime).toLocaleString([], {
+              dateStyle: 'short',
+              timeStyle: 'short',
+            });
+            const endStr = new Date(shift.endDatetime).toLocaleString([], {
+              dateStyle: 'short',
+              timeStyle: 'short',
+            });
+            const filledBy = shift.filledByStaffId?.fullName;
+            const nextStatus =
+              shift.status === 'open'
+                ? 'in_progress'
+                : shift.status === 'in_progress'
+                  ? 'filled'
+                  : null;
+            const nextLabel =
+              shift.status === 'open' ? 'Start →' : shift.status === 'in_progress' ? '✓ Filled' : null;
+            const showFindCover = shift.status === 'open' || shift.status === 'in_progress';
+            const updateCount = (shift.updateLogs ?? []).length;
+            const expanded = expandedId === shift._id;
+
+            return (
+              <Fragment key={shift._id}>
+                <TableRow>
+                  <TableCell className="text-xs">
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: sc.color,
+                        background: sc.bg,
+                        padding: '2px 9px',
+                        borderRadius: 20,
+                      }}
+                    >
+                      {sc.label}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          background: pc.color,
+                          display: 'inline-block',
+                        }}
+                      />
+                      {pc.label}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-xs font-medium">{participantName}</TableCell>
+                  <TableCell className="text-xs whitespace-nowrap">{startStr}</TableCell>
+                  <TableCell className="text-xs whitespace-nowrap">{endStr}</TableCell>
+                  <TableCell className="text-xs">{rc.label}</TableCell>
+                  <TableCell className="text-xs max-w-[180px] truncate" title={shiftLocation(shift)}>
+                    {shiftLocation(shift) || '—'}
+                  </TableCell>
+                  <TableCell className="text-xs">{filledBy || 'Unassigned'}</TableCell>
+                  <TableCell className="text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId(expanded ? null : shift._id)}
+                      style={{
+                        background: C.faint,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 6,
+                        padding: '2px 8px',
+                        fontSize: 11,
+                        cursor: 'pointer',
+                        color: C.muted,
+                      }}
+                    >
+                      {updateCount} update{updateCount !== 1 ? 's' : ''}
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-xs text-right">
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                      {showFindCover && (
+                        <button
+                          type="button"
+                          onClick={() => onFindCover(shift)}
+                          style={{
+                            background: C.accentBg,
+                            color: C.accent,
+                            border: `1px solid ${C.accent}44`,
+                            borderRadius: 6,
+                            padding: '4px 10px',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Find Cover
+                        </button>
+                      )}
+                      {nextStatus && (
+                        <button
+                          type="button"
+                          onClick={() => onStatus({ id: shift._id, status: nextStatus })}
+                          style={{
+                            background: C.faint,
+                            color: '#555',
+                            border: `1px solid ${C.border}`,
+                            borderRadius: 6,
+                            padding: '4px 10px',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {nextLabel}
+                        </button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+                {expanded && (
+                  <TableRow>
+                    <TableCell colSpan={10} style={{ background: C.faint, padding: '12px 16px' }}>
+                      <NoteThread
+                        notes={shift.updateLogs ?? []}
+                        shiftId={shift._id}
+                        onAdd={onNote}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function ImportVacantShiftsModal({ onClose }) {
+  const upload = useUploadVacantShifts();
+
+  const onDrop = useCallback(
+    async (files) => {
+      const file = files[0];
+      if (!file) return;
+      const check = validateTabularFile(file);
+      if (!check.valid) {
+        toast.error(check.error);
+        return;
+      }
+      try {
+        const res = await upload.mutateAsync(file);
+        toast.success(
+          `Import complete — ${res.created ?? 0} created, ${res.updated ?? 0} updated (${res.rowsProcessed ?? 0} rows)`
+        );
+        if (res.skipped) toast.message(`${res.skipped} row(s) skipped`);
+        if (res.errors?.length) toast.message(`${res.errors.length} row error(s) — see network response`);
+        onClose();
+      } catch (e) {
+        toast.error(getErrorMessage(e));
+      }
+    },
+    [upload, onClose]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: TABULAR_ACCEPT,
+    maxFiles: 1,
+    disabled: upload.isPending,
+  });
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,.35)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 500,
+        backdropFilter: 'blur(6px)',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: C.surface,
+          borderRadius: 18,
+          padding: 28,
+          width: 480,
+          maxWidth: '95vw',
+          boxShadow: '0 32px 80px rgba(0,0,0,.18)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.text }}>Import Vacant Shifts</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: C.muted, fontSize: 20, cursor: 'pointer' }}
+          >
+            ✕
+          </button>
+        </div>
+        <p style={{ fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.5 }}>
+          Upload a ShiftCare Vacant Shifts Report (.csv or .xlsx). Rows are upserted by Shift ID.
+        </p>
+        <div
+          {...getRootProps()}
+          style={{
+            cursor: upload.isPending ? 'wait' : 'pointer',
+            border: `2px dashed ${isDragActive ? C.accent : C.border}`,
+            borderRadius: 12,
+            padding: 32,
+            textAlign: 'center',
+            background: isDragActive ? C.accentBg : C.faint,
+            fontSize: 13,
+            color: C.muted,
+          }}
+        >
+          <input {...getInputProps()} />
+          {upload.isPending
+            ? 'Importing…'
+            : isDragActive
+              ? 'Drop file here'
+              : 'Drag & drop a file, or click to browse'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LogShiftModal({ onClose, onSubmit, participants = [] }) {
   const now = new Date();
   const toLocal = (d) => new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -396,9 +731,25 @@ export function RosterShiftLog() {
   const addUpdate = useAddVacantShiftUpdate();
 
   const [showModal, setShowModal] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      const stored = localStorage.getItem(VIEW_STORAGE_KEY);
+      return stored === 'table' ? 'table' : 'cards';
+    } catch {
+      return 'cards';
+    }
+  });
   const [statusF, setStatusF] = useState('all');
   const [priF, setPriF] = useState('all');
   const [search, setSearch] = useState('');
+
+  function setViewModePersisted(mode) {
+    setViewMode(mode);
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, mode);
+    } catch {}
+  }
 
   const shifts = data?.shifts ?? [];
   const counts = data?.counts ?? { open: 0, in_progress: 0, filled: 0, critical: 0 };
@@ -497,8 +848,27 @@ export function RosterShiftLog() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <ViewToggle mode={viewMode} onChange={setViewModePersisted} />
             <LiveClock />
             <button
+              type="button"
+              onClick={() => setShowImport(true)}
+              style={{
+                background: C.surface,
+                color: C.text,
+                border: `1.5px solid ${C.border}`,
+                borderRadius: 9,
+                padding: '8px 18px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Import
+            </button>
+            <button
+              type="button"
               onClick={() => setShowModal(true)}
               style={{ background: C.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
             >
@@ -570,6 +940,13 @@ export function RosterShiftLog() {
               + Log first shift
             </button>
           </div>
+        ) : viewMode === 'table' ? (
+          <ShiftLogTable
+            shifts={visible}
+            onStatus={handleStatus}
+            onNote={handleNote}
+            onFindCover={handleFindCover}
+          />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, alignItems: 'start' }}>
             {cols.map((col, ci) => (
@@ -597,6 +974,8 @@ export function RosterShiftLog() {
           participants={participants}
         />
       )}
+
+      {showImport && <ImportVacantShiftsModal onClose={() => setShowImport(false)} />}
 
       <style>{`
         @keyframes rise { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }

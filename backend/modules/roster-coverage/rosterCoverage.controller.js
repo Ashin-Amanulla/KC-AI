@@ -18,6 +18,7 @@ import {
 } from './services/fortnight.js';
 import { buildSummaryPdf } from '../forecast-actuals/summaryPdf.js';
 import { parseShiftCsvBuffer } from '../shifts/shiftCsvParser.js';
+import { parseVacantShiftBuffer } from './vacantShiftImport.js';
 import { nameMatchKeys, normStaffNameForMatch } from '../../utils/staffNameNorm.js';
 
 const MS_PER_DAY = 86400000;
@@ -1069,6 +1070,109 @@ export async function uploadTimesheet(req, res, next) {
       errors,
       timesheetSpan,
       totalHoursImported,
+    });
+  } catch (e) {
+    if (filePath) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch {}
+    }
+    next(e);
+  }
+}
+
+export async function uploadVacantShifts(req, res, next) {
+  let filePath = null;
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    filePath = req.file.path;
+    const buffer = fs.readFileSync(filePath);
+    const parseResult = parseVacantShiftBuffer(buffer, req.file.originalname || '');
+
+    if (parseResult.errors.length > 0 && parseResult.rows.length === 0) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch {}
+      return res.status(400).json({
+        success: false,
+        errors: parseResult.errors,
+        rowsProcessed: parseResult.rowsProcessed,
+        created: 0,
+        updated: 0,
+        skipped: 0,
+      });
+    }
+
+    const partLookup = buildRosterNameLookup(await RosterParticipant.find().lean(), 'name');
+    const errors = [...parseResult.errors];
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const row of parseResult.rows) {
+      const pt = await ensureParticipantForTimesheetRow(row.clientName, partLookup);
+      if (!pt) {
+        skipped += 1;
+        errors.push(
+          `Unknown or ambiguous roster participant "${row.clientName}" (shift ${row.shiftcareShiftId})`
+        );
+        continue;
+      }
+
+      const existing = await RosterVacantShift.findOne({
+        shiftcareShiftId: row.shiftcareShiftId,
+      }).lean();
+
+      const scheduleFields = {
+        rosterParticipantId: pt._id,
+        startDatetime: row.startDatetime,
+        endDatetime: row.endDatetime,
+        sleepover: row.sleepover,
+        reason: row.reason,
+        priority: row.priority,
+        shiftcareShiftId: row.shiftcareShiftId,
+      };
+
+      if (existing) {
+        await RosterVacantShift.findByIdAndUpdate(existing._id, {
+          $set: scheduleFields,
+        });
+        updated += 1;
+      } else {
+        await RosterVacantShift.create({
+          ...scheduleFields,
+          notes: row.notes,
+          status: row.status,
+          createdBy: req.user?.userId || null,
+        });
+        created += 1;
+      }
+    }
+
+    await RosterCoverageAudit.create({
+      action: 'vacant_shifts_upload',
+      userId: req.user?.userId || null,
+      payload: {
+        rows: parseResult.rowsProcessed,
+        created,
+        updated,
+        skipped,
+        errors: errors.length,
+      },
+    });
+
+    try {
+      fs.unlinkSync(filePath);
+    } catch {}
+
+    res.json({
+      success: true,
+      rowsProcessed: parseResult.rowsProcessed,
+      created,
+      updated,
+      skipped,
+      errors,
     });
   } catch (e) {
     if (filePath) {
