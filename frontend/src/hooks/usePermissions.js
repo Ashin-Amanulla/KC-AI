@@ -21,6 +21,7 @@ export const usePermissions = () => {
       defaultLanding: getDefaultLanding(permissions),
       canManageUsers: checkPermission(permissions, PERMISSIONS.USERS_MANAGE),
       canManageRoles: checkPermission(permissions, PERMISSIONS.ROLES_MANAGE),
+      canViewWorkforceCost: checkPermission(permissions, PERMISSIONS.WORKFORCE_COST_VIEW),
     }),
     [permissions]
   );
