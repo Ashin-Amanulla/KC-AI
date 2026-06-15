@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   allocateOt76GlobalTierFromTotals,
   resolveOt76PayTiers,
-} from './ot76GlobalTier.js';
+} from '../../../backend/modules/pay-hours/utils/ot76GlobalTier.js';
 
 test('allocateOt76GlobalTierFromTotals: weekday pool consumes global 1.5× first', () => {
   assert.deepEqual(allocateOt76GlobalTierFromTotals(9, 6), {

@@ -17,7 +17,7 @@ import {
   BROKEN_ALLOWANCE_2,
   effectiveSleepoverRate,
 } from '../frontend/src/lib/schadsWageCalc.js';
-import { resolveOt76PayTiers } from '../frontend/src/lib/ot76GlobalTier.js';
+import { resolveOt76PayTiers } from '../backend/modules/pay-hours/utils/ot76GlobalTier.js';
 import { loadStaffRatesMap } from './lib/staffRatesFromXlsx.mjs';
 
 const XLSX = require('../frontend/node_modules/xlsx/xlsx.js');

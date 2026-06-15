@@ -1,5 +1,4 @@
-/** Fortnight OT>76: one shared 1.5× band for first 2h across weekday + Saturday (weekday pool first).
- *  Mirror of backend/modules/pay-hours/utils/ot76GlobalTier.js — keep both in sync. */
+/** Fortnight OT>76: one shared 1.5× band for first 2h across weekday + Saturday (weekday pool first). */
 
 export const OT76_GLOBAL_TIER1_MAX = 2;
 

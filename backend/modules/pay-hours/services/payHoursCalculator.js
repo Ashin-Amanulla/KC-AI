@@ -8,7 +8,7 @@
  * Hours are stored as numbers with 2dp precision via r2().
  */
 
-import { allocateOt76GlobalTierFromTotals } from '../../../../frontend/src/lib/ot76GlobalTier.js';
+import { allocateOt76GlobalTierFromTotals } from '../utils/ot76GlobalTier.js';
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
