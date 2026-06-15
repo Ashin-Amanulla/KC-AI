@@ -1273,7 +1273,6 @@ function StaffProfitabilitySection({
               )}
             </div>
 
-            {!staffOnly && (
             <div className="space-y-2">
               <button
                 type="button"
@@ -1399,7 +1398,6 @@ function StaffProfitabilitySection({
                 </>
               )}
             </div>
-            )}
 
             {/* Legend */}
             <div className="flex items-center gap-4 text-xs text-gray-400">
