@@ -20,6 +20,28 @@ export function parseDateInput(value) {
   return Number.isFinite(t) ? new Date(t) : null;
 }
 
+export function formatBooleanDisplay(value, style = 'yes') {
+  if (style === 'yn') return value ? 'Y' : 'N';
+  return value ? 'Yes' : 'No';
+}
+
+export function parseBooleanInput(value) {
+  const s = String(value ?? '').trim().toLowerCase();
+  if (!s) return false;
+  return s === 'y' || s === 'yes' || s === 'true' || s === '1';
+}
+
+export function parseLinkedIds(value) {
+  return String(value ?? '')
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function formatLinkedIds(ids) {
+  return (ids || []).join(', ');
+}
+
 export function SelectField({ label, value, onChange, options, className = '' }) {
   return (
     <div className={className}>

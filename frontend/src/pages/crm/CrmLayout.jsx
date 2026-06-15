@@ -12,7 +12,7 @@ const LINKS = [
 
 export function CrmLayout() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-bold tracking-tight md:text-3xl">CRM</h2>
         <p className="text-sm text-muted-foreground">
