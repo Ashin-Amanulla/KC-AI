@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test, { describe } from 'node:test';
 import { computePayHoursForStaff, computeSleepovernAttachedNight } from './payHoursCalculator.js';
-import { detectBrokenShifts } from '../../shifts/shiftCsvParser.js';
+import { detectBrokenShifts, parseShiftCsvBuffer } from '../../shifts/shiftCsvParser.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EVIDENCE_FIXTURES = path.join(__dirname, '../../../fixtures/kc-studio-evidence');
@@ -850,6 +850,28 @@ describe('76-hour ordinary cap', () => {
     assert.strictEqual(data.morningHours, 76);
     assert.strictEqual(data.otAfter76Hours, 4);
     assert.strictEqual(data.otAfter76Weekday, 4);
+  });
+
+  test('76h cap: per-shift breakdown keeps OT>76 hours on affected shifts', () => {
+    const buf = fs.readFileSync(
+      path.join(__dirname, '../../../../tmp/test/Scheduler_Timesheet_Export_2026-06-15-01-08.csv')
+    );
+    const { shifts } = parseShiftCsvBuffer(buf);
+    detectBrokenShifts(shifts);
+    const dora = shifts
+      .filter((s) => s.staffName === 'Dora Vilma Amaya')
+      .map((s) => ({ ...s, _id: String(s.shiftcareId) }));
+    const { data, shiftBreakdowns } = computePayHoursForStaff(dora, new Set());
+    const sharonSat = shiftBreakdowns.get('145463996');
+    assert.ok(sharonSat, 'Sharon Kynaston Sat 13 Jun shift present');
+    assert.strictEqual(sharonSat.totalHours, 7);
+    assert.strictEqual(sharonSat.saturdayHours, 1);
+    assert.strictEqual(sharonSat.otAfter76Saturday, 6);
+    assert.strictEqual(
+      r2((sharonSat.saturdayHours || 0) + (sharonSat.otAfter76Saturday || 0)),
+      7
+    );
+    assert.strictEqual(data.otAfter76Saturday, 6);
   });
 });
 

@@ -127,8 +127,21 @@ function shiftBreakdownPayableHours(bd) {
       (bd.sundayOtUpto2 || 0) +
       (bd.sundayOtAfter2 || 0) +
       (bd.holidayOtUpto2 || 0) +
-      (bd.holidayOtAfter2 || 0)
+      (bd.holidayOtAfter2 || 0) +
+      (bd.otAfter76Weekday || 0) +
+      (bd.otAfter76Saturday || 0) +
+      (bd.otAfter76Sunday || 0) +
+      (bd.otAfter76Holiday || 0)
   );
+}
+
+function emptyOtAfter76Fields() {
+  return {
+    otAfter76Weekday: 0,
+    otAfter76Saturday: 0,
+    otAfter76Sunday: 0,
+    otAfter76Holiday: 0,
+  };
 }
 
 function ensureShiftBreakdownHasPayableHours(bd, shift) {
@@ -986,13 +999,14 @@ function computeShiftDurationHours(shift) {
 // ─── 76-HOUR CAP ─────────────────────────────────────────────────────────────
 
 function apply76HourCap(data, hourLedger) {
+  const perShiftOt76 = {};
   const totalRegular = r2(
     data.morningHours + data.afternoonHours + data.nightHours +
     data.saturdayHours + data.sundayHours + data.holidayHours +
     data.nursingCareHours + data.nursingAfternoonHours + data.nursingNightHours
   );
 
-  if (totalRegular <= TOTAL_HOURS_CAP) return;
+  if (totalRegular <= TOTAL_HOURS_CAP) return perShiftOt76;
 
   const excess = r2(totalRegular - TOTAL_HOURS_CAP);
   data.otAfter76Hours = r2(data.otAfter76Hours + excess);
@@ -1024,6 +1038,16 @@ function apply76HourCap(data, hourLedger) {
     }
     remaining = r2(remaining - deduct);
 
+    if (entry.shiftId && deduct > 0) {
+      if (!perShiftOt76[entry.shiftId]) perShiftOt76[entry.shiftId] = {};
+      perShiftOt76[entry.shiftId][entry.dayType] = r2(
+        (perShiftOt76[entry.shiftId][entry.dayType] || 0) + deduct
+      );
+      // #region agent log
+      fetch('http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa72d1'},body:JSON.stringify({sessionId:'aa72d1',location:'payHoursCalculator.js:apply76HourCap',message:'76h cap deducted from shift',data:{shiftId:entry.shiftId,dayType:entry.dayType,deduct,entryHoursAfter:entry.hours,fieldName:entry.fieldName},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+    }
+
     // Accumulate by day type
     if (entry.dayType === 'holiday') ot76Holiday = r2(ot76Holiday + deduct);
     else if (entry.dayType === 'sunday') ot76Sunday = r2(ot76Sunday + deduct);
@@ -1035,6 +1059,8 @@ function apply76HourCap(data, hourLedger) {
   data.otAfter76Saturday = r2(data.otAfter76Saturday + ot76Saturday);
   data.otAfter76Sunday = r2(data.otAfter76Sunday + ot76Sunday);
   data.otAfter76Holiday = r2(data.otAfter76Holiday + ot76Holiday);
+
+  return perShiftOt76;
 }
 
 // ─── CHAIN PROCESSING ────────────────────────────────────────────────────────
@@ -1261,7 +1287,7 @@ function processContinuousChains(pendingSegments, data, ctx) {
 
 // ─── PER-SHIFT BREAKDOWNS ────────────────────────────────────────────────────
 
-function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
+function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shifts) {
   const breakdowns = new Map();
   const shiftLookup = new Map(shifts.map(s => [String(s._id), s]));
 
@@ -1280,6 +1306,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
         sundayOtUpto2: 0, sundayOtAfter2: 0,
         holidayOtUpto2: 0, holidayOtAfter2: 0,
+        ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: shift?.shiftType === 'sleepover' || false,
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
@@ -1312,6 +1339,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
         sundayOtUpto2: 0, sundayOtAfter2: 0,
         holidayOtUpto2: 0, holidayOtAfter2: 0,
+        ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: shift?.shiftType === 'sleepover' || false,
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
@@ -1363,6 +1391,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
         sundayOtUpto2: 0, sundayOtAfter2: 0,
         holidayOtUpto2: 0, holidayOtAfter2: 0,
+        ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: false,
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
@@ -1390,6 +1419,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
         sundayOtUpto2: 0, sundayOtAfter2: 0,
         holidayOtUpto2: 0, holidayOtAfter2: 0,
+        ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: true,
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
@@ -1416,6 +1446,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
         sundayOtUpto2: 0, sundayOtAfter2: 0,
         holidayOtUpto2: 0, holidayOtAfter2: 0,
+        ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: shift?.shiftType === 'sleepover' || false,
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
@@ -1445,6 +1476,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
         sundayOtUpto2: 0, sundayOtAfter2: 0,
         holidayOtUpto2: 0, holidayOtAfter2: 0,
+        ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: shift?.shiftType === 'sleepover' || false,
         minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
@@ -1468,6 +1500,18 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, ctx, shifts) {
     const sid = String(shift._id);
     if (!breakdowns.has(sid)) continue;
     ensureShiftBreakdownHasPayableHours(breakdowns.get(sid), shift);
+  }
+
+  for (const [sid, otByDayType] of Object.entries(perShiftOt76 || {})) {
+    if (!breakdowns.has(sid)) continue;
+    const bd = breakdowns.get(sid);
+    if (otByDayType.weekday) bd.otAfter76Weekday = r2(otByDayType.weekday);
+    if (otByDayType.saturday) bd.otAfter76Saturday = r2(otByDayType.saturday);
+    if (otByDayType.sunday) bd.otAfter76Sunday = r2(otByDayType.sunday);
+    if (otByDayType.holiday) bd.otAfter76Holiday = r2(otByDayType.holiday);
+    // #region agent log
+    fetch('http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa72d1'},body:JSON.stringify({sessionId:'aa72d1',location:'payHoursCalculator.js:buildPerShiftBreakdowns',message:'per-shift OT>76 applied',data:{shiftId:sid,otByDayType,payableTotal:shiftBreakdownPayableHours(bd)},timestamp:Date.now(),hypothesisId:'D',runId:'post-fix'})}).catch(()=>{});
+    // #endregion
   }
 
   return breakdowns;
@@ -1685,10 +1729,10 @@ export function computePayHoursForStaff(shifts, holidaySet) {
   const capLedger = [...hourLedger, ...ctx.nursingWeekdayLedger];
 
   // Apply 76-hour cap (mutates ledger + data)
-  apply76HourCap(data, capLedger);
+  const perShiftOt76 = apply76HourCap(data, capLedger);
 
   // Build per-shift breakdowns from the post-OT-deduction + post-76h-cap ledger
-  const shiftBreakdowns = buildPerShiftBreakdowns(capLedger, perShiftOt, ctx, shifts);
+  const shiftBreakdowns = buildPerShiftBreakdowns(capLedger, perShiftOt, perShiftOt76, ctx, shifts);
 
   return { data, shiftBreakdowns };
 }

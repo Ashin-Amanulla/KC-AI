@@ -1,6 +1,4 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useQueries } from '@tanstack/react-query';
-import api from '../utils/api';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { Plus, X, AlertCircle, Upload, FileSpreadsheet, ChevronDown, UserPlus, EyeOff, Trash2, Download } from 'lucide-react';
@@ -36,6 +34,7 @@ import {
   calcGross,
   calcAllowances,
   staffTotalHours,
+  shiftRowPayableHours,
   totalOtHrs,
   calcBreakdown,
   effectiveSleepoverRate,
@@ -58,18 +57,6 @@ const fmtExDate = (dt, tzOffset) => {
   const adjustedMs = d.getTime() + sign * (h * 60 + m) * 60000;
   const adjusted = new Date(adjustedMs);
   return adjusted.toISOString().slice(0, 10);
-};
-const fmtExTime = (dt, tzOffset) => {
-  if (!dt) return '—';
-  const d = new Date(dt);
-  if (!tzOffset) return d.toISOString().slice(11, 16);
-  const sign = tzOffset[0] === '+' ? 1 : -1;
-  const clean = tzOffset.slice(1).replace(':', '');
-  const h = parseInt(clean.slice(0, 2), 10);
-  const m = parseInt(clean.slice(2, 4), 10);
-  const adjustedMs = d.getTime() + sign * (h * 60 + m) * 60000;
-  const adjusted = new Date(adjustedMs);
-  return adjusted.toISOString().slice(11, 16);
 };
 const fmtPayPeriod = (row) => {
   if (!row?.periodStart && !row?.periodEnd) return '—';
@@ -529,26 +516,7 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
                   <span className="capitalize">{String(shift.shiftType || '').replace(/_/g, ' ')}</span>
                 </TableCell>
                 <TableCell className="text-right font-mono font-medium">
-                  {h(
-                    r2(
-                      (shift.morningHours || 0) +
-                        (shift.afternoonHours || 0) +
-                        (shift.nightHours || 0) +
-                        (shift.weekdayOtUpto2 || 0) +
-                        (shift.weekdayOtAfter2 || 0) +
-                        (shift.saturdayHours || 0) +
-                        (shift.saturdayOtUpto2 || 0) +
-                        (shift.saturdayOtAfter2 || 0) +
-                        (shift.sundayHours || 0) +
-                        (shift.sundayOtUpto2 || 0) +
-                        (shift.sundayOtAfter2 || 0) +
-                        (shift.holidayHours || 0) +
-                        (shift.holidayOtUpto2 || 0) +
-                        (shift.holidayOtAfter2 || 0) +
-                        (shift.nursingCareHours || 0) +
-                        (shift.shortTurnaroundHours || 0)
-                    )
-                  )}
+                  {h(shiftRowPayableHours(shift))}
                 </TableCell>
                 {shiftOv(shift, 'morningHours', shift.morningHours, 'text-yellow-800')}
                 {shiftOv(shift, 'afternoonHours', shift.afternoonHours, 'text-orange-800')}
@@ -584,6 +552,20 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
                         No-break DT {h(shift.shortTurnaroundHours)}
                       </span>
                     )}
+                    {(() => {
+                      const ot76 = r2(
+                        (shift.otAfter76Weekday || 0) +
+                          (shift.otAfter76Saturday || 0) +
+                          (shift.otAfter76Sunday || 0) +
+                          (shift.otAfter76Holiday || 0)
+                      );
+                      if (ot76 <= 0) return null;
+                      return (
+                        <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-rose-100 text-rose-800" title="Hours reclassified to OT>76h cap">
+                          OT&gt;76 {h(ot76)}
+                        </span>
+                      );
+                    })()}
                     {(() => {
                       const wdOt = r2((shift.weekdayOtUpto2 || 0) + (shift.weekdayOtAfter2 || 0));
                       const satOt = r2((shift.saturdayOtUpto2 || 0) + (shift.saturdayOtAfter2 || 0));
@@ -685,6 +667,40 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
     </details>
   );
 };
+
+const ExpandChevronButton = ({ expanded, onClick, title = 'Show shift breakdown' }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title={title}
+    className={`shrink-0 w-5 h-5 flex items-center justify-center rounded border text-[11px] transition-all duration-200 ${
+      expanded
+        ? 'bg-foreground text-background border-foreground'
+        : 'text-muted-foreground border-border hover:border-foreground hover:text-foreground'
+    }`}
+    style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+  >
+    ▸
+  </button>
+);
+
+const ShiftBreakdownExpandRow = ({ expanded, colSpan, containerWidth, children }) => (
+  <TableRow className="hover:bg-transparent border-0">
+    <TableCell colSpan={colSpan} className="p-0 border-0" style={{ width: containerWidth || '100%' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateRows: expanded ? '1fr' : '0fr',
+          transition: 'grid-template-rows 0.3s ease',
+          overflow: 'hidden',
+          width: containerWidth ? `${containerWidth}px` : '100%',
+        }}
+      >
+        <div style={{ overflow: 'hidden', minWidth: 0 }}>{children}</div>
+      </div>
+    </TableCell>
+  </TableRow>
+);
 
 const EMPTY_PAY_HOURS = (staffName) => ({
   staffName,
@@ -1266,42 +1282,6 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
         (m.minimumEngagementExceptionCount || 0) > 0;
     }).length,
   [displayRows, getMergedRow]);
-
-  const minEngExceptionFetchRows = useMemo(() => {
-    if (view !== 'exceptions') return [];
-    return displayRows.filter((row) => {
-      if (!row._id || row._manualOnly) return false;
-      const m = getMergedRow(row);
-      return (m.minimumEngagementExceptionCount || 0) > 0;
-    });
-  }, [view, displayRows, getMergedRow]);
-
-  const minEngShiftQueryResults = useQueries({
-    queries: minEngExceptionFetchRows.map((row) => ({
-      queryKey: ['pay-hours', 'shifts', row._id],
-      queryFn: async () => {
-        const { data } = await api.get(`/api/pay-hours/${row._id}/shifts`);
-        return { staffName: row.staffName, shifts: data?.shifts ?? [] };
-      },
-      staleTime: 60_000,
-    })),
-  });
-
-  const minEngExceptionLines = useMemo(() => {
-    const lines = [];
-    let loading = false;
-    for (const q of minEngShiftQueryResults) {
-      if (q.isLoading || q.isPending) loading = true;
-      if (!q.data?.shifts) continue;
-      const { staffName, shifts } = q.data;
-      for (const s of shifts) {
-        if (!s.minimumEngagementException) continue;
-        lines.push({ staffName, shift: s, key: `${staffName}-${s._id}` });
-      }
-    }
-    lines.sort((a, b) => new Date(a.shift.shiftStart) - new Date(b.shift.shiftStart));
-    return { lines, loading };
-  }, [minEngShiftQueryResults]);
 
   const setRate = useCallback((staffName, val) => {
     setBaseRates(prev => ({ ...prev, [staffName]: val }));
@@ -2135,19 +2115,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                           <TableRow className={`hover:bg-muted/30 text-xs ${isCasual ? 'bg-blue-50/30' : ''}`}>
                             <TableCell className={`font-medium sticky left-0 z-10 text-sm border-r border-border/50 ${isCasual ? 'bg-blue-50/60' : 'bg-background'}`}>
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <button
-                                  type="button"
+                                <ExpandChevronButton
+                                  expanded={!!expandedBreakdown[row.staffName]}
                                   onClick={() => toggleBreakdown(row.staffName)}
                                   title="Show pay breakdown"
-                                  className={`shrink-0 w-5 h-5 flex items-center justify-center rounded border text-[11px] transition-all duration-200 ${
-                                    expandedBreakdown[row.staffName]
-                                      ? 'bg-foreground text-background border-foreground rotate-90'
-                                      : 'text-muted-foreground border-border hover:border-foreground hover:text-foreground'
-                                  }`}
-                                  style={{ transform: expandedBreakdown[row.staffName] ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
-                                >
-                                  ▸
-                                </button>
+                                />
                                 <span className="truncate">{row.staffName}</span>
                                 {isManualOnly && (
                                   <button
@@ -2296,38 +2268,27 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                             })()}
                           </TableRow>
 
-                          {/* Breakdown panel — always rendered, animated via grid-template-rows */}
-                          <TableRow className="hover:bg-transparent border-0">
-                            <TableCell colSpan={summaryColSpan} className="p-0 border-0" style={{ width: tableContainerWidth || '100%' }}>
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateRows: expandedBreakdown[row.staffName] ? '1fr' : '0fr',
-                                  transition: 'grid-template-rows 0.3s ease',
-                                  overflow: 'hidden',
-                                  width: tableContainerWidth ? `${tableContainerWidth}px` : '100%',
-                                }}
-                              >
-                                <div style={{ overflow: 'hidden', minWidth: 0 }}>
-                                  <PayBreakdownPanel
-                                    mrow={mrow}
-                                    staffName={row.staffName}
-                                    baseRate={rateVal}
-                                    empType={empT}
-                                    isCasual={isCasual}
-                                    staffRates={staffRates}
-                                  />
-                                  <PayHoursShiftsBreakdown
-                                    payHoursId={row._id}
-                                    expanded={!!expandedBreakdown[row.staffName]}
-                                    isManualOnly={isManualOnly}
-                                    mrow={mrow}
-                                    onShiftCtx={handleShiftCtx}
-                                  />
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
+                          <ShiftBreakdownExpandRow
+                            expanded={!!expandedBreakdown[row.staffName]}
+                            colSpan={summaryColSpan}
+                            containerWidth={tableContainerWidth}
+                          >
+                            <PayBreakdownPanel
+                              mrow={mrow}
+                              staffName={row.staffName}
+                              baseRate={rateVal}
+                              empType={empT}
+                              isCasual={isCasual}
+                              staffRates={staffRates}
+                            />
+                            <PayHoursShiftsBreakdown
+                              payHoursId={row._id}
+                              expanded={!!expandedBreakdown[row.staffName]}
+                              isManualOnly={isManualOnly}
+                              mrow={mrow}
+                              onShiftCtx={handleShiftCtx}
+                            />
+                          </ShiftBreakdownExpandRow>
                           </React.Fragment>
                         );
                       })}
@@ -2605,47 +2566,48 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       </p>
                     </CardHeader>
                     <CardContent className="p-0">
-                      {minEngExceptionLines.loading ? (
-                        <div className="px-6 py-4 text-xs text-muted-foreground">Loading shift times…</div>
-                      ) : minEngExceptionLines.lines.length === 0 ? (
-                        <div className="px-6 py-4 text-xs text-muted-foreground">
-                          No shift rows returned (recompute pay hours if counts look wrong).
-                        </div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-amber-50/60 text-[11px]">
-                                <TableHead className="min-w-[140px]">Staff</TableHead>
-                                <TableHead className="whitespace-nowrap">Pay period</TableHead>
-                                <TableHead className="whitespace-nowrap">Date</TableHead>
-                                <TableHead className="whitespace-nowrap">Start</TableHead>
-                                <TableHead className="whitespace-nowrap">End</TableHead>
-                                <TableHead className="text-right whitespace-nowrap">Hours</TableHead>
-                                <TableHead className="min-w-[120px]">Client</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {minEngExceptionLines.lines.map(({ staffName, shift, key }) => {
-                                const prRow = displayRows.find((dr) => dr.staffName === staffName);
-                                return (
-                                  <TableRow key={key} className="text-xs hover:bg-muted/30">
-                                    <TableCell className="font-medium">{staffName}</TableCell>
-                                    <TableCell className="text-muted-foreground">{fmtPayPeriod(prRow)}</TableCell>
-                                    <TableCell>{fmtExDate(shift.shiftStart, shift.timezoneOffset)}</TableCell>
-                                    <TableCell className="font-mono">{fmtExTime(shift.shiftStart, shift.timezoneOffset)}</TableCell>
-                                    <TableCell className="font-mono">{fmtExTime(shift.shiftEnd, shift.timezoneOffset)}</TableCell>
-                                    <TableCell className="text-right font-mono">
-                                      {shift.hours != null ? r2(Number(shift.hours)).toFixed(2) : '—'}
-                                    </TableCell>
-                                    <TableCell>{shift.clientName || '—'}</TableCell>
-                                  </TableRow>
-                                );
-                              })}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-amber-50/60 text-[11px]">
+                              <TableHead className="min-w-[180px]">Staff</TableHead>
+                              <TableHead className="whitespace-nowrap">Pay period</TableHead>
+                              <TableHead className="text-right whitespace-nowrap">Short PC shifts</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {visible.filter((r) => r.minEng > 0).map(({ row, m, minEng }) => (
+                              <React.Fragment key={row.staffName}>
+                                <TableRow className="text-xs hover:bg-muted/30">
+                                  <TableCell>
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <ExpandChevronButton
+                                        expanded={!!expandedBreakdown[row.staffName]}
+                                        onClick={() => toggleBreakdown(row.staffName)}
+                                      />
+                                      <span className="font-medium truncate">{row.staffName}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground">{fmtPayPeriod(row)}</TableCell>
+                                  <TableCell className="text-right font-medium text-amber-900">{minEng}</TableCell>
+                                </TableRow>
+                                <ShiftBreakdownExpandRow
+                                  expanded={!!expandedBreakdown[row.staffName]}
+                                  colSpan={3}
+                                >
+                                  <PayHoursShiftsBreakdown
+                                    payHoursId={row._id}
+                                    expanded={!!expandedBreakdown[row.staffName]}
+                                    isManualOnly={row._manualOnly === true}
+                                    mrow={m}
+                                    onShiftCtx={handleShiftCtx}
+                                  />
+                                </ShiftBreakdownExpandRow>
+                              </React.Fragment>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 )}
@@ -2684,8 +2646,17 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               ? <span className={`font-medium ${cls}`}>{fmtH(v)}</span>
                               : <span className="text-muted-foreground/30">—</span>;
                             return (
-                              <TableRow key={row.staffName} className="text-xs hover:bg-muted/30">
-                                <TableCell className="font-medium">{row.staffName}</TableCell>
+                              <React.Fragment key={row.staffName}>
+                              <TableRow className="text-xs hover:bg-muted/30">
+                                <TableCell>
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <ExpandChevronButton
+                                      expanded={!!expandedBreakdown[row.staffName]}
+                                      onClick={() => toggleBreakdown(row.staffName)}
+                                    />
+                                    <span className="font-medium truncate">{row.staffName}</span>
+                                  </div>
+                                </TableCell>
                                 <TableCell className="text-muted-foreground text-[11px] whitespace-nowrap">{fmtPayPeriod(row)}</TableCell>
                                 <TableCell className="text-right">{d(ot, 'text-orange-600')}</TableCell>
                                 <TableCell className="text-right">{d(m.weekdayOtUpto2 || 0, 'text-orange-500')}</TableCell>
@@ -2718,6 +2689,19 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                     : <span className="text-muted-foreground/50 font-normal">—</span>}
                                 </TableCell>
                               </TableRow>
+                              <ShiftBreakdownExpandRow
+                                expanded={!!expandedBreakdown[row.staffName]}
+                                colSpan={13}
+                              >
+                                <PayHoursShiftsBreakdown
+                                  payHoursId={row._id}
+                                  expanded={!!expandedBreakdown[row.staffName]}
+                                  isManualOnly={row._manualOnly === true}
+                                  mrow={m}
+                                  onShiftCtx={handleShiftCtx}
+                                />
+                              </ShiftBreakdownExpandRow>
+                              </React.Fragment>
                             );
                           })}
                           {/* Totals */}
@@ -2774,7 +2758,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {visible.filter(r => r.ot76tot > 0).map(({ row, ot76wd, ot76sat, ot76sun, ot76hol, ot76tot, ot76Monetary }) => {
+                            {visible.filter(r => r.ot76tot > 0).map(({ row, m, ot76wd, ot76sat, ot76sun, ot76hol, ot76tot, ot76Monetary }) => {
                               const wdT1 = r2(Math.min(ot76wd, 2));
                               const wdT2 = r2(Math.max(0, ot76wd - 2));
                               const sT1  = r2(Math.min(ot76sat, 2));
@@ -2783,8 +2767,17 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                 ? <span className={`font-medium ${cls}`}>{fmtH(v)}</span>
                                 : <span className="text-muted-foreground/30">—</span>;
                               return (
-                                <TableRow key={row.staffName} className="text-xs hover:bg-rose-50/30">
-                                  <TableCell className="font-medium">{row.staffName}</TableCell>
+                                <React.Fragment key={row.staffName}>
+                                <TableRow className="text-xs hover:bg-rose-50/30">
+                                  <TableCell>
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <ExpandChevronButton
+                                        expanded={!!expandedBreakdown[row.staffName]}
+                                        onClick={() => toggleBreakdown(row.staffName)}
+                                      />
+                                      <span className="font-medium truncate">{row.staffName}</span>
+                                    </div>
+                                  </TableCell>
                                   <TableCell className="text-muted-foreground text-[11px] whitespace-nowrap">{fmtPayPeriod(row)}</TableCell>
                                   <TableCell className="text-right">{cell(ot76tot)}</TableCell>
                                   <TableCell className="text-right">{cell(ot76wd)}</TableCell>
@@ -2801,6 +2794,19 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                       : <span className="text-muted-foreground/50 font-normal">—</span>}
                                   </TableCell>
                                 </TableRow>
+                                <ShiftBreakdownExpandRow
+                                  expanded={!!expandedBreakdown[row.staffName]}
+                                  colSpan={12}
+                                >
+                                  <PayHoursShiftsBreakdown
+                                    payHoursId={row._id}
+                                    expanded={!!expandedBreakdown[row.staffName]}
+                                    isManualOnly={row._manualOnly === true}
+                                    mrow={m}
+                                    onShiftCtx={handleShiftCtx}
+                                  />
+                                </ShiftBreakdownExpandRow>
+                                </React.Fragment>
                               );
                             })}
                             {/* Totals */}
@@ -2847,9 +2853,18 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {visible.map(({ row, broken, allow, gross }) => (
-                            <TableRow key={row.staffName} className="text-xs hover:bg-amber-50/20">
-                              <TableCell className="font-medium">{row.staffName}</TableCell>
+                          {visible.map(({ row, m, broken, allow, gross }) => (
+                            <React.Fragment key={row.staffName}>
+                            <TableRow className="text-xs hover:bg-amber-50/20">
+                              <TableCell>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <ExpandChevronButton
+                                    expanded={!!expandedBreakdown[row.staffName]}
+                                    onClick={() => toggleBreakdown(row.staffName)}
+                                  />
+                                  <span className="font-medium truncate">{row.staffName}</span>
+                                </div>
+                              </TableCell>
                               <TableCell className="text-right">
                                 {broken > 0
                                   ? <span className="font-medium text-orange-700">{broken}</span>
@@ -2874,6 +2889,19 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                   : <span className="text-muted-foreground text-xs font-normal">enter rate</span>}
                               </TableCell>
                             </TableRow>
+                            <ShiftBreakdownExpandRow
+                              expanded={!!expandedBreakdown[row.staffName]}
+                              colSpan={6}
+                            >
+                              <PayHoursShiftsBreakdown
+                                payHoursId={row._id}
+                                expanded={!!expandedBreakdown[row.staffName]}
+                                isManualOnly={row._manualOnly === true}
+                                mrow={m}
+                                onShiftCtx={handleShiftCtx}
+                              />
+                            </ShiftBreakdownExpandRow>
+                            </React.Fragment>
                           ))}
                           {/* Totals */}
                           <TableRow className="border-t-2 font-bold text-xs bg-amber-50/20">

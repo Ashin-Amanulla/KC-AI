@@ -346,7 +346,37 @@ export function staffTotalHours(ph) {
       (ph.holidayOtUpto2 || 0) +
       (ph.holidayOtAfter2 || 0) +
       (ph.nursingCareHours || 0) +
-      (ph.shortTurnaroundHours || 0)
+      (ph.shortTurnaroundHours || 0) +
+      (ph.otAfter76Weekday || 0) +
+      (ph.otAfter76Saturday || 0) +
+      (ph.otAfter76Sunday || 0) +
+      (ph.otAfter76Holiday || 0)
+  );
+}
+
+/** Payable hours for a single shift row (includes OT>76 reclassified from 76h cap). */
+export function shiftRowPayableHours(shift) {
+  return r2(
+    (shift.morningHours || 0) +
+      (shift.afternoonHours || 0) +
+      (shift.nightHours || 0) +
+      (shift.weekdayOtUpto2 || 0) +
+      (shift.weekdayOtAfter2 || 0) +
+      (shift.saturdayHours || 0) +
+      (shift.saturdayOtUpto2 || 0) +
+      (shift.saturdayOtAfter2 || 0) +
+      (shift.sundayHours || 0) +
+      (shift.sundayOtUpto2 || 0) +
+      (shift.sundayOtAfter2 || 0) +
+      (shift.holidayHours || 0) +
+      (shift.holidayOtUpto2 || 0) +
+      (shift.holidayOtAfter2 || 0) +
+      (shift.nursingCareHours || 0) +
+      (shift.shortTurnaroundHours || 0) +
+      (shift.otAfter76Weekday || 0) +
+      (shift.otAfter76Saturday || 0) +
+      (shift.otAfter76Sunday || 0) +
+      (shift.otAfter76Holiday || 0)
   );
 }
 
