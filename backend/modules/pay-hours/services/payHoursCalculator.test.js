@@ -873,6 +873,48 @@ describe('76-hour ordinary cap', () => {
     );
     assert.strictEqual(data.otAfter76Saturday, 6);
   });
+
+  test('76h cap: no double-count when OT>76 fully reclassifies a Sunday shift', () => {
+    const buf = fs.readFileSync(
+      path.join(__dirname, '../../../../tmp/test/Scheduler_Timesheet_Export_2026-06-15-01-08.csv')
+    );
+    const { shifts } = parseShiftCsvBuffer(buf);
+    detectBrokenShifts(shifts);
+    const dora = shifts
+      .filter((s) => s.staffName === 'Dora Vilma Amaya')
+      .map((s) => ({ ...s, _id: String(s.shiftcareId) }));
+    const { shiftBreakdowns } = computePayHoursForStaff(dora, new Set());
+    const sunNight = shiftBreakdowns.get('148432639');
+    assert.ok(sunNight, 'Teresa Sun 14 Jun overnight shift present');
+    assert.strictEqual(sunNight.totalHours, 10);
+    const payable = r2(
+      (sunNight.morningHours || 0) +
+        (sunNight.afternoonHours || 0) +
+        (sunNight.nightHours || 0) +
+        (sunNight.saturdayHours || 0) +
+        (sunNight.sundayHours || 0) +
+        (sunNight.holidayHours || 0) +
+        (sunNight.nursingCareHours || 0) +
+        (sunNight.shortTurnaroundHours || 0) +
+        (sunNight.weekdayOtUpto2 || 0) +
+        (sunNight.weekdayOtAfter2 || 0) +
+        (sunNight.saturdayOtUpto2 || 0) +
+        (sunNight.saturdayOtAfter2 || 0) +
+        (sunNight.sundayOtUpto2 || 0) +
+        (sunNight.sundayOtAfter2 || 0) +
+        (sunNight.holidayOtUpto2 || 0) +
+        (sunNight.holidayOtAfter2 || 0) +
+        (sunNight.otAfter76Weekday || 0) +
+        (sunNight.otAfter76Saturday || 0) +
+        (sunNight.otAfter76Sunday || 0) +
+        (sunNight.otAfter76Holiday || 0)
+    );
+    assert.strictEqual(payable, 10, 'per-shift payable must equal shift duration');
+    assert.ok(
+      (sunNight.sundayHours || 0) + (sunNight.otAfter76Sunday || 0) <= 10,
+      'Sunday ordinary + OT>76 must not double-count'
+    );
+  });
 });
 
 describe('hours normalization from timestamps', () => {

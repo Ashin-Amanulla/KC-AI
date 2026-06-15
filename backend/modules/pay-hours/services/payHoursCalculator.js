@@ -1496,12 +1496,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
     }
   }
 
-  for (const shift of shifts) {
-    const sid = String(shift._id);
-    if (!breakdowns.has(sid)) continue;
-    ensureShiftBreakdownHasPayableHours(breakdowns.get(sid), shift);
-  }
-
+  // Apply OT>76 per shift before ensure backfill — otherwise capped shifts get full hours re-added.
   for (const [sid, otByDayType] of Object.entries(perShiftOt76 || {})) {
     if (!breakdowns.has(sid)) continue;
     const bd = breakdowns.get(sid);
@@ -1510,8 +1505,22 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
     if (otByDayType.sunday) bd.otAfter76Sunday = r2(otByDayType.sunday);
     if (otByDayType.holiday) bd.otAfter76Holiday = r2(otByDayType.holiday);
     // #region agent log
-    fetch('http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa72d1'},body:JSON.stringify({sessionId:'aa72d1',location:'payHoursCalculator.js:buildPerShiftBreakdowns',message:'per-shift OT>76 applied',data:{shiftId:sid,otByDayType,payableTotal:shiftBreakdownPayableHours(bd)},timestamp:Date.now(),hypothesisId:'D',runId:'post-fix'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa72d1'},body:JSON.stringify({sessionId:'aa72d1',location:'payHoursCalculator.js:buildPerShiftBreakdowns:ot76',message:'per-shift OT>76 applied',data:{shiftId:sid,otByDayType,sundayHours:bd.sundayHours,payableTotal:shiftBreakdownPayableHours(bd)},timestamp:Date.now(),hypothesisId:'F',runId:'post-fix'})}).catch(()=>{});
     // #endregion
+  }
+
+  for (const shift of shifts) {
+    const sid = String(shift._id);
+    if (!breakdowns.has(sid)) continue;
+    const bd = breakdowns.get(sid);
+    const before = shiftBreakdownPayableHours(bd);
+    ensureShiftBreakdownHasPayableHours(bd, shift);
+    const after = shiftBreakdownPayableHours(bd);
+    if (after > before) {
+      // #region agent log
+      fetch('http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa72d1'},body:JSON.stringify({sessionId:'aa72d1',location:'payHoursCalculator.js:ensureShiftBreakdownHasPayableHours',message:'backfilled payable hours',data:{shiftId:sid,before,after,sundayHours:bd.sundayHours,otAfter76Sunday:bd.otAfter76Sunday},timestamp:Date.now(),hypothesisId:'F',runId:'post-fix'})}).catch(()=>{});
+      // #endregion
+    }
   }
 
   return breakdowns;
