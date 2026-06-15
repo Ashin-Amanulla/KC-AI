@@ -2408,7 +2408,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 <span>WD/Sat OT — after 2h:</span><span className="font-medium text-foreground">2.0×</span>
                 <span>Ordinary cap / shift (WD / Sat / Sun / PH):</span><span className="font-medium text-foreground">10h before OT</span>
                 <span>Sun / PH OT:</span><span className="font-medium text-foreground">same as Sun/PH rate</span>
-                <span>OT &gt; 76h — WD/Sat:</span><span className="font-medium text-foreground">1.5× / 2× (tiered)</span>
+                <span>OT &gt; 76h — WD/Sat:</span><span className="font-medium text-foreground">1.5× first 2h total, then 2×</span>
                 <span>OT &gt; 76h — Sunday:</span><span className="font-medium text-foreground">2.0× flat</span>
                 <span>OT &gt; 76h — PH:</span><span className="font-medium text-foreground">2.5× flat</span>
               </div>
@@ -2425,7 +2425,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
               <p className="font-semibold">⚠ SCHADS Award Rules Applied</p>
               <ul className="list-disc list-inside space-y-0.5 text-[11px] leading-relaxed">
                 <li><strong>OT triggers:</strong> &gt;76h/fortnight; &gt;10h active hours/shift (daily OT) — same hour paid once, not double-counted</li>
-                <li><strong>OT &gt; 76h rates:</strong> Weekday/Sat shifts use 1.5× (first 2h) then 2×; Sun shifts 2.0×; PH shifts 2.5×</li>
+                <li><strong>OT &gt; 76h rates:</strong> Weekday + Saturday share one 1.5× band (first 2h total), then 2×; Sun 2.0×; PH 2.5×</li>
                 <li><strong>Sunday/PH OT:</strong> Same rate as ordinary day (2.0× / 2.5×) — no separate OT brackets</li>
                 <li><strong>Broken shifts:</strong> $20.82 per shift (1 break), $27.56 for 2 breaks (cap not tracked per-shift)</li>
                 <li><strong>Meal allowance:</strong> $16.62 per shift where OT &gt;1h; +$16.62 on same shift where OT &gt;4h (counted per-shift by backend)</li>
@@ -2735,7 +2735,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         <span className="text-xs font-normal text-muted-foreground">({visible.filter(r => r.ot76tot > 0).length} staff)</span>
                       </CardTitle>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Hours that exceed the 76h fortnightly cap. Weekday &amp; Saturday: tiered (1.5× first 2h, 2× after). Sunday: 2.0×. Public Holiday: 2.5×. Same hour is not double-counted with daily OT.
+                        Hours that exceed the 76h fortnightly cap. Weekday &amp; Saturday share one 1.5× band (first 2h combined), then 2×. Sunday: 2.0×. Public Holiday: 2.5×. Same hour is not double-counted with daily OT.
                       </p>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -2746,8 +2746,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               <TableHead className="min-w-[160px]">Staff</TableHead>
                               <TableHead className="min-w-[140px] whitespace-nowrap">Pay period</TableHead>
                               <TableHead className="text-right text-rose-700 whitespace-nowrap">Total OT&gt;76<br/><span className="font-normal opacity-70">all days</span></TableHead>
-                              <TableHead className="text-right text-rose-700 whitespace-nowrap">Weekday<br/><span className="font-normal opacity-70">1.5×/2×</span></TableHead>
-                              <TableHead className="text-right text-rose-600 whitespace-nowrap">Saturday<br/><span className="font-normal opacity-70">1.5×/2×</span></TableHead>
+                              <TableHead className="text-right text-rose-700 whitespace-nowrap">Weekday<br/><span className="font-normal opacity-70">global 1.5×/2×</span></TableHead>
+                              <TableHead className="text-right text-rose-600 whitespace-nowrap">Saturday<br/><span className="font-normal opacity-70">2× after WD tier</span></TableHead>
                               <TableHead className="text-right text-rose-500 whitespace-nowrap">Sunday<br/><span className="font-normal opacity-70">2.0× flat</span></TableHead>
                               <TableHead className="text-right text-rose-800 whitespace-nowrap">Holiday<br/><span className="font-normal opacity-70">2.5× flat</span></TableHead>
                               <TableHead className="text-right whitespace-nowrap">WD tier 1<br/><span className="font-normal opacity-70 text-muted-foreground">≤2h @ 1.5×</span></TableHead>
@@ -2924,7 +2924,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                   <ul className="list-disc list-inside space-y-0.5 leading-relaxed">
                     <li><strong>Daily OT trigger:</strong> &gt;10h active hours in a single day — same hour not double-counted with 76h cap OT</li>
                     <li><strong>Fortnightly OT trigger:</strong> &gt;76h total hours across the fortnight</li>
-                    <li><strong>WD/Sat OT rate:</strong> 1.5× for the first 2h of OT, 2× for hours beyond 2h</li>
+                    <li><strong>Daily WD/Sat OT rate:</strong> 1.5× for the first 2h of daily OT per day, 2× beyond</li>
+                    <li><strong>OT &gt;76h WD/Sat:</strong> one shared 1.5× band (first 2h total; weekday first), then 2×</li>
                     <li><strong>Sunday OT:</strong> 2.0× (same as ordinary Sunday — no separate OT bracket)</li>
                     <li><strong>Public Holiday OT:</strong> 2.5× (same as ordinary PH rate)</li>
                     <li><strong>Broken shift allowance:</strong> ${BROKEN_ALLOWANCE_1.toFixed(2)} per shift with 1 break · ${BROKEN_ALLOWANCE_2.toFixed(2)} for 2 breaks (cap not tracked per-shift)</li>

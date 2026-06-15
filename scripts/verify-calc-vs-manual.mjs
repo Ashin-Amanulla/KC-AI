@@ -17,6 +17,7 @@ import {
   BROKEN_ALLOWANCE_2,
   effectiveSleepoverRate,
 } from '../frontend/src/lib/schadsWageCalc.js';
+import { resolveOt76PayTiers } from '../frontend/src/lib/ot76GlobalTier.js';
 import { loadStaffRatesMap } from './lib/staffRatesFromXlsx.mjs';
 
 const XLSX = require('../frontend/node_modules/xlsx/xlsx.js');
@@ -33,10 +34,7 @@ function manualGrossFromRatesMirror(ph, rates) {
   const ot76Sat = ph.otAfter76Saturday || 0;
   const sunAll = (ph.sundayHours || 0) + (ph.sundayOtUpto2 || 0) + (ph.sundayOtAfter2 || 0);
   const holAll = (ph.holidayHours || 0) + (ph.holidayOtUpto2 || 0) + (ph.holidayOtAfter2 || 0);
-  const ot76WdT1 = r2(Math.min(ot76Wd, 2));
-  const ot76WdT2 = r2(Math.max(0, ot76Wd - 2));
-  const ot76SatT1 = r2(Math.min(ot76Sat, 2));
-  const ot76SatT2 = r2(Math.max(0, ot76Sat - 2));
+  const { wdT1: ot76WdT1, wdT2: ot76WdT2, satT1: ot76SatT1, satT2: ot76SatT2 } = resolveOt76PayTiers(ph);
 
   const mealAllow = r2((ph.mealAllowanceCount || 0) * rates.mealAllow);
   const mileageAllow = r2((ph.totalKm || 0) * (rates.kmRate || VEHICLE_RATE));

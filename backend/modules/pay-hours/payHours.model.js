@@ -55,6 +55,10 @@ const payHoursSchema = new mongoose.Schema(
     otAfter76Saturday: { type: Number, default: 0 },     // Sat OT rates (1.5×/2×)
     otAfter76Sunday: { type: Number, default: 0 },       // Sun rate (2.0× flat)
     otAfter76Holiday: { type: Number, default: 0 },      // PH rate (2.5× flat)
+    otAfter76WeekdayUpto2: { type: Number, default: 0 }, // global 1.5× band (WD+Sat combined)
+    otAfter76WeekdayAfter2: { type: Number, default: 0 },
+    otAfter76SaturdayUpto2: { type: Number, default: 0 },
+    otAfter76SaturdayAfter2: { type: Number, default: 0 },
     // Shift counts
     brokenShiftCount:       { type: Number, default: 0 }, // days with 1 break ($20.82)
     brokenShift2BreakCount: { type: Number, default: 0 }, // days with 2 breaks ($27.56)

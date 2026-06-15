@@ -874,6 +874,25 @@ describe('76-hour ordinary cap', () => {
     assert.strictEqual(data.otAfter76Saturday, 6);
   });
 
+  test('76h cap: global OT>76 tier — first 2h only once across weekday + Saturday', () => {
+    const buf = fs.readFileSync(
+      path.join(__dirname, '../../../../tmp/test/Scheduler_Timesheet_Export_2026-06-15-01-08.csv')
+    );
+    const { shifts } = parseShiftCsvBuffer(buf);
+    detectBrokenShifts(shifts);
+    const dora = shifts
+      .filter((s) => s.staffName === 'Dora Vilma Amaya')
+      .map((s) => ({ ...s, _id: String(s.shiftcareId) }));
+    const { data } = computePayHoursForStaff(dora, new Set());
+    const tier1Total = r2(
+      (data.otAfter76WeekdayUpto2 || 0) + (data.otAfter76SaturdayUpto2 || 0)
+    );
+    const tierableTotal = r2((data.otAfter76Weekday || 0) + (data.otAfter76Saturday || 0));
+    assert.strictEqual(tier1Total, Math.min(2, tierableTotal));
+    assert.strictEqual(data.otAfter76SaturdayUpto2 || 0, 0, 'Saturday should not get a separate 1.5× band');
+    assert.strictEqual(data.otAfter76SaturdayAfter2 || 0, data.otAfter76Saturday || 0);
+  });
+
   test('76h cap: no double-count when OT>76 fully reclassifies a Sunday shift', () => {
     const buf = fs.readFileSync(
       path.join(__dirname, '../../../../tmp/test/Scheduler_Timesheet_Export_2026-06-15-01-08.csv')

@@ -2,6 +2,8 @@
  * SCHADS award wage calculations — shared by SchadsCalculator and Cost Analysis.
  */
 
+import { resolveOt76PayTiers } from './ot76GlobalTier.js';
+
 export const DAILY_ORD = 7.6;
 export const WEEKLY_ORD = 38.0;
 export const BROKEN_ALLOWANCE_1 = 20.82;
@@ -89,14 +91,9 @@ export function calcGrossFromRates(ph, rates) {
   const satBaseOnly = r2(Math.max(0, (ph.saturdayHours || 0) - nursingSat));
   const sunBaseOnly = r2(Math.max(0, (ph.sundayHours || 0) - nursingSun));
   const holBaseOnly = r2(Math.max(0, (ph.holidayHours || 0) - nursingHol));
-  const ot76Wd = ph.otAfter76Weekday || 0;
-  const ot76Sat = ph.otAfter76Saturday || 0;
   const sunAll = sunBaseOnly + (ph.sundayOtUpto2 || 0) + (ph.sundayOtAfter2 || 0);
   const holAll = holBaseOnly + (ph.holidayOtUpto2 || 0) + (ph.holidayOtAfter2 || 0);
-  const ot76WdT1 = r2(Math.min(ot76Wd, 2));
-  const ot76WdT2 = r2(Math.max(0, ot76Wd - 2));
-  const ot76SatT1 = r2(Math.min(ot76Sat, 2));
-  const ot76SatT2 = r2(Math.max(0, ot76Sat - 2));
+  const { wdT1: ot76WdT1, wdT2: ot76WdT2, satT1: ot76SatT1, satT2: ot76SatT2 } = resolveOt76PayTiers(ph);
 
   const brokenShiftRate = normalizedRates.brokenShift > 0 ? normalizedRates.brokenShift : BROKEN_ALLOWANCE_1;
   const mealAllow = r2((ph.mealAllowanceCount || 0) * normalizedRates.mealAllow);
@@ -156,14 +153,9 @@ export function calcBreakdownFromRates(ph, rates) {
   const satBaseOnly = r2(Math.max(0, (ph.saturdayHours || 0) - nursingSat));
   const sunBaseOnly = r2(Math.max(0, (ph.sundayHours || 0) - nursingSun));
   const holBaseOnly = r2(Math.max(0, (ph.holidayHours || 0) - nursingHol));
-  const ot76Wd = ph.otAfter76Weekday || 0;
-  const ot76Sat = ph.otAfter76Saturday || 0;
   const sunAll = r2(sunBaseOnly + (ph.sundayOtUpto2 || 0) + (ph.sundayOtAfter2 || 0));
   const holAll = r2(holBaseOnly + (ph.holidayOtUpto2 || 0) + (ph.holidayOtAfter2 || 0));
-  const ot76WdT1 = r2(Math.min(ot76Wd, 2));
-  const ot76WdT2 = r2(Math.max(0, ot76Wd - 2));
-  const ot76SatT1 = r2(Math.min(ot76Sat, 2));
-  const ot76SatT2 = r2(Math.max(0, ot76Sat - 2));
+  const { wdT1: ot76WdT1, wdT2: ot76WdT2, satT1: ot76SatT1, satT2: ot76SatT2 } = resolveOt76PayTiers(ph);
 
   const defs = [
     ['Daytime (≤8pm)', ph.morningHours || 0, normalizedRates.daytime, 'ord'],
@@ -271,14 +263,9 @@ export function calcGross(ph, baseRate, empType = 'permanent') {
 
   const sunAll = (ph.sundayHours || 0) + (ph.sundayOtUpto2 || 0) + (ph.sundayOtAfter2 || 0);
   const holAll = (ph.holidayHours || 0) + (ph.holidayOtUpto2 || 0) + (ph.holidayOtAfter2 || 0);
-  const ot76Wd = ph.otAfter76Weekday || 0;
-  const ot76Sat = ph.otAfter76Saturday || 0;
   const ot76Sun = ph.otAfter76Sunday || 0;
   const ot76Hol = ph.otAfter76Holiday || 0;
-  const ot76WdT1 = r2(Math.min(ot76Wd, 2));
-  const ot76WdT2 = r2(Math.max(0, ot76Wd - 2));
-  const ot76SatT1 = r2(Math.min(ot76Sat, 2));
-  const ot76SatT2 = r2(Math.max(0, ot76Sat - 2));
+  const { wdT1: ot76WdT1, wdT2: ot76WdT2, satT1: ot76SatT1, satT2: ot76SatT2 } = resolveOt76PayTiers(ph);
 
   let pay = 0;
   if (empType === 'casual') {

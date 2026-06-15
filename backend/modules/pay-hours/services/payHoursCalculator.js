@@ -8,6 +8,8 @@
  * Hours are stored as numbers with 2dp precision via r2().
  */
 
+import { allocateOt76GlobalTierFromTotals } from '../../../../frontend/src/lib/ot76GlobalTier.js';
+
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
 const MORNING_START = 6;             // 06:00 local
@@ -709,6 +711,8 @@ export function newPayHoursData() {
     shortTurnaroundHours: 0,
     otAfter76Weekday: 0, otAfter76Saturday: 0,
     otAfter76Sunday: 0, otAfter76Holiday: 0,
+    otAfter76WeekdayUpto2: 0, otAfter76WeekdayAfter2: 0,
+    otAfter76SaturdayUpto2: 0, otAfter76SaturdayAfter2: 0,
     brokenShiftCount: 0,
     brokenShift2BreakCount: 0,
     mealAllowanceCount: 0,
@@ -1059,6 +1063,15 @@ function apply76HourCap(data, hourLedger) {
   data.otAfter76Saturday = r2(data.otAfter76Saturday + ot76Saturday);
   data.otAfter76Sunday = r2(data.otAfter76Sunday + ot76Sunday);
   data.otAfter76Holiday = r2(data.otAfter76Holiday + ot76Holiday);
+
+  const ot76Tiers = allocateOt76GlobalTierFromTotals(
+    data.otAfter76Weekday,
+    data.otAfter76Saturday
+  );
+  data.otAfter76WeekdayUpto2 = r2(ot76Tiers.wdT1);
+  data.otAfter76WeekdayAfter2 = r2(ot76Tiers.wdT2);
+  data.otAfter76SaturdayUpto2 = r2(ot76Tiers.satT1);
+  data.otAfter76SaturdayAfter2 = r2(ot76Tiers.satT2);
 
   return perShiftOt76;
 }
