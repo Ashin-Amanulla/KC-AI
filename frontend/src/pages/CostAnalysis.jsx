@@ -22,6 +22,7 @@ import {
   applyRowAllocationsToClients,
   buildLineStaffPaidMap,
   buildShiftCostIndex,
+  buildLineShiftCalcMap,
 } from '../lib/staffCostAllocation';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -151,7 +152,7 @@ function enrichCostMapWithNameKeys(map) {
 
 // ─── Staff profitability analysis ─────────────────────────────────────────────
 function analyzeStaffProfitability(rows, payrollMap, options = {}) {
-  const { shiftCostIndex } = options;
+  const { shiftCostIndex, wageSource = 'award' } = options;
   const useShiftAllocation = Boolean(
     shiftCostIndex && (shiftCostIndex.byShiftcareId?.size || shiftCostIndex.bySharedKey?.size)
   );
@@ -312,6 +313,7 @@ function analyzeStaffProfitability(rows, payrollMap, options = {}) {
     lineStaffPaidMap: useShiftAllocation
       ? buildLineStaffPaidMap(staffRows, rowAllocByStaff)
       : null,
+    lineShiftCalcMap: buildLineShiftCalcMap(staffRows, shiftCostIndex, { wageSource }),
     totalRevenue,
     // Matched comparisons
     matchedRevenue:      r2(matchedRevenue),
@@ -586,7 +588,7 @@ function rateGroupShort(rg) {
     .substring(0, 50);
 }
 
-function StaffDetailRows({ s, lineStaffPaidMap }) {
+function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
   // Group billing rows by date for readability
   const byDate = {};
   for (const r of s.billingRows) {
@@ -630,18 +632,18 @@ function StaffDetailRows({ s, lineStaffPaidMap }) {
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
               Billing Lines ({s.billingRows.length} rows)
-              <span className="font-normal normal-case text-gray-400 ml-2">Scroll horizontally for Staff Paid &amp; $/hr</span>
+              <span className="font-normal normal-case text-gray-400 ml-2">Shift time and SCHADS bands shown when pay hours match</span>
             </p>
             <div className="rounded-lg border border-gray-200 overflow-x-auto">
-              <table className="w-full text-xs min-w-[960px]">
+              <table className="w-full text-xs min-w-[1100px]">
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="text-left px-3 py-1.5 font-medium text-gray-600">Date</th>
                     <th className="text-left px-3 py-1.5 font-medium text-gray-600">Client</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-gray-600 whitespace-nowrap">Shift Time</th>
                     <th className="text-left px-3 py-1.5 font-medium text-gray-600">Rate Group</th>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Type</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Start</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">End</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Billing Type</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-gray-600 min-w-[200px]">Wage Calculation</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Hrs</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Billed shift cost from export (before km/add-ons)">Billed Cost</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Km</th>
@@ -656,8 +658,7 @@ function StaffDetailRows({ s, lineStaffPaidMap }) {
                       {byDate[date].map((r, i) => {
                         const effectiveRate = r.duration > 0 ? r2(r.totalCost / r.duration) : 0;
                         const staffPaid = allocStaffPaid(r);
-                        const startTime = r.startDt?.split(' ').slice(1).join(' ') || '';
-                        const endTime   = r.endDt?.split(' ').slice(1).join(' ') || '';
+                        const calcMeta = lineShiftCalcMap?.get(r);
                         return (
                           <tr key={`${r.shiftId}-${i}`} className="border-t border-gray-100 hover:bg-white">
                             {i === 0 && (
@@ -666,10 +667,10 @@ function StaffDetailRows({ s, lineStaffPaidMap }) {
                               </td>
                             )}
                             <td className="px-3 py-1.5 text-gray-700 max-w-[140px] truncate">{r.client}</td>
+                            <td className="px-3 py-1.5 text-gray-600 whitespace-nowrap">{calcMeta?.shiftTime || '—'}</td>
                             <td className="px-3 py-1.5 text-gray-500 max-w-[180px] truncate" title={r.rateGroup}>{rateGroupShort(r.rateGroup)}</td>
                             <td className="px-3 py-1.5 text-gray-500">{r.shiftType || '—'}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-600 whitespace-nowrap">{startTime}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-600 whitespace-nowrap">{endTime}</td>
+                            <td className="px-3 py-1.5 text-gray-600 max-w-[280px]" title={calcMeta?.calcType || ''}>{calcMeta?.calcType || '—'}</td>
                             <td className="px-3 py-1.5 text-right font-medium">{r.duration}h</td>
                             <td className="px-3 py-1.5 text-right text-gray-600">{fmt(r.cost)}</td>
                             <td className="px-3 py-1.5 text-right text-gray-400">{r.kms > 0 ? r.kms + 'km' : '—'}</td>
@@ -682,7 +683,7 @@ function StaffDetailRows({ s, lineStaffPaidMap }) {
                       {/* Day subtotal if multiple rows */}
                       {byDate[date].length > 1 && (
                         <tr className="bg-blue-50 border-t border-blue-100">
-                          <td className="px-3 py-1 text-gray-400 text-right" colSpan={5}>{date} subtotal</td>
+                          <td className="px-3 py-1 text-gray-400 text-right" colSpan={6}>{date} subtotal</td>
                           <td className="px-3 py-1 text-right font-medium">{r2(byDate[date].reduce((s, r) => s + r.duration, 0))}h</td>
                           <td className="px-3 py-1" />
                           <td className="px-3 py-1" />
@@ -782,7 +783,7 @@ function StaffDetailRows({ s, lineStaffPaidMap }) {
   );
 }
 
-function ClientDetailRows({ c, lineStaffPaidMap }) {
+function ClientDetailRows({ c, lineStaffPaidMap, lineShiftCalcMap }) {
   const byDate = {};
   for (const r of c.billingRows || []) {
     const key = r.date || '?';
@@ -838,12 +839,16 @@ function ClientDetailRows({ c, lineStaffPaidMap }) {
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Billing Lines ({(c.billingRows || []).length})</p>
-            <div className="rounded-lg border border-gray-200 overflow-hidden">
-              <table className="w-full text-xs">
+            <div className="rounded-lg border border-gray-200 overflow-x-auto">
+              <table className="w-full text-xs min-w-[900px]">
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="text-left px-3 py-1.5 font-medium text-gray-600">Date</th>
                     <th className="text-left px-3 py-1.5 font-medium text-gray-600">Staff</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-gray-600 whitespace-nowrap">Shift Time</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Rate Group</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Billing Type</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-gray-600 min-w-[180px]">Wage Calculation</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Hrs</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Total</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Staff Paid</th>
@@ -854,10 +859,15 @@ function ClientDetailRows({ c, lineStaffPaidMap }) {
                     <React.Fragment key={date}>
                       {byDate[date].map((r, idx) => {
                         const staffPaid = allocStaffPaid(r);
+                        const calcMeta = lineShiftCalcMap?.get(r);
                         return (
                           <tr key={`${r.shiftId}-${idx}`} className="border-t border-gray-100">
                             {idx === 0 && <td rowSpan={byDate[date].length} className="px-3 py-1.5 align-top border-r border-gray-100 text-gray-700">{date}</td>}
                             <td className="px-3 py-1.5 text-gray-700">{r.staff || '—'}</td>
+                            <td className="px-3 py-1.5 text-gray-600 whitespace-nowrap">{calcMeta?.shiftTime || '—'}</td>
+                            <td className="px-3 py-1.5 text-gray-500 max-w-[160px] truncate" title={r.rateGroup}>{rateGroupShort(r.rateGroup)}</td>
+                            <td className="px-3 py-1.5 text-gray-500">{r.shiftType || '—'}</td>
+                            <td className="px-3 py-1.5 text-gray-600 max-w-[240px]" title={calcMeta?.calcType || ''}>{calcMeta?.calcType || '—'}</td>
                             <td className="px-3 py-1.5 text-right">{r.duration}h</td>
                             <td className="px-3 py-1.5 text-right font-medium">{fmt(r.totalCost)}</td>
                             <td className="px-3 py-1.5 text-right text-gray-600">{staffPaid !== null ? fmt(staffPaid) : '—'}</td>
@@ -952,6 +962,7 @@ function StaffProfitabilitySection({
     }
     return map;
   }, [sa]);
+  const lineShiftCalcMap = sa?.lineShiftCalcMap ?? null;
   const costBasisReady = payrollMap && payrollMap.size > 0;
   return (
     <Card>
@@ -1245,7 +1256,7 @@ function StaffProfitabilitySection({
                               <TableCell className="text-right text-gray-500 text-sm">{s.hours}h</TableCell>
                               <TableCell className="text-right text-gray-500 text-sm">{s.clients}</TableCell>
                             </TableRow>
-                            {isOpen && <StaffDetailRows s={s} lineStaffPaidMap={lineStaffPaidMap} />}
+                            {isOpen && <StaffDetailRows s={s} lineStaffPaidMap={lineStaffPaidMap} lineShiftCalcMap={lineShiftCalcMap} />}
                           </React.Fragment>
                         );
                       })}
@@ -1388,7 +1399,7 @@ function StaffProfitabilitySection({
                             <TableCell className="text-right text-gray-500 text-sm">{c.hours}h</TableCell>
                             <TableCell className="text-right text-gray-500 text-sm">{c.staffCount}</TableCell>
                           </TableRow>
-                          {isOpen && <ClientDetailRows c={c} lineStaffPaidMap={lineStaffPaidMap} />}
+                          {isOpen && <ClientDetailRows c={c} lineStaffPaidMap={lineStaffPaidMap} lineShiftCalcMap={lineShiftCalcMap} />}
                         </React.Fragment>
                       );
                     })}
@@ -1634,9 +1645,9 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
   const analysis    = useMemo(() => rows ? analyzeRows(rows) : null, [rows]);
   const staffAnalysis = useMemo(
     () => (rows && effectiveCostMap?.size)
-      ? analyzeStaffProfitability(rows, effectiveCostMap, { shiftCostIndex })
+      ? analyzeStaffProfitability(rows, effectiveCostMap, { shiftCostIndex, wageSource })
       : null,
-    [rows, effectiveCostMap, shiftCostIndex],
+    [rows, effectiveCostMap, shiftCostIndex, wageSource],
   );
 
   const resetBillingFile = () => {

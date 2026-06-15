@@ -112,6 +112,105 @@ function groupBillingRowsByShift(billingRows) {
   return groups;
 }
 
+const SCHADS_BAND_FIELDS = [
+  ['morningHours', 'Day'],
+  ['afternoonHours', 'Eve'],
+  ['nightHours', 'Night'],
+  ['saturdayHours', 'Sat'],
+  ['sundayHours', 'Sun'],
+  ['holidayHours', 'PH'],
+  ['nursingCareHours', 'Nursing'],
+  ['nursingAfternoonHours', 'Nursing Eve'],
+  ['nursingNightHours', 'Nursing Night'],
+  ['nursingSaturdayHours', 'Nursing Sat'],
+  ['nursingSundayHours', 'Nursing Sun'],
+  ['nursingHolidayHours', 'Nursing PH'],
+  ['weekdayOtUpto2', 'WD OT ≤2h'],
+  ['weekdayOtAfter2', 'WD OT >2h'],
+  ['saturdayOtUpto2', 'Sat OT ≤2h'],
+  ['saturdayOtAfter2', 'Sat OT >2h'],
+  ['sundayOtUpto2', 'Sun OT ≤2h'],
+  ['sundayOtAfter2', 'Sun OT >2h'],
+  ['holidayOtUpto2', 'PH OT ≤2h'],
+  ['holidayOtAfter2', 'PH OT >2h'],
+  ['otAfter76Weekday', 'OT>76 WD'],
+  ['otAfter76Saturday', 'OT>76 Sat'],
+  ['otAfter76Sunday', 'OT>76 Sun'],
+  ['otAfter76Holiday', 'OT>76 PH'],
+  ['shortTurnaroundHours', '2× no break'],
+];
+
+export function formatBillingShiftTime(row) {
+  if (!row?.startDt && !row?.endDt) return '—';
+  const timePart = (dt) => {
+    if (!dt) return '';
+    const parts = dt.trim().split(/\s+/);
+    return parts.length > 1 ? parts.slice(1).join(' ') : dt;
+  };
+  const start = timePart(row.startDt);
+  const end = timePart(row.endDt);
+  if (start && end) return `${start} – ${end}`;
+  return start || end || '—';
+}
+
+export function formatEngineShiftTime(sph) {
+  if (!sph?.shiftStart || !sph?.shiftEnd) return null;
+  const opts = { hour: 'numeric', minute: '2-digit', hour12: true };
+  const start = new Date(sph.shiftStart).toLocaleTimeString('en-AU', opts);
+  const end = new Date(sph.shiftEnd).toLocaleTimeString('en-AU', opts);
+  return `${start} – ${end}`;
+}
+
+export function formatSchadsPayBands(sph) {
+  if (!sph) return null;
+  const parts = [];
+  for (const [key, label] of SCHADS_BAND_FIELDS) {
+    const h = Number(sph[key]) || 0;
+    if (h > 0) parts.push(`${label} ${r2(h)}h`);
+  }
+  if (sph.isBrokenShift) parts.push('Broken shift');
+  if (sph.isSleepover) parts.push('Sleepover');
+  const bands = parts.join(', ');
+  if (sph.shiftType && bands) return `${sph.shiftType}: ${bands}`;
+  if (bands) return bands;
+  return sph.shiftType || '—';
+}
+
+export function buildLineShiftCalcMap(staffRows, shiftCostIndex, { wageSource = 'award' } = {}) {
+  const map = new WeakMap();
+  for (const staffRow of staffRows || []) {
+    const staffNorm = normName(staffRow.name);
+    const groups = groupBillingRowsByShift(staffRow.billingRows || []);
+    for (const groupRows of groups.values()) {
+      const sample = groupRows[0];
+      let meta;
+      if (wageSource === 'payroll') {
+        meta = {
+          shiftTime: formatBillingShiftTime(sample),
+          calcType: 'Payroll file (pro-rata by hours)',
+        };
+      } else if (shiftCostIndex) {
+        const shiftCost = matchBillingGroup(groupRows, shiftCostIndex, staffNorm);
+        meta = {
+          shiftTime: shiftCost?.sph
+            ? (formatEngineShiftTime(shiftCost.sph) || formatBillingShiftTime(sample))
+            : formatBillingShiftTime(sample),
+          calcType: shiftCost
+            ? formatSchadsPayBands(shiftCost.sph)
+            : 'Award wages (pro-rata, no shift match)',
+        };
+      } else {
+        meta = {
+          shiftTime: formatBillingShiftTime(sample),
+          calcType: 'Award wages (pro-rata, no pay hours)',
+        };
+      }
+      for (const row of groupRows) map.set(row, meta);
+    }
+  }
+  return map;
+}
+
 /**
  * Allocate one staff member's wages to billing rows using shift-level SCHADS gross.
  * Returns Map(billingRow -> { wages, superAmt, employerCost }).
