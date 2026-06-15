@@ -335,14 +335,6 @@ export function WorkforceHub() {
 
       {step === 'cost' && canViewWorkforceCost && (
         <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Billing &amp; cost analysis</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              Upload billing export. Staff revenue vs wages defaults to <strong>award calculation</strong> (pay hours + rates + super %). Switch to payroll file if you need the export comparison.
-            </CardContent>
-          </Card>
           <CostAnalysis embedded locationId={locationId || undefined} hubStaffRatesMap={hubStaffRatesMap} />
           <div className="flex justify-start">
             <Button type="button" variant="outline" onClick={() => setStep('calculator')}>

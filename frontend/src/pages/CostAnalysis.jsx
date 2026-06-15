@@ -901,6 +901,7 @@ function StaffProfitabilitySection({
   payHoursPeriodText,
   usingHubRates,
   locationCode = 'loc',
+  staffOnly = false,
 }) {
   const [expanded, setExpanded] = useState(new Set());
   const [expandedClients, setExpandedClients] = useState(new Set());
@@ -1272,7 +1273,7 @@ function StaffProfitabilitySection({
               )}
             </div>
 
-            {/* Client revenue vs wages */}
+            {!staffOnly && (
             <div className="space-y-2">
               <button
                 type="button"
@@ -1398,6 +1399,7 @@ function StaffProfitabilitySection({
                 </>
               )}
             </div>
+            )}
 
             {/* Legend */}
             <div className="flex items-center gap-4 text-xs text-gray-400">
@@ -1408,7 +1410,7 @@ function StaffProfitabilitySection({
             </div>
 
             {/* Paid not billed */}
-            {sa.paidNotBilled.length > 0 && (
+            {!staffOnly && sa.paidNotBilled.length > 0 && (
               <details className="border border-amber-200 rounded-lg">
                 <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-amber-800 bg-amber-50 rounded-lg flex items-center justify-between">
                   <span className="flex items-center gap-2">
@@ -1639,12 +1641,63 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
     [rows, effectiveCostMap, shiftCostIndex],
   );
 
+  const resetBillingFile = () => {
+    setRows(null);
+    setPayrollMap(null);
+    setPayrollName('');
+    setLocalAwardRatesMap(null);
+    setAwardRatesName('');
+    setAwardRatesError('');
+  };
+
+  const staffSectionProps = {
+    sa: staffAnalysis,
+    payrollMap: effectiveCostMap,
+    payrollName: effectiveCostLabel,
+    payrollLoading,
+    payrollError,
+    payrollDz,
+    onRemovePayroll: () => { setPayrollMap(null); setPayrollName(''); },
+    wageSource,
+    onWageSourceChange: setWageSource,
+    awardRatesDz,
+    awardRatesLoading,
+    awardRatesError,
+    awardRatesName,
+    onRemoveAwardRates: () => {
+      setLocalAwardRatesMap(null);
+      setAwardRatesName('');
+      setAwardRatesError('');
+    },
+    superPct,
+    onSuperPctChange: setSuperPct,
+    awardDefaultRate,
+    onAwardDefaultRateChange: setAwardDefaultRate,
+    awardEmpType,
+    onAwardEmpTypeChange: setAwardEmpType,
+    payHoursCount: payHoursRows.length,
+    payHoursPeriodText,
+    usingHubRates,
+    locationCode: locationId || 'loc',
+  };
+
   if (!rows) {
     return (
-      <div className="p-6 max-w-2xl mx-auto">
+      <div className={embedded ? 'p-4 max-w-2xl' : 'p-6 max-w-2xl mx-auto'}>
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Cost Analysis</h1>
-          <p className="text-gray-500 mt-1">Upload a ShiftCare billing export to identify inefficiencies and rostering improvements.</p>
+          {embedded ? (
+            <>
+              <h2 className="text-lg font-semibold text-gray-900">Staff Revenue vs Wages</h2>
+              <p className="text-gray-500 mt-1 text-sm">
+                Upload a ShiftCare billing export. Wages default to award calculation from pay hours and rates.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold text-gray-900">Cost Analysis</h1>
+              <p className="text-gray-500 mt-1">Upload a ShiftCare billing export to identify inefficiencies and rostering improvements.</p>
+            </>
+          )}
         </div>
 
         <div
@@ -1672,6 +1725,7 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
           </div>
         )}
 
+        {!embedded && (
         <div className="mt-6 bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
           <p className="font-medium text-gray-700 mb-2">What this analyzes:</p>
           <ul className="space-y-1 list-disc list-inside">
@@ -1684,20 +1738,26 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
             <li>Staff revenue vs wages (award calculation from pay hours or payroll file)</li>
           </ul>
         </div>
+        )}
+      </div>
+    );
+  }
+
+  if (embedded) {
+    return (
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-500">{rows.length} billing lines</p>
+          <Button variant="outline" size="sm" onClick={resetBillingFile}>
+            <Upload className="w-4 h-4 mr-1" /> New File
+          </Button>
+        </div>
+        <StaffProfitabilitySection {...staffSectionProps} staffOnly />
       </div>
     );
   }
 
   const a = analysis;
-
-  const resetBillingFile = () => {
-    setRows(null);
-    setPayrollMap(null);
-    setPayrollName('');
-    setLocalAwardRatesMap(null);
-    setAwardRatesName('');
-    setAwardRatesError('');
-  };
 
   return (
     <div className={embedded ? 'p-4 space-y-6' : 'p-6 space-y-6'}>
@@ -1988,36 +2048,7 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
       </SectionToggle>
 
       {/* Staff Profitability — wage basis + data */}
-      <StaffProfitabilitySection
-        sa={staffAnalysis}
-        payrollMap={effectiveCostMap}
-        payrollName={effectiveCostLabel}
-        payrollLoading={payrollLoading}
-        payrollError={payrollError}
-        payrollDz={payrollDz}
-        onRemovePayroll={() => { setPayrollMap(null); setPayrollName(''); }}
-        wageSource={wageSource}
-        onWageSourceChange={setWageSource}
-        awardRatesDz={awardRatesDz}
-        awardRatesLoading={awardRatesLoading}
-        awardRatesError={awardRatesError}
-        awardRatesName={awardRatesName}
-        onRemoveAwardRates={() => {
-          setLocalAwardRatesMap(null);
-          setAwardRatesName('');
-          setAwardRatesError('');
-        }}
-        superPct={superPct}
-        onSuperPctChange={setSuperPct}
-        awardDefaultRate={awardDefaultRate}
-        onAwardDefaultRateChange={setAwardDefaultRate}
-        awardEmpType={awardEmpType}
-        onAwardEmpTypeChange={setAwardEmpType}
-        payHoursCount={payHoursRows.length}
-        payHoursPeriodText={payHoursPeriodText}
-        usingHubRates={usingHubRates}
-        locationCode={locationId || 'loc'}
-      />
+      <StaffProfitabilitySection {...staffSectionProps} />
 
       {/* Recommendations Summary */}
       <Card>
