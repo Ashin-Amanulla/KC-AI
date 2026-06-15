@@ -4,6 +4,7 @@ import {
   computePayHours,
   getJobStatus,
   listPayHours,
+  listShiftCosts,
   getShiftPayHours,
   patchPayHoursManual,
   clearPayHoursManual,
@@ -34,6 +35,7 @@ router.patch('/pay-hours/:id', ...authPayHours, patchPayHoursManual);
 router.delete('/pay-hours/:id/manual', ...authPayHours, clearPayHoursManual);
 router.patch('/pay-hours/:id/shifts/:shiftPayHoursId', ...authPayHours, patchShiftPayHoursManual);
 router.delete('/pay-hours/:id/shifts/:shiftPayHoursId/manual', ...authPayHours, clearShiftPayHoursManual);
+router.get('/pay-hours/shift-costs', ...authAll, listShiftCosts);
 router.get('/pay-hours/:id/shifts', ...authAll, getShiftPayHours);
 router.get('/pay-hours', ...authAll, listPayHours);
 

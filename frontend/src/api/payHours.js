@@ -16,6 +16,20 @@ export const usePayHours = (params = {}) => {
   });
 };
 
+export const useShiftCostLookup = (locationId, enabled = true) => {
+  return useQuery({
+    queryKey: [PAY_HOURS_QUERY_KEY, 'shift-costs', locationId ?? 'all'],
+    queryFn: async () => {
+      const params = {};
+      if (locationId) params.locationId = locationId;
+      const response = await api.get('/api/pay-hours/shift-costs', { params });
+      return response.data;
+    },
+    enabled,
+    staleTime: 60000,
+  });
+};
+
 export const useShiftPayHours = (payHoursId, enabled = false) => {
   return useQuery({
     queryKey: [PAY_HOURS_QUERY_KEY, 'shifts', payHoursId],

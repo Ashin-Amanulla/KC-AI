@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { PayHours } from './payHours.model.js';
 import { ShiftPayHours } from './shiftPayHours.model.js';
+import { Shift } from '../shifts/shift.model.js';
 import { PayHoursJob } from './payHoursJob.model.js';
 import { addPayHoursJob } from '../../jobs/payHoursQueue.js';
 import {
@@ -79,6 +80,41 @@ export const listPayHours = async (req, res, next) => {
       periodEnd,
       total: payHours.length,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listShiftCosts = async (req, res, next) => {
+  try {
+    const { locationId } = req.query;
+
+    const filter = {};
+    if (locationId) filter.location = locationId;
+
+    const payHoursRows = await PayHours.find(filter).select('_id staffName').lean();
+    const payHoursIds = payHoursRows.map((p) => p._id);
+
+    if (payHoursIds.length === 0) {
+      return res.json({ shifts: [], total: 0 });
+    }
+
+    const shiftPayRows = await ShiftPayHours.find({ payHoursId: { $in: payHoursIds } })
+      .sort({ shiftStart: 1 })
+      .lean();
+
+    const shiftIds = [...new Set(shiftPayRows.map((s) => String(s.shiftId)))];
+    const shiftDocs = shiftIds.length
+      ? await Shift.find({ _id: { $in: shiftIds } }).select('_id shiftcareId').lean()
+      : [];
+    const shiftcareById = new Map(shiftDocs.map((s) => [String(s._id), s.shiftcareId || null]));
+
+    const shifts = shiftPayRows.map((row) => ({
+      ...serializeShiftPayHoursRecord(row),
+      shiftcareId: shiftcareById.get(String(row.shiftId)) || null,
+    }));
+
+    res.json({ shifts, total: shifts.length });
   } catch (error) {
     next(error);
   }

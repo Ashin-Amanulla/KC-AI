@@ -759,6 +759,65 @@ describe('daily ordinary cap (10h) & OT tiers', () => {
 
 
 
+describe('detectBrokenShifts gap boundaries', () => {
+  test('exactly 10h gap after overnight PC is not broken (adequate rest)', () => {
+    const s1 = shift({
+      _id: 'bs10a',
+      shiftType: 'personal_care',
+      start: brisbaneLocal('2026-06-05', 22, 0).toISOString(),
+      end: brisbaneLocal('2026-06-06', 6, 0).toISOString(),
+      timezoneOffset: '+10:00',
+    });
+    const s2 = shift({
+      _id: 'bs10b',
+      shiftType: 'personal_care',
+      start: brisbaneLocal('2026-06-06', 16, 0).toISOString(),
+      end: brisbaneLocal('2026-06-06', 20, 0).toISOString(),
+      timezoneOffset: '+10:00',
+    });
+    detectBrokenShifts([s1, s2]);
+    assert.strictEqual(s2.isBrokenShift, false);
+  });
+
+  test('just under 10h gap after overnight PC is broken', () => {
+    const s1 = shift({
+      _id: 'bs09a',
+      shiftType: 'personal_care',
+      start: brisbaneLocal('2026-06-05', 22, 0).toISOString(),
+      end: brisbaneLocal('2026-06-06', 6, 0).toISOString(),
+      timezoneOffset: '+10:00',
+    });
+    const s2 = shift({
+      _id: 'bs09b',
+      shiftType: 'personal_care',
+      start: brisbaneLocal('2026-06-06', 15, 59).toISOString(),
+      end: brisbaneLocal('2026-06-06', 20, 0).toISOString(),
+      timezoneOffset: '+10:00',
+    });
+    detectBrokenShifts([s1, s2]);
+    assert.strictEqual(s2.isBrokenShift, true);
+  });
+
+  test('exactly 8h gap after sleepover is not broken', () => {
+    const s1 = shift({
+      _id: 'bs08a',
+      shiftType: 'sleepover',
+      start: brisbaneLocal('2026-06-05', 22, 0).toISOString(),
+      end: brisbaneLocal('2026-06-06', 6, 0).toISOString(),
+      timezoneOffset: '+10:00',
+    });
+    const s2 = shift({
+      _id: 'bs08b',
+      shiftType: 'personal_care',
+      start: brisbaneLocal('2026-06-06', 14, 0).toISOString(),
+      end: brisbaneLocal('2026-06-06', 20, 0).toISOString(),
+      timezoneOffset: '+10:00',
+    });
+    detectBrokenShifts([s1, s2]);
+    assert.strictEqual(s2.isBrokenShift, false);
+  });
+});
+
 describe('broken shift (same local day)', () => {
   // Engine adds both full chain ordinary hours and broken-shift OT hours (see processBrokenShiftOvertime + processSingleChain when hasBroken).
   test('short span (<12h) over 10h active: extra goes to WD OT tier1 via broken rule', () => {
@@ -964,13 +1023,11 @@ describe('KC Studio evidence fixtures (May 2026 FN)', () => {
     assert.strictEqual(bd?.afternoonHours || 0, 0);
   });
 
-  test('Krishna jith: evidence chain marks broken shift after inadequate rest', () => {
+  test('Krishna jith: exactly 10h rest after PC is adequate (not broken)', () => {
     const shifts = loadEvidenceFixture('krishnaBrokenShiftMay25');
     detectBrokenShifts(shifts);
     const broken = shifts.filter((s) => s.isBrokenShift);
-    assert.ok(broken.length >= 1);
-    const { data } = computePayHoursForStaff(shifts, new Set());
-    assert.ok(data.brokenShiftCount >= 1 || data.brokenShift2BreakCount >= 1);
+    assert.strictEqual(broken.length, 0);
   });
 
   test('Sona Sara Paul: post-sleepover PC on May 22 lands in payable bucket', () => {

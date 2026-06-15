@@ -63,7 +63,7 @@ function collectBrokenShiftSpanPrevious(processedShift, processedShifts) {
       break;
     }
     const thresholdMs = brokenShiftGapThresholdMs(prev.shiftType);
-    if (thresholdMs != null && gap <= thresholdMs) {
+    if (thresholdMs != null && gap < thresholdMs) {
       const sameStartDay = isSameLocalDate(next.startUtc, prev.startUtc, offsetStr);
       const spansOntoCurrentDay = isSameLocalDate(prev.endUtc, next.startUtc, offsetStr);
       if (sameStartDay || spansOntoCurrentDay) {

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { usePayHours } from '../api/payHours';
+import { usePayHours, useShiftCostLookup } from '../api/payHours';
 import { useStaffRates, staffRatesArrayToMap, enrichCostMapWithStaffRateAliases } from '../api/staffRates';
 import { buildAwardCostMapFromPayHours, r2 as r2Schads, VEHICLE_RATE, normName } from '../lib/schadsWageCalc';
 import { nameMatchKeys } from '../lib/staffNameNorm';
@@ -16,6 +16,13 @@ import { Input } from '../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { toast } from 'sonner';
 import { downloadClientRevenueVsWagesXlsx } from '../lib/clientRevenueExport';
+import {
+  allocateHourProportional,
+  allocateStaffMemberRows,
+  applyRowAllocationsToClients,
+  buildLineStaffPaidMap,
+  buildShiftCostIndex,
+} from '../lib/staffCostAllocation';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const r2 = (n) => Math.round(n * 100) / 100;
@@ -143,7 +150,13 @@ function enrichCostMapWithNameKeys(map) {
 }
 
 // ─── Staff profitability analysis ─────────────────────────────────────────────
-function analyzeStaffProfitability(rows, payrollMap) {
+function analyzeStaffProfitability(rows, payrollMap, options = {}) {
+  const { shiftCostIndex } = options;
+  const useShiftAllocation = Boolean(
+    shiftCostIndex && (shiftCostIndex.byShiftcareId?.size || shiftCostIndex.bySharedKey?.size)
+  );
+  const rowAllocByStaff = new Map();
+  let unmatchedBillingLines = 0;
   // Aggregate revenue, hours, and raw billing rows per staff
   const byStaff = {};
   for (const r of rows) {
@@ -205,37 +218,32 @@ function analyzeStaffProfitability(rows, payrollMap) {
       matchedWages   += wages;
       matchedSuper   += superAmt || 0;
 
-      // Allocate this staff member's payroll cost to clients by hours worked for each client.
-      const totalStaffHours = d.hours || 0;
-      if (totalStaffHours > 0) {
-        for (const br of d.billingRows) {
-          if (!br.client || !byClient[br.client]) continue;
-          const share = (br.duration || 0) / totalStaffHours;
-          const wageShare = r2(wages * share);
-          const superShare = r2((superAmt || 0) * share);
-          const employerShare = r2((wages + (superAmt || 0)) * share);
-
-          byClient[br.client].matchedRevenue = r2(byClient[br.client].matchedRevenue + br.totalCost);
-          byClient[br.client].allocWages = r2(byClient[br.client].allocWages + wageShare);
-          byClient[br.client].allocSuper = r2(byClient[br.client].allocSuper + superShare);
-          byClient[br.client].allocEmployerCost = r2(byClient[br.client].allocEmployerCost + employerShare);
-          const staffKey = key;
-          if (!byClient[br.client].staffAlloc[staffKey]) {
-            byClient[br.client].staffAlloc[staffKey] = {
-              staffName: d.name,
-              hours: 0,
-              revenue: 0,
-              wages: 0,
-              superAmt: 0,
-              employerCost: 0,
-            };
-          }
-          byClient[br.client].staffAlloc[staffKey].hours = r2(byClient[br.client].staffAlloc[staffKey].hours + (br.duration || 0));
-          byClient[br.client].staffAlloc[staffKey].revenue = r2(byClient[br.client].staffAlloc[staffKey].revenue + br.totalCost);
-          byClient[br.client].staffAlloc[staffKey].wages = r2(byClient[br.client].staffAlloc[staffKey].wages + wageShare);
-          byClient[br.client].staffAlloc[staffKey].superAmt = r2(byClient[br.client].staffAlloc[staffKey].superAmt + superShare);
-          byClient[br.client].staffAlloc[staffKey].employerCost = r2(byClient[br.client].staffAlloc[staffKey].employerCost + employerShare);
-        }
+      if (useShiftAllocation) {
+        const { rowAlloc, unmatchedCount } = allocateStaffMemberRows({
+          billingRows: d.billingRows,
+          staffNorm: key,
+          wages,
+          superAmt,
+          shiftCostIndex,
+        });
+        rowAllocByStaff.set(key, rowAlloc);
+        unmatchedBillingLines += unmatchedCount;
+        applyRowAllocationsToClients({
+          rowAlloc,
+          byClient,
+          staffKey: key,
+          staffName: d.name,
+          billingRows: d.billingRows,
+        });
+      } else {
+        allocateHourProportional({
+          billingRows: d.billingRows,
+          wages,
+          superAmt,
+          byClient,
+          staffKey: key,
+          staffName: d.name,
+        });
       }
     }
 
@@ -300,6 +308,10 @@ function analyzeStaffProfitability(rows, payrollMap) {
     clientRows,
     paidNotBilled,
     matchedCount,
+    unmatchedBillingLines,
+    lineStaffPaidMap: useShiftAllocation
+      ? buildLineStaffPaidMap(staffRows, rowAllocByStaff)
+      : null,
     totalRevenue,
     // Matched comparisons
     matchedRevenue:      r2(matchedRevenue),
@@ -905,6 +917,7 @@ function StaffProfitabilitySection({
     return next;
   });
   const lineStaffPaidMap = useMemo(() => {
+    if (sa?.lineStaffPaidMap) return sa.lineStaffPaidMap;
     if (!sa?.staffRows?.length) return null;
     const map = new WeakMap();
     for (const staffRow of sa.staffRows) {
@@ -1014,11 +1027,17 @@ function StaffProfitabilitySection({
         {wageSource === 'award' && (
           <div className="space-y-3 rounded-lg border border-gray-200 p-4 bg-gray-50/50">
             <p className="text-xs text-gray-600">
-              Uses pay hours from the app (same SCHADS logic as the award calculator). Gross pay × super % = employer cost, allocated across clients by billing hours.
+              Uses pay hours from the app (same SCHADS logic as the award calculator). Gross pay × super % = employer cost, allocated to clients by shift SCHADS bands (not average hourly rate).
               {payHoursPeriodText ? (
                 <span className="block mt-1 font-medium text-gray-800">Pay period in app: {payHoursPeriodText}</span>
               ) : null}
             </p>
+            {sa?.unmatchedBillingLines > 0 && (
+              <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                {sa.unmatchedBillingLines} billing line{sa.unmatchedBillingLines === 1 ? '' : 's'} could not be matched to pay-hours shifts — those lines use hour-proportional fallback.
+              </div>
+            )}
             {payHoursCount === 0 && (
               <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -1461,6 +1480,9 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
       ? `${new Date(payHoursData.periodStart).toLocaleDateString('en-AU')} — ${new Date(payHoursData.periodEnd).toLocaleDateString('en-AU')}`
       : '';
 
+  const shiftCostLookupEnabled = wageSource === 'award' && payHoursRows.length > 0;
+  const { data: shiftCostData } = useShiftCostLookup(locationId || undefined, shiftCostLookupEnabled);
+
   const { data: staffRatesApiData } = useStaffRates(locationId || undefined);
   const dbStaffRatesByNorm = useMemo(
     () => staffRatesArrayToMap(staffRatesApiData?.staffRates),
@@ -1474,6 +1496,15 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
     if (localAwardRatesMap && localAwardRatesMap.size > 0) for (const [k, v] of localAwardRatesMap) m.set(k, v);
     return m.size > 0 ? m : null;
   }, [dbStaffRatesByNorm, hubStaffRatesMap, localAwardRatesMap]);
+
+  const shiftCostIndex = useMemo(() => {
+    if (!shiftCostLookupEnabled || !shiftCostData?.shifts?.length) return null;
+    if (!hubXlsxRatesMerge?.size && !awardDefaultRate) return null;
+    return buildShiftCostIndex(shiftCostData.shifts, hubXlsxRatesMerge || new Map(), superPct, {
+      baseRate: awardDefaultRate,
+      empType: awardEmpType,
+    });
+  }, [shiftCostLookupEnabled, shiftCostData?.shifts, hubXlsxRatesMerge, superPct, awardDefaultRate, awardEmpType]);
 
   const usingHubRates = Boolean(
     (hubStaffRatesMap?.size > 0 || dbStaffRatesByNorm.size > 0) &&
@@ -1602,8 +1633,10 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
 
   const analysis    = useMemo(() => rows ? analyzeRows(rows) : null, [rows]);
   const staffAnalysis = useMemo(
-    () => (rows && effectiveCostMap?.size) ? analyzeStaffProfitability(rows, effectiveCostMap) : null,
-    [rows, effectiveCostMap],
+    () => (rows && effectiveCostMap?.size)
+      ? analyzeStaffProfitability(rows, effectiveCostMap, { shiftCostIndex })
+      : null,
+    [rows, effectiveCostMap, shiftCostIndex],
   );
 
   if (!rows) {

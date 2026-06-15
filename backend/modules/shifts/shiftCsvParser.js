@@ -510,7 +510,8 @@ function calculateIsBrokenShift(currentShift, previousShift) {
   if (gap <= 0) return false;
 
   const thresholdMs = brokenShiftGapThresholdMs(previousShift.shiftType);
-  if (thresholdMs == null || gap > thresholdMs) return false;
+  // BR-BS: broken only when 0 < gap < threshold (exactly threshold hours is adequate rest)
+  if (thresholdMs == null || gap >= thresholdMs) return false;
 
   const sameStartDay = isSameLocalDate(
     currentShift.startDatetime,
