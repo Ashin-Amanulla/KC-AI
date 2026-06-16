@@ -1010,8 +1010,44 @@ describe('hours normalization from timestamps', () => {
       30
     );
     const { shiftBreakdowns } = computePayHoursForStaff([pcBefore, sleepover, pcAfter], new Set());
-    assert.strictEqual(shiftBreakdowns.get('me04a')?.minimumEngagementException, true);
-    assert.strictEqual(shiftBreakdowns.get('me04c')?.minimumEngagementException, true);
+    assert.strictEqual(shiftBreakdowns.get('me04a')?.minimumEngagementException, false);
+    assert.strictEqual(shiftBreakdowns.get('me04c')?.minimumEngagementException, false);
+    assert.strictEqual(shiftBreakdowns.get('me04a')?.minimum4hEngagementReview, true);
+    assert.strictEqual(shiftBreakdowns.get('me04c')?.minimum4hEngagementReview, true);
+  });
+
+  test('minimum engagement: Ross Daly sleepover chain — no min 2h on post, min 4h on pre under 4h', () => {
+    const pre = shiftBrisbane(
+      { _id: 'ross-pre', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-03',
+      18,
+      30,
+      22,
+      0
+    );
+    const sleepoverStart = brisbaneLocal('2026-06-03', 22, 0);
+    const sleepoverEnd = brisbaneLocal('2026-06-04', 6, 0);
+    const sleepover = shift({
+      _id: 'ross-so',
+      shiftType: 'sleepover',
+      timezoneOffset: '+10:00',
+      start: sleepoverStart.toISOString(),
+      end: sleepoverEnd.toISOString(),
+      hours: 8,
+    });
+    const post = shiftBrisbane(
+      { _id: 'ross-post', shiftType: 'personal_care', timezoneOffset: '+10:00' },
+      '2026-06-04',
+      6,
+      0,
+      6,
+      30
+    );
+    const { shiftBreakdowns } = computePayHoursForStaff([pre, sleepover, post], new Set());
+    assert.strictEqual(shiftBreakdowns.get('ross-pre')?.minimumEngagementException, false);
+    assert.strictEqual(shiftBreakdowns.get('ross-post')?.minimumEngagementException, false);
+    assert.strictEqual(shiftBreakdowns.get('ross-pre')?.minimum4hEngagementReview, true);
+    assert.strictEqual(shiftBreakdowns.get('ross-post')?.minimum4hEngagementReview, false);
   });
 
   test('minimum engagement: post-sleepover under 2h is allowed when pre-sleepover is >=4h', () => {
@@ -1043,6 +1079,8 @@ describe('hours normalization from timestamps', () => {
     );
     const { shiftBreakdowns } = computePayHoursForStaff([pre, sleepover, post], new Set());
     assert.strictEqual(shiftBreakdowns.get('me05c')?.minimumEngagementException, false);
+    assert.strictEqual(shiftBreakdowns.get('me05a')?.minimum4hEngagementReview, false);
+    assert.strictEqual(shiftBreakdowns.get('me05c')?.minimum4hEngagementReview, false);
   });
 
   test('minimum engagement: unrelated PC same day (no link) keeps short shift flagged', () => {

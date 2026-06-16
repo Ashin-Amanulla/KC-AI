@@ -49,6 +49,7 @@ const shiftPayHoursSchema = new mongoose.Schema(
     isBrokenShift: { type: Boolean, default: false },
     isSleepover: { type: Boolean, default: false },
     minimumEngagementException: { type: Boolean, default: false },
+    minimum4hEngagementReview: { type: Boolean, default: false },
     mileage: { type: Number, default: null },
     manualFields: {
       type: Map,

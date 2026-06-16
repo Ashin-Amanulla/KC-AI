@@ -965,29 +965,56 @@ function resolveMinimumEngagementChains(shifts, ctx) {
   }
   flushGroup(group);
 
-  // SCHADS 25.7(f): if a sleepover has immediately-adjacent pre/post personal care
-  // periods and at least one side is rostered/paid at >=4h, the other side does not
-  // require a 2h minimum-engagement review flag.
-  for (let i = 1; i < ordered.length - 1; i++) {
+  // Sleepover-adjacent personal care: per-segment 2h minimum does not apply.
+  // Flanked PC–sleepover–PC chains use a 4h minimum across active PC (sleepover excluded).
+  for (let i = 0; i < ordered.length; i++) {
     const mid = ordered[i];
     if (mid.shiftType !== 'sleepover') continue;
-    const pre = ordered[i - 1];
-    const post = ordered[i + 1];
-    if (pre.shiftType !== 'personal_care' || post.shiftType !== 'personal_care') continue;
 
-    const preGap = new Date(mid.startDatetime) - new Date(pre.endDatetime);
-    const postGap = new Date(post.startDatetime) - new Date(mid.endDatetime);
-    const isImmediatePre = Math.abs(preGap) <= GAP_CONTIGUOUS_TOLERANCE_MS;
-    const isImmediatePost = Math.abs(postGap) <= GAP_CONTIGUOUS_TOLERANCE_MS;
-    if (!isImmediatePre || !isImmediatePost) continue;
+    const pre = i > 0 ? ordered[i - 1] : null;
+    const post = i < ordered.length - 1 ? ordered[i + 1] : null;
 
-    const preHours = normalizeShiftHours(pre, new Date(pre.startDatetime), new Date(pre.endDatetime));
-    const postHours = normalizeShiftHours(post, new Date(post.startDatetime), new Date(post.endDatetime));
-    if (preHours >= 4 && postHours > 0 && postHours < 2) {
+    const preGap = pre ? new Date(mid.startDatetime) - new Date(pre.endDatetime) : null;
+    const postGap = post ? new Date(post.startDatetime) - new Date(mid.endDatetime) : null;
+    const isImmediatePre = pre && preGap !== null && Math.abs(preGap) <= GAP_CONTIGUOUS_TOLERANCE_MS;
+    const isImmediatePost = post && postGap !== null && Math.abs(postGap) <= GAP_CONTIGUOUS_TOLERANCE_MS;
+
+    if (pre?.shiftType === 'personal_care' && isImmediatePre) {
+      ctx.shiftMinimumEngagementException.set(String(pre._id), false);
+    }
+    if (post?.shiftType === 'personal_care' && isImmediatePost) {
       ctx.shiftMinimumEngagementException.set(String(post._id), false);
     }
-    if (postHours >= 4 && preHours > 0 && preHours < 2) {
-      ctx.shiftMinimumEngagementException.set(String(pre._id), false);
+
+    const preHours =
+      pre?.shiftType === 'personal_care' && isImmediatePre
+        ? normalizeShiftHours(pre, new Date(pre.startDatetime), new Date(pre.endDatetime))
+        : 0;
+    const postHours =
+      post?.shiftType === 'personal_care' && isImmediatePost
+        ? normalizeShiftHours(post, new Date(post.startDatetime), new Date(post.endDatetime))
+        : 0;
+    const pcSum = r2(preHours + postHours);
+    const isFlanked =
+      pre?.shiftType === 'personal_care' &&
+      post?.shiftType === 'personal_care' &&
+      isImmediatePre &&
+      isImmediatePost;
+
+    if (isFlanked) {
+      if (preHours > 0 && preHours < 4) {
+        ctx.shiftMinimum4hEngagementReview.set(String(pre._id), true);
+      }
+      if (postHours > 0 && postHours < 4 && pcSum < 4) {
+        ctx.shiftMinimum4hEngagementReview.set(String(post._id), true);
+      }
+    } else {
+      if (preHours > 0 && preHours < 4) {
+        ctx.shiftMinimum4hEngagementReview.set(String(pre._id), true);
+      }
+      if (postHours > 0 && postHours < 4) {
+        ctx.shiftMinimum4hEngagementReview.set(String(post._id), true);
+      }
     }
   }
 }
@@ -1300,6 +1327,13 @@ function processContinuousChains(pendingSegments, data, ctx) {
 
 // ─── PER-SHIFT BREAKDOWNS ────────────────────────────────────────────────────
 
+function shiftEngagementFlags(ctx, sid) {
+  return {
+    minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
+    minimum4hEngagementReview: ctx.shiftMinimum4hEngagementReview.get(sid) || false,
+  };
+}
+
 function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shifts) {
   const breakdowns = new Map();
   const shiftLookup = new Map(shifts.map(s => [String(s._id), s]));
@@ -1322,7 +1356,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
         ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: shift?.shiftType === 'sleepover' || false,
-        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
+        ...shiftEngagementFlags(ctx, sid),
         clientName: shift?.clientName || null,
         mileage: shift?.mileage ?? null,
         totalHours: computeShiftDurationHours(shift),
@@ -1355,7 +1389,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
         ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: shift?.shiftType === 'sleepover' || false,
-        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
+        ...shiftEngagementFlags(ctx, sid),
         clientName: shift?.clientName || null,
         mileage: shift?.mileage ?? null,
         totalHours: computeShiftDurationHours(shift),
@@ -1407,7 +1441,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
         ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: false,
-        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
+        ...shiftEngagementFlags(ctx, sid),
         clientName: shift.clientName || null,
         mileage: shift.mileage ?? null,
         totalHours: computeShiftDurationHours(shift),
@@ -1435,7 +1469,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
         ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: true,
-        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
+        ...shiftEngagementFlags(ctx, sid),
         clientName: shift.clientName || null,
         mileage: shift.mileage ?? null,
         totalHours: computeShiftDurationHours(shift),
@@ -1462,7 +1496,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
         ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: shift?.shiftType === 'sleepover' || false,
-        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
+        ...shiftEngagementFlags(ctx, sid),
         clientName: shift?.clientName || null,
         mileage: shift?.mileage ?? null,
         totalHours: computeShiftDurationHours(shift),
@@ -1492,7 +1526,7 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
         ...emptyOtAfter76Fields(),
         isBrokenShift: ctx.shiftIsBroken.get(sid) || false,
         isSleepover: shift?.shiftType === 'sleepover' || false,
-        minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
+        ...shiftEngagementFlags(ctx, sid),
         clientName: shift?.clientName || null,
         mileage: shift?.mileage ?? null,
         totalHours: computeShiftDurationHours(shift),
@@ -1733,6 +1767,7 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     shiftActiveHours: new Map(),
     shiftIsBroken: new Map(),
     shiftMinimumEngagementException: new Map(),
+    shiftMinimum4hEngagementReview: new Map(),
     reclassifiedFullDoubleTimeShiftIds: new Set(),
     shortTurnaroundByShift: {},
     brokenShiftOtByShift: {},

@@ -30,6 +30,11 @@ const r2 = (n) => Math.round(n * 100) / 100;
 const fmt = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const fmtK = (n) => n >= 1000 ? '$' + (n / 1000).toFixed(1) + 'k' : fmt(n);
 const pct = (part, total) => total > 0 ? ((part / total) * 100).toFixed(1) + '%' : '0%';
+const ratioPct = (part, total) => (total > 0 && part != null ? `${r2((part / total) * 100)}%` : '—');
+const lineMarginPct = (revenue, cost) => {
+  if (cost == null || revenue <= 0) return '—';
+  return `${r2(((revenue - cost) / revenue) * 100)}%`;
+};
 // ─── Payroll file parser (ShiftCare Payroll Employee Summary XLSX) ────────────
 function parsePayrollXlsx(arrayBuffer) {
   const wb = XLSX.read(arrayBuffer, { type: 'array' });
@@ -635,7 +640,7 @@ function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
               <span className="font-normal normal-case text-gray-400 ml-2">Shift time and SCHADS bands shown when pay hours match</span>
             </p>
             <div className="rounded-lg border border-gray-200 overflow-x-auto">
-              <table className="w-full text-xs min-w-[1100px]">
+              <table className="w-full text-xs min-w-[1280px]">
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="text-left px-3 py-1.5 font-medium text-gray-600">Date</th>
@@ -649,6 +654,10 @@ function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Km</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Total</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Staff Paid</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line hours ÷ staff total hours">Hrs %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line revenue ÷ staff total revenue">Rev %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line staff cost ÷ staff total employer cost">Wage %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="(Revenue − staff cost) ÷ revenue">Margin %</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">$/hr</th>
                   </tr>
                 </thead>
@@ -676,6 +685,10 @@ function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
                             <td className="px-3 py-1.5 text-right text-gray-400">{r.kms > 0 ? r.kms + 'km' : '—'}</td>
                             <td className="px-3 py-1.5 text-right font-semibold text-gray-800">{fmt(r.totalCost)}</td>
                             <td className="px-3 py-1.5 text-right text-gray-600">{staffPaid !== null ? fmt(staffPaid) : '—'}</td>
+                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(r.duration, s.hours)}</td>
+                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(r.totalCost, s.revenue)}</td>
+                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(staffPaid, s.employerCost)}</td>
+                            <td className="px-3 py-1.5 text-right text-gray-500">{lineMarginPct(r.totalCost, staffPaid)}</td>
                             <td className="px-3 py-1.5 text-right text-gray-500">{fmt(effectiveRate)}</td>
                           </tr>
                         );
@@ -693,6 +706,7 @@ function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
                               ? fmt(r2(byDate[date].reduce((sum, r) => sum + (allocStaffPaid(r) || 0), 0)))
                               : '—'}
                           </td>
+                          <td className="px-3 py-1" colSpan={4} />
                           <td className="px-3 py-1" />
                         </tr>
                       )}
@@ -706,6 +720,10 @@ function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
                     <td className="px-3 py-2" />
                     <td className="px-3 py-2 text-right text-gray-900">{fmt(s.revenue)}</td>
                     <td className="px-3 py-2 text-right text-gray-900">{s.employerCost !== null ? fmt(s.employerCost) : '—'}</td>
+                    <td className="px-3 py-2 text-right text-gray-500">100%</td>
+                    <td className="px-3 py-2 text-right text-gray-500">100%</td>
+                    <td className="px-3 py-2 text-right text-gray-500">{s.employerCost !== null ? '100%' : '—'}</td>
+                    <td className="px-3 py-2 text-right text-gray-500">{s.marginPct != null ? `${s.marginPct}%` : '—'}</td>
                     <td className="px-3 py-2 text-right text-gray-600">{fmt(s.revenuePerHour)}</td>
                   </tr>
                 </tbody>
@@ -840,7 +858,7 @@ function ClientDetailRows({ c, lineStaffPaidMap, lineShiftCalcMap }) {
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Billing Lines ({(c.billingRows || []).length})</p>
             <div className="rounded-lg border border-gray-200 overflow-x-auto">
-              <table className="w-full text-xs min-w-[900px]">
+              <table className="w-full text-xs min-w-[1100px]">
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="text-left px-3 py-1.5 font-medium text-gray-600">Date</th>
@@ -852,6 +870,10 @@ function ClientDetailRows({ c, lineStaffPaidMap, lineShiftCalcMap }) {
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Hrs</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Total</th>
                     <th className="text-right px-3 py-1.5 font-medium text-gray-600">Staff Paid</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line hours ÷ client total hours">Hrs %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line revenue ÷ client total revenue">Rev %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line staff cost ÷ client allocated cost">Wage %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="(Revenue − staff cost) ÷ revenue">Margin %</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -871,6 +893,10 @@ function ClientDetailRows({ c, lineStaffPaidMap, lineShiftCalcMap }) {
                             <td className="px-3 py-1.5 text-right">{r.duration}h</td>
                             <td className="px-3 py-1.5 text-right font-medium">{fmt(r.totalCost)}</td>
                             <td className="px-3 py-1.5 text-right text-gray-600">{staffPaid !== null ? fmt(staffPaid) : '—'}</td>
+                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(r.duration, c.hours)}</td>
+                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(r.totalCost, c.revenue)}</td>
+                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(staffPaid, c.allocEmployerCost)}</td>
+                            <td className="px-3 py-1.5 text-right text-gray-500">{lineMarginPct(r.totalCost, staffPaid)}</td>
                           </tr>
                         );
                       })}

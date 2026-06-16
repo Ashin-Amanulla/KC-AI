@@ -411,6 +411,30 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
 };
 
 /** Per-shift rows from the same pay-hours job that produced the summary (lazy-fetch when expanded). */
+const SLEEPOVER_CHAIN_GAP_MS = 60 * 1000;
+
+function buildSleepoverChainIds(shifts) {
+  const chainIdByShift = new Map();
+  let chainId = 0;
+  for (let i = 0; i < shifts.length; i++) {
+    if (shifts[i].shiftType !== 'sleepover') continue;
+    const pre = i > 0 ? shifts[i - 1] : null;
+    const post = i < shifts.length - 1 ? shifts[i + 1] : null;
+    const preOk =
+      pre &&
+      Math.abs(new Date(shifts[i].shiftStart) - new Date(pre.shiftEnd)) <= SLEEPOVER_CHAIN_GAP_MS;
+    const postOk =
+      post &&
+      Math.abs(new Date(post.shiftStart) - new Date(shifts[i].shiftEnd)) <= SLEEPOVER_CHAIN_GAP_MS;
+    if (!preOk && !postOk) continue;
+    chainId += 1;
+    if (preOk) chainIdByShift.set(String(pre._id), chainId);
+    chainIdByShift.set(String(shifts[i]._id), chainId);
+    if (postOk) chainIdByShift.set(String(post._id), chainId);
+  }
+  return chainIdByShift;
+}
+
 const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onShiftCtx }) => {
   const enabled = Boolean(payHoursId && expanded && !isManualOnly);
   const { data, isLoading, isError, error } = useShiftPayHours(payHoursId, enabled);
@@ -463,6 +487,7 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
   };
 
   const shifts = data?.shifts || [];
+  const sleepoverChainIds = useMemo(() => buildSleepoverChainIds(shifts), [shifts]);
 
   let body;
   if (isManualOnly || !payHoursId) {
@@ -505,7 +530,14 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
           </TableHeader>
           <TableBody>
             {shifts.map((shift) => (
-              <TableRow key={shift._id} className="text-[11px]">
+              <TableRow
+                key={shift._id}
+                className={`text-[11px] ${
+                  sleepoverChainIds.has(String(shift._id))
+                    ? 'border-l-2 border-l-purple-300 bg-purple-50/20'
+                    : ''
+                }`}
+              >
                 <TableCell>{formatDate(shift.shiftDate, shift.timezoneOffset)}</TableCell>
                 <TableCell className="font-mono">{formatTime(shift.shiftStart, shift.timezoneOffset)}</TableCell>
                 <TableCell className="font-mono">{formatTime(shift.shiftEnd, shift.timezoneOffset)}</TableCell>
@@ -545,6 +577,11 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
                     {shift.minimumEngagementException && (
                       <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-amber-100 text-amber-900" title="Personal care shift under 2h — review minimum payment / adjust hours manually">
                         Min 2h review
+                      </span>
+                    )}
+                    {shift.minimum4hEngagementReview && (
+                      <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-yellow-100 text-yellow-900" title="Sleepover-flanked personal care — review 4h minimum active care (sleepover excluded)">
+                        Min 4h review
                       </span>
                     )}
                     {(shift.shortTurnaroundHours || 0) > 0 && (

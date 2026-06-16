@@ -196,6 +196,7 @@ export async function computeAllPayHours(jobId, locationId = null) {
             isBrokenShift: bd.isBrokenShift,
             isSleepover: bd.isSleepover,
             minimumEngagementException: bd.minimumEngagementException,
+            minimum4hEngagementReview: bd.minimum4hEngagementReview || false,
             mileage: bd.mileage ?? null,
             ...preservedShift,
           });
