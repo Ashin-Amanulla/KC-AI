@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Search, Trash2 } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { SkeletonTable } from '../../ui/Skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { getErrorMessage } from '../../utils/api';
 import { cn } from '../../lib/utils';
+import { fetchCrmNextId } from '../../api/crm';
 import {
   buildEmptyDraft,
+  compareCellValues,
   draftToBody,
   formatCellDisplay,
   rowToDraft,
@@ -19,8 +22,38 @@ import { formatBooleanDisplay } from './crmFormUtils.jsx';
 
 const ROW_NUM_WIDTH = 40;
 
+function sortStorageKey(title) {
+  return `crm-sort:${title}`;
+}
+
+function loadSortState(title) {
+  try {
+    const raw = sessionStorage.getItem(sortStorageKey(title));
+    if (!raw) return { sortKey: null, sortDir: 'asc' };
+    const parsed = JSON.parse(raw);
+    return {
+      sortKey: parsed.sortKey ?? null,
+      sortDir: parsed.sortDir === 'desc' ? 'desc' : 'asc',
+    };
+  } catch {
+    return { sortKey: null, sortDir: 'asc' };
+  }
+}
+
+function saveSortState(title, sortKey, sortDir) {
+  try {
+    sessionStorage.setItem(sortStorageKey(title), JSON.stringify({ sortKey, sortDir }));
+  } catch {}
+}
+
 function isDraftRow(row) {
   return String(row._id || '').startsWith('draft-');
+}
+
+function isIdReadOnly(col, row, autoIdEntity) {
+  if (!col.isId) return false;
+  if (!isDraftRow(row)) return true;
+  return !!autoIdEntity;
 }
 
 function CellEditor({ col, value, onChange, onCommit, onCancel, inputRef }) {
@@ -95,16 +128,42 @@ function CellEditor({ col, value, onChange, onCommit, onCancel, inputRef }) {
   );
 }
 
-function DisplayCell({ row, col }) {
-  if (col.type === 'boolean') {
-    return <span className="tabular-nums">{formatBooleanDisplay(row[col.key], col.booleanStyle)}</span>;
-  }
+function OverflowTextCell({ row, col, onExpand }) {
+  const ref = useRef(null);
+  const [overflows, setOverflows] = useState(false);
   const text = formatCellDisplay(row, col);
+  const canExpand = text.length > 0;
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    setOverflows(el.scrollWidth > el.clientWidth);
+  }, [text]);
+
   return (
-    <span className="block max-w-[220px] truncate tabular-nums" title={text}>
+    <span
+      ref={ref}
+      className={cn(
+        'block max-w-[220px] truncate tabular-nums',
+        canExpand && (overflows || text.length > 40) && 'cursor-zoom-in'
+      )}
+      title={overflows ? 'Double-click to view full text' : undefined}
+      onDoubleClick={(e) => {
+        if (!canExpand) return;
+        e.stopPropagation();
+        onExpand({ title: col.label, text });
+      }}
+    >
       {text}
     </span>
   );
+}
+
+function DisplayCell({ row, col, onExpand }) {
+  if (col.type === 'boolean') {
+    return <span className="tabular-nums">{formatBooleanDisplay(row[col.key], col.booleanStyle)}</span>;
+  }
+  return <OverflowTextCell row={row} col={col} onExpand={onExpand} />;
 }
 
 export function CrmSpreadsheet({
@@ -113,6 +172,7 @@ export function CrmSpreadsheet({
   rows = [],
   idField,
   idLabel,
+  autoIdEntity,
   isLoading,
   canManage,
   searchValue = '',
@@ -127,9 +187,28 @@ export function CrmSpreadsheet({
   const [editing, setEditing] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [savingCell, setSavingCell] = useState(false);
+  const [addingRow, setAddingRow] = useState(false);
+  const [overflowDialog, setOverflowDialog] = useState(null);
+  const [{ sortKey, sortDir }, setSortState] = useState(() => loadSortState(title));
   const inputRef = useRef(null);
 
-  const allRows = [...rows, ...draftRows];
+  useEffect(() => {
+    saveSortState(title, sortKey, sortDir);
+  }, [title, sortKey, sortDir]);
+
+  const sortedSavedRows = useMemo(() => {
+    if (!sortKey) return rows;
+    const col = columns.find((c) => c.key === sortKey);
+    if (!col) return rows;
+    const copy = [...rows];
+    copy.sort((a, b) => {
+      const cmp = compareCellValues(a, b, col);
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+    return copy;
+  }, [rows, sortKey, sortDir, columns]);
+
+  const allRows = useMemo(() => [...sortedSavedRows, ...draftRows], [sortedSavedRows, draftRows]);
 
   const clearEditing = useCallback(() => {
     setEditing(null);
@@ -143,11 +222,20 @@ export function CrmSpreadsheet({
     }
   }, [editing]);
 
+  const handleSort = (colKey) => {
+    setSortState((prev) => {
+      if (prev.sortKey === colKey) {
+        return { sortKey: colKey, sortDir: prev.sortDir === 'asc' ? 'desc' : 'asc' };
+      }
+      return { sortKey: colKey, sortDir: 'asc' };
+    });
+  };
+
   const startEdit = (rowIndex, colKey, row) => {
     if (!canManage || savingCell) return;
     const col = columns.find((c) => c.key === colKey);
     if (!col) return;
-    if (col.isId && !isDraftRow(row)) return;
+    if (isIdReadOnly(col, row, autoIdEntity)) return;
 
     const draft = isDraftRow(row) ? row : rowToDraft(row, columns);
     setEditing({ rowIndex, colKey, rowId: row._id, originalDraft: draft });
@@ -161,8 +249,7 @@ export function CrmSpreadsheet({
     let nextCol = colIndex + direction;
     while (nextCol >= 0 && nextCol < columns.length) {
       const col = columns[nextCol];
-      const canEditCol = !(col.isId && !isDraftRow(row));
-      if (canEditCol) {
+      if (!isIdReadOnly(col, row, autoIdEntity)) {
         startEdit(editing.rowIndex, col.key, row);
         return;
       }
@@ -206,18 +293,18 @@ export function CrmSpreadsheet({
       const body = draftToBody(mergedDraft, columns);
 
       if (isDraftRow(row)) {
-      const idErr = validateDraft(mergedDraft, idField, idLabel);
-      setDraftRows((prev) =>
-        prev.map((d) => (d._id === row._id ? { ...d, ...mergedDraft } : d))
-      );
-      if (idErr) {
-        clearEditing();
-        return;
-      }
-      await onCreate(body);
-      setDraftRows((prev) => prev.filter((d) => d._id !== row._id));
-      toast.success('Created');
-    } else {
+        const idErr = validateDraft(mergedDraft, idField, idLabel);
+        setDraftRows((prev) =>
+          prev.map((d) => (d._id === row._id ? { ...d, ...mergedDraft } : d))
+        );
+        if (idErr) {
+          clearEditing();
+          return;
+        }
+        await onCreate(body);
+        setDraftRows((prev) => prev.filter((d) => d._id !== row._id));
+        toast.success('Created');
+      } else {
         await onUpdate({ id: row._id, ...body });
         toast.success('Updated');
       }
@@ -237,9 +324,20 @@ export function CrmSpreadsheet({
     }
   };
 
-  const addRow = () => {
-    const draft = buildEmptyDraft(columns);
-    setDraftRows((prev) => [...prev, { _id: `draft-${Date.now()}`, ...draft }]);
+  const addRow = async () => {
+    setAddingRow(true);
+    try {
+      const draft = buildEmptyDraft(columns);
+      if (autoIdEntity) {
+        const { id } = await fetchCrmNextId(autoIdEntity);
+        draft[idField] = id;
+      }
+      setDraftRows((prev) => [...prev, { _id: `draft-${Date.now()}`, ...draft }]);
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setAddingRow(false);
+    }
   };
 
   const removeRow = async (row) => {
@@ -268,8 +366,28 @@ export function CrmSpreadsheet({
 
   const stickyIdLeft = ROW_NUM_WIDTH;
 
+  const SortIcon = ({ colKey }) => {
+    if (sortKey !== colKey) {
+      return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-40" />;
+    }
+    return sortDir === 'asc' ? (
+      <ArrowUp className="ml-1 inline h-3 w-3" />
+    ) : (
+      <ArrowDown className="ml-1 inline h-3 w-3" />
+    );
+  };
+
   return (
     <Card>
+      <Dialog open={!!overflowDialog} onOpenChange={(open) => !open && setOverflowDialog(null)}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{overflowDialog?.title || 'Cell content'}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm whitespace-pre-wrap break-words">{overflowDialog?.text}</p>
+        </DialogContent>
+      </Dialog>
+
       <CardHeader className="space-y-3 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle className="text-base">{title}</CardTitle>
@@ -287,9 +405,15 @@ export function CrmSpreadsheet({
               {allRows.length} record{allRows.length === 1 ? '' : 's'}
             </span>
             {canManage && (
-              <Button type="button" size="sm" variant="outline" onClick={addRow} disabled={isSaving || savingCell}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={addRow}
+                disabled={isSaving || savingCell || addingRow}
+              >
                 <Plus className="mr-1 h-3.5 w-3.5" />
-                Add row
+                {addingRow ? 'Adding…' : 'Add row'}
               </Button>
             )}
           </div>
@@ -315,15 +439,21 @@ export function CrmSpreadsheet({
                     <TableHead
                       key={col.key}
                       className={cn(
-                        'h-8 border border-border/60 px-2 py-1 font-semibold whitespace-nowrap',
-                        col.isId && 'sticky z-30 bg-muted/90 border-r-2 border-r-border'
+                        'h-8 border border-border/60 px-2 py-1 font-semibold whitespace-nowrap select-none',
+                        col.isId && 'sticky z-30 bg-muted/90 border-r-2 border-r-border',
+                        'cursor-pointer hover:bg-muted'
                       )}
                       style={{
                         minWidth: col.minWidth || 100,
                         ...(col.isId ? { left: stickyIdLeft } : {}),
                       }}
+                      onClick={() => handleSort(col.key)}
+                      title={`Sort by ${col.label}`}
                     >
-                      {col.label}
+                      <span className="inline-flex items-center">
+                        {col.label}
+                        <SortIcon colKey={col.key} />
+                      </span>
                     </TableHead>
                   ))}
                   {canManage && (
@@ -363,7 +493,7 @@ export function CrmSpreadsheet({
                         {columns.map((col) => {
                           const isEditing =
                             editing?.rowIndex === rowIndex && editing?.colKey === col.key;
-                          const readOnly = !canManage || (col.isId && !isDraft);
+                          const readOnly = !canManage || isIdReadOnly(col, row, autoIdEntity);
                           return (
                             <TableCell
                               key={col.key}
@@ -390,7 +520,7 @@ export function CrmSpreadsheet({
                                   inputRef={inputRef}
                                 />
                               ) : (
-                                <DisplayCell row={displayRow} col={col} />
+                                <DisplayCell row={displayRow} col={col} onExpand={setOverflowDialog} />
                               )}
                             </TableCell>
                           );

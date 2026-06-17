@@ -22,6 +22,7 @@ import {
   deleteStaffingRequirement,
   importCrmWorkbook,
   exportCrmWorkbook,
+  getNextId,
 } from './crm.controller.js';
 
 const router = express.Router();
@@ -30,6 +31,8 @@ const authView = [authenticateJWT, authorizePermission(PERMISSIONS.CRM_VIEW)];
 const authManage = [authenticateJWT, authorizePermission(PERMISSIONS.CRM_MANAGE)];
 
 router.get('/crm/dashboard', ...authView, getDashboard);
+
+router.get('/crm/next-id/:entity', ...authView, getNextId);
 
 router.get('/crm/support-coordinators', ...authView, listSupportCoordinators);
 router.post('/crm/support-coordinators', ...authManage, createSupportCoordinator);

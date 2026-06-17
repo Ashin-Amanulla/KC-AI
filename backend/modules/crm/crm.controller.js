@@ -10,6 +10,16 @@ function handleMongoError(e, next) {
   return next(e);
 }
 
+export async function getNextId(req, res, next) {
+  try {
+    const id = await crmService.previewNextId(req.params.entity);
+    res.json({ id });
+  } catch (e) {
+    if (e.status === 400) return res.status(400).json({ error: e.message });
+    next(e);
+  }
+}
+
 export async function getDashboard(req, res, next) {
   try {
     const summary = await crmService.getDashboardSummary();

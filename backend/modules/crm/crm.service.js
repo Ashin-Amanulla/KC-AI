@@ -19,6 +19,11 @@ import {
   marketingActivityToExportRow,
   staffingRequirementToExportRow,
 } from './crmExcelImport.js';
+import {
+  allocateNextId,
+  CRM_ID_CONFIG,
+  isBlankId,
+} from './crmIdAllocator.js';
 
 const MS_PER_DAY = 86400000;
 
@@ -35,6 +40,50 @@ function buildSearchFilter(search, fields) {
   return { $or: fields.map((f) => ({ [f]: regex })) };
 }
 
+const ENTITY_MODELS = {
+  'support-coordinators': CrmSupportCoordinator,
+  leads: CrmLead,
+  'marketing-activities': CrmMarketingActivity,
+};
+
+async function ensureBusinessId(data, entityKey) {
+  const cfg = CRM_ID_CONFIG[entityKey];
+  if (!cfg) return data;
+  const body = { ...data };
+  if (!isBlankId(body[cfg.field])) return body;
+  body[cfg.field] = await allocateNextId(
+    ENTITY_MODELS[entityKey],
+    cfg.field,
+    cfg.prefix,
+    cfg.padWidth
+  );
+  return body;
+}
+
+async function createWithAutoId(model, entityKey, data) {
+  const body = await ensureBusinessId(data, entityKey);
+  try {
+    return await model.create(body);
+  } catch (e) {
+    if (e?.code === 11000 && CRM_ID_CONFIG[entityKey]) {
+      const retryBody = await ensureBusinessId({ ...data, [CRM_ID_CONFIG[entityKey].field]: '' }, entityKey);
+      return model.create(retryBody);
+    }
+    throw e;
+  }
+}
+
+export async function previewNextId(entityKey) {
+  const cfg = CRM_ID_CONFIG[entityKey];
+  const model = ENTITY_MODELS[entityKey];
+  if (!cfg || !model) {
+    const err = new Error('Unknown entity for ID preview');
+    err.status = 400;
+    throw err;
+  }
+  return allocateNextId(model, cfg.field, cfg.prefix, cfg.padWidth);
+}
+
 // --- Support Coordinators ---
 
 export async function listSupportCoordinators({ search } = {}) {
@@ -49,7 +98,7 @@ export async function listSupportCoordinators({ search } = {}) {
 }
 
 export async function createSupportCoordinator(data) {
-  return CrmSupportCoordinator.create(data);
+  return createWithAutoId(CrmSupportCoordinator, 'support-coordinators', data);
 }
 
 export async function updateSupportCoordinator(id, data) {
@@ -69,7 +118,7 @@ export async function listLeads({ search, status } = {}) {
 }
 
 export async function createLead(data) {
-  return CrmLead.create(data);
+  return createWithAutoId(CrmLead, 'leads', data);
 }
 
 export async function updateLead(id, data) {
@@ -93,7 +142,7 @@ export async function listMarketingActivities({ search } = {}) {
 }
 
 export async function createMarketingActivity(data) {
-  return CrmMarketingActivity.create(data);
+  return createWithAutoId(CrmMarketingActivity, 'marketing-activities', data);
 }
 
 export async function updateMarketingActivity(id, data) {

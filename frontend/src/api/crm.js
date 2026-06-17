@@ -208,3 +208,8 @@ export function useCrmImport() {
 export async function exportCrmWorkbook() {
   await downloadBlobGet('/api/crm/export', {}, 'bdm-master-tracker.xlsx');
 }
+
+export async function fetchCrmNextId(entity) {
+  const res = await api.get(`/api/crm/next-id/${entity}`);
+  return res.data;
+}

@@ -35,6 +35,7 @@ export function CrmSupportCoordinators() {
       rows={data?.[config.rowsKey] ?? []}
       idField={config.idField}
       idLabel={config.idLabel}
+      autoIdEntity={config.autoIdEntity}
       isLoading={isLoading}
       canManage={canManage}
       searchValue={search}

@@ -192,6 +192,37 @@ export function validateDraft(draft, idField, idLabel) {
   return null;
 }
 
+function sortableValue(row, col) {
+  const raw = row[col.key];
+  switch (col.type) {
+    case 'number': {
+      const n = parseNumberInput(raw);
+      return n == null ? null : n;
+    }
+    case 'date':
+    case 'datetime': {
+      if (!raw) return null;
+      const t = new Date(raw).getTime();
+      return Number.isNaN(t) ? null : t;
+    }
+    case 'boolean':
+      return raw ? 1 : 0;
+    default:
+      return formatDisplay(row, col).toLowerCase();
+  }
+}
+
+/** Comparator for client-side column sort (asc). Multiply by -1 for desc. */
+export function compareCellValues(a, b, col) {
+  const av = sortableValue(a, col);
+  const bv = sortableValue(b, col);
+  if (av == null && bv == null) return 0;
+  if (av == null) return 1;
+  if (bv == null) return -1;
+  if (typeof av === 'number' && typeof bv === 'number') return av - bv;
+  return String(av).localeCompare(String(bv), undefined, { sensitivity: 'base' });
+}
+
 export const CRM_ENTITY_CONFIG = {
   supportCoordinators: {
     columns: SUPPORT_COORDINATOR_COLUMNS,
@@ -199,6 +230,7 @@ export const CRM_ENTITY_CONFIG = {
     idLabel: 'SC ID',
     rowsKey: 'supportCoordinators',
     deleteConfirm: 'Delete this support coordinator?',
+    autoIdEntity: 'support-coordinators',
   },
   leads: {
     columns: LEAD_COLUMNS,
@@ -206,6 +238,7 @@ export const CRM_ENTITY_CONFIG = {
     idLabel: 'Lead ID',
     rowsKey: 'leads',
     deleteConfirm: 'Delete this lead?',
+    autoIdEntity: 'leads',
   },
   marketingActivities: {
     columns: MARKETING_ACTIVITY_COLUMNS,
@@ -213,6 +246,7 @@ export const CRM_ENTITY_CONFIG = {
     idLabel: 'Activity ID',
     rowsKey: 'marketingActivities',
     deleteConfirm: 'Delete this marketing activity?',
+    autoIdEntity: 'marketing-activities',
   },
   staffingRequirements: {
     columns: STAFFING_REQUIREMENT_COLUMNS,
