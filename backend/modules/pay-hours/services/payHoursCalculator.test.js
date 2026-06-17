@@ -875,9 +875,50 @@ describe('broken shift (same local day)', () => {
     const s2 = shiftBrisbane({ _id: 'br01b', isBrokenShift: true }, '2026-04-07', 15, 0, 20, 0);
     const { data } = computePayHoursForStaff([s1, s2], new Set());
     assert.strictEqual(data.brokenShiftCount, 1);
+    assert.strictEqual(data.brokenShift2BreakCount, 0);
     assert.strictEqual(data.morningHours, 11);
     assert.strictEqual(data.weekdayOtUpto2, 1);
     assert.strictEqual(data.weekdayOtAfter2, 0);
+  });
+
+  test('PC → sleepover → PC: one unpaid gap = 1-break allowance only (not 2-break)', () => {
+    const s1 = shift({
+      _id: 'bs-so01',
+      shiftType: 'personal_care',
+      timezoneOffset: '+10:00',
+      start: brisbaneLocal('2026-06-04', 14, 0).toISOString(),
+      end: brisbaneLocal('2026-06-04', 22, 0).toISOString(),
+      hours: 8,
+    });
+    const s2 = shift({
+      _id: 'bs-so02',
+      shiftType: 'sleepover',
+      timezoneOffset: '+10:00',
+      start: brisbaneLocal('2026-06-04', 22, 0).toISOString(),
+      end: brisbaneLocal('2026-06-05', 6, 0).toISOString(),
+      hours: 8,
+    });
+    const s3 = shift({
+      _id: 'bs-so03',
+      shiftType: 'personal_care',
+      timezoneOffset: '+10:00',
+      start: brisbaneLocal('2026-06-05', 13, 30).toISOString(),
+      end: brisbaneLocal('2026-06-05', 22, 0).toISOString(),
+      hours: 8.5,
+    });
+    detectBrokenShifts([s1, s2, s3]);
+    const { data } = computePayHoursForStaff([s1, s2, s3], new Set());
+    assert.strictEqual(data.brokenShiftCount, 1);
+    assert.strictEqual(data.brokenShift2BreakCount, 0);
+  });
+
+  test('two inadequate gaps same day: 2-break allowance', () => {
+    const s1 = shiftBrisbane({ _id: 'bs2a', isBrokenShift: false }, '2026-04-07', 9, 0, 12, 0);
+    const s2 = shiftBrisbane({ _id: 'bs2b', isBrokenShift: true }, '2026-04-07', 15, 0, 17, 0);
+    const s3 = shiftBrisbane({ _id: 'bs2c', isBrokenShift: true }, '2026-04-07', 19, 0, 21, 0);
+    const { data } = computePayHoursForStaff([s1, s2, s3], new Set());
+    assert.strictEqual(data.brokenShiftCount, 0);
+    assert.strictEqual(data.brokenShift2BreakCount, 1);
   });
 });
 

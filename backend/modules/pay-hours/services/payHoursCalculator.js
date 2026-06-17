@@ -786,15 +786,25 @@ function addBrokenShiftOtToCategory(data, dayType, hours, isTier1) {
   }
 }
 
+function countBreaksInBrokenShiftSpan(previousShifts, currentShift) {
+  const chain = [...previousShifts, currentShift];
+  let breaks = 0;
+  for (let i = 1; i < chain.length; i++) {
+    const gapMs = chain[i].startUtc - chain[i - 1].endUtc;
+    if (gapMs > 0) breaks += 1;
+  }
+  return breaks;
+}
+
 function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
-  // Check if there's an actual break (gap > 0) in the current link
+  // Allowance tier follows unpaid gaps in the span, not shift count (sleepovers are worked time).
   if (currentShift.isBrokenShift) {
-    if (previousShifts.length >= 2) {
-      // 2nd break in same day — upgrade from 1-break to 2-break (don't double-count)
-      data.brokenShiftCount       = Math.max(0, data.brokenShiftCount - 1);
+    const breakCount = countBreaksInBrokenShiftSpan(previousShifts, currentShift);
+    const allowanceTier = Math.max(breakCount, 1);
+    if (allowanceTier >= 2) {
+      data.brokenShiftCount = Math.max(0, data.brokenShiftCount - 1);
       data.brokenShift2BreakCount += 1;
     } else {
-      // First break in this day
       data.brokenShiftCount += 1;
     }
   }
