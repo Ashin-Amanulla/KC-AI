@@ -28,8 +28,8 @@ import { CrmDashboard } from './pages/crm/CrmDashboard';
 import { CrmSupportCoordinators } from './pages/crm/CrmSupportCoordinators';
 import { CrmLeads } from './pages/crm/CrmLeads';
 import { CrmMarketingActivities } from './pages/crm/CrmMarketingActivities';
-import { CrmStaffingRequirements } from './pages/crm/CrmStaffingRequirements';
 import { CrmImportExport } from './pages/crm/CrmImportExport';
+import { HrRequirementsPage } from './pages/hr-requirements/HrRequirementsPage';
 import { canAccessPath, getDefaultLanding } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
@@ -211,9 +211,17 @@ function App() {
             <Route path="support-coordinators" element={<CrmSupportCoordinators />} />
             <Route path="leads" element={<CrmLeads />} />
             <Route path="marketing" element={<CrmMarketingActivities />} />
-            <Route path="staffing" element={<CrmStaffingRequirements />} />
             <Route path="import-export" element={<CrmImportExport />} />
+            <Route path="staffing" element={<Navigate to="/hr-requirements" replace />} />
           </Route>
+          <Route
+            path="/hr-requirements"
+            element={
+              <ProtectedRoute>
+                <HrRequirementsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/shifts" element={<ProtectedRoute><Navigate to="/workforce#workforce-roster" replace /></ProtectedRoute>} />
           <Route path="/pay-hours" element={<ProtectedRoute><Navigate to="/workforce#workforce-roster" replace /></ProtectedRoute>} />
           <Route path="/cost-analysis" element={<ProtectedRoute><Navigate to="/workforce?step=cost" replace /></ProtectedRoute>} />

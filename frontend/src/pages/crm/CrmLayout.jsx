@@ -6,7 +6,6 @@ const LINKS = [
   { to: '/crm/support-coordinators', label: 'Support Coordinators' },
   { to: '/crm/leads', label: 'Leads' },
   { to: '/crm/marketing', label: 'Marketing' },
-  { to: '/crm/staffing', label: 'Staffing' },
   { to: '/crm/import-export', label: 'Import / Export' },
 ];
 
@@ -16,7 +15,7 @@ export function CrmLayout() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight md:text-3xl">CRM</h2>
         <p className="text-sm text-muted-foreground">
-          Business development tracker — support coordinators, leads, marketing, and staffing.
+          Business development tracker — support coordinators, leads, and marketing.
         </p>
       </div>
       <nav className="flex flex-wrap gap-2 border-b pb-2">

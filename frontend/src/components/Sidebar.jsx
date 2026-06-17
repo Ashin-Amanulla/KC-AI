@@ -18,6 +18,7 @@ import {
   GitCompare,
   Layers,
   Briefcase,
+  ClipboardList,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { getNavItemsForPermissions } from '../config/nav';
@@ -41,6 +42,7 @@ const iconMap = {
   GitCompare,
   Layers,
   Briefcase,
+  ClipboardList,
 };
 
 export function Sidebar() {

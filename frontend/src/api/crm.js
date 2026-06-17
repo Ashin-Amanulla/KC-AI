@@ -7,7 +7,6 @@ const Q = {
   supportCoordinators: (params) => ['crm', 'support-coordinators', params],
   leads: (params) => ['crm', 'leads', params],
   marketingActivities: (params) => ['crm', 'marketing-activities', params],
-  staffingRequirements: (params) => ['crm', 'staffing-requirements', params],
 };
 
 export function useCrmDashboard() {
@@ -146,47 +145,6 @@ export function useDeleteCrmMarketingActivity() {
   });
 }
 
-export function useCrmStaffingRequirements(params = {}) {
-  return useQuery({
-    queryKey: Q.staffingRequirements(params),
-    queryFn: async () =>
-      (await api.get('/api/crm/staffing-requirements', { params })).data,
-  });
-}
-
-export function useCreateCrmStaffingRequirement() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (body) =>
-      (await api.post('/api/crm/staffing-requirements', body)).data,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['crm', 'staffing-requirements'] });
-    },
-  });
-}
-
-export function useUpdateCrmStaffingRequirement() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, ...body }) =>
-      (await api.put(`/api/crm/staffing-requirements/${id}`, body)).data,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['crm', 'staffing-requirements'] });
-    },
-  });
-}
-
-export function useDeleteCrmStaffingRequirement() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id) =>
-      (await api.delete(`/api/crm/staffing-requirements/${id}`)).data,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['crm', 'staffing-requirements'] });
-    },
-  });
-}
-
 export function useCrmImport() {
   const qc = useQueryClient();
   return useMutation({
@@ -201,6 +159,7 @@ export function useCrmImport() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm'] });
+      qc.invalidateQueries({ queryKey: ['hr-requirements'] });
     },
   });
 }

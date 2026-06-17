@@ -40,6 +40,12 @@ export const NAV_ITEMS = [
     permission: PERMISSIONS.CRM_VIEW,
   },
   {
+    path: '/hr-requirements',
+    label: 'HR requirements',
+    icon: 'ClipboardList',
+    permission: PERMISSIONS.CRM_VIEW,
+  },
+  {
     path: '/roster-coverage/shift-log',
     label: 'Shift log',
     icon: 'CalendarDays',

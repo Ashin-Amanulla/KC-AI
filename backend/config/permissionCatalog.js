@@ -62,6 +62,7 @@ export const PERMISSION_CATALOG = [
   { key: PERMISSIONS.USERS_MANAGE, label: 'Manage Users', category: 'Admin', path: '/admin/access' },
   { key: PERMISSIONS.ROLES_MANAGE, label: 'Manage Roles', category: 'Admin', path: '/admin/access' },
   { key: PERMISSIONS.CRM_VIEW, label: 'CRM', category: 'CRM', path: '/crm' },
+  { key: PERMISSIONS.CRM_VIEW, label: 'HR requirements', category: 'HR', path: '/hr-requirements' },
   { key: PERMISSIONS.CRM_MANAGE, label: 'Manage CRM', category: 'CRM', path: '/crm' },
 ];
 
@@ -85,6 +86,7 @@ export const PATH_PERMISSION_MAP = [
   { prefix: '/clients', permission: PERMISSIONS.CLIENTS_VIEW },
   { prefix: '/staff', permission: PERMISSIONS.STAFF_VIEW },
   { prefix: '/crm', permission: PERMISSIONS.CRM_VIEW },
+  { prefix: '/hr-requirements', permission: PERMISSIONS.CRM_VIEW },
   { prefix: '/', permission: PERMISSIONS.DASHBOARD_VIEW },
 ];
 

@@ -142,19 +142,6 @@ export const MARKETING_ACTIVITY_COLUMNS = [
   { key: 'notes', label: 'Notes', type: 'text', minWidth: 160 },
 ];
 
-export const STAFFING_REQUIREMENT_COLUMNS = [
-  { key: 'participant', label: 'Participant', type: 'text', minWidth: 120, isId: true },
-  { key: 'staffRequired', label: 'Staff Required', type: 'number', minWidth: 100 },
-  { key: 'supportWorkerAge', label: 'Support Worker Age', type: 'text', minWidth: 120 },
-  { key: 'sex', label: 'Sex', type: 'text', minWidth: 80 },
-  { key: 'drivingLicenseRequired', label: 'Driving License Required', type: 'text', minWidth: 140 },
-  { key: 'vehicleRequired', label: 'Vehicle Required', type: 'text', minWidth: 120 },
-  { key: 'location', label: 'Location', type: 'text', minWidth: 100 },
-  { key: 'dueDate', label: 'Due Date', type: 'date', minWidth: 110 },
-  { key: 'notes', label: 'Notes', type: 'text', minWidth: 160 },
-  { key: 'completed', label: 'Completed', type: 'boolean', booleanStyle: 'yes', minWidth: 90 },
-];
-
 export function buildEmptyDraft(columns) {
   const draft = {};
   for (const col of columns) {
@@ -247,12 +234,5 @@ export const CRM_ENTITY_CONFIG = {
     rowsKey: 'marketingActivities',
     deleteConfirm: 'Delete this marketing activity?',
     autoIdEntity: 'marketing-activities',
-  },
-  staffingRequirements: {
-    columns: STAFFING_REQUIREMENT_COLUMNS,
-    idField: 'participant',
-    idLabel: 'Participant',
-    rowsKey: 'staffingRequirements',
-    deleteConfirm: 'Delete this staffing requirement?',
   },
 };

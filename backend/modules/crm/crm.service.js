@@ -157,7 +157,7 @@ export async function deleteMarketingActivity(id) {
 
 export async function listStaffingRequirements({ search } = {}) {
   const filter = buildSearchFilter(search, ['participant', 'location', 'notes']);
-  return CrmStaffingRequirement.find(filter).sort({ dueDate: 1, participant: 1 }).lean();
+  return CrmStaffingRequirement.find(filter).sort({ startDate: 1, dueDate: 1, participant: 1 }).lean();
 }
 
 export async function createStaffingRequirement(data) {

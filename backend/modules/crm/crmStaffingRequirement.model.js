@@ -9,6 +9,8 @@ const crmStaffingRequirementSchema = new mongoose.Schema(
     drivingLicenseRequired: { type: String, trim: true, default: '' },
     vehicleRequired: { type: String, trim: true, default: '' },
     location: { type: String, trim: true, default: '' },
+    startDate: { type: Date, default: null },
+    endDate: { type: Date, default: null },
     dueDate: { type: Date, default: null },
     notes: { type: String, trim: true, default: '' },
     completed: { type: Boolean, default: false },

@@ -79,6 +79,8 @@ test('parseStaffingRequirementRow maps Excel columns', () => {
     'Driving License Required': 'Yes',
     'Vehicle Required': 'Yes',
     Location: 'Caboolture',
+    'Start Date': '2026-03-01',
+    'End Date': '2026-03-31',
     'Due Date': '2026-03-14',
     Notes: 'Coverage needed',
     Completed: 'No',
@@ -87,6 +89,8 @@ test('parseStaffingRequirementRow maps Excel columns', () => {
   assert.strictEqual(parsed.participant, 'Brandon');
   assert.strictEqual(parsed.staffRequired, 1);
   assert.strictEqual(parsed.completed, false);
+  assert.ok(parsed.startDate instanceof Date);
+  assert.ok(parsed.endDate instanceof Date);
 });
 
 test('parseWorkbookBuffer reads sample BDM tracker', () => {

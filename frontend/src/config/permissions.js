@@ -62,6 +62,7 @@ export const canAccessPath = (permissions, path) => {
   if (path === '/pay-hours-tests') return hasPermission(permissions, PERMISSIONS.PAY_HOURS_TESTS_VIEW);
   if (path === '/shift-analysis') return hasPermission(permissions, PERMISSIONS.SHIFT_ANALYSIS_VIEW);
   if (path.startsWith('/crm')) return hasPermission(permissions, PERMISSIONS.CRM_VIEW);
+  if (path.startsWith('/hr-requirements')) return hasPermission(permissions, PERMISSIONS.CRM_VIEW);
 
   return false;
 };
