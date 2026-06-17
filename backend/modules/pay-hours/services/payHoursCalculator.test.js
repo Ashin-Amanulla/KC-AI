@@ -818,6 +818,56 @@ describe('detectBrokenShifts gap boundaries', () => {
   });
 });
 
+describe('continuous overnight PC chains (split ShiftCare rows)', () => {
+  test('20:00–22:00 + 22:00–06:00 Wed: evening block upgrades to night (matches single 10h shift)', () => {
+    const s1 = shift({
+      _id: 'co01a',
+      shiftType: 'personal_care',
+      timezoneOffset: '+10:00',
+      start: brisbaneLocal('2026-06-10', 20, 0).toISOString(),
+      end: brisbaneLocal('2026-06-10', 22, 0).toISOString(),
+      hours: 2,
+    });
+    const s2 = shift({
+      _id: 'co01b',
+      shiftType: 'personal_care',
+      timezoneOffset: '+10:00',
+      start: brisbaneLocal('2026-06-10', 22, 0).toISOString(),
+      end: brisbaneLocal('2026-06-11', 6, 0).toISOString(),
+      hours: 8,
+    });
+    const { data, shiftBreakdowns } = computePayHoursForStaff([s1, s2], new Set());
+    assert.strictEqual(data.afternoonHours, 0);
+    assert.strictEqual(data.nightHours, 10);
+    assert.strictEqual(shiftBreakdowns.get('co01a')?.afternoonHours || 0, 0);
+    assert.strictEqual(shiftBreakdowns.get('co01a')?.nightHours, 2);
+    assert.strictEqual(shiftBreakdowns.get('co01b')?.nightHours, 8);
+  });
+
+  test('20:00–22:00 + 22:00–06:00 Fri→Sat: evening upgrades to night on weekday portion', () => {
+    const s1 = shift({
+      _id: 'co02a',
+      shiftType: 'personal_care',
+      timezoneOffset: '+10:00',
+      start: brisbaneLocal('2026-06-05', 20, 0).toISOString(),
+      end: brisbaneLocal('2026-06-05', 22, 0).toISOString(),
+      hours: 2,
+    });
+    const s2 = shift({
+      _id: 'co02b',
+      shiftType: 'personal_care',
+      timezoneOffset: '+10:00',
+      start: brisbaneLocal('2026-06-05', 22, 0).toISOString(),
+      end: brisbaneLocal('2026-06-06', 6, 0).toISOString(),
+      hours: 8,
+    });
+    const { data } = computePayHoursForStaff([s1, s2], new Set());
+    assert.strictEqual(data.afternoonHours, 0);
+    assert.strictEqual(data.nightHours, 4);
+    assert.strictEqual(data.saturdayHours, 6);
+  });
+});
+
 describe('broken shift (same local day)', () => {
   // Engine adds both full chain ordinary hours and broken-shift OT hours (see processBrokenShiftOvertime + processSingleChain when hasBroken).
   test('short span (<12h) over 10h active: extra goes to WD OT tier1 via broken rule', () => {

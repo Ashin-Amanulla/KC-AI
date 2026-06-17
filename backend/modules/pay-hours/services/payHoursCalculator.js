@@ -1221,11 +1221,53 @@ function buildOrderedChainEntries(chain, ctx) {
   return { entries };
 }
 
-function processSingleChain(chain, data, ctx) {
-  const { entries } = buildOrderedChainEntries(chain, ctx);
+/**
+ * Back-to-back PC shifts (gap=0) exported as separate ShiftCare rows should load like
+ * one combined shift. When the chain finishes after midnight (or past 8pm same day),
+ * retroactively apply that penalty band to earlier weekday segments in the chain.
+ * Mirrors handleBrokenShift loading for continuous (non-broken) spans.
+ */
+function applyContinuousOvernightChainNightLoading(chain, ctx) {
+  const shiftIds = new Set(chain.map((ps) => ps.shiftId));
+  if (shiftIds.size < 2) return;
 
-  const uniqueShiftIds = [...new Set(chain.map(ps => ps.shiftId))];
-  const hasBroken = uniqueShiftIds.some(sid => ctx.shiftIsBroken.get(sid) === true);
+  const pcSegs = chain.filter(
+    (ps) =>
+      ps.segment?.hours > 0 &&
+      ps.shiftType === 'personal_care' &&
+      !ps.segment.isSleepoverExcess &&
+      !ctx.reclassifiedFullDoubleTimeShiftIds?.has(ps.shiftId)
+  );
+  if (pcSegs.length < 2) return;
+
+  const firstSid = pcSegs[0].shiftId;
+  const lastSid = pcSegs[pcSegs.length - 1].shiftId;
+  const offsetStr = ctx.shiftTimezone?.get(lastSid) || ctx.shiftTimezone?.get(firstSid) || '+10:00';
+
+  const shiftStartDateStr = localDateStr(pcSegs[0].segment.startUtc, offsetStr);
+  const endDateStr = localDateStr(pcSegs[pcSegs.length - 1].segment.endUtc, offsetStr);
+  const endHour = localHour(pcSegs[pcSegs.length - 1].segment.endUtc, offsetStr);
+
+  const targetCategory =
+    endDateStr !== shiftStartDateStr ? 'night' : endHour > AFTERNOON_START ? 'afternoon' : null;
+  if (!targetCategory) return;
+
+  for (const ps of pcSegs) {
+    const seg = ps.segment;
+    if (seg.dayType !== 'weekday') continue;
+    seg.timeCategory = targetCategory;
+  }
+}
+
+function processSingleChain(chain, data, ctx) {
+  const uniqueShiftIds = [...new Set(chain.map((ps) => ps.shiftId))];
+  const hasBroken = uniqueShiftIds.some((sid) => ctx.shiftIsBroken.get(sid) === true);
+
+  if (!hasBroken) {
+    applyContinuousOvernightChainNightLoading(chain, ctx);
+  }
+
+  const { entries } = buildOrderedChainEntries(chain, ctx);
 
   let perShiftOt = {};
   let calcEntries = [...entries];
@@ -1605,6 +1647,7 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
   const activeHours = calculateActiveHours(normalizedHours, shift.shiftType);
   const minimumEngagementException = isMinimumEngagementException(shift.shiftType, normalizedHours);
   ctx.shiftActiveHours.set(sid, activeHours);
+  ctx.shiftTimezone.set(sid, offsetStr);
   ctx.shiftIsBroken.set(sid, shift.isBrokenShift);
   ctx.shiftMinimumEngagementException.set(sid, minimumEngagementException);
 
@@ -1765,6 +1808,7 @@ export function computePayHoursForStaff(shifts, holidaySet) {
     previousShiftType: null,
     previousTurnaroundBreakMs: MIN_BREAK_BETWEEN_SHIFTS_MS,
     shiftActiveHours: new Map(),
+    shiftTimezone: new Map(),
     shiftIsBroken: new Map(),
     shiftMinimumEngagementException: new Map(),
     shiftMinimum4hEngagementReview: new Map(),
