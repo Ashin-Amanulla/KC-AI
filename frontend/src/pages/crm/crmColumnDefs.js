@@ -7,6 +7,7 @@ import {
   parseLinkedIds,
   formatLinkedIds,
 } from './crmFormUtils.jsx';
+import { SPREADSHEET_ROOMS } from '../../lib/spreadsheetCollaboration';
 
 const RELATIONSHIP_STATUSES = ['Cold', 'Warm', 'Active', 'Strategic'];
 const PARTICIPANT_TYPES = ['SIL Only', 'In Home Care', 'MTA', 'ILO'];
@@ -72,7 +73,7 @@ function formatDisplay(row, col) {
   return String(raw);
 }
 
-function parseFieldValue(value, col) {
+export function parseFieldValue(value, col) {
   switch (col.type) {
     case 'date':
     case 'datetime':
@@ -218,6 +219,8 @@ export const CRM_ENTITY_CONFIG = {
     rowsKey: 'supportCoordinators',
     deleteConfirm: 'Delete this support coordinator?',
     autoIdEntity: 'support-coordinators',
+    collaborationRoom: SPREADSHEET_ROOMS.supportCoordinators,
+    queryKeyPrefix: ['crm', 'support-coordinators'],
   },
   leads: {
     columns: LEAD_COLUMNS,
@@ -226,6 +229,8 @@ export const CRM_ENTITY_CONFIG = {
     rowsKey: 'leads',
     deleteConfirm: 'Delete this lead?',
     autoIdEntity: 'leads',
+    collaborationRoom: SPREADSHEET_ROOMS.leads,
+    queryKeyPrefix: ['crm', 'leads'],
   },
   marketingActivities: {
     columns: MARKETING_ACTIVITY_COLUMNS,
@@ -234,5 +239,7 @@ export const CRM_ENTITY_CONFIG = {
     rowsKey: 'marketingActivities',
     deleteConfirm: 'Delete this marketing activity?',
     autoIdEntity: 'marketing-activities',
+    collaborationRoom: SPREADSHEET_ROOMS.marketing,
+    queryKeyPrefix: ['crm', 'marketing-activities'],
   },
 };

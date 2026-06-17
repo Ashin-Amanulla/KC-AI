@@ -1,3 +1,5 @@
+import { SPREADSHEET_ROOMS } from '../../lib/spreadsheetCollaboration';
+
 export const HR_REQUIREMENTS_COLUMNS = [
   { key: 'participant', label: 'Participant', type: 'text', minWidth: 120, isId: true },
   { key: 'staffRequired', label: 'Staff Required', type: 'number', minWidth: 100 },
@@ -19,4 +21,6 @@ export const HR_REQUIREMENTS_CONFIG = {
   idLabel: 'Participant',
   rowsKey: 'staffingRequirements',
   deleteConfirm: 'Delete this HR requirement?',
+  collaborationRoom: SPREADSHEET_ROOMS.hrRequirements,
+  queryKeyPrefix: ['hr-requirements'],
 };

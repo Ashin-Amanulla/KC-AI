@@ -22,7 +22,9 @@ import rosterCoverageRoutes from './modules/roster-coverage/rosterCoverage.route
 import crmRoutes from './modules/crm/crm.route.js';
 import { formatErrorResponse } from './helpers/errors.js';
 import { Holiday } from './modules/holidays/holiday.model.js';
+import { attachSpreadsheetCollaborationWs } from './modules/crm/crmCollaborationWs.js';
 import morgan from 'morgan';
+import http from 'http';
 
 const app = express();
 
@@ -125,7 +127,9 @@ const startServer = async () => {
     }
     startCsvAnalysisWorker();
     startPayHoursWorker();
-    app.listen(config.port, () => {
+    const server = http.createServer(app);
+    attachSpreadsheetCollaborationWs(server);
+    server.listen(config.port, () => {
       console.log(`Server running on port ${config.port}`);
       console.log(`Environment: ${config.nodeEnv}`);
     });

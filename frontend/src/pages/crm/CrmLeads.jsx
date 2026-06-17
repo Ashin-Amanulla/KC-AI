@@ -45,6 +45,9 @@ export function CrmLeads() {
       onDelete={deleteM.mutateAsync}
       deleteConfirm={config.deleteConfirm}
       isSaving={createM.isPending || updateM.isPending || deleteM.isPending}
+      collaborationRoom={config.collaborationRoom}
+      queryKeyPrefix={config.queryKeyPrefix}
+      rowsKey={config.rowsKey}
     />
   );
 }

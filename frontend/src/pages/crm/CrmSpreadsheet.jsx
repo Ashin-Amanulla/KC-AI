@@ -15,10 +15,12 @@ import {
   compareCellValues,
   draftToBody,
   formatCellDisplay,
+  parseFieldValue,
   rowToDraft,
   validateDraft,
 } from './crmColumnDefs';
 import { formatBooleanDisplay } from './crmFormUtils.jsx';
+import { useSpreadsheetCollaboration } from '../../hooks/useSpreadsheetCollaboration';
 
 const ROW_NUM_WIDTH = 40;
 
@@ -159,7 +161,18 @@ function OverflowTextCell({ row, col, onExpand }) {
   );
 }
 
-function DisplayCell({ row, col, onExpand }) {
+function DisplayCell({ row, col, onExpand, livePreview }) {
+  if (livePreview?.value != null && String(livePreview.value) !== '') {
+    return (
+      <span
+        className="block max-w-[220px] truncate tabular-nums italic"
+        style={{ color: livePreview.color }}
+        title={`${livePreview.userName} is editing…`}
+      >
+        {String(livePreview.value)}
+      </span>
+    );
+  }
   if (col.type === 'boolean') {
     return <span className="tabular-nums">{formatBooleanDisplay(row[col.key], col.booleanStyle)}</span>;
   }
@@ -182,6 +195,9 @@ export function CrmSpreadsheet({
   onDelete,
   deleteConfirm,
   isSaving = false,
+  collaborationRoom,
+  queryKeyPrefix,
+  rowsKey,
 }) {
   const [draftRows, setDraftRows] = useState([]);
   const [editing, setEditing] = useState(null);
@@ -191,6 +207,23 @@ export function CrmSpreadsheet({
   const [overflowDialog, setOverflowDialog] = useState(null);
   const [{ sortKey, sortDir }, setSortState] = useState(() => loadSortState(title));
   const inputRef = useRef(null);
+  const editingRef = useRef(null);
+
+  useEffect(() => {
+    editingRef.current = editing
+      ? { rowId: String(editing.rowId), colKey: editing.colKey }
+      : null;
+  }, [editing]);
+
+  const collaboration = useSpreadsheetCollaboration({
+    room: collaborationRoom,
+    queryKeyPrefix: queryKeyPrefix || [],
+    rowsKey: rowsKey || '',
+    editingRef,
+  });
+
+  const { connected, peers, cellFocus, livePreviews, notifyFocus, notifyBlur, notifyPreview } =
+    collaboration;
 
   useEffect(() => {
     saveSortState(title, sortKey, sortDir);
@@ -211,9 +244,21 @@ export function CrmSpreadsheet({
   const allRows = useMemo(() => [...sortedSavedRows, ...draftRows], [sortedSavedRows, draftRows]);
 
   const clearEditing = useCallback(() => {
+    const e = editingRef.current;
+    if (e && collaborationRoom) {
+      notifyBlur(e.rowId, e.colKey);
+    }
     setEditing(null);
     setEditValue('');
-  }, []);
+  }, [collaborationRoom, notifyBlur]);
+
+  useEffect(() => {
+    if (!editing || !collaborationRoom) return undefined;
+    const timer = setTimeout(() => {
+      notifyPreview(editing.rowId, editing.colKey, editValue);
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [editValue, editing, collaborationRoom, notifyPreview]);
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -238,8 +283,12 @@ export function CrmSpreadsheet({
     if (isIdReadOnly(col, row, autoIdEntity)) return;
 
     const draft = isDraftRow(row) ? row : rowToDraft(row, columns);
+    if (editing && (editing.rowId !== row._id || editing.colKey !== colKey)) {
+      notifyBlur(editing.rowId, editing.colKey);
+    }
     setEditing({ rowIndex, colKey, rowId: row._id, originalDraft: draft });
     setEditValue(draft[colKey] ?? (col.type === 'boolean' ? false : ''));
+    if (collaborationRoom) notifyFocus(row._id, colKey);
   };
 
   const moveEdit = (direction) => {
@@ -305,7 +354,8 @@ export function CrmSpreadsheet({
         setDraftRows((prev) => prev.filter((d) => d._id !== row._id));
         toast.success('Created');
       } else {
-        await onUpdate({ id: row._id, ...body });
+        const patch = { [col.key]: parseFieldValue(newValue, col) };
+        await onUpdate({ id: row._id, ...patch });
         toast.success('Updated');
       }
       clearEditing();
@@ -418,6 +468,36 @@ export function CrmSpreadsheet({
             )}
           </div>
         </div>
+        {collaborationRoom && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5',
+                connected ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-muted-foreground'
+              )}
+            >
+              <span
+                className={cn('h-1.5 w-1.5 rounded-full', connected ? 'bg-emerald-500' : 'bg-muted-foreground')}
+              />
+              {connected ? 'Live' : 'Reconnecting…'}
+            </span>
+            {peers.length > 0 && (
+              <>
+                <span className="text-muted-foreground">Viewing:</span>
+                {peers.map((p) => (
+                  <span
+                    key={p.userId}
+                    className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5"
+                    title={p.name}
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+                    {p.name}
+                  </span>
+                ))}
+              </>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-0 pb-4">
         {isLoading ? (
@@ -494,22 +574,37 @@ export function CrmSpreadsheet({
                           const isEditing =
                             editing?.rowIndex === rowIndex && editing?.colKey === col.key;
                           const readOnly = !canManage || isIdReadOnly(col, row, autoIdEntity);
+                          const focusKey = `${row._id}:${col.key}`;
+                          const peerFocus = cellFocus[focusKey];
+                          const livePreview = livePreviews[focusKey];
                           return (
                             <TableCell
                               key={col.key}
                               className={cn(
-                                'border border-border/60 px-2 py-1',
+                                'border border-border/60 px-2 py-1 relative',
                                 !readOnly && 'cursor-cell',
                                 isEditing && 'ring-2 ring-inset ring-primary bg-background',
+                                peerFocus && !isEditing && 'bg-background',
                                 col.isId && 'sticky z-10 bg-background border-r-2 border-r-border font-medium'
                               )}
                               style={{
                                 minWidth: col.minWidth || 100,
                                 ...(col.isId ? { left: stickyIdLeft } : {}),
+                                ...(peerFocus && !isEditing
+                                  ? { boxShadow: `inset 0 0 0 2px ${peerFocus.color}` }
+                                  : {}),
                               }}
                               onClick={() => !readOnly && !isEditing && startEdit(rowIndex, col.key, row)}
                               onKeyDown={isEditing ? handleKeyNav : undefined}
                             >
+                              {peerFocus && !isEditing && (
+                                <span
+                                  className="absolute -top-2 left-1 z-20 max-w-[120px] truncate rounded px-1 text-[9px] font-medium text-white"
+                                  style={{ backgroundColor: peerFocus.color }}
+                                >
+                                  {peerFocus.userName}
+                                </span>
+                              )}
                               {isEditing ? (
                                 <CellEditor
                                   col={col}
@@ -520,7 +615,12 @@ export function CrmSpreadsheet({
                                   inputRef={inputRef}
                                 />
                               ) : (
-                                <DisplayCell row={displayRow} col={col} onExpand={setOverflowDialog} />
+                                <DisplayCell
+                                  row={displayRow}
+                                  col={col}
+                                  onExpand={setOverflowDialog}
+                                  livePreview={livePreview}
+                                />
                               )}
                             </TableCell>
                           );
