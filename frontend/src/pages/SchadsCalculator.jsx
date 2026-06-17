@@ -17,6 +17,8 @@ import {
   usePatchShiftPayHoursManual,
 } from '../api/payHours';
 import { useStaffRates, staffRatesArrayToMap, useUpsertStaffRate } from '../api/staffRates';
+import { enrichCostMapWithStaffRateAliases } from '../lib/staffCostMapEnrich';
+import { normStaffNameForMatch, lookupByNameKeys, registerNameKeys } from '../lib/staffNameNorm';
 import { STAFF_RATES_TABLE_FIELDS } from '../lib/staffRateFieldMeta';
 import { LoadingScreen } from '../ui/LoadingSpinner';
 import {
@@ -1035,7 +1037,7 @@ function pillCls(type, isPH) {
 // Main Component
 // ════════════════════════════════════════════════════════════════════
 export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapChange } = {}) {
-  const normName = useCallback((s) => s?.toString().toLowerCase().replace(/\s+/g, ' ').trim() ?? '', []);
+  const normName = useCallback((s) => normStaffNameForMatch(s), []);
 
   const [view, setView] = useState('summary'); // 'summary' | 'exceptions' | 'rates' | 'manual'
 
@@ -1225,6 +1227,19 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     return m;
   }, [staffRatesFromDbMap, staffRatesMap]);
 
+  /** Payroll map with name variants + staff-rate aliases for cross-spelling matches. */
+  const resolvedPayrollMap = useMemo(() => {
+    if (!payrollData) return null;
+    const m = new Map(payrollData);
+    for (const [, v] of payrollData) {
+      registerNameKeys(m, v.name, v);
+    }
+    if (staffRatesApiData?.staffRates?.length) {
+      enrichCostMapWithStaffRateAliases(m, staffRatesApiData.staffRates);
+    }
+    return m;
+  }, [payrollData, staffRatesApiData]);
+
   // Totals row
   const totals = useMemo(() => {
     const COLS = ['morningHours','afternoonHours','nightHours','weekdayOtUpto2','weekdayOtAfter2',
@@ -1246,7 +1261,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       t.mileageAllow  = r2(t.mileageAllow  + allow.mileageAllow);
       const rate = baseRates[row.staffName] ?? defaultRate;
       const empT = empTypes[row.staffName] ?? defaultEmpType;
-      const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
+      const staffRates = lookupByNameKeys(resolvedStaffRatesMap, row.staffName) ?? null;
       const g = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rate, empT);
       const addAl = r2(Number(mrow.additionalAllowance) || 0);
       t.additionalAllowanceSum = r2((t.additionalAllowanceSum || 0) + addAl);
@@ -1265,11 +1280,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       const mrow = getMergedRow(row);
       const rateVal = baseRates[row.staffName] ?? defaultRate;
       const empT = getEmpType(row.staffName);
-      const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
+      const staffRates = lookupByNameKeys(resolvedStaffRatesMap, row.staffName) ?? null;
       const modeled = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
       const addAl = r2(Number(mrow.additionalAllowance) || 0);
       const modeledWithAdd = modeled != null ? r2(modeled + addAl) : null;
-      const p = payrollData.get(normName(row.staffName));
+      const p = lookupByNameKeys(resolvedPayrollMap, row.staffName);
       if (p) {
         totalPayroll = r2(totalPayroll + p.earnings);
         matched++;
@@ -1283,7 +1298,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       totalDiff: r2(totalDisplayGross - totalPayroll),
       matched,
     };
-  }, [displayRows, payrollData, getMergedRow, baseRates, defaultRate, getEmpType, resolvedStaffRatesMap, normName, alignGrossToPayroll]);
+  }, [displayRows, payrollData, getMergedRow, baseRates, defaultRate, getEmpType, resolvedStaffRatesMap, resolvedPayrollMap, alignGrossToPayroll]);
 
   const payrollVarianceStats = useMemo(() => {
     if (!payrollData) return null;
@@ -1291,13 +1306,13 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     let zeroVariance = 0;
     let withVariance = 0;
     for (const row of displayRows) {
-      const match = payrollData.get(normName(row.staffName));
+      const match = lookupByNameKeys(resolvedPayrollMap, row.staffName);
       if (!match) continue;
       matched++;
       const mrow = getMergedRow(row);
       const rateVal = baseRates[row.staffName] ?? defaultRate;
       const empT = getEmpType(row.staffName);
-      const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
+      const staffRates = lookupByNameKeys(resolvedStaffRatesMap, row.staffName) ?? null;
       const modeled = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
       if (modeled === null) continue;
       const addAl = r2(Number(mrow.additionalAllowance) || 0);
@@ -1307,7 +1322,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       else withVariance++;
     }
     return { matched, zeroVariance, withVariance };
-  }, [payrollData, displayRows, normName, getMergedRow, baseRates, defaultRate, getEmpType, resolvedStaffRatesMap]);
+  }, [payrollData, displayRows, getMergedRow, baseRates, defaultRate, getEmpType, resolvedStaffRatesMap, resolvedPayrollMap]);
 
   // Count staff with any exception (OT, OT>76, broken shifts, or short PC minimum-engagement flags)
   const exceptionCount = useMemo(() =>
@@ -1457,7 +1472,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           allowance:  idx.allowance >= 0 ? g('allowance') : 0,
         };
         if (sleepoverExtraCol >= 0) row.sleepoverExtra = gx(sleepoverExtraCol);
-        map.set(normName(name), row);
+        registerNameKeys(map, name, row);
     }
     setStaffRatesMap((prev) => {
       const next = new Map(prev || []);
@@ -1469,7 +1484,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       return next;
     });
     setRatesFileName(fileLabel);
-  }, [normName, onStaffRatesMapChange]);
+  }, [onStaffRatesMapChange]);
 
   const ingestPayrollWorkbook = useCallback((wb) => {
     const ws = wb.Sheets[wb.SheetNames[0]];
@@ -1490,10 +1505,10 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
       if (!name || isNaN(earn) || earn < 0) continue;
       const nLower = name.toLowerCase();
       if (nLower === 'total' || nLower === 'totals' || nLower === 'subtotal' || nLower === 'summary') continue;
-      map.set(normName(name), { name, earnings: earn });
+      registerNameKeys(map, name, { name, earnings: earn });
     }
     setPayrollData(map);
-  }, [normName]);
+  }, []);
 
   const parseRatesFile = useCallback((file) => {
     const reader = new FileReader();
@@ -1746,13 +1761,13 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
         getGrossPay: (row, mrow) => {
           const rateVal = baseRates[row.staffName] ?? defaultRate;
           const empT = getEmpType(row.staffName);
-          const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
+          const staffRates = lookupByNameKeys(resolvedStaffRatesMap, row.staffName) ?? null;
           const modeledBase = staffRates
             ? calcGrossFromRates(mrow, staffRates)
             : calcGross(mrow, rateVal, empT);
           const addAlRow = r2(Number(mrow.additionalAllowance) || 0);
           const modeledGross = modeledBase !== null ? r2(modeledBase + addAlRow) : null;
-          const payrollForGross = payrollData?.get(normName(row.staffName));
+          const payrollForGross = lookupByNameKeys(resolvedPayrollMap, row.staffName);
           if (alignGrossToPayroll && payrollForGross) return payrollForGross.earnings;
           return modeledGross;
         },
@@ -1767,8 +1782,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     defaultRate,
     getEmpType,
     resolvedStaffRatesMap,
-    normName,
-    payrollData,
+    resolvedPayrollMap,
     alignGrossToPayroll,
   ]);
 
@@ -2104,11 +2118,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         const mrow      = getMergedRow(row);
                         const rateVal   = baseRates[row.staffName] ?? defaultRate;
                         const empT      = getEmpType(row.staffName);
-                        const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
+                        const staffRates = lookupByNameKeys(resolvedStaffRatesMap, row.staffName) ?? null;
                         const modeledBase = staffRates ? calcGrossFromRates(mrow, staffRates) : calcGross(mrow, rateVal, empT);
                         const addAlRow = r2(Number(mrow.additionalAllowance) || 0);
                         const modeledGross = modeledBase !== null ? r2(modeledBase + addAlRow) : null;
-                        const payrollForGross = payrollData?.get(normName(row.staffName));
+                        const payrollForGross = lookupByNameKeys(resolvedPayrollMap, row.staffName);
                         const displayGross =
                           alignGrossToPayroll && payrollForGross
                             ? payrollForGross.earnings
@@ -2183,7 +2197,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               onContextMenu={(e) => {
                                 e.preventDefault();
                                 const key = normName(row.staffName);
-                                const existing = resolvedStaffRatesMap.get(key);
+                                const existing = lookupByNameKeys(resolvedStaffRatesMap, row.staffName);
                                 const rowData = existing ? { ...existing } : schadsFlatRatesRow(row.staffName, rateVal || defaultRate || 0);
                                 if (!rowData.sleepover) rowData.sleepover = 90;
                                 setRatesEdit({ key, row: rowData, aliases: getAliasesForKey(key) });
@@ -2285,7 +2299,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                             </TableCell>
                             {/* Payroll comparison */}
                             {payrollData && (() => {
-                              const match = payrollData.get(normName(row.staffName));
+                              const match = lookupByNameKeys(resolvedPayrollMap, row.staffName);
                               if (!match) return (
                                 <TableCell colSpan={3} className="text-center text-xs text-muted-foreground/40 border-l border-border/50">no match</TableCell>
                               );
@@ -2498,7 +2512,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           const allow   = calcAllowances(m);
           const rate    = baseRates[row.staffName] ?? defaultRate;
           const empT    = getEmpType(row.staffName);
-          const staffRates = resolvedStaffRatesMap.get(normName(row.staffName)) ?? null;
+          const staffRates = lookupByNameKeys(resolvedStaffRatesMap, row.staffName) ?? null;
           const gross   = calcGross(m, rate, empT);
           const otBrokenPay = calcOtAndBrokenPay(m, { staffRates, baseRate: rate, empType: empT });
           const ot76Monetary = calcOt76MonetaryPay(m, { staffRates, baseRate: rate, empType: empT });

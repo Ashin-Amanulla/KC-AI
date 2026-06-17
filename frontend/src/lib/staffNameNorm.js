@@ -53,3 +53,19 @@ export function nameMatchKeys(displayName) {
   if (weak && weak !== n) keys.add(weak);
   return keys;
 }
+
+/** First map entry whose key matches any variant of displayName. */
+export function lookupByNameKeys(map, displayName) {
+  if (!map) return undefined;
+  for (const k of nameMatchKeys(displayName)) {
+    if (map.has(k)) return map.get(k);
+  }
+  return undefined;
+}
+
+/** Register value under every lookup key for displayName (later keys overwrite). */
+export function registerNameKeys(map, displayName, value) {
+  for (const k of nameMatchKeys(displayName)) {
+    map.set(k, value);
+  }
+}
