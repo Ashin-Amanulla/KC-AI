@@ -1,4 +1,5 @@
 import { useCrmDashboard } from '../../api/crm';
+import { useCrmBdm } from './CrmBdmContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 
 function MetricCard({ label, value }) {
@@ -15,7 +16,8 @@ function MetricCard({ label, value }) {
 }
 
 export function CrmDashboard() {
-  const { data, isLoading } = useCrmDashboard();
+  const { bdmParams } = useCrmBdm();
+  const { data, isLoading } = useCrmDashboard(bdmParams);
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading dashboard…</p>;

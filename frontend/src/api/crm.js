@@ -3,16 +3,25 @@ import api from '../utils/api';
 import { downloadBlobGet } from '../lib/downloadBlob';
 
 const Q = {
-  dashboard: ['crm', 'dashboard'],
+  dashboard: (params) => ['crm', 'dashboard', params],
+  bdmOwners: ['crm', 'bdm-owners'],
   supportCoordinators: (params) => ['crm', 'support-coordinators', params],
   leads: (params) => ['crm', 'leads', params],
   marketingActivities: (params) => ['crm', 'marketing-activities', params],
 };
 
-export function useCrmDashboard() {
+export function useCrmBdmOwners(enabled = true) {
   return useQuery({
-    queryKey: Q.dashboard,
-    queryFn: async () => (await api.get('/api/crm/dashboard')).data,
+    queryKey: Q.bdmOwners,
+    queryFn: async () => (await api.get('/api/crm/bdm-owners')).data,
+    enabled,
+  });
+}
+
+export function useCrmDashboard(params = {}) {
+  return useQuery({
+    queryKey: Q.dashboard(params),
+    queryFn: async () => (await api.get('/api/crm/dashboard', { params })).data,
   });
 }
 
@@ -31,7 +40,7 @@ export function useCreateCrmSupportCoordinator() {
       (await api.post('/api/crm/support-coordinators', body)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm', 'support-coordinators'] });
-      qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
     },
   });
 }
@@ -43,7 +52,7 @@ export function useUpdateCrmSupportCoordinator() {
       (await api.put(`/api/crm/support-coordinators/${id}`, body)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm', 'support-coordinators'] });
-      qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
     },
   });
 }
@@ -55,7 +64,7 @@ export function useDeleteCrmSupportCoordinator() {
       (await api.delete(`/api/crm/support-coordinators/${id}`)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm', 'support-coordinators'] });
-      qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
     },
   });
 }
@@ -73,7 +82,7 @@ export function useCreateCrmLead() {
     mutationFn: async (body) => (await api.post('/api/crm/leads', body)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm', 'leads'] });
-      qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
     },
   });
 }
@@ -85,7 +94,7 @@ export function useUpdateCrmLead() {
       (await api.put(`/api/crm/leads/${id}`, body)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm', 'leads'] });
-      qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
     },
   });
 }
@@ -96,7 +105,7 @@ export function useDeleteCrmLead() {
     mutationFn: async (id) => (await api.delete(`/api/crm/leads/${id}`)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm', 'leads'] });
-      qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
     },
   });
 }
@@ -116,7 +125,7 @@ export function useCreateCrmMarketingActivity() {
       (await api.post('/api/crm/marketing-activities', body)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm', 'marketing-activities'] });
-      qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
     },
   });
 }
@@ -128,7 +137,7 @@ export function useUpdateCrmMarketingActivity() {
       (await api.put(`/api/crm/marketing-activities/${id}`, body)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm', 'marketing-activities'] });
-      qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
     },
   });
 }
@@ -140,7 +149,7 @@ export function useDeleteCrmMarketingActivity() {
       (await api.delete(`/api/crm/marketing-activities/${id}`)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crm', 'marketing-activities'] });
-      qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
     },
   });
 }
@@ -164,8 +173,8 @@ export function useCrmImport() {
   });
 }
 
-export async function exportCrmWorkbook() {
-  await downloadBlobGet('/api/crm/export', {}, 'bdm-master-tracker.xlsx');
+export async function exportCrmWorkbook(params = {}) {
+  await downloadBlobGet('/api/crm/export', params, 'bdm-master-tracker.xlsx');
 }
 
 export async function fetchCrmNextId(entity) {

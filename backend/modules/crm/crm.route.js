@@ -3,6 +3,7 @@ import { authenticateJWT, authorizePermission } from '../../middlewares/auth.mid
 import { PERMISSIONS } from '../../config/permissionCatalog.js';
 import { tabularUpload } from '../../middlewares/tabularUpload.middleware.js';
 import {
+  getBdmOwners,
   getDashboard,
   listSupportCoordinators,
   createSupportCoordinator,
@@ -29,6 +30,8 @@ const router = express.Router();
 
 const authView = [authenticateJWT, authorizePermission(PERMISSIONS.CRM_VIEW)];
 const authManage = [authenticateJWT, authorizePermission(PERMISSIONS.CRM_MANAGE)];
+
+router.get('/crm/bdm-owners', ...authView, getBdmOwners);
 
 router.get('/crm/dashboard', ...authView, getDashboard);
 

@@ -24,6 +24,15 @@ import {
   CRM_ID_CONFIG,
   isBlankId,
 } from './crmIdAllocator.js';
+import {
+  mergeMongoFilters,
+  assertCanMutateRecord,
+  withBdmOwnerOnCreate,
+  listBdmOwners,
+} from './crmAccess.js';
+import { enrichLead, enrichLeads, stripLeadComputedFields } from './crmLeadUtils.js';
+
+export { listBdmOwners };
 
 const MS_PER_DAY = 86400000;
 
@@ -84,97 +93,138 @@ export async function previewNextId(entityKey) {
   return allocateNextId(model, cfg.field, cfg.prefix, cfg.padWidth);
 }
 
+function buildListFilter(search, fields, extra = {}, bdmFilter = {}) {
+  const filter = mergeMongoFilters(buildSearchFilter(search, fields), bdmFilter);
+  return { ...filter, ...extra };
+}
+
+async function findOwned(Model, id, access) {
+  const doc = await Model.findById(id).lean();
+  if (!doc) return null;
+  assertCanMutateRecord(doc, access);
+  return doc;
+}
+
 // --- Support Coordinators ---
 
-export async function listSupportCoordinators({ search } = {}) {
-  const filter = buildSearchFilter(search, [
-    'scId',
-    'coordinatorName',
-    'organisation',
-    'email',
-    'location',
-  ]);
+export async function listSupportCoordinators({ search, access } = {}) {
+  const filter = buildListFilter(
+    search,
+    ['scId', 'coordinatorName', 'organisation', 'email', 'location'],
+    {},
+    access?.bdmFilter
+  );
   return CrmSupportCoordinator.find(filter).sort({ scId: 1 }).lean();
 }
 
-export async function createSupportCoordinator(data) {
-  return createWithAutoId(CrmSupportCoordinator, 'support-coordinators', data);
+export async function createSupportCoordinator(data, access) {
+  const body = withBdmOwnerOnCreate(data, access);
+  return createWithAutoId(CrmSupportCoordinator, 'support-coordinators', body);
 }
 
-export async function updateSupportCoordinator(id, data) {
-  return CrmSupportCoordinator.findByIdAndUpdate(id, data, { new: true, runValidators: true }).lean();
+export async function updateSupportCoordinator(id, data, access) {
+  await findOwned(CrmSupportCoordinator, id, access);
+  const { bdmOwnerId, ...patch } = data || {};
+  return CrmSupportCoordinator.findByIdAndUpdate(id, patch, { new: true, runValidators: true }).lean();
 }
 
-export async function deleteSupportCoordinator(id) {
+export async function deleteSupportCoordinator(id, access) {
+  await findOwned(CrmSupportCoordinator, id, access);
   return CrmSupportCoordinator.findByIdAndDelete(id);
 }
 
 // --- Leads ---
 
-export async function listLeads({ search, status } = {}) {
-  const filter = buildSearchFilter(search, ['leadId', 'name', 'referralSource', 'referralEmail']);
-  if (status) filter.status = status;
-  return CrmLead.find(filter).sort({ leadId: 1 }).lean();
+export async function listLeads({ search, status, access } = {}) {
+  const extra = status ? { status } : {};
+  const filter = buildListFilter(
+    search,
+    ['leadId', 'name', 'referralSource', 'referralEmail'],
+    extra,
+    access?.bdmFilter
+  );
+  const rows = await CrmLead.find(filter).sort({ leadId: 1 }).lean();
+  return enrichLeads(rows);
 }
 
-export async function createLead(data) {
-  return createWithAutoId(CrmLead, 'leads', data);
+export async function createLead(data, access) {
+  const body = withBdmOwnerOnCreate(stripLeadComputedFields(data), access);
+  const doc = await createWithAutoId(CrmLead, 'leads', body);
+  return enrichLead(doc?.toObject ? doc.toObject() : doc);
 }
 
-export async function updateLead(id, data) {
-  return CrmLead.findByIdAndUpdate(id, data, { new: true, runValidators: true }).lean();
+export async function updateLead(id, data, access) {
+  await findOwned(CrmLead, id, access);
+  const patch = stripLeadComputedFields(data);
+  delete patch.bdmOwnerId;
+  const doc = await CrmLead.findByIdAndUpdate(id, patch, { new: true, runValidators: true }).lean();
+  return enrichLead(doc);
 }
 
-export async function deleteLead(id) {
+export async function deleteLead(id, access) {
+  await findOwned(CrmLead, id, access);
   return CrmLead.findByIdAndDelete(id);
 }
 
 // --- Marketing Activities ---
 
-export async function listMarketingActivities({ search } = {}) {
-  const filter = buildSearchFilter(search, [
-    'activityId',
-    'activityType',
-    'organisationName',
-    'relatedScOrLeadId',
-  ]);
+export async function listMarketingActivities({ search, access } = {}) {
+  const filter = buildListFilter(
+    search,
+    ['activityId', 'activityType', 'organisationName', 'relatedScOrLeadId'],
+    {},
+    access?.bdmFilter
+  );
   return CrmMarketingActivity.find(filter).sort({ date: -1, activityId: 1 }).lean();
 }
 
-export async function createMarketingActivity(data) {
-  return createWithAutoId(CrmMarketingActivity, 'marketing-activities', data);
+export async function createMarketingActivity(data, access) {
+  const body = withBdmOwnerOnCreate(data, access);
+  return createWithAutoId(CrmMarketingActivity, 'marketing-activities', body);
 }
 
-export async function updateMarketingActivity(id, data) {
-  return CrmMarketingActivity.findByIdAndUpdate(id, data, { new: true, runValidators: true }).lean();
+export async function updateMarketingActivity(id, data, access) {
+  await findOwned(CrmMarketingActivity, id, access);
+  const { bdmOwnerId, ...patch } = data || {};
+  return CrmMarketingActivity.findByIdAndUpdate(id, patch, { new: true, runValidators: true }).lean();
 }
 
-export async function deleteMarketingActivity(id) {
+export async function deleteMarketingActivity(id, access) {
+  await findOwned(CrmMarketingActivity, id, access);
   return CrmMarketingActivity.findByIdAndDelete(id);
 }
 
 // --- Staffing Requirements ---
 
-export async function listStaffingRequirements({ search } = {}) {
-  const filter = buildSearchFilter(search, ['participant', 'location', 'notes']);
+export async function listStaffingRequirements({ search, access } = {}) {
+  const filter = buildListFilter(search, ['participant', 'location', 'notes'], {}, access?.bdmFilter);
   return CrmStaffingRequirement.find(filter).sort({ startDate: 1, dueDate: 1, participant: 1 }).lean();
 }
 
-export async function createStaffingRequirement(data) {
-  return CrmStaffingRequirement.create(data);
+export async function createStaffingRequirement(data, access) {
+  const body = withBdmOwnerOnCreate(data, access);
+  return CrmStaffingRequirement.create(body);
 }
 
-export async function updateStaffingRequirement(id, data) {
-  return CrmStaffingRequirement.findByIdAndUpdate(id, data, { new: true, runValidators: true }).lean();
+export async function updateStaffingRequirement(id, data, access) {
+  await findOwned(CrmStaffingRequirement, id, access);
+  const { bdmOwnerId, ...patch } = data || {};
+  return CrmStaffingRequirement.findByIdAndUpdate(id, patch, { new: true, runValidators: true }).lean();
 }
 
-export async function deleteStaffingRequirement(id) {
+export async function deleteStaffingRequirement(id, access) {
+  await findOwned(CrmStaffingRequirement, id, access);
   return CrmStaffingRequirement.findByIdAndDelete(id);
 }
 
 // --- Dashboard ---
 
-export async function getDashboardSummary() {
+export async function getDashboardSummary(access = {}) {
+  const bdm = access?.bdmFilter ?? {};
+  const scFilter = mergeMongoFilters({}, bdm);
+  const leadFilter = mergeMongoFilters({}, bdm);
+  const actFilter = mergeMongoFilters({}, bdm);
+
   const today = startOfToday();
   const in7Days = new Date(today.getTime() + 7 * MS_PER_DAY);
   const last7 = new Date(today.getTime() - 7 * MS_PER_DAY);
@@ -192,24 +242,31 @@ export async function getDashboardSummary() {
     activitiesLast30,
     scByRelationship,
   ] = await Promise.all([
-    CrmSupportCoordinator.countDocuments(),
-    CrmLead.countDocuments(),
-    CrmLead.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+    CrmSupportCoordinator.countDocuments(scFilter),
+    CrmLead.countDocuments(leadFilter),
+    CrmLead.aggregate([{ $match: leadFilter }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
     CrmSupportCoordinator.countDocuments({
+      ...scFilter,
       nextFollowUpDate: { $ne: null, $lt: today },
     }),
     CrmSupportCoordinator.countDocuments({
+      ...scFilter,
       nextFollowUpDate: { $gte: today, $lte: in7Days },
     }),
     CrmMarketingActivity.countDocuments({
+      ...actFilter,
       nextActionDate: { $ne: null, $lt: today },
     }),
     CrmMarketingActivity.countDocuments({
+      ...actFilter,
       nextActionDate: { $gte: today, $lte: in7Days },
     }),
-    CrmMarketingActivity.countDocuments({ date: { $gte: last7 } }),
-    CrmMarketingActivity.countDocuments({ date: { $gte: last30 } }),
-    CrmSupportCoordinator.aggregate([{ $group: { _id: '$relationshipStatus', count: { $sum: 1 } } }]),
+    CrmMarketingActivity.countDocuments({ ...actFilter, date: { $gte: last7 } }),
+    CrmMarketingActivity.countDocuments({ ...actFilter, date: { $gte: last30 } }),
+    CrmSupportCoordinator.aggregate([
+      { $match: scFilter },
+      { $group: { _id: '$relationshipStatus', count: { $sum: 1 } } },
+    ]),
   ]);
 
   const leadStatusCounts = Object.fromEntries(LEAD_STATUSES.map((s) => [s, 0]));
@@ -247,8 +304,9 @@ export async function getDashboardSummary() {
 
 // --- Import / Export ---
 
-export async function importWorkbook(buffer) {
+export async function importWorkbook(buffer, access) {
   const sheets = parseWorkbookBuffer(buffer);
+  const ownerOnInsert = access?.userId ? { bdmOwnerId: access.userId } : {};
   const results = {
     supportCoordinators: { upserted: 0, skipped: 0 },
     leads: { upserted: 0, skipped: 0 },
@@ -264,7 +322,7 @@ export async function importWorkbook(buffer) {
     }
     await CrmSupportCoordinator.findOneAndUpdate(
       { scId: parsed.scId },
-      { $set: parsed },
+      { $set: parsed, $setOnInsert: ownerOnInsert },
       { upsert: true, runValidators: true }
     );
     results.supportCoordinators.upserted += 1;
@@ -278,7 +336,7 @@ export async function importWorkbook(buffer) {
     }
     await CrmLead.findOneAndUpdate(
       { leadId: parsed.leadId },
-      { $set: parsed },
+      { $set: parsed, $setOnInsert: ownerOnInsert },
       { upsert: true, runValidators: true }
     );
     results.leads.upserted += 1;
@@ -292,7 +350,7 @@ export async function importWorkbook(buffer) {
     }
     await CrmMarketingActivity.findOneAndUpdate(
       { activityId: parsed.activityId },
-      { $set: parsed },
+      { $set: parsed, $setOnInsert: ownerOnInsert },
       { upsert: true, runValidators: true }
     );
     results.marketingActivities.upserted += 1;
@@ -310,7 +368,7 @@ export async function importWorkbook(buffer) {
     };
     await CrmStaffingRequirement.findOneAndUpdate(
       filter,
-      { $set: parsed },
+      { $set: parsed, $setOnInsert: ownerOnInsert },
       { upsert: true, runValidators: true }
     );
     results.staffingRequirements.upserted += 1;
@@ -319,13 +377,21 @@ export async function importWorkbook(buffer) {
   return results;
 }
 
-export async function exportWorkbook() {
+export async function exportWorkbook(access = {}) {
+  const bdm = access?.bdmFilter ?? {};
+  const scFilter = mergeMongoFilters({}, bdm);
+  const leadFilter = mergeMongoFilters({}, bdm);
+  const actFilter = mergeMongoFilters({}, bdm);
+  const staffFilter = mergeMongoFilters({}, bdm);
+
   const [scs, leads, activities, staffing] = await Promise.all([
-    CrmSupportCoordinator.find().sort({ scId: 1 }).lean(),
-    CrmLead.find().sort({ leadId: 1 }).lean(),
-    CrmMarketingActivity.find().sort({ activityId: 1 }).lean(),
-    CrmStaffingRequirement.find().sort({ participant: 1 }).lean(),
+    CrmSupportCoordinator.find(scFilter).sort({ scId: 1 }).lean(),
+    CrmLead.find(leadFilter).sort({ leadId: 1 }).lean(),
+    CrmMarketingActivity.find(actFilter).sort({ activityId: 1 }).lean(),
+    CrmStaffingRequirement.find(staffFilter).sort({ participant: 1 }).lean(),
   ]);
+
+  const enrichedLeads = enrichLeads(leads);
 
   const workbook = XLSX.utils.book_new();
 
@@ -337,7 +403,7 @@ export async function exportWorkbook() {
 
   const leadSheet = XLSX.utils.aoa_to_sheet([
     LEAD_EXPORT_HEADERS,
-    ...leads.map(leadToExportRow),
+    ...enrichedLeads.map(leadToExportRow),
   ]);
   XLSX.utils.book_append_sheet(workbook, leadSheet, CRM_SHEETS.POTENTIAL_LEADS);
 

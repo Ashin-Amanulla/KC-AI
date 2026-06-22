@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const crmMarketingActivitySchema = new mongoose.Schema(
   {
+    bdmOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
     activityId: { type: String, required: true, trim: true, unique: true, index: true },
     date: { type: Date, default: null },
     activityType: { type: String, trim: true, default: '' },

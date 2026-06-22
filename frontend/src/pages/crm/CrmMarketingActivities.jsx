@@ -9,12 +9,14 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { PERMISSIONS } from '../../config/permissions';
 import { CrmSpreadsheet } from './CrmSpreadsheet';
 import { CRM_ENTITY_CONFIG } from './crmColumnDefs';
+import { useCrmBdm } from './CrmBdmContext';
 
 const config = CRM_ENTITY_CONFIG.marketingActivities;
 
 export function CrmMarketingActivities() {
   const { hasPermission } = usePermissions();
   const canManage = hasPermission(PERMISSIONS.CRM_MANAGE);
+  const { bdmParams } = useCrmBdm();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -23,7 +25,10 @@ export function CrmMarketingActivities() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data, isLoading } = useCrmMarketingActivities({ search: debouncedSearch || undefined });
+  const { data, isLoading } = useCrmMarketingActivities({
+    search: debouncedSearch || undefined,
+    ...bdmParams,
+  });
   const createM = useCreateCrmMarketingActivity();
   const updateM = useUpdateCrmMarketingActivity();
   const deleteM = useDeleteCrmMarketingActivity();

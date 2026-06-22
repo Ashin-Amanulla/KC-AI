@@ -18,6 +18,7 @@ export const PERMISSIONS = {
   ROLES_MANAGE: 'roles:manage',
   CRM_VIEW: 'crm:view',
   CRM_MANAGE: 'crm:manage',
+  CRM_VIEW_ALL: 'crm:view_all',
 };
 
 export const ALL_PERMISSION_KEYS = Object.values(PERMISSIONS);
@@ -64,6 +65,7 @@ export const PERMISSION_CATALOG = [
   { key: PERMISSIONS.CRM_VIEW, label: 'CRM', category: 'CRM', path: '/crm' },
   { key: PERMISSIONS.CRM_VIEW, label: 'HR requirements', category: 'HR', path: '/hr-requirements' },
   { key: PERMISSIONS.CRM_MANAGE, label: 'Manage CRM', category: 'CRM', path: '/crm' },
+  { key: PERMISSIONS.CRM_VIEW_ALL, label: 'View all BDM CRM lists', category: 'CRM', path: '/crm' },
 ];
 
 /** Path -> permission required (first match wins for specialized paths) */

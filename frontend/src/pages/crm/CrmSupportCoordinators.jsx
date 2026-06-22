@@ -9,12 +9,14 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { PERMISSIONS } from '../../config/permissions';
 import { CrmSpreadsheet } from './CrmSpreadsheet';
 import { CRM_ENTITY_CONFIG } from './crmColumnDefs';
+import { useCrmBdm } from './CrmBdmContext';
 
 const config = CRM_ENTITY_CONFIG.supportCoordinators;
 
 export function CrmSupportCoordinators() {
   const { hasPermission } = usePermissions();
   const canManage = hasPermission(PERMISSIONS.CRM_MANAGE);
+  const { bdmParams } = useCrmBdm();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -23,7 +25,10 @@ export function CrmSupportCoordinators() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data, isLoading } = useCrmSupportCoordinators({ search: debouncedSearch || undefined });
+  const { data, isLoading } = useCrmSupportCoordinators({
+    search: debouncedSearch || undefined,
+    ...bdmParams,
+  });
   const createM = useCreateCrmSupportCoordinator();
   const updateM = useUpdateCrmSupportCoordinator();
   const deleteM = useDeleteCrmSupportCoordinator();

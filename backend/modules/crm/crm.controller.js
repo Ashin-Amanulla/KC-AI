@@ -1,5 +1,6 @@
 import fs from 'fs';
 import * as crmService from './crm.service.js';
+import { resolveCrmAccess } from './crmAccess.js';
 import {
   notifyRowCreated,
   notifyRowDeleted,
@@ -27,9 +28,31 @@ export async function getNextId(req, res, next) {
   }
 }
 
+function crmAccess(req) {
+  return resolveCrmAccess(req, req.query.bdmOwnerId);
+}
+
+function handleServiceError(e, next) {
+  if (e?.status === 403) return next(e);
+  return handleMongoError(e, next);
+}
+
+export async function getBdmOwners(req, res, next) {
+  try {
+    const access = crmAccess(req);
+    if (!access.viewAll) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const owners = await crmService.listBdmOwners();
+    res.json({ bdmOwners: owners });
+  } catch (e) {
+    next(e);
+  }
+}
+
 export async function getDashboard(req, res, next) {
   try {
-    const summary = await crmService.getDashboardSummary();
+    const summary = await crmService.getDashboardSummary(crmAccess(req));
     res.json(summary);
   } catch (e) {
     next(e);
@@ -40,7 +63,7 @@ export async function getDashboard(req, res, next) {
 
 export async function listSupportCoordinators(req, res, next) {
   try {
-    const rows = await crmService.listSupportCoordinators({ search: req.query.search });
+    const rows = await crmService.listSupportCoordinators({ search: req.query.search, access: crmAccess(req) });
     res.json({ supportCoordinators: rows });
   } catch (e) {
     next(e);
@@ -49,7 +72,7 @@ export async function listSupportCoordinators(req, res, next) {
 
 export async function createSupportCoordinator(req, res, next) {
   try {
-    const doc = await crmService.createSupportCoordinator(req.body || {});
+    const doc = await crmService.createSupportCoordinator(req.body || {}, crmAccess(req));
     notifyRowCreated(SPREADSHEET_ROOMS.supportCoordinators, doc);
     res.status(201).json({ supportCoordinator: doc });
   } catch (e) {
@@ -59,7 +82,7 @@ export async function createSupportCoordinator(req, res, next) {
 
 export async function updateSupportCoordinator(req, res, next) {
   try {
-    const doc = await crmService.updateSupportCoordinator(req.params.id, req.body || {});
+    const doc = await crmService.updateSupportCoordinator(req.params.id, req.body || {}, crmAccess(req));
     if (!doc) return res.status(404).json({ error: 'Not found' });
     notifyRowUpdated(SPREADSHEET_ROOMS.supportCoordinators, doc);
     res.json({ supportCoordinator: doc });
@@ -70,7 +93,7 @@ export async function updateSupportCoordinator(req, res, next) {
 
 export async function deleteSupportCoordinator(req, res, next) {
   try {
-    const doc = await crmService.deleteSupportCoordinator(req.params.id);
+    const doc = await crmService.deleteSupportCoordinator(req.params.id, crmAccess(req));
     if (!doc) return res.status(404).json({ error: 'Not found' });
     notifyRowDeleted(SPREADSHEET_ROOMS.supportCoordinators, req.params.id);
     res.json({ ok: true });
@@ -86,6 +109,7 @@ export async function listLeads(req, res, next) {
     const rows = await crmService.listLeads({
       search: req.query.search,
       status: req.query.status,
+      access: crmAccess(req),
     });
     res.json({ leads: rows });
   } catch (e) {
@@ -95,7 +119,7 @@ export async function listLeads(req, res, next) {
 
 export async function createLead(req, res, next) {
   try {
-    const doc = await crmService.createLead(req.body || {});
+    const doc = await crmService.createLead(req.body || {}, crmAccess(req));
     notifyRowCreated(SPREADSHEET_ROOMS.leads, doc);
     res.status(201).json({ lead: doc });
   } catch (e) {
@@ -105,7 +129,7 @@ export async function createLead(req, res, next) {
 
 export async function updateLead(req, res, next) {
   try {
-    const doc = await crmService.updateLead(req.params.id, req.body || {});
+    const doc = await crmService.updateLead(req.params.id, req.body || {}, crmAccess(req));
     if (!doc) return res.status(404).json({ error: 'Not found' });
     notifyRowUpdated(SPREADSHEET_ROOMS.leads, doc);
     res.json({ lead: doc });
@@ -116,7 +140,7 @@ export async function updateLead(req, res, next) {
 
 export async function deleteLead(req, res, next) {
   try {
-    const doc = await crmService.deleteLead(req.params.id);
+    const doc = await crmService.deleteLead(req.params.id, crmAccess(req));
     if (!doc) return res.status(404).json({ error: 'Not found' });
     notifyRowDeleted(SPREADSHEET_ROOMS.leads, req.params.id);
     res.json({ ok: true });
@@ -129,7 +153,7 @@ export async function deleteLead(req, res, next) {
 
 export async function listMarketingActivities(req, res, next) {
   try {
-    const rows = await crmService.listMarketingActivities({ search: req.query.search });
+    const rows = await crmService.listMarketingActivities({ search: req.query.search, access: crmAccess(req) });
     res.json({ marketingActivities: rows });
   } catch (e) {
     next(e);
@@ -138,7 +162,7 @@ export async function listMarketingActivities(req, res, next) {
 
 export async function createMarketingActivity(req, res, next) {
   try {
-    const doc = await crmService.createMarketingActivity(req.body || {});
+    const doc = await crmService.createMarketingActivity(req.body || {}, crmAccess(req));
     notifyRowCreated(SPREADSHEET_ROOMS.marketing, doc);
     res.status(201).json({ marketingActivity: doc });
   } catch (e) {
@@ -148,7 +172,7 @@ export async function createMarketingActivity(req, res, next) {
 
 export async function updateMarketingActivity(req, res, next) {
   try {
-    const doc = await crmService.updateMarketingActivity(req.params.id, req.body || {});
+    const doc = await crmService.updateMarketingActivity(req.params.id, req.body || {}, crmAccess(req));
     if (!doc) return res.status(404).json({ error: 'Not found' });
     notifyRowUpdated(SPREADSHEET_ROOMS.marketing, doc);
     res.json({ marketingActivity: doc });
@@ -159,7 +183,7 @@ export async function updateMarketingActivity(req, res, next) {
 
 export async function deleteMarketingActivity(req, res, next) {
   try {
-    const doc = await crmService.deleteMarketingActivity(req.params.id);
+    const doc = await crmService.deleteMarketingActivity(req.params.id, crmAccess(req));
     if (!doc) return res.status(404).json({ error: 'Not found' });
     notifyRowDeleted(SPREADSHEET_ROOMS.marketing, req.params.id);
     res.json({ ok: true });
@@ -172,7 +196,7 @@ export async function deleteMarketingActivity(req, res, next) {
 
 export async function listStaffingRequirements(req, res, next) {
   try {
-    const rows = await crmService.listStaffingRequirements({ search: req.query.search });
+    const rows = await crmService.listStaffingRequirements({ search: req.query.search, access: crmAccess(req) });
     res.json({ staffingRequirements: rows });
   } catch (e) {
     next(e);
@@ -181,7 +205,7 @@ export async function listStaffingRequirements(req, res, next) {
 
 export async function createStaffingRequirement(req, res, next) {
   try {
-    const doc = await crmService.createStaffingRequirement(req.body || {});
+    const doc = await crmService.createStaffingRequirement(req.body || {}, crmAccess(req));
     notifyRowCreated(SPREADSHEET_ROOMS.hrRequirements, doc);
     res.status(201).json({ staffingRequirement: doc });
   } catch (e) {
@@ -191,7 +215,7 @@ export async function createStaffingRequirement(req, res, next) {
 
 export async function updateStaffingRequirement(req, res, next) {
   try {
-    const doc = await crmService.updateStaffingRequirement(req.params.id, req.body || {});
+    const doc = await crmService.updateStaffingRequirement(req.params.id, req.body || {}, crmAccess(req));
     if (!doc) return res.status(404).json({ error: 'Not found' });
     notifyRowUpdated(SPREADSHEET_ROOMS.hrRequirements, doc);
     res.json({ staffingRequirement: doc });
@@ -202,7 +226,7 @@ export async function updateStaffingRequirement(req, res, next) {
 
 export async function deleteStaffingRequirement(req, res, next) {
   try {
-    const doc = await crmService.deleteStaffingRequirement(req.params.id);
+    const doc = await crmService.deleteStaffingRequirement(req.params.id, crmAccess(req));
     if (!doc) return res.status(404).json({ error: 'Not found' });
     notifyRowDeleted(SPREADSHEET_ROOMS.hrRequirements, req.params.id);
     res.json({ ok: true });
@@ -222,7 +246,7 @@ export async function importCrmWorkbook(req, res, next) {
     try {
       fs.unlinkSync(req.file.path);
     } catch {}
-    const results = await crmService.importWorkbook(buffer);
+    const results = await crmService.importWorkbook(buffer, crmAccess(req));
     notifyCrmImportComplete();
     res.json({ results });
   } catch (e) {
@@ -232,7 +256,7 @@ export async function importCrmWorkbook(req, res, next) {
 
 export async function exportCrmWorkbook(req, res, next) {
   try {
-    const { filename, body, contentType } = await crmService.exportWorkbook();
+    const { filename, body, contentType } = await crmService.exportWorkbook(crmAccess(req));
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(body);

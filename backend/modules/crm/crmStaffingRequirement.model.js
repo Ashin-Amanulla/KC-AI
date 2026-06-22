@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const crmStaffingRequirementSchema = new mongoose.Schema(
   {
+    bdmOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
     participant: { type: String, trim: true, default: '' },
     staffRequired: { type: Number, default: null },
     supportWorkerAge: { type: String, trim: true, default: '' },

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { useCrmImport, exportCrmWorkbook } from '../../api/crm';
+import { useCrmBdm } from './CrmBdmContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { PERMISSIONS } from '../../config/permissions';
 import { TABULAR_ACCEPT, validateTabularFile } from '../../config/upload';
@@ -11,6 +12,7 @@ import { getErrorMessage } from '../../utils/api';
 
 export function CrmImportExport() {
   const { hasPermission } = usePermissions();
+  const { bdmParams } = useCrmBdm();
   const canManage = hasPermission(PERMISSIONS.CRM_MANAGE);
   const importM = useCrmImport();
 
@@ -45,7 +47,7 @@ export function CrmImportExport() {
 
   const handleExport = async () => {
     try {
-      await exportCrmWorkbook();
+      await exportCrmWorkbook(bdmParams);
       toast.success('Export downloaded');
     } catch (e) {
       toast.error(getErrorMessage(e));

@@ -14,6 +14,7 @@ export const PERMISSIONS = {
   ROLES_MANAGE: 'roles:manage',
   CRM_VIEW: 'crm:view',
   CRM_MANAGE: 'crm:manage',
+  CRM_VIEW_ALL: 'crm:view_all',
 };
 
 export const hasPermission = (permissions, key) => {

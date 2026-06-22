@@ -124,7 +124,6 @@ export function parseLeadRow(row) {
       getRowValue(row, 'meet and greet date & time', cols) || getRowValue(row, 'meet and greet date time', cols)
     ),
     estAnnualValue: parseNumber(getRowValue(row, 'est. annual value ($)', cols) || getRowValue(row, 'est annual value', cols)),
-    daysStale: parseNumber(getRowValue(row, 'days stale', cols)),
     lostReason: String(getRowValue(row, 'reason lost/deferred', cols) || getRowValue(row, 'reason', cols)).trim(),
   };
 }

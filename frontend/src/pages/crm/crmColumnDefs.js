@@ -102,7 +102,7 @@ export const SUPPORT_COORDINATOR_COLUMNS = [
   { key: 'location', label: 'Location', type: 'text', minWidth: 100 },
   { key: 'lastContactDate', label: 'Last Contact Date', type: 'date', minWidth: 120 },
   { key: 'nextFollowUpDate', label: 'Next Follow-up Date', type: 'date', minWidth: 120 },
-  { key: 'notes', label: 'Notes', type: 'text', minWidth: 160 },
+  { key: 'notes', label: 'Notes', type: 'text', minWidth: 160, multiline: true },
   { key: 'specialty', label: 'Specialty (Complex/HI/etc)', type: 'text', minWidth: 140 },
   { key: 'source', label: 'Source', type: 'text', minWidth: 100 },
   { key: 'linkedLeadIds', label: 'Linked Lead ID(s)', type: 'linkedIds', minWidth: 140 },
@@ -115,17 +115,17 @@ export const LEAD_COLUMNS = [
   { key: 'referralSource', label: 'Referral Source (Name/Org)', type: 'text', minWidth: 140 },
   { key: 'referralPhone', label: 'Referral Phone', type: 'text', minWidth: 110 },
   { key: 'referralEmail', label: 'Referral Email', type: 'text', minWidth: 140 },
-  { key: 'requirementSummary', label: 'Requirement Summary', type: 'text', minWidth: 160 },
+  { key: 'requirementSummary', label: 'Requirement Summary', type: 'text', minWidth: 160, multiline: true },
   { key: 'participantType', label: 'Participant Type', type: 'select', options: PARTICIPANT_TYPES, minWidth: 120 },
   { key: 'currentStage', label: 'Current Stage', type: 'select', options: LEAD_STAGES, minWidth: 120 },
   { key: 'status', label: 'Status', type: 'select', options: LEAD_STATUSES, minWidth: 100 },
   { key: 'lastContactDate', label: 'Last Contact Date', type: 'date', minWidth: 120 },
-  { key: 'followUpNotes', label: 'Follow up Notes', type: 'text', minWidth: 140 },
+  { key: 'followUpNotes', label: 'Follow up Notes', type: 'text', minWidth: 140, multiline: true },
   { key: 'meetAndGreetPlanned', label: 'Meet & Greet Planned', type: 'boolean', booleanStyle: 'yes', minWidth: 120 },
   { key: 'meetAndGreetDateTime', label: 'Meet and Greet Date & Time', type: 'datetime', minWidth: 160 },
   { key: 'estAnnualValue', label: 'Est. Annual Value ($)', type: 'number', minWidth: 120 },
-  { key: 'daysStale', label: 'Days Stale', type: 'number', minWidth: 90 },
-  { key: 'lostReason', label: 'Reason (Lost/Deferred)', type: 'text', minWidth: 140 },
+  { key: 'daysStale', label: 'Days Stale', type: 'number', minWidth: 90, computed: true },
+  { key: 'lostReason', label: 'Reason (Lost/Deferred)', type: 'text', minWidth: 140, multiline: true },
 ];
 
 export const MARKETING_ACTIVITY_COLUMNS = [
@@ -135,12 +135,12 @@ export const MARKETING_ACTIVITY_COLUMNS = [
   { key: 'relatedScOrLeadId', label: 'Related SC_ID / Lead_ID', type: 'text', minWidth: 140 },
   { key: 'organisationName', label: 'Organisation/Name', type: 'text', minWidth: 140 },
   { key: 'channel', label: 'Channel (Email/Visit/Event/etc)', type: 'text', minWidth: 140 },
-  { key: 'objective', label: 'Objective', type: 'text', minWidth: 140 },
-  { key: 'outcome', label: 'Outcome', type: 'text', minWidth: 140 },
+  { key: 'objective', label: 'Objective', type: 'text', minWidth: 140, multiline: true },
+  { key: 'outcome', label: 'Outcome', type: 'text', minWidth: 140, multiline: true },
   { key: 'followUpRequired', label: 'Follow-up Required (Y/N)', type: 'boolean', booleanStyle: 'yn', minWidth: 120 },
   { key: 'followUpOwner', label: 'Follow-up Owner', type: 'text', minWidth: 120 },
   { key: 'nextActionDate', label: 'Next Action Date', type: 'date', minWidth: 120 },
-  { key: 'notes', label: 'Notes', type: 'text', minWidth: 160 },
+  { key: 'notes', label: 'Notes', type: 'text', minWidth: 160, multiline: true },
 ];
 
 export function buildEmptyDraft(columns) {
@@ -169,6 +169,7 @@ export function formatCellDisplay(row, col) {
 export function draftToBody(draft, columns) {
   const body = {};
   for (const col of columns) {
+    if (col.computed) continue;
     body[col.key] = parseFieldValue(draft[col.key], col);
   }
   return body;

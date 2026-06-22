@@ -3,6 +3,7 @@ import { RELATIONSHIP_STATUSES } from './crm.constants.js';
 
 const crmSupportCoordinatorSchema = new mongoose.Schema(
   {
+    bdmOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
     scId: { type: String, required: true, trim: true, unique: true, index: true },
     coordinatorName: { type: String, trim: true, default: '' },
     organisation: { type: String, trim: true, default: '' },
