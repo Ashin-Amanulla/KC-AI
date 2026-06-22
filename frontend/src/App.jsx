@@ -29,7 +29,7 @@ import { CrmSupportCoordinators } from './pages/crm/CrmSupportCoordinators';
 import { CrmLeads } from './pages/crm/CrmLeads';
 import { CrmMarketingActivities } from './pages/crm/CrmMarketingActivities';
 import { CrmImportExport } from './pages/crm/CrmImportExport';
-import { HrRequirementsPage } from './pages/hr-requirements/HrRequirementsPage';
+import { CirPage } from './pages/cir/CirPage';
 import { canAccessPath, getDefaultLanding } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
@@ -214,6 +214,14 @@ function App() {
             <Route path="import-export" element={<CrmImportExport />} />
             <Route path="staffing" element={<Navigate to="/hr-requirements" replace />} />
           </Route>
+          <Route
+            path="/continuous-improvement"
+            element={
+              <ProtectedRoute>
+                <CirPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/hr-requirements"
             element={

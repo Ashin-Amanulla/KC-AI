@@ -46,6 +46,12 @@ export const NAV_ITEMS = [
     permission: PERMISSIONS.CRM_VIEW,
   },
   {
+    path: '/continuous-improvement',
+    label: 'Continuous Improvement',
+    icon: 'ListChecks',
+    permission: PERMISSIONS.CIR_VIEW,
+  },
+  {
     path: '/roster-coverage/shift-log',
     label: 'Shift log',
     icon: 'CalendarDays',

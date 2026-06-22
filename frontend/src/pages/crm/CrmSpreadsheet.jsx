@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialo
 import { getErrorMessage } from '../../utils/api';
 import { cn } from '../../lib/utils';
 import { fetchCrmNextId } from '../../api/crm';
+import { ActionUpdateThread } from '../../components/ActionUpdateThread';
 import {
   buildEmptyDraft,
   compareCellValues,
@@ -63,6 +64,90 @@ function isCellReadOnly(col, row, autoIdEntity, canManage) {
   return isIdReadOnly(col, row, autoIdEntity);
 }
 
+function isCustomSelectValue(value, col) {
+  if (!col.allowOther) return false;
+  const v = String(value ?? '').trim();
+  if (!v || v === 'Other') return false;
+  return !(col.options || []).includes(v);
+}
+
+function resolveSelectCommitValue(selectVal, otherText, col) {
+  if (!col.allowOther) return selectVal;
+  if (selectVal === 'Other') {
+    const custom = String(otherText ?? '').trim();
+    return custom || 'Other';
+  }
+  return selectVal;
+}
+
+function SelectCellEditor({ col, value, onChange, onCommit, onCancel, inputRef }) {
+  const opts = col.options || [];
+  const custom = isCustomSelectValue(value, col);
+  const [selectVal, setSelectVal] = useState(custom ? 'Other' : (value ?? ''));
+  const [otherText, setOtherText] = useState(custom ? String(value) : '');
+
+  const commitSelect = () => {
+    const resolved = resolveSelectCommitValue(selectVal, otherText, col);
+    onChange(resolved);
+    onCommit(resolved);
+  };
+
+  return (
+    <div className="flex min-w-[140px] flex-col gap-1">
+      <select
+        ref={inputRef}
+        className="h-7 w-full min-w-0 rounded border border-input bg-background px-1 text-xs"
+        value={selectVal}
+        onChange={(e) => {
+          const next = e.target.value;
+          setSelectVal(next);
+          if (!col.allowOther || next !== 'Other') {
+            onChange(next);
+          }
+        }}
+        onBlur={() => {
+          if (!col.allowOther || selectVal !== 'Other') commitSelect();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commitSelect();
+          }
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+        autoFocus
+      >
+        <option value="">—</option>
+        {opts.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))}
+      </select>
+      {col.allowOther && selectVal === 'Other' && (
+        <Input
+          type="text"
+          value={otherText}
+          onChange={(e) => setOtherText(e.target.value)}
+          onBlur={commitSelect}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              commitSelect();
+            }
+          }}
+          placeholder="Specify other…"
+          className="h-7 px-1.5 text-xs"
+          autoFocus
+        />
+      )}
+    </div>
+  );
+}
+
 function CellEditor({ col, value, onChange, onCommit, onCancel, inputRef }) {
   if (col.type === 'boolean') {
     return (
@@ -81,31 +166,14 @@ function CellEditor({ col, value, onChange, onCommit, onCancel, inputRef }) {
 
   if (col.type === 'select') {
     return (
-      <select
-        ref={inputRef}
-        className="h-7 w-full min-w-0 rounded border border-input bg-background px-1 text-xs"
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={() => onCommit()}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            onCommit();
-          }
-          if (e.key === 'Escape') {
-            e.preventDefault();
-            onCancel();
-          }
-        }}
-        autoFocus
-      >
-        <option value="">—</option>
-        {(col.options || []).map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
+      <SelectCellEditor
+        col={col}
+        value={value}
+        onChange={onChange}
+        onCommit={onCommit}
+        onCancel={onCancel}
+        inputRef={inputRef}
+      />
     );
   }
 
@@ -184,6 +252,23 @@ function DisplayCell({ row, col, onExpand, livePreview, multiline }) {
       </span>
     );
   }
+  if (col.actionsPanel) {
+    const text = formatCellDisplay(row, col);
+    const count = (row.actionUpdates ?? []).length;
+    return (
+      <span
+        className="block max-w-[220px] truncate cursor-pointer tabular-nums"
+        title={count > 0 ? `${count} update(s) — click to open` : 'Click to open actions'}
+      >
+        {text || '—'}
+        {count > 0 && (
+          <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {count}
+          </span>
+        )}
+      </span>
+    );
+  }
   if (col.type === 'boolean') {
     return <span className="tabular-nums">{formatBooleanDisplay(row[col.key], col.booleanStyle)}</span>;
   }
@@ -197,6 +282,7 @@ export function CrmSpreadsheet({
   idField,
   idLabel,
   autoIdEntity,
+  fetchNextId = fetchCrmNextId,
   isLoading,
   canManage,
   searchValue = '',
@@ -204,6 +290,7 @@ export function CrmSpreadsheet({
   onCreate,
   onUpdate,
   onDelete,
+  onAppendActionUpdate,
   deleteConfirm,
   isSaving = false,
   collaborationRoom,
@@ -216,6 +303,8 @@ export function CrmSpreadsheet({
   const [savingCell, setSavingCell] = useState(false);
   const [addingRow, setAddingRow] = useState(false);
   const [expandEditor, setExpandEditor] = useState(null);
+  const [actionsPanel, setActionsPanel] = useState(null);
+  const [postingActionUpdate, setPostingActionUpdate] = useState(false);
   const [{ sortKey, sortDir }, setSortState] = useState(() => loadSortState(title));
   const inputRef = useRef(null);
   const expandTextareaRef = useRef(null);
@@ -254,6 +343,14 @@ export function CrmSpreadsheet({
   }, [rows, sortKey, sortDir, columns]);
 
   const allRows = useMemo(() => [...sortedSavedRows, ...draftRows], [sortedSavedRows, draftRows]);
+
+  useEffect(() => {
+    if (!actionsPanel?.row?._id || isDraftRow(actionsPanel.row)) return;
+    const fresh = rows.find((r) => String(r._id) === String(actionsPanel.row._id));
+    if (fresh) {
+      setActionsPanel((prev) => (prev ? { ...prev, row: fresh } : prev));
+    }
+  }, [rows, actionsPanel?.row?._id]);
 
   const clearEditing = useCallback(() => {
     const e = editingRef.current;
@@ -318,6 +415,83 @@ export function CrmSpreadsheet({
     if (collaborationRoom) notifyFocus(row._id, colKey);
   };
 
+  const closeActionsPanel = useCallback(() => {
+    if (actionsPanel?.row && collaborationRoom) {
+      notifyBlur(actionsPanel.row._id, 'actions');
+    }
+    setActionsPanel(null);
+  }, [actionsPanel, collaborationRoom, notifyBlur]);
+
+  const openActionsPanel = (rowIndex, row) => {
+    clearEditing();
+    const draft = isDraftRow(row) ? row : rowToDraft(row, columns);
+    setActionsPanel({
+      row,
+      rowIndex,
+      actionsValue: draft.actions ?? '',
+      originalDraft: draft,
+    });
+    if (collaborationRoom) notifyFocus(row._id, 'actions');
+  };
+
+  const saveActionsPanel = async () => {
+    if (!actionsPanel || savingCell) return;
+    const { row, actionsValue, originalDraft } = actionsPanel;
+    if (String(actionsValue ?? '') === String(originalDraft.actions ?? '')) {
+      closeActionsPanel();
+      return;
+    }
+
+    const mergedDraft = { ...originalDraft, actions: actionsValue };
+    setSavingCell(true);
+    try {
+      if (isDraftRow(row)) {
+        setDraftRows((prev) =>
+          prev.map((d) => (d._id === row._id ? { ...d, actions: actionsValue } : d))
+        );
+        const idErr = validateDraft(mergedDraft, idField, idLabel);
+        if (idErr) {
+          closeActionsPanel();
+          return;
+        }
+        await onCreate(draftToBody(mergedDraft, columns));
+        setDraftRows((prev) => prev.filter((d) => d._id !== row._id));
+        toast.success('Created');
+      } else {
+        await onUpdate({ id: row._id, actions: parseFieldValue(actionsValue, { type: 'text' }) });
+        toast.success('Updated');
+      }
+      closeActionsPanel();
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setSavingCell(false);
+    }
+  };
+
+  const postActionUpdate = async ({ text, authorName }) => {
+    if (!actionsPanel?.row?._id || isDraftRow(actionsPanel.row) || !onAppendActionUpdate) return;
+    setPostingActionUpdate(true);
+    try {
+      const res = await onAppendActionUpdate({
+        id: actionsPanel.row._id,
+        text,
+        authorName,
+      });
+      const updated = res?.record ?? res;
+      if (updated) {
+        setActionsPanel((prev) =>
+          prev ? { ...prev, row: { ...prev.row, ...updated } } : prev
+        );
+      }
+      toast.success('Update posted');
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setPostingActionUpdate(false);
+    }
+  };
+
   const openExpandEditor = (rowIndex, colKey, row, readOnly = false) => {
     const col = columns.find((c) => c.key === colKey);
     if (!col) return;
@@ -339,6 +513,10 @@ export function CrmSpreadsheet({
     const col = columns.find((c) => c.key === colKey);
     if (!col) return;
     const cellReadOnly = isCellReadOnly(col, row, autoIdEntity, canManage);
+    if (col.actionsPanel) {
+      openActionsPanel(rowIndex, row);
+      return;
+    }
     if (col.multiline) {
       openExpandEditor(rowIndex, colKey, row, cellReadOnly);
       return;
@@ -484,7 +662,7 @@ export function CrmSpreadsheet({
     try {
       const draft = buildEmptyDraft(columns);
       if (autoIdEntity) {
-        const { id } = await fetchCrmNextId(autoIdEntity);
+        const { id } = await fetchNextId(autoIdEntity);
         draft[idField] = id;
       }
       setDraftRows((prev) => [...prev, { _id: `draft-${Date.now()}`, ...draft }]);
@@ -534,6 +712,42 @@ export function CrmSpreadsheet({
 
   return (
     <Card>
+      <Dialog open={!!actionsPanel} onOpenChange={(open) => !open && closeActionsPanel()}>
+        <DialogContent className="flex max-h-[85vh] w-[min(42rem,92vw)] flex-col gap-3 sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Actions — {actionsPanel?.row?.[idField] || 'New record'}</DialogTitle>
+          </DialogHeader>
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Planned action</p>
+            <textarea
+              value={actionsPanel?.actionsValue ?? ''}
+              readOnly={!canManage}
+              onChange={(e) =>
+                setActionsPanel((prev) => (prev ? { ...prev, actionsValue: e.target.value } : prev))
+              }
+              className="min-h-[120px] w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="Describe the planned action…"
+            />
+          </div>
+          <ActionUpdateThread
+            notes={actionsPanel?.row?.actionUpdates ?? []}
+            canPost={canManage && actionsPanel?.row && !isDraftRow(actionsPanel.row) && !!onAppendActionUpdate}
+            onPost={postActionUpdate}
+            isPosting={postingActionUpdate}
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={closeActionsPanel}>
+              Close
+            </Button>
+            {canManage && (
+              <Button type="button" onClick={saveActionsPanel} disabled={savingCell}>
+                {savingCell ? 'Saving…' : 'Save action'}
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!expandEditor} onOpenChange={(open) => !open && closeExpandEditor()}>
         <DialogContent className="flex max-h-[85vh] w-[min(42rem,92vw)] flex-col gap-3 sm:max-w-2xl">
           <DialogHeader>

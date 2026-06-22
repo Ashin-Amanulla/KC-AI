@@ -81,7 +81,7 @@ async function authenticateToken(token) {
     const user = await User.findById(decoded.userId).select('name email role').lean();
     if (!user) return null;
     const permissions = await loadRolePermissions(user.role || decoded.role || 'viewer');
-    if (!permissions.includes(PERMISSIONS.CRM_VIEW)) return null;
+    if (!permissions.includes(PERMISSIONS.CRM_VIEW) && !permissions.includes(PERMISSIONS.CIR_VIEW)) return null;
     return {
       userId: String(decoded.userId),
       email: user.email || decoded.email,
@@ -208,6 +208,7 @@ export const SPREADSHEET_ROOMS = {
   leads: 'crm:leads',
   marketing: 'crm:marketing',
   hrRequirements: 'hr:requirements',
+  cirRegister: 'cir:register',
 };
 
 /**

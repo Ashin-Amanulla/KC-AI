@@ -13,4 +13,5 @@ export const SPREADSHEET_ROOMS = {
   leads: 'crm:leads',
   marketing: 'crm:marketing',
   hrRequirements: 'hr:requirements',
+  cirRegister: 'cir:register',
 };

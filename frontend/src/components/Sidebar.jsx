@@ -19,6 +19,7 @@ import {
   Layers,
   Briefcase,
   ClipboardList,
+  ListChecks,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { getNavItemsForPermissions } from '../config/nav';
@@ -43,6 +44,7 @@ const iconMap = {
   Layers,
   Briefcase,
   ClipboardList,
+  ListChecks,
 };
 
 export function Sidebar() {

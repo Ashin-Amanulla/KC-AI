@@ -19,6 +19,8 @@ export const PERMISSIONS = {
   CRM_VIEW: 'crm:view',
   CRM_MANAGE: 'crm:manage',
   CRM_VIEW_ALL: 'crm:view_all',
+  CIR_VIEW: 'cir:view',
+  CIR_MANAGE: 'cir:manage',
 };
 
 export const ALL_PERMISSION_KEYS = Object.values(PERMISSIONS);
@@ -66,6 +68,8 @@ export const PERMISSION_CATALOG = [
   { key: PERMISSIONS.CRM_VIEW, label: 'HR requirements', category: 'HR', path: '/hr-requirements' },
   { key: PERMISSIONS.CRM_MANAGE, label: 'Manage CRM', category: 'CRM', path: '/crm' },
   { key: PERMISSIONS.CRM_VIEW_ALL, label: 'View all BDM CRM lists', category: 'CRM', path: '/crm' },
+  { key: PERMISSIONS.CIR_VIEW, label: 'Continuous Improvement Register', category: 'Quality', path: '/continuous-improvement' },
+  { key: PERMISSIONS.CIR_MANAGE, label: 'Manage CIR', category: 'Quality', path: '/continuous-improvement' },
 ];
 
 /** Path -> permission required (first match wins for specialized paths) */
@@ -89,6 +93,7 @@ export const PATH_PERMISSION_MAP = [
   { prefix: '/staff', permission: PERMISSIONS.STAFF_VIEW },
   { prefix: '/crm', permission: PERMISSIONS.CRM_VIEW },
   { prefix: '/hr-requirements', permission: PERMISSIONS.CRM_VIEW },
+  { prefix: '/continuous-improvement', permission: PERMISSIONS.CIR_VIEW },
   { prefix: '/', permission: PERMISSIONS.DASHBOARD_VIEW },
 ];
 
@@ -102,6 +107,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     PERMISSIONS.SHIFT_ANALYSIS_VIEW,
     PERMISSIONS.FORECAST_ANALYSIS_VIEW,
     PERMISSIONS.ROSTER_VIEW,
+    PERMISSIONS.CIR_VIEW,
+    PERMISSIONS.CIR_MANAGE,
   ],
   viewer: [
     PERMISSIONS.DASHBOARD_VIEW,
@@ -109,8 +116,10 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     PERMISSIONS.CLIENTS_VIEW,
     PERMISSIONS.ROSTER_VIEW,
     PERMISSIONS.CRM_VIEW,
+    PERMISSIONS.CIR_VIEW,
+    PERMISSIONS.CIR_MANAGE,
   ],
-  shifts_viewer: [PERMISSIONS.ROSTER_SHIFT_LOG_VIEW],
+  shifts_viewer: [PERMISSIONS.ROSTER_SHIFT_LOG_VIEW, PERMISSIONS.CIR_VIEW, PERMISSIONS.CIR_MANAGE],
 };
 
 export const DEFAULT_ROLES = [

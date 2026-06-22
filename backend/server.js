@@ -20,6 +20,7 @@ import standardForecastRoutes from './modules/standard-forecast/standardForecast
 import staffRatesRoutes from './modules/staff-rates/staffRates.route.js';
 import rosterCoverageRoutes from './modules/roster-coverage/rosterCoverage.route.js';
 import crmRoutes from './modules/crm/crm.route.js';
+import cirRoutes from './modules/cir/cir.route.js';
 import { formatErrorResponse } from './helpers/errors.js';
 import { Holiday } from './modules/holidays/holiday.model.js';
 import { attachSpreadsheetCollaborationWs } from './modules/crm/crmCollaborationWs.js';
@@ -85,6 +86,7 @@ app.use('/api', csvAnalysisRoutes);
 app.use('/api', shiftcareRoutes);
 app.use('/api', rosterCoverageRoutes);
 app.use('/api', crmRoutes);
+app.use('/api', cirRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
