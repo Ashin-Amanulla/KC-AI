@@ -6,10 +6,11 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { connectDB } from '../config/db.js';
-import { importCirWorkbook } from '../modules/cir/cir.service.js';
+import dotenv from 'dotenv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 const defaultPath = path.join(
   process.env.HOME || '',
   'Downloads',
@@ -23,10 +24,15 @@ async function main() {
     console.error('File not found:', xlsxPath);
     process.exit(1);
   }
+
+  const { connectDB, markMongoShutdown } = await import('../config/db.js');
+  const { importCirWorkbook } = await import('../modules/cir/cir.service.js');
+
   await connectDB();
   const buffer = fs.readFileSync(xlsxPath);
   const results = await importCirWorkbook(buffer);
   console.log('CIR seed complete:', results);
+  markMongoShutdown();
   process.exit(0);
 }
 
