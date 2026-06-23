@@ -11,7 +11,7 @@ export const HR_REQUIREMENTS_COLUMNS = [
   { key: 'startDate', label: 'Start Date', type: 'date', minWidth: 110 },
   { key: 'endDate', label: 'End Date', type: 'date', minWidth: 110 },
   { key: 'dueDate', label: 'Due Date', type: 'date', minWidth: 110 },
-  { key: 'notes', label: 'Notes', type: 'text', minWidth: 160 },
+  { key: 'notes', label: 'Notes', type: 'text', minWidth: 160, multiline: true },
   { key: 'completed', label: 'Completed', type: 'boolean', booleanStyle: 'yes', minWidth: 90 },
 ];
 

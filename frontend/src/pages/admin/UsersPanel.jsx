@@ -156,6 +156,13 @@ export const UsersPanel = () => {
                     </option>
                   ))}
                 </select>
+                {(() => {
+                  const selected = roles.find((r) => r.slug === form.role);
+                  if (!selected?.description) return null;
+                  return (
+                    <p className="mt-1.5 text-xs text-muted-foreground">{selected.description}</p>
+                  );
+                })()}
               </div>
               {editingId && (
                 <div className="flex items-center gap-2">

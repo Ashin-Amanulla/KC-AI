@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { useRoles, useCreateRole, useUpdateRole, useDeleteRole } from '../../api/roles';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -14,6 +14,8 @@ import {
 } from '../../ui/table';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { PermissionPicker } from './PermissionPicker';
+import { RolePermissionSummary } from './RolePermissionSummary';
 
 const emptyForm = () => ({
   name: '',
@@ -35,29 +37,10 @@ export const RolesPanel = ({ readOnly = false }) => {
   const roles = data?.roles || [];
   const catalog = data?.catalog || [];
 
-  const catalogByCategory = useMemo(() => {
-    const groups = {};
-    for (const item of catalog) {
-      const cat = item.category || 'Other';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(item);
-    }
-    return groups;
-  }, [catalog]);
-
   const resetForm = () => {
     setForm(emptyForm());
     setEditingId(null);
     setShowForm(false);
-  };
-
-  const togglePermission = (key) => {
-    setForm((f) => ({
-      ...f,
-      permissions: f.permissions.includes(key)
-        ? f.permissions.filter((p) => p !== key)
-        : [...f.permissions, key],
-    }));
   };
 
   const handleCreate = async (e) => {
@@ -108,9 +91,14 @@ export const RolesPanel = ({ readOnly = false }) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold">Roles & permissions</h3>
+        <div>
+          <h3 className="text-xl font-semibold">Roles & permissions</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            A role is a template of what someone can see and do. Assign roles to users on the Users tab.
+          </p>
+        </div>
         {canEdit && (
-          <Button onClick={() => { resetForm(); setShowForm(true); }}>Add Role</Button>
+          <Button onClick={() => { resetForm(); setShowForm(true); }}>Add role</Button>
         )}
       </div>
 
@@ -123,7 +111,7 @@ export const RolesPanel = ({ readOnly = false }) => {
       {showForm && canEdit && (
         <Card>
           <CardHeader>
-            <CardTitle>{editingId ? 'Edit Role' : 'Create Role'}</CardTitle>
+            <CardTitle>{editingId ? 'Edit role' : 'Create role'}</CardTitle>
           </CardHeader>
           <CardContent>
             <form
@@ -131,60 +119,35 @@ export const RolesPanel = ({ readOnly = false }) => {
               className="flex flex-col gap-4"
             >
               <div>
-                <label className="text-sm font-medium">Name</label>
+                <label className="text-sm font-medium">Role name</label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. BDM, Finance team"
                   required
                   className="mt-1"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Description</label>
+                <label className="text-sm font-medium">Description (optional)</label>
                 <Input
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="Who is this role for?"
                   className="mt-1"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Permissions</label>
-                <div className="space-y-4 max-h-96 overflow-y-auto border rounded-md p-4">
-                  {Object.entries(catalogByCategory).map(([category, items]) => (
-                    <div key={category}>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
-                        {category}
-                      </p>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {items.map((item) => (
-                          <label
-                            key={item.key}
-                            className="flex items-start gap-2 text-sm cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={form.permissions.includes(item.key)}
-                              onChange={() => togglePermission(item.key)}
-                              className="mt-1"
-                            />
-                            <span>
-                              <span className="font-medium">{item.label}</span>
-                              {item.path && (
-                                <span className="block text-xs text-muted-foreground">
-                                  {item.path}
-                                </span>
-                              )}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <label className="text-sm font-medium mb-2 block">What can this role access?</label>
+                <PermissionPicker
+                  catalog={catalog}
+                  selectedKeys={form.permissions}
+                  onChange={(permissions) => setForm((f) => ({ ...f, permissions }))}
+                />
               </div>
               <div className="flex gap-2">
                 <Button type="submit" disabled={createRole.isPending || updateRole.isPending}>
-                  {editingId ? 'Update' : 'Create'}
+                  {editingId ? 'Save role' : 'Create role'}
                 </Button>
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancel
@@ -207,10 +170,9 @@ export const RolesPanel = ({ readOnly = false }) => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Slug</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Users</TableHead>
-                  <TableHead>Permissions</TableHead>
+                  <TableHead>Access summary</TableHead>
                   <TableHead>Status</TableHead>
                   {canEdit && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
@@ -219,15 +181,20 @@ export const RolesPanel = ({ readOnly = false }) => {
                 {roles.map((role) => (
                   <TableRow key={role._id}>
                     <TableCell>
-                      {role.name}
+                      <div className="font-medium">{role.name}</div>
+                      {role.description && (
+                        <div className="text-xs text-muted-foreground mt-0.5 max-w-xs">{role.description}</div>
+                      )}
                       {role.isSystem && (
-                        <span className="ml-2 text-xs bg-muted px-1.5 py-0.5 rounded">System</span>
+                        <span className="mt-1 inline-block text-xs bg-muted px-1.5 py-0.5 rounded">Built-in role</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{role.slug}</TableCell>
                     <TableCell>{role.userCount ?? 0}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
-                      {(role.permissions || []).length} granted
+                    <TableCell>
+                      <RolePermissionSummary
+                        permissionKeys={role.permissions || []}
+                        catalog={catalog}
+                      />
                     </TableCell>
                     <TableCell>{role.isActive !== false ? 'Active' : 'Inactive'}</TableCell>
                     {canEdit && (

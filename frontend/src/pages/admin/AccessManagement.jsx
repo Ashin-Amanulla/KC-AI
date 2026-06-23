@@ -28,7 +28,8 @@ export const AccessManagement = () => {
       <div>
         <h2 className="text-3xl font-bold">Access management</h2>
         <p className="text-muted-foreground mt-1">
-          Manage users, roles, and feature permissions for this application.
+          Assign each person a role to control what they can see and do. Use plain-language permission
+          descriptions when editing roles.
         </p>
       </div>
 
