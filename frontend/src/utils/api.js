@@ -59,9 +59,17 @@ api.interceptors.response.use(
  * Handles both { error: "string" } and { error: { message: "string" } } formats.
  */
 export const getErrorMessage = (err) => {
-  const e = err?.response?.data?.error;
+  const data = err?.response?.data;
+  const e = data?.error;
   if (typeof e === 'string') return e;
-  if (e?.message) return e.message;
+  if (e?.details) {
+    if (Array.isArray(e.details)) {
+      const msgs = e.details.map((d) => (typeof d === 'string' ? d : d.message)).filter(Boolean);
+      if (msgs.length) return msgs.join('. ');
+    }
+    if (typeof e.details === 'string') return e.details;
+  }
+  if (e?.message && e.message !== 'Validation failed') return e.message;
   return err?.message || 'An error occurred';
 };
 

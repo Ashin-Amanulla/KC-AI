@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../../api/users';
 import { useRoles } from '../../api/roles';
@@ -29,20 +29,47 @@ export const UsersPanel = () => {
   const users = data?.users || [];
   const roles = (rolesData?.roles || []).filter((r) => r.isActive !== false);
   const roleLabel = (slug) => roles.find((r) => r.slug === slug)?.name || slug;
+  const defaultRoleSlug = roles[0]?.slug || 'viewer';
+
+  useEffect(() => {
+    if (!roles.length) return;
+    const validSlugs = new Set(roles.map((r) => r.slug));
+    if (!validSlugs.has(form.role)) {
+      setForm((f) => ({ ...f, role: defaultRoleSlug }));
+    }
+  }, [roles, defaultRoleSlug, form.role]);
 
   const resetForm = () => {
-    setForm({ email: '', password: '', name: '', role: roles[0]?.slug || 'viewer' });
+    setForm({ email: '', password: '', name: '', role: defaultRoleSlug });
     setEditingId(null);
     setShowForm(false);
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    const name = form.name.trim();
+    const email = form.email.trim();
+    if (!name) {
+      toast.error('Name is required');
+      return;
+    }
+    if (!email) {
+      toast.error('Email is required');
+      return;
+    }
+    if (!form.password || form.password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    if (!roles.some((r) => r.slug === form.role)) {
+      toast.error('Please choose a valid role');
+      return;
+    }
     try {
       await createUser.mutateAsync({
-        email: form.email,
+        email,
         password: form.password,
-        name: form.name,
+        name,
         role: form.role,
       });
       toast.success('User created');
@@ -55,10 +82,23 @@ export const UsersPanel = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!editingId) return;
+    const name = form.name.trim();
+    if (!name) {
+      toast.error('Name is required');
+      return;
+    }
+    if (form.password && form.password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    if (!roles.some((r) => r.slug === form.role)) {
+      toast.error('Please choose a valid role');
+      return;
+    }
     try {
       await updateUser.mutateAsync({
         id: editingId,
-        name: form.name,
+        name,
         role: form.role,
         isActive: form.isActive,
         ...(form.password ? { password: form.password } : {}),
@@ -140,8 +180,10 @@ export const UsersPanel = () => {
                   onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                   placeholder="••••••••"
                   required={!editingId}
+                  minLength={editingId ? undefined : 6}
                   className="mt-1"
                 />
+                <p className="mt-1 text-xs text-muted-foreground">At least 6 characters</p>
               </div>
               <div>
                 <label className="text-sm font-medium">Role</label>
@@ -149,12 +191,18 @@ export const UsersPanel = () => {
                   value={form.role}
                   onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
                   className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                  disabled={roles.length === 0}
                 >
-                  {roles.map((r) => (
-                    <option key={r.slug} value={r.slug}>
-                      {r.name}
-                    </option>
-                  ))}
+                  {roles.length === 0 ? (
+                    <option value="">No roles available</option>
+                  ) : (
+                    roles.map((r) => (
+                      <option key={r.slug} value={r.slug}>
+                        {r.name}
+                      </option>
+                    ))
+                  )}
                 </select>
                 {(() => {
                   const selected = roles.find((r) => r.slug === form.role);

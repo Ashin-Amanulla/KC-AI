@@ -13,22 +13,24 @@ export const validate = (schema) => {
     keys.forEach((key) => {
       const s = schema[key];
       if (!s) return;
-      const { error } = s.validate(req[key], { abortEarly: false });
+      const { error, value } = s.validate(req[key], { abortEarly: false, stripUnknown: true });
       if (error) {
         error.details.forEach((d) => {
           errors.push({ field: d.path.join('.'), message: d.message });
         });
+      } else if (value !== undefined) {
+        req[key] = value;
       }
     });
 
     if (errors.length > 0) {
-      const message = errors.map((e) => `${e.field}: ${e.message}`).join('; ');
+      const message = errors.map((e) => e.message).join('. ');
       return res.status(400).json({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Validation failed',
-          details: message,
+          message,
+          details: errors,
         },
       });
     }
