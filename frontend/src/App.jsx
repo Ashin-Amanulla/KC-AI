@@ -30,6 +30,7 @@ import { CrmLeads } from './pages/crm/CrmLeads';
 import { CrmMarketingActivities } from './pages/crm/CrmMarketingActivities';
 import { CrmImportExport } from './pages/crm/CrmImportExport';
 import { CirPage } from './pages/cir/CirPage';
+import { HrRequirementsPage } from './pages/hr-requirements/HrRequirementsPage';
 import { canAccessPath, getDefaultLanding } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 
