@@ -8,6 +8,16 @@ import { detectBrokenShifts, parseShiftCsvBuffer } from '../../shifts/shiftCsvPa
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EVIDENCE_FIXTURES = path.join(__dirname, '../../../fixtures/kc-studio-evidence');
+const DORA_76H_CAP_CSV = path.join(__dirname, '../../../fixtures/dora-vilma-amaya-76h-cap.csv');
+
+function loadDora76hCapShifts() {
+  const buf = fs.readFileSync(DORA_76H_CAP_CSV);
+  const { shifts } = parseShiftCsvBuffer(buf);
+  detectBrokenShifts(shifts);
+  return shifts
+    .filter((s) => s.staffName === 'Dora Vilma Amaya')
+    .map((s) => ({ ...s, _id: String(s.shiftcareId) }));
+}
 
 function loadEvidenceFixture(name) {
   const raw = fs.readFileSync(path.join(EVIDENCE_FIXTURES, `${name}.json`), 'utf8');
@@ -944,14 +954,7 @@ describe('76-hour ordinary cap', () => {
   });
 
   test('76h cap: per-shift breakdown keeps OT>76 hours on affected shifts', () => {
-    const buf = fs.readFileSync(
-      path.join(__dirname, '../../../../tmp/test/Scheduler_Timesheet_Export_2026-06-15-01-08.csv')
-    );
-    const { shifts } = parseShiftCsvBuffer(buf);
-    detectBrokenShifts(shifts);
-    const dora = shifts
-      .filter((s) => s.staffName === 'Dora Vilma Amaya')
-      .map((s) => ({ ...s, _id: String(s.shiftcareId) }));
+    const dora = loadDora76hCapShifts();
     const { data, shiftBreakdowns } = computePayHoursForStaff(dora, new Set());
     const sharonSat = shiftBreakdowns.get('145463996');
     assert.ok(sharonSat, 'Sharon Kynaston Sat 13 Jun shift present');
@@ -966,14 +969,7 @@ describe('76-hour ordinary cap', () => {
   });
 
   test('76h cap: global OT>76 tier — first 2h only once across weekday + Saturday', () => {
-    const buf = fs.readFileSync(
-      path.join(__dirname, '../../../../tmp/test/Scheduler_Timesheet_Export_2026-06-15-01-08.csv')
-    );
-    const { shifts } = parseShiftCsvBuffer(buf);
-    detectBrokenShifts(shifts);
-    const dora = shifts
-      .filter((s) => s.staffName === 'Dora Vilma Amaya')
-      .map((s) => ({ ...s, _id: String(s.shiftcareId) }));
+    const dora = loadDora76hCapShifts();
     const { data } = computePayHoursForStaff(dora, new Set());
     const tier1Total = r2(
       (data.otAfter76WeekdayUpto2 || 0) + (data.otAfter76SaturdayUpto2 || 0)
@@ -985,14 +981,7 @@ describe('76-hour ordinary cap', () => {
   });
 
   test('76h cap: no double-count when OT>76 fully reclassifies a Sunday shift', () => {
-    const buf = fs.readFileSync(
-      path.join(__dirname, '../../../../tmp/test/Scheduler_Timesheet_Export_2026-06-15-01-08.csv')
-    );
-    const { shifts } = parseShiftCsvBuffer(buf);
-    detectBrokenShifts(shifts);
-    const dora = shifts
-      .filter((s) => s.staffName === 'Dora Vilma Amaya')
-      .map((s) => ({ ...s, _id: String(s.shiftcareId) }));
+    const dora = loadDora76hCapShifts();
     const { shiftBreakdowns } = computePayHoursForStaff(dora, new Set());
     const sunNight = shiftBreakdowns.get('148432639');
     assert.ok(sunNight, 'Teresa Sun 14 Jun overnight shift present');
