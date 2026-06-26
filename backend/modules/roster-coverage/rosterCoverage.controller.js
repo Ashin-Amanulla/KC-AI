@@ -1110,6 +1110,8 @@ export async function uploadVacantShifts(req, res, next) {
     let updated = 0;
     let skipped = 0;
 
+    const seenShiftIds = parseResult.rows.map((r) => r.shiftcareShiftId);
+
     for (const row of parseResult.rows) {
       const pt = await ensureParticipantForTimesheetRow(row.clientName, partLookup);
       if (!pt) {
@@ -1150,6 +1152,23 @@ export async function uploadVacantShifts(req, res, next) {
       }
     }
 
+    // Stale-shift cleanup: any previously-imported shift (has a ShiftCare Shift ID)
+    // that is absent from this upload is marked 'cancelled'.
+    // NOTE: currently cancels regardless of status (filled/in_progress included).
+    //   To exempt already-actioned shifts, add `status: 'open'` to the filter.
+    //   See .cursor/rules/vacant-shift-import.mdc for the rationale.
+    let cancelled = 0;
+    if (seenShiftIds.length > 0) {
+      const staleResult = await RosterVacantShift.updateMany(
+        {
+          shiftcareShiftId: { $nin: seenShiftIds, $ne: null },
+          status: { $ne: 'cancelled' },
+        },
+        { $set: { status: 'cancelled' } }
+      );
+      cancelled = staleResult.modifiedCount ?? staleResult.nModified ?? 0;
+    }
+
     await RosterCoverageAudit.create({
       action: 'vacant_shifts_upload',
       userId: req.user?.userId || null,
@@ -1158,6 +1177,7 @@ export async function uploadVacantShifts(req, res, next) {
         created,
         updated,
         skipped,
+        cancelled,
         errors: errors.length,
       },
     });
@@ -1172,6 +1192,7 @@ export async function uploadVacantShifts(req, res, next) {
       created,
       updated,
       skipped,
+      cancelled,
       errors,
     });
   } catch (e) {

@@ -1,0 +1,35 @@
+---
+description: Vacant shift import (ShiftCare upload) behavior & stale-shift cleanup policy
+globs: backend/modules/roster-coverage/rosterCoverage.controller.js,backend/modules/roster-coverage/vacantShiftImport.js
+alwaysApply: false
+---
+
+# Vacant Shift Import — behavior & cleanup policy
+
+Endpoint: `POST /roster-coverage/vacant-shifts/upload` → `uploadVacantShifts` in
+`backend/modules/roster-coverage/rosterCoverage.controller.js`.
+
+## Upsert
+- Match key is the ShiftCare `Shift ID` (`shiftcareShiftId`).
+- Match found → update schedule fields only (`rosterParticipantId`, `startDatetime`,
+  `endDatetime`, `sleepover`, `reason`, `priority`). Preserves `status`, `notes`,
+  `updateLogs`, `filledByStaffId`.
+- No match → create with `status: 'open'`.
+
+## Stale-shift cleanup (decided 2026-06-26)
+After a successful upload, any vacant shift that **has a `shiftcareShiftId`** but is
+**absent from the uploaded file** is marked `status: 'cancelled'`.
+
+Decisions in effect:
+- **Action:** cancel (reversible), NOT hard delete. Keeps history/audit + note threads.
+- **Scope:** ALL imported shifts (any date) not present in this file — not limited to the
+  file's date range.
+- **Status:** cancels regardless of current status. Filled / in-progress shifts ARE
+  cancelled too.
+- Manually-logged shifts (no `shiftcareShiftId`) are NEVER cleaned up.
+
+### How to change later
+The "cancel regardless of status" choice is the one most likely to need revisiting.
+To exempt already-actioned shifts, add `status: 'open'` to the `updateMany` filter in
+`uploadVacantShifts`. To scope cleanup to the file's date window, also constrain
+`startDatetime` to the min/max of the uploaded rows.

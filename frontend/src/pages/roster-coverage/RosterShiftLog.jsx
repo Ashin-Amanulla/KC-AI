@@ -523,6 +523,7 @@ function ImportVacantShiftsModal({ onClose }) {
         toast.success(
           `Import complete — ${res.created ?? 0} created, ${res.updated ?? 0} updated (${res.rowsProcessed ?? 0} rows)`
         );
+        if (res.cancelled) toast.message(`${res.cancelled} stale shift(s) cancelled`);
         if (res.skipped) toast.message(`${res.skipped} row(s) skipped`);
         if (res.errors?.length) toast.message(`${res.errors.length} row error(s) — see network response`);
         onClose();
