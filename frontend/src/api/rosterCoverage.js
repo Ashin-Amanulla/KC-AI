@@ -295,3 +295,28 @@ export function useAddVacantShiftUpdate() {
     onSuccess: () => qc.invalidateQueries({ queryKey: Q.shiftDashboard }),
   });
 }
+
+export function useDeleteVacantShift() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) =>
+      (await api.delete(`/api/roster-coverage/vacant-shifts/${id}`)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: Q.shiftDashboard });
+      qc.invalidateQueries({ queryKey: Q.dashboard });
+    },
+  });
+}
+
+export function useClearVacantShifts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      (await api.delete('/api/roster-coverage/vacant-shifts')).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: Q.shiftDashboard });
+      qc.invalidateQueries({ queryKey: Q.dashboard });
+      qc.invalidateQueries({ queryKey: Q.audit });
+    },
+  });
+}

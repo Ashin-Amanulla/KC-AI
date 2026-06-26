@@ -20,6 +20,8 @@ import {
   listVacantShifts,
   createVacantShift,
   patchVacantShift,
+  deleteVacantShift,
+  clearVacantShifts,
   postFindCover,
   getDashboardSummary,
   getStaffProfile,
@@ -86,6 +88,7 @@ router.delete('/roster-coverage/worked-shifts/:id', ...authRoster, deleteWorkedS
 router.get('/roster-coverage/shift-dashboard', ...authAll, listShiftDashboard);
 router.get('/roster-coverage/vacant-shifts', ...authAll, listVacantShifts);
 router.post('/roster-coverage/vacant-shifts', ...authRoster, createVacantShift);
+router.delete('/roster-coverage/vacant-shifts', ...authRoster, clearVacantShifts);
 router.post('/roster-coverage/vacant-shifts/:id/updates', ...authAll, addVacantShiftUpdate);
 router.patch(
   '/roster-coverage/vacant-shifts/:vacantId/contact/:staffId',
@@ -93,6 +96,7 @@ router.patch(
   patchContactStatus
 );
 router.patch('/roster-coverage/vacant-shifts/:id', ...authRoster, patchVacantShift);
+router.delete('/roster-coverage/vacant-shifts/:id', ...authRoster, deleteVacantShift);
 
 router.post('/roster-coverage/find-cover', ...authRoster, postFindCover);
 router.post('/roster-coverage/timesheet-upload', ...authRoster, upload.single('file'), uploadTimesheet);

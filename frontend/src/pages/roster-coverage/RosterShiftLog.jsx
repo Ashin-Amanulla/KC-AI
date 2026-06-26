@@ -9,6 +9,8 @@ import {
   useAddVacantShiftUpdate,
   useRosterParticipants,
   useUploadVacantShifts,
+  useDeleteVacantShift,
+  useClearVacantShifts,
 } from '../../api/rosterCoverage';
 import { TABULAR_ACCEPT, validateTabularFile } from '../../config/upload';
 import { getErrorMessage } from '../../utils/api';
@@ -163,7 +165,7 @@ function NoteThread({ notes = [], shiftId, onAdd }) {
   );
 }
 
-function ShiftCard({ shift, idx, onStatus, onNote, onFindCover }) {
+function ShiftCard({ shift, idx, onStatus, onNote, onFindCover, onDelete }) {
   const rc = REASON_CFG[shift.reason] ?? { dot: '#94A3B8', bg: C.faint, label: shift.reason };
   const sc = STATUS_CFG[shift.status] ?? STATUS_CFG.open;
   const pc = PRI_CFG[shift.priority] ?? PRI_CFG.medium;
@@ -275,6 +277,16 @@ function ShiftCard({ shift, idx, onStatus, onNote, onFindCover }) {
             {nextLabel}
           </button>
           )}
+          <button
+            type="button"
+            title="Delete shift"
+            onClick={() => onDelete(shift)}
+            style={{ background: 'transparent', color: C.muted, border: `1.5px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF1F3'; e.currentTarget.style.borderColor = '#F43F5E'; e.currentTarget.style.color = '#F43F5E'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}
+          >
+            Delete
+          </button>
         </div>
       </div>
 
@@ -331,7 +343,7 @@ function shiftLocation(shift) {
   return m ? m[1].trim() : '';
 }
 
-function ShiftLogTable({ shifts, onStatus, onNote, onFindCover }) {
+function ShiftLogTable({ shifts, onStatus, onNote, onFindCover, onDelete }) {
   const [expandedId, setExpandedId] = useState(null);
   const sorted = useMemo(
     () => [...shifts].sort((a, b) => new Date(a.startDatetime) - new Date(b.startDatetime)),
@@ -483,6 +495,23 @@ function ShiftLogTable({ shifts, onStatus, onNote, onFindCover }) {
                           {nextLabel}
                         </button>
                       )}
+                      <button
+                        type="button"
+                        title="Delete shift"
+                        onClick={() => onDelete(shift)}
+                        style={{
+                          background: 'transparent',
+                          color: '#F43F5E',
+                          border: `1px solid #F43F5E44`,
+                          borderRadius: 6,
+                          padding: '4px 10px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -730,6 +759,8 @@ export function RosterShiftLog() {
   const createShift = useCreateVacantShift();
   const patchShift = usePatchVacantShift();
   const addUpdate = useAddVacantShiftUpdate();
+  const deleteShift = useDeleteVacantShift();
+  const clearShifts = useClearVacantShifts();
 
   const [showModal, setShowModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -801,6 +832,29 @@ export function RosterShiftLog() {
     navigate(`/roster-coverage/find-cover?${shiftToFindCoverSearchParams(shift)}`);
   }
 
+  function handleDelete(shift) {
+    const name = shift.rosterParticipantId?.name ?? 'this shift';
+    if (!window.confirm(`Delete the shift for ${name}? This cannot be undone.`)) return;
+    deleteShift.mutate(shift._id, {
+      onSuccess: () => toast.success('Shift deleted'),
+      onError: (e) => toast.error(getErrorMessage(e)),
+    });
+  }
+
+  function handleClearAll() {
+    if (shifts.length === 0) return;
+    if (
+      !window.confirm(
+        `Delete ALL ${shifts.length} shift(s) in the log? This cannot be undone.`
+      )
+    )
+      return;
+    clearShifts.mutate(undefined, {
+      onSuccess: (res) => toast.success(`Cleared ${res?.deleted ?? 0} shift(s)`),
+      onError: (e) => toast.error(getErrorMessage(e)),
+    });
+  }
+
   const filterBtn = (active, onClick, label, color) => (
     <button
       key={label}
@@ -855,6 +909,25 @@ export function RosterShiftLog() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <ViewToggle mode={viewMode} onChange={setViewModePersisted} />
             <LiveClock />
+            <button
+              type="button"
+              onClick={handleClearAll}
+              disabled={shifts.length === 0 || clearShifts.isPending}
+              style={{
+                background: C.surface,
+                color: shifts.length === 0 ? C.muted : '#F43F5E',
+                border: `1.5px solid ${shifts.length === 0 ? C.border : '#F43F5E44'}`,
+                borderRadius: 9,
+                padding: '8px 18px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: shifts.length === 0 ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit',
+                opacity: clearShifts.isPending ? 0.6 : 1,
+              }}
+            >
+              {clearShifts.isPending ? 'Clearing…' : 'Clear All'}
+            </button>
             <button
               type="button"
               onClick={() => setShowImport(true)}
@@ -951,6 +1024,7 @@ export function RosterShiftLog() {
             onStatus={handleStatus}
             onNote={handleNote}
             onFindCover={handleFindCover}
+            onDelete={handleDelete}
           />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, alignItems: 'start' }}>
@@ -964,6 +1038,7 @@ export function RosterShiftLog() {
                     onStatus={handleStatus}
                     onNote={handleNote}
                     onFindCover={handleFindCover}
+                    onDelete={handleDelete}
                   />
                 ))}
               </div>

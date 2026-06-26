@@ -522,6 +522,33 @@ export async function patchVacantShift(req, res, next) {
   }
 }
 
+export async function deleteVacantShift(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (badId(res, id)) return;
+    const doc = await RosterVacantShift.findByIdAndDelete(id);
+    if (!doc) return res.status(404).json({ error: 'Not found' });
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function clearVacantShifts(req, res, next) {
+  try {
+    const result = await RosterVacantShift.deleteMany({});
+    const deleted = result.deletedCount ?? 0;
+    await RosterCoverageAudit.create({
+      action: 'vacant_shifts_clear_all',
+      userId: req.user?.userId || null,
+      payload: { deleted },
+    });
+    res.json({ ok: true, deleted });
+  } catch (e) {
+    next(e);
+  }
+}
+
 // ─── Find cover ──────────────────────────────────────────────────────────────
 
 export async function postFindCover(req, res, next) {
