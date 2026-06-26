@@ -777,8 +777,12 @@ export function RosterShiftLog() {
     return true;
   });
 
+  const sortedVisible = [...visible].sort(
+    (a, b) => new Date(a.startDatetime) - new Date(b.startDatetime)
+  );
+
   const cols = [[], [], []];
-  visible.forEach((s, i) => cols[i % 3].push(s));
+  sortedVisible.forEach((s, i) => cols[i % 3].push(s));
 
   function handleCreate(form) {
     createShift.mutate(form, { onSuccess: () => setShowModal(false) });
