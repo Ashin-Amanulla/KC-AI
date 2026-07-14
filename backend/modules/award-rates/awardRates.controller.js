@@ -38,7 +38,7 @@ export const createAwardRateSet = async (req, res, next) => {
       constants,
       notes: notes || '',
     });
-    invalidateAwardRateCache();
+    await invalidateAwardRateCache();
     res.status(201).json({ set });
   } catch (err) {
     if (err?.code === 11000) {
@@ -60,7 +60,7 @@ export const updateAwardRateSet = async (req, res, next) => {
       runValidators: true,
     });
     if (!set) return res.status(404).json({ error: 'Rate set not found' });
-    invalidateAwardRateCache();
+    await invalidateAwardRateCache();
     res.json({ set });
   } catch (err) {
     next(err);

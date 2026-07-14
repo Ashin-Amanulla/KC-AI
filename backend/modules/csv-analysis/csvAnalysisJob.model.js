@@ -28,6 +28,9 @@ const csvAnalysisJobSchema = new mongoose.Schema(
   { strict: true }
 );
 
+csvAnalysisJobSchema.index({ status: 1 });
+csvAnalysisJobSchema.index({ uploadedBy: 1, createdAt: -1 });
+
 export const CsvAnalysisJob = mongoose.model(
   'CsvAnalysisJob',
   csvAnalysisJobSchema

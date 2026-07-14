@@ -96,6 +96,7 @@ const payHoursSchema = new mongoose.Schema(
     computedAt: {
       type: Date,
       default: null,
+      index: true,
     },
     manualFields: {
       type: Map,

@@ -15,6 +15,12 @@ import {
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { config } from '../../config/index.js';
+import { parsePagination, paginationMeta } from '../../utils/pagination.js';
+import {
+  NotFoundError,
+  ValidationError,
+} from '../../helpers/errors.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -43,7 +49,7 @@ export const getJobStatus = async (req, res, next) => {
       .lean();
 
     if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+      throw new NotFoundError('Job not found');
     }
 
     res.json(job);
@@ -55,6 +61,7 @@ export const getJobStatus = async (req, res, next) => {
 export const listPayHours = async (req, res, next) => {
   try {
     const { staffName, locationId } = req.query;
+    const { page, pageSize, skip } = parsePagination(req.query, config.payHours.listPageSize);
 
     const filter = {};
     if (locationId) filter.location = locationId;
@@ -62,11 +69,11 @@ export const listPayHours = async (req, res, next) => {
       filter.staffName = { $regex: staffName, $options: 'i' };
     }
 
-    const payHours = await PayHours.find(filter)
-      .sort({ staffName: 1 })
-      .lean();
+    const [payHours, total] = await Promise.all([
+      PayHours.find(filter).sort({ staffName: 1 }).skip(skip).limit(pageSize).lean(),
+      PayHours.countDocuments(filter),
+    ]);
 
-    // Determine overall period
     let periodStart = null;
     let periodEnd = null;
     if (payHours.length > 0) {
@@ -78,7 +85,8 @@ export const listPayHours = async (req, res, next) => {
       payHours: payHours.map(serializePayHoursRecord),
       periodStart,
       periodEnd,
-      total: payHours.length,
+      total,
+      ...paginationMeta(total, page, pageSize),
     });
   } catch (error) {
     next(error);
@@ -88,6 +96,7 @@ export const listPayHours = async (req, res, next) => {
 export const listShiftCosts = async (req, res, next) => {
   try {
     const { locationId } = req.query;
+    const { page, pageSize, skip } = parsePagination(req.query, config.payHours.listPageSize);
 
     const filter = {};
     if (locationId) filter.location = locationId;
@@ -96,12 +105,17 @@ export const listShiftCosts = async (req, res, next) => {
     const payHoursIds = payHoursRows.map((p) => p._id);
 
     if (payHoursIds.length === 0) {
-      return res.json({ shifts: [], total: 0 });
+      return res.json({ shifts: [], total: 0, page, pageSize, totalPages: 1 });
     }
 
-    const shiftPayRows = await ShiftPayHours.find({ payHoursId: { $in: payHoursIds } })
-      .sort({ shiftStart: 1 })
-      .lean();
+    const [shiftPayRows, total] = await Promise.all([
+      ShiftPayHours.find({ payHoursId: { $in: payHoursIds } })
+        .sort({ shiftStart: 1 })
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
+      ShiftPayHours.countDocuments({ payHoursId: { $in: payHoursIds } }),
+    ]);
 
     const shiftIds = [...new Set(shiftPayRows.map((s) => String(s.shiftId)))];
     const shiftDocs = shiftIds.length
@@ -114,7 +128,11 @@ export const listShiftCosts = async (req, res, next) => {
       shiftcareId: shiftcareById.get(String(row.shiftId)) || null,
     }));
 
-    res.json({ shifts, total: shifts.length });
+    res.json({
+      shifts,
+      total,
+      ...paginationMeta(total, page, pageSize),
+    });
   } catch (error) {
     next(error);
   }
@@ -126,7 +144,7 @@ export const getShiftPayHours = async (req, res, next) => {
 
     const payHours = await PayHours.findById(id).lean();
     if (!payHours) {
-      return res.status(404).json({ error: 'Pay hours record not found' });
+      throw new NotFoundError('Pay hours record not found');
     }
 
     const shifts = await ShiftPayHours.find({ payHoursId: id })
@@ -146,18 +164,18 @@ export const patchPayHoursManual = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid pay hours id' });
+      throw new ValidationError('Invalid pay hours id');
     }
 
     const payHours = await PayHours.findById(id);
-    if (!payHours) return res.status(404).json({ error: 'Pay hours record not found' });
+    if (!payHours) throw new NotFoundError('Pay hours record not found');
 
     const incoming = pickManualFields(req.body?.fields ?? {}, STAFF_MANUAL_FIELD_KEYS);
     const unset = Array.isArray(req.body?.unset)
       ? req.body.unset.filter((k) => STAFF_MANUAL_FIELD_KEYS.has(k))
       : [];
     if (!Object.keys(incoming).length && !unset.length) {
-      return res.status(400).json({ error: 'No valid manual fields provided' });
+      throw new ValidationError('No valid manual fields provided');
     }
 
     const merged = { ...manualFieldsToObject(payHours.manualFields), ...incoming };
@@ -178,11 +196,11 @@ export const clearPayHoursManual = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid pay hours id' });
+      throw new ValidationError('Invalid pay hours id');
     }
 
     const payHours = await PayHours.findById(id);
-    if (!payHours) return res.status(404).json({ error: 'Pay hours record not found' });
+    if (!payHours) throw new NotFoundError('Pay hours record not found');
 
     payHours.manualFields = new Map();
     payHours.isManuallyAdjusted = false;
@@ -200,21 +218,21 @@ export const patchShiftPayHoursManual = async (req, res, next) => {
   try {
     const { id, shiftPayHoursId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(shiftPayHoursId)) {
-      return res.status(400).json({ error: 'Invalid id' });
+      throw new ValidationError('Invalid id');
     }
 
     const payHours = await PayHours.findById(id).lean();
-    if (!payHours) return res.status(404).json({ error: 'Pay hours record not found' });
+    if (!payHours) throw new NotFoundError('Pay hours record not found');
 
     const shiftDoc = await ShiftPayHours.findOne({ _id: shiftPayHoursId, payHoursId: id });
-    if (!shiftDoc) return res.status(404).json({ error: 'Shift pay hours record not found' });
+    if (!shiftDoc) throw new NotFoundError('Shift pay hours record not found');
 
     const incoming = pickManualFields(req.body?.fields ?? {}, SHIFT_MANUAL_FIELD_KEYS);
     const unset = Array.isArray(req.body?.unset)
       ? req.body.unset.filter((k) => SHIFT_MANUAL_FIELD_KEYS.has(k))
       : [];
     if (!Object.keys(incoming).length && !unset.length) {
-      return res.status(400).json({ error: 'No valid manual fields provided' });
+      throw new ValidationError('No valid manual fields provided');
     }
 
     const merged = { ...manualFieldsToObject(shiftDoc.manualFields), ...incoming };
@@ -235,11 +253,11 @@ export const clearShiftPayHoursManual = async (req, res, next) => {
   try {
     const { id, shiftPayHoursId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(shiftPayHoursId)) {
-      return res.status(400).json({ error: 'Invalid id' });
+      throw new ValidationError('Invalid id');
     }
 
     const shiftDoc = await ShiftPayHours.findOne({ _id: shiftPayHoursId, payHoursId: id });
-    if (!shiftDoc) return res.status(404).json({ error: 'Shift pay hours record not found' });
+    if (!shiftDoc) throw new NotFoundError('Shift pay hours record not found');
 
     shiftDoc.manualFields = new Map();
     shiftDoc.isManuallyAdjusted = false;

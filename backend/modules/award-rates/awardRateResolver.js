@@ -1,4 +1,8 @@
 import { AwardRateSet } from './awardRateSet.model.js';
+import { getOrSet, invalidate } from '../../utils/cache.js';
+
+const AWARD_RATES_CACHE_KEY = 'award-rates:sets';
+const AWARD_RATES_TTL_SECONDS = 5 * 60;
 
 /**
  * Resolves which award-rate set applies at a given date.
@@ -34,21 +38,14 @@ export const FALLBACK_CONSTANTS = Object.freeze({
   phMult: 2.5,
 });
 
-let cache = null; // sorted descending by effectiveFrom
-let cacheLoadedAt = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000;
-
-export function invalidateAwardRateCache() {
-  cache = null;
-  cacheLoadedAt = 0;
+export async function invalidateAwardRateCache() {
+  await invalidate(AWARD_RATES_CACHE_KEY);
 }
 
 async function loadSets() {
-  const now = Date.now();
-  if (cache && now - cacheLoadedAt < CACHE_TTL_MS) return cache;
-  cache = await AwardRateSet.find({}).sort({ effectiveFrom: -1 }).lean();
-  cacheLoadedAt = now;
-  return cache;
+  return getOrSet(AWARD_RATES_CACHE_KEY, AWARD_RATES_TTL_SECONDS, async () =>
+    AwardRateSet.find({}).sort({ effectiveFrom: -1 }).lean()
+  );
 }
 
 /** The full rate-set document effective at `date`, or null when none applies. */

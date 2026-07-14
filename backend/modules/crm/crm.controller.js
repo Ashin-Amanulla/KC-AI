@@ -63,8 +63,19 @@ export async function getDashboard(req, res, next) {
 
 export async function listSupportCoordinators(req, res, next) {
   try {
-    const rows = await crmService.listSupportCoordinators({ search: req.query.search, access: crmAccess(req) });
-    res.json({ supportCoordinators: rows });
+    const result = await crmService.listSupportCoordinators({
+      search: req.query.search,
+      access: crmAccess(req),
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+    });
+    res.json({
+      supportCoordinators: result.items,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      totalPages: result.totalPages,
+    });
   } catch (e) {
     next(e);
   }
@@ -106,12 +117,20 @@ export async function deleteSupportCoordinator(req, res, next) {
 
 export async function listLeads(req, res, next) {
   try {
-    const rows = await crmService.listLeads({
+    const result = await crmService.listLeads({
       search: req.query.search,
       status: req.query.status,
       access: crmAccess(req),
+      page: req.query.page,
+      pageSize: req.query.pageSize,
     });
-    res.json({ leads: rows });
+    res.json({
+      leads: result.items,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      totalPages: result.totalPages,
+    });
   } catch (e) {
     next(e);
   }
@@ -153,8 +172,19 @@ export async function deleteLead(req, res, next) {
 
 export async function listMarketingActivities(req, res, next) {
   try {
-    const rows = await crmService.listMarketingActivities({ search: req.query.search, access: crmAccess(req) });
-    res.json({ marketingActivities: rows });
+    const result = await crmService.listMarketingActivities({
+      search: req.query.search,
+      access: crmAccess(req),
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+    });
+    res.json({
+      marketingActivities: result.items,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      totalPages: result.totalPages,
+    });
   } catch (e) {
     next(e);
   }
@@ -196,8 +226,19 @@ export async function deleteMarketingActivity(req, res, next) {
 
 export async function listStaffingRequirements(req, res, next) {
   try {
-    const rows = await crmService.listStaffingRequirements({ search: req.query.search, access: crmAccess(req) });
-    res.json({ staffingRequirements: rows });
+    const result = await crmService.listStaffingRequirements({
+      search: req.query.search,
+      access: crmAccess(req),
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+    });
+    res.json({
+      staffingRequirements: result.items,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      totalPages: result.totalPages,
+    });
   } catch (e) {
     next(e);
   }

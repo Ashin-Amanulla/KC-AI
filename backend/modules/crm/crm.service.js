@@ -31,6 +31,8 @@ import {
   listBdmOwners,
 } from './crmAccess.js';
 import { enrichLead, enrichLeads, stripLeadComputedFields } from './crmLeadUtils.js';
+import { config } from '../../config/index.js';
+import { parsePagination, paginationMeta } from '../../utils/pagination.js';
 
 export { listBdmOwners };
 
@@ -105,16 +107,28 @@ async function findOwned(Model, id, access) {
   return doc;
 }
 
+async function paginatedFind(Model, filter, sort, { page, pageSize } = {}) {
+  const pagination = parsePagination({ page, pageSize }, config.crm.pageSize);
+  const [items, total] = await Promise.all([
+    Model.find(filter).sort(sort).skip(pagination.skip).limit(pagination.pageSize).lean(),
+    Model.countDocuments(filter),
+  ]);
+  return {
+    items,
+    ...paginationMeta(total, pagination.page, pagination.pageSize),
+  };
+}
+
 // --- Support Coordinators ---
 
-export async function listSupportCoordinators({ search, access } = {}) {
+export async function listSupportCoordinators({ search, access, page, pageSize } = {}) {
   const filter = buildListFilter(
     search,
     ['scId', 'coordinatorName', 'organisation', 'email', 'location'],
     {},
     access?.bdmFilter
   );
-  return CrmSupportCoordinator.find(filter).sort({ scId: 1 }).lean();
+  return paginatedFind(CrmSupportCoordinator, filter, { scId: 1 }, { page, pageSize });
 }
 
 export async function createSupportCoordinator(data, access) {
@@ -135,7 +149,7 @@ export async function deleteSupportCoordinator(id, access) {
 
 // --- Leads ---
 
-export async function listLeads({ search, status, access } = {}) {
+export async function listLeads({ search, status, access, page, pageSize } = {}) {
   const extra = status ? { status } : {};
   const filter = buildListFilter(
     search,
@@ -143,8 +157,11 @@ export async function listLeads({ search, status, access } = {}) {
     extra,
     access?.bdmFilter
   );
-  const rows = await CrmLead.find(filter).sort({ leadId: 1 }).lean();
-  return enrichLeads(rows);
+  const result = await paginatedFind(CrmLead, filter, { leadId: 1 }, { page, pageSize });
+  return {
+    ...result,
+    items: enrichLeads(result.items),
+  };
 }
 
 export async function createLead(data, access) {
@@ -168,14 +185,14 @@ export async function deleteLead(id, access) {
 
 // --- Marketing Activities ---
 
-export async function listMarketingActivities({ search, access } = {}) {
+export async function listMarketingActivities({ search, access, page, pageSize } = {}) {
   const filter = buildListFilter(
     search,
     ['activityId', 'activityType', 'organisationName', 'relatedScOrLeadId'],
     {},
     access?.bdmFilter
   );
-  return CrmMarketingActivity.find(filter).sort({ date: -1, activityId: 1 }).lean();
+  return paginatedFind(CrmMarketingActivity, filter, { date: -1, activityId: 1 }, { page, pageSize });
 }
 
 export async function createMarketingActivity(data, access) {
@@ -196,9 +213,14 @@ export async function deleteMarketingActivity(id, access) {
 
 // --- Staffing Requirements ---
 
-export async function listStaffingRequirements({ search, access } = {}) {
+export async function listStaffingRequirements({ search, access, page, pageSize } = {}) {
   const filter = buildListFilter(search, ['participant', 'location', 'notes'], {}, access?.bdmFilter);
-  return CrmStaffingRequirement.find(filter).sort({ startDate: 1, dueDate: 1, participant: 1 }).lean();
+  return paginatedFind(
+    CrmStaffingRequirement,
+    filter,
+    { startDate: 1, dueDate: 1, participant: 1 },
+    { page, pageSize }
+  );
 }
 
 export async function createStaffingRequirement(data, access) {
