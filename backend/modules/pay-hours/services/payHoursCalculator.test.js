@@ -880,13 +880,16 @@ describe('continuous overnight PC chains (split ShiftCare rows)', () => {
 
 describe('broken shift (same local day)', () => {
   // Engine adds both full chain ordinary hours and broken-shift OT hours (see processBrokenShiftOvertime + processSingleChain when hasBroken).
-  test('[R085] short span (<12h) over 10h active: extra goes to WD OT tier1 via broken rule', () => {
+  test('[R085] short span (<12h) over 10h active: extra RECLASSIFIED to WD OT tier1 (not stacked)', () => {
     const s1 = shiftBrisbane({ _id: 'br01a', isBrokenShift: false }, '2026-04-07', 9, 0, 15, 0);
     const s2 = shiftBrisbane({ _id: 'br01b', isBrokenShift: true }, '2026-04-07', 15, 0, 20, 0);
     const { data } = computePayHoursForStaff([s1, s2], new Set());
     assert.strictEqual(data.brokenShiftCount, 1);
     assert.strictEqual(data.brokenShift2BreakCount, 0);
-    assert.strictEqual(data.morningHours, 11);
+    // 11 active hours total: 10 ordinary + 1 reclassified to OT. Buckets must
+    // sum to hours worked — the pre-2026-07 behaviour paid 11 ordinary AND
+    // 1h OT (12 paid hours for 11 worked).
+    assert.strictEqual(data.morningHours, 10);
     assert.strictEqual(data.weekdayOtUpto2, 1);
     assert.strictEqual(data.weekdayOtAfter2, 0);
   });

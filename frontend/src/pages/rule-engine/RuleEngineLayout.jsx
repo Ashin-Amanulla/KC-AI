@@ -7,17 +7,18 @@ const LINKS = [
   { to: '/rule-engine/tests', label: 'Test Monitor' },
   { to: '/rule-engine/rates', label: 'Award Rates' },
   { to: '/rule-engine/coverage', label: 'Rate-card Coverage' },
+  { to: '/rule-engine/data-quality', label: 'Data Quality' },
 ];
 
 export function RuleEngineLayout() {
   const { setLabel, status, isFallback } = useAwardRatesStore();
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight md:text-3xl">SCHADS Rule Engine</h2>
-          <p className="text-sm text-muted-foreground">
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold tracking-tight">SCHADS Rule Engine</h2>
+          <p className="text-[13px] text-muted-foreground">
             How we pay under the SCHADS Award (MA000100) — every encoded rule, its test coverage,
             and the effective award rates.
           </p>

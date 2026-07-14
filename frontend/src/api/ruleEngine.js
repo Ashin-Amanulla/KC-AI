@@ -89,6 +89,19 @@ export const useRateCardCoverage = (locationId) => {
   });
 };
 
+export const useAnomalies = (locationId) => {
+  return useQuery({
+    queryKey: ['rule-engine-anomalies', locationId ?? 'all'],
+    queryFn: async () => {
+      const params = {};
+      if (locationId) params.locationId = locationId;
+      const response = await api.get('/api/rule-engine/anomalies', { params });
+      return response.data;
+    },
+    staleTime: 30000,
+  });
+};
+
 export const useGoldenDiff = () => {
   return useMutation({
     mutationFn: async ({ expected, locationId }) => {

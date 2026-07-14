@@ -19,6 +19,7 @@ import { RulesReference } from './pages/rule-engine/RulesReference';
 import { TestMonitor } from './pages/rule-engine/TestMonitor';
 import { AwardRatesPage } from './pages/rule-engine/AwardRatesPage';
 import { RateCardCoverage } from './pages/rule-engine/RateCardCoverage';
+import { DataQuality } from './pages/rule-engine/DataQuality';
 import { RosterCoverageLayout } from './pages/roster-coverage/RosterCoverageLayout';
 import { RosterDashboard } from './pages/roster-coverage/RosterDashboard';
 import { RosterFindCover } from './pages/roster-coverage/RosterFindCover';
@@ -190,6 +191,7 @@ function App() {
             <Route path="tests" element={<TestMonitor />} />
             <Route path="rates" element={<AwardRatesPage />} />
             <Route path="coverage" element={<RateCardCoverage />} />
+            <Route path="data-quality" element={<DataQuality />} />
           </Route>
           <Route
             path="/workforce"

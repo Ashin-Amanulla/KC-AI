@@ -38,7 +38,7 @@ export const Layout = ({ children }) => {
         )}
         style={{ '--sidebar-width': `${sidebarWidth}px` }}
       >
-        <div className="container mx-auto px-4 py-6 md:px-6 md:py-8">
+        <div className="w-full px-4 py-4 md:px-5 md:py-5">
           {children}
         </div>
       </main>

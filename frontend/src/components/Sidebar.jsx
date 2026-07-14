@@ -142,17 +142,25 @@ export function Sidebar() {
 
   const sidebarContent = (
     <>
-      <div className="flex h-14 items-center border-b px-4">
+      <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-4">
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground"
+          title="Kangaroo Care"
+        >
+          KC
+        </span>
         {!collapsed && (
-          <span className="text-lg font-semibold">ShiftCare Viewer</span>
-        )}
-        {collapsed && (
-          <span className="text-lg font-semibold" title="ShiftCare Viewer">
-            S
+          <span className="flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-sm font-semibold text-sidebar-accent-foreground">
+              Kangaroo Care
+            </span>
+            <span className="truncate text-[11px] text-sidebar-foreground/60">
+              Workforce console
+            </span>
           </span>
         )}
       </div>
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
         {navGroups.map((group) => {
           const isSingleItem = group.items.length === 1 && group.id === 'overview';
           const open = collapsed || isSingleItem || openGroups.has(group.id);
@@ -162,14 +170,14 @@ export function Sidebar() {
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.id)}
-                  className="flex items-center justify-between rounded-md px-3 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+                  className="mt-1.5 flex items-center justify-between rounded-md px-3 py-1 text-left text-[10.5px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 hover:text-sidebar-foreground"
                 >
                   <span>{group.label}</span>
                   <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !open && '-rotate-90')} />
                 </button>
               )}
               {open && (
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-0.5">
                   {group.items.map((item) => {
                     const Icon = iconMap[item.icon];
                     const isActive = isItemActive(item, location.pathname, hasFullRoster);
@@ -180,14 +188,14 @@ export function Sidebar() {
                         onClick={() => setMobileOpen(false)}
                         title={collapsed ? item.label : undefined}
                         className={cn(
-                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                          'flex items-center gap-2.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors',
                           isActive
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                            ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                            : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                         )}
                       >
-                        {Icon && <Icon className="h-5 w-5 shrink-0" />}
-                        {!collapsed && <span>{item.label}</span>}
+                        {Icon && <Icon className="h-4 w-4 shrink-0" />}
+                        {!collapsed && <span className="truncate">{item.label}</span>}
                       </Link>
                     );
                   })}
@@ -197,43 +205,44 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="border-t p-2">
+      <div className="shrink-0 border-t border-sidebar-border p-2">
         {!collapsed && user && (
-          <div className="mb-2 px-3 py-2 text-xs text-muted-foreground">
-            <div className="truncate font-medium text-foreground">
+          <div className="mb-1 px-3 py-1.5 text-[11px] text-sidebar-foreground/60">
+            <div className="truncate text-xs font-medium text-sidebar-accent-foreground">
               {user.name || user.email}
             </div>
             <div className="truncate">{user.email}</div>
-            <div className="capitalize">{user.role?.replace('_', ' ')}</div>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-3"
-          onClick={handleLogout}
-          title={collapsed ? 'Logout' : undefined}
-        >
-          <LogOut className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>Logout</span>}
-        </Button>
-        <button
-          type="button"
-          onClick={() => {
-            const next = !collapsed;
-            setCollapsed(next);
-            window.dispatchEvent(new CustomEvent('sidebar-toggle', { detail: { collapsed: next } }));
-          }}
-          className="mt-2 flex w-full items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-5 w-5" />
-          ) : (
-            <ChevronLeft className="h-5 w-5" />
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex-1 justify-start gap-2.5 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            onClick={handleLogout}
+            title={collapsed ? 'Logout' : undefined}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Logout</span>}
+          </Button>
+          <button
+            type="button"
+            onClick={() => {
+              const next = !collapsed;
+              setCollapsed(next);
+              window.dispatchEvent(new CustomEvent('sidebar-toggle', { detail: { collapsed: next } }));
+            }}
+            className="flex items-center justify-center rounded-md p-2 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </div>
     </>
   );
@@ -262,7 +271,7 @@ export function Sidebar() {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-30 hidden h-screen flex-col border-r bg-background transition-[width] duration-200 md:flex',
+          'fixed left-0 top-0 z-30 hidden h-screen flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200 md:flex',
           collapsed ? 'w-[72px]' : 'w-64'
         )}
       >
@@ -272,7 +281,7 @@ export function Sidebar() {
       {/* Mobile drawer */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r bg-background transition-transform duration-200 md:hidden',
+          'fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-200 md:hidden',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >

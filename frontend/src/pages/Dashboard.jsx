@@ -17,27 +17,10 @@ import {
   TableRow,
 } from '../ui/table';
 import { LoadingScreen } from '../ui/LoadingSpinner';
+import { StatCard } from '../ui/stat-card';
+import { PageHeader } from '../components/PageHeader';
+import { CalendarClock, Users2, HeartHandshake, Banknote } from 'lucide-react';
 import { cn } from '../lib/utils';
-
-function StatCard({ label, value, sub, tone = 'default' }) {
-  const toneCls =
-    tone === 'warning'
-      ? 'text-amber-600 dark:text-amber-400'
-      : tone === 'destructive'
-        ? 'text-destructive'
-        : 'text-foreground';
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{label}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className={cn('text-2xl font-bold tabular-nums', toneCls)}>{value}</div>
-        {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
-      </CardContent>
-    </Card>
-  );
-}
 
 const JOB_STATUS_META = {
   completed: { label: 'Completed', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
@@ -233,37 +216,32 @@ export const Dashboard = () => {
     : 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold">Dashboard</h2>
-        <div className="flex items-center space-x-4">
-          <div>
-            <label className="text-sm font-medium mr-2">From:</label>
-            <Input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="w-40"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mr-2">To:</label>
-            <Input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="w-40"
-            />
-          </div>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <PageHeader title="Dashboard" description="Operations, pay-run health, and exceptions at a glance.">
+        <label className="text-xs font-medium text-muted-foreground">From</label>
+        <Input
+          type="date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          className="h-8 w-36"
+        />
+        <label className="text-xs font-medium text-muted-foreground">To</label>
+        <Input
+          type="date"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+          className="h-8 w-36"
+        />
+      </PageHeader>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Shifts" value={shiftsLoading ? '…' : totalShifts} sub="In selected date range" />
-        <StatCard label="Total Staff" value={staffLoading ? '…' : totalStaff} sub="Active staff members" />
-        <StatCard label="Total Clients" value={clientsLoading ? '…' : totalClients} sub="Active clients" />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard icon={CalendarClock} tone="primary" label="Total Shifts" value={shiftsLoading ? '…' : totalShifts} sub="In selected date range" />
+        <StatCard icon={Users2} label="Total Staff" value={staffLoading ? '…' : totalStaff} sub="Active staff members" />
+        <StatCard icon={HeartHandshake} label="Total Clients" value={clientsLoading ? '…' : totalClients} sub="Active clients" />
         <StatCard
+          icon={Banknote}
+          tone={totalExceptions > 0 ? 'warning' : 'success'}
           label="Gross pay (current)"
           value={summaryLoading ? '…' : `$${(summary?.totalGross ?? 0).toLocaleString()}`}
           sub="Latest computed pay hours"
@@ -271,7 +249,7 @@ export const Dashboard = () => {
       </div>
 
       {summary && (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           <ExceptionQueue exceptions={exceptions} canViewRuleEngine={canViewRuleEngine} />
           <PayRunStatusCard payRun={summary.payRun} />
           <RuleEngineHealthCard awardRates={summary.awardRates} canViewRuleEngine={canViewRuleEngine} />

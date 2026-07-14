@@ -171,6 +171,115 @@ export const goldenDiff = async (req, res, next) => {
   }
 };
 
+const GROSS_PER_HOUR_MIN = 20; // below SCHADS minimum → rate card or hours look wrong
+const GROSS_PER_HOUR_MAX = 150; // implausibly high effective rate
+const MAX_SINGLE_SHIFT_HOURS = 16;
+
+/**
+ * Data-quality scan across imported shifts and computed pay hours. Every
+ * check here corresponds to a class of discrepancy accountants have reported:
+ * overlapping/duplicate rostered shifts, implausible durations, negative pay
+ * buckets, and effective hourly rates outside sane SCHADS bounds.
+ */
+export const scanAnomalies = async (req, res, next) => {
+  try {
+    const { locationId } = req.query;
+    const shiftFilter = locationId ? { location: new mongoose.Types.ObjectId(locationId) } : {};
+    const payFilter = locationId ? { location: new mongoose.Types.ObjectId(locationId) } : {};
+
+    const [shifts, payHours] = await Promise.all([
+      Shift.find(shiftFilter)
+        .select('staffName startDatetime endDatetime hours shiftType')
+        .sort({ staffName: 1, startDatetime: 1 })
+        .lean(),
+      PayHours.find(payFilter).lean(),
+    ]);
+
+    const anomalies = [];
+
+    // Overlapping / zero-duration / implausibly long shifts per staff
+    let prevByStaff = new Map();
+    for (const shift of shifts) {
+      const key = (shift.staffName || '').toLowerCase();
+      const start = new Date(shift.startDatetime);
+      const end = new Date(shift.endDatetime);
+      const durH = (end - start) / 3600000;
+
+      if (durH <= 0) {
+        anomalies.push({
+          type: 'zero-duration-shift',
+          severity: 'error',
+          staffName: shift.staffName,
+          detail: `Shift ${start.toISOString()} has non-positive duration (${durH.toFixed(2)}h)`,
+        });
+      } else if (durH > MAX_SINGLE_SHIFT_HOURS && shift.shiftType !== 'sleepover') {
+        anomalies.push({
+          type: 'implausible-duration',
+          severity: 'warning',
+          staffName: shift.staffName,
+          detail: `${shift.shiftType} shift of ${durH.toFixed(2)}h starting ${start.toISOString()}`,
+        });
+      }
+
+      const prev = prevByStaff.get(key);
+      if (prev && start < prev.end) {
+        anomalies.push({
+          type: 'overlapping-shifts',
+          severity: 'error',
+          staffName: shift.staffName,
+          detail: `Shift starting ${start.toISOString()} overlaps previous shift ending ${prev.end.toISOString()} — double-paid time`,
+        });
+      }
+      if (!prev || end > prev.end) prevByStaff.set(key, { end });
+    }
+
+    // Computed pay sanity
+    for (const row of payHours) {
+      for (const [field, value] of Object.entries(row)) {
+        if (typeof value === 'number' && value < -0.001) {
+          anomalies.push({
+            type: 'negative-bucket',
+            severity: 'error',
+            staffName: row.staffName,
+            detail: `${field} is negative (${value})`,
+          });
+        }
+      }
+      const payable =
+        (row.morningHours || 0) + (row.afternoonHours || 0) + (row.nightHours || 0) +
+        (row.saturdayHours || 0) + (row.sundayHours || 0) + (row.holidayHours || 0) +
+        (row.nursingCareHours || 0) + (row.shortTurnaroundHours || 0) +
+        (row.weekdayOtUpto2 || 0) + (row.weekdayOtAfter2 || 0) +
+        (row.saturdayOtUpto2 || 0) + (row.saturdayOtAfter2 || 0) +
+        (row.sundayOtUpto2 || 0) + (row.sundayOtAfter2 || 0) +
+        (row.holidayOtUpto2 || 0) + (row.holidayOtAfter2 || 0);
+      if (row.gross != null && payable > 1) {
+        const perHour = row.gross / payable;
+        if (perHour < GROSS_PER_HOUR_MIN || perHour > GROSS_PER_HOUR_MAX) {
+          anomalies.push({
+            type: 'effective-rate-out-of-bounds',
+            severity: 'warning',
+            staffName: row.staffName,
+            detail: `Effective rate $${perHour.toFixed(2)}/h over ${payable.toFixed(2)} payable hours (gross $${row.gross})`,
+          });
+        }
+      }
+    }
+
+    const bySeverity = { error: 0, warning: 0 };
+    for (const a of anomalies) bySeverity[a.severity] = (bySeverity[a.severity] || 0) + 1;
+
+    res.json({
+      scannedShifts: shifts.length,
+      scannedPayHours: payHours.length,
+      totals: bySeverity,
+      anomalies: anomalies.slice(0, 500),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 /**
  * Rate-card coverage: staff who worked shifts but have no StaffSchadsRate row
  * (they silently fall back to default rates in cost analysis — a confirmed

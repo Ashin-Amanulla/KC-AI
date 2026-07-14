@@ -7,6 +7,7 @@ import {
   listRules,
   goldenDiff,
   rateCardCoverage,
+  scanAnomalies,
 } from './ruleEngine.controller.js';
 import { PERMISSIONS } from '../../config/permissionCatalog.js';
 
@@ -20,5 +21,6 @@ router.get('/rule-engine/test-runs/:id', authenticateJWT, authorizePermission(..
 router.post('/rule-engine/test-runs', authenticateJWT, authorizePermission(...readPerms), executeTestRun);
 router.post('/rule-engine/golden-diff', authenticateJWT, authorizePermission(...readPerms), goldenDiff);
 router.get('/rule-engine/coverage', authenticateJWT, authorizePermission(...readPerms), rateCardCoverage);
+router.get('/rule-engine/anomalies', authenticateJWT, authorizePermission(...readPerms), scanAnomalies);
 
 export default router;

@@ -786,6 +786,63 @@ function addBrokenShiftOtToCategory(data, dayType, hours, isTier1) {
   }
 }
 
+const NURSING_MIRROR_FIELD = {
+  nightHours: 'nursingNightHours',
+  afternoonHours: 'nursingAfternoonHours',
+};
+
+/**
+ * Remove up to `hours` of a nursing shift's weekday ORDINARY time from the
+ * staff buckets and the nursing ledger (end-first). Used when broken-shift OT
+ * reclassifies those hours — nursing weekday hours are bucketed directly at
+ * processing time (they bypass chain building), so unlike PC segments they
+ * are not excluded automatically and would otherwise be paid twice.
+ * Returns the hours actually removed.
+ */
+function removeNursingWeekdayOrdinary(data, ctx, shiftId, hours) {
+  if (hours <= 0) return 0;
+  let left = hours;
+  let removed = 0;
+  const entries = (ctx.nursingWeekdayLedger || []).filter(
+    (e) => e.shiftId === shiftId && e.hours > 0
+  );
+  for (let i = entries.length - 1; i >= 0 && left > 0; i--) {
+    const entry = entries[i];
+    const take = Math.min(entry.hours, left);
+    entry.hours = r2(entry.hours - take);
+    data[entry.fieldName] = r2(Math.max(0, (data[entry.fieldName] || 0) - take));
+    const mirror = NURSING_MIRROR_FIELD[entry.fieldName];
+    if (mirror) data[mirror] = r2(Math.max(0, (data[mirror] || 0) - take));
+    left = r2(left - take);
+    removed = r2(removed + take);
+  }
+  return removed;
+}
+
+/**
+ * Broken-shift OT RECLASSIFIES ordinary hours (pays them at the OT rate
+ * instead), it does not stack on top. Deduct the reclassified hours from the
+ * span's ordinary time, end-first (the OT is the last-worked time).
+ */
+function deductBrokenOtFromSpanOrdinary(previousShifts, currentShift, hours, data, ctx) {
+  let left = hours;
+  const spanChronological = [...previousShifts, currentShift];
+  for (let i = spanChronological.length - 1; i >= 0 && left > 0; i--) {
+    const s = spanChronological[i];
+    if (s.shiftType === 'sleepover') continue;
+    if (s.shiftType === 'nursing_support') {
+      left = r2(left - removeNursingWeekdayOrdinary(data, ctx, s.shiftId, left));
+      continue;
+    }
+    const segs = (s.segments || []).filter((seg) => seg && seg.hours > 0 && !seg.isSleepoverExcess);
+    for (let j = segs.length - 1; j >= 0 && left > 0; j--) {
+      const take = Math.min(segs[j].hours, left);
+      segs[j].hours = r2(segs[j].hours - take);
+      left = r2(left - take);
+    }
+  }
+}
+
 function countBreaksInBrokenShiftSpan(previousShifts, currentShift) {
   const chain = [...previousShifts, currentShift];
   let breaks = 0;
@@ -832,6 +889,8 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
       const extraHours = r2(totalActive - cap);
       addBrokenShiftOtToCategory(data, dayType, extraHours, true);
       trackBrokenShiftOtForShift(ctx, currentShift.shiftId, dayType, extraHours, true);
+      // The OT hours are reclassified ordinary hours, not additional hours.
+      deductBrokenOtFromSpanOrdinary(previousShifts, currentShift, extraHours, data, ctx);
       // Meal allowance per broken-shift OT event
       if (extraHours > 1) data.mealAllowanceCount += 1;
       if (extraHours > 4) data.mealAllowanceCount += 1;
@@ -845,6 +904,12 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
       ctx.reclassifiedFullDoubleTimeShiftIds.add(currentShift.shiftId);
       addBrokenShiftOtToCategory(data, dayType, doubleTimeHours, false); // false = tier 2 = 2×
       trackBrokenShiftOtForShift(ctx, currentShift.shiftId, dayType, doubleTimeHours, false);
+      // PC segments are excluded from bucket building via the reclassified
+      // set, but nursing weekday hours were bucketed directly at processing
+      // time — remove them or the shift is paid at ordinary AND at 2×.
+      if (currentShift.shiftType === 'nursing_support') {
+        removeNursingWeekdayOrdinary(data, ctx, currentShift.shiftId, doubleTimeHours);
+      }
       // Meal allowance per broken-shift OT event
       if (doubleTimeHours > 1) data.mealAllowanceCount += 1;
       if (doubleTimeHours > 4) data.mealAllowanceCount += 1;
@@ -873,19 +938,43 @@ function handleBrokenShift(shift, processedShift, processedShifts, data, ctx) {
       const targetField = targetCategory === 'night' ? 'nightHours' : 'afternoonHours';
       const targetNursingField = targetCategory === 'night' ? 'nursingNightHours' : 'nursingAfternoonHours';
       for (const s of spanShifts) {
+        // A shift already fully reclassified to double time (short turnaround
+        // or an earlier ≥12h broken span) has left the ordinary buckets —
+        // retro-loading it again would re-add hours that are being paid at 2×.
+        if (ctx.reclassifiedFullDoubleTimeShiftIds?.has(s.shiftId)) continue;
         if (s.shiftType === 'nursing_support') {
+          // Move only the hours still sitting in the nursing ledger (broken-
+          // shift OT may have reclassified part of them already).
           const nursingWeekdayHours = r2(
-            (s.segments || [])
-              .filter((seg) => seg && seg.hours > 0 && seg.dayType === 'weekday' && !seg.isSleepoverExcess)
-              .reduce((sum, seg) => sum + seg.hours, 0)
+            (ctx.nursingWeekdayLedger || [])
+              .filter((e) => e.shiftId === s.shiftId && e.hours > 0)
+              .reduce((sum, e) => sum + e.hours, 0)
           );
           if (nursingWeekdayHours > 0) {
-            data.nursingCareHours = r2(Math.max(0, data.nursingCareHours - nursingWeekdayHours));
-            data[targetField] = r2((data[targetField] || 0) + nursingWeekdayHours);
-            data[targetNursingField] = r2((data[targetNursingField] || 0) + nursingWeekdayHours);
-            for (const e of ctx.nursingWeekdayLedger || []) {
-              if (e.shiftId === s.shiftId && e.fieldName === 'nursingCareHours') {
-                e.fieldName = targetField;
+            // A nursing shift can sit inside two broken spans (e.g. broken
+            // shifts on consecutive days). Track where its hours currently
+            // live so a second retro pass MOVES them instead of adding them
+            // to a second bucket (double count at staff level).
+            if (!ctx.nursingRetroFieldByShift) ctx.nursingRetroFieldByShift = new Map();
+            const prevField = ctx.nursingRetroFieldByShift.get(s.shiftId) || 'nursingCareHours';
+            if (prevField !== targetField) {
+              if (prevField === 'nursingCareHours') {
+                data.nursingCareHours = r2(Math.max(0, data.nursingCareHours - nursingWeekdayHours));
+              } else {
+                const prevNursingField =
+                  prevField === 'nightHours' ? 'nursingNightHours' : 'nursingAfternoonHours';
+                data[prevField] = r2(Math.max(0, (data[prevField] || 0) - nursingWeekdayHours));
+                data[prevNursingField] = r2(
+                  Math.max(0, (data[prevNursingField] || 0) - nursingWeekdayHours)
+                );
+              }
+              data[targetField] = r2((data[targetField] || 0) + nursingWeekdayHours);
+              data[targetNursingField] = r2((data[targetNursingField] || 0) + nursingWeekdayHours);
+              ctx.nursingRetroFieldByShift.set(s.shiftId, targetField);
+              for (const e of ctx.nursingWeekdayLedger || []) {
+                if (e.shiftId === s.shiftId && e.fieldName === prevField) {
+                  e.fieldName = targetField;
+                }
               }
             }
           }
@@ -1478,10 +1567,14 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
 
     if (!breakdowns.has(sid)) {
       // Pure weekday nursing: no segments were added to pendingSegments, create entry now.
+      // A shift fully reclassified to double time (short turnaround / broken ≥12h span)
+      // gets its hours via that bucket instead — seeding nursingCareHours too would
+      // pay the same hours twice in the per-shift row.
+      const fullyReclassified = ctx.reclassifiedFullDoubleTimeShiftIds?.has(sid) || false;
       breakdowns.set(sid, {
         morningHours: 0, afternoonHours: 0, nightHours: 0,
         saturdayHours: 0, sundayHours: 0, holidayHours: 0,
-        nursingCareHours: shift.hours,
+        nursingCareHours: fullyReclassified ? 0 : shift.hours,
         shortTurnaroundHours: 0,
         weekdayOtUpto2: 0, weekdayOtAfter2: 0,
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
@@ -1726,18 +1819,12 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
   // Short turnaround (<10h break) override: current shift paid at double time
   // until a compliant break is achieved. Reclassify this shift's active hours to OT tier 2.
   if (shortTurnaround && activeHours > 0) {
-    if (shift.shiftType === 'nursing_support') {
-      const weekdayNursingHours = r2(
-        (segments || [])
-          .filter((seg) => seg && seg.hours > 0 && seg.dayType === 'weekday')
-          .reduce((sum, seg) => sum + seg.hours, 0)
-      );
-      if (weekdayNursingHours > 0) {
-        ctx.data.nursingCareHours = r2(Math.max(0, ctx.data.nursingCareHours - weekdayNursingHours));
-      }
-      if (ctx.nursingWeekdayLedger?.length) {
-        ctx.nursingWeekdayLedger = ctx.nursingWeekdayLedger.filter((e) => e.shiftId !== sid);
-      }
+    // NOTE: this shift's nursing hours were never added to nursingCareHours or
+    // the nursing ledger (the !shortTurnaround guard above skipped them), so
+    // there is nothing to deduct here. A previous version deducted anyway,
+    // silently deleting the PREVIOUS nursing shift's ordinary hours.
+    if (shift.shiftType === 'nursing_support' && ctx.nursingWeekdayLedger?.length) {
+      ctx.nursingWeekdayLedger = ctx.nursingWeekdayLedger.filter((e) => e.shiftId !== sid);
     }
 
     for (const seg of segments || []) {
