@@ -2,6 +2,10 @@ import jwt from 'jsonwebtoken';
 import { User } from '../user/user.model.js';
 import { config } from '../../config/index.js';
 import { loadRolePermissions } from '../../middlewares/auth.middleware.js';
+import {
+  UnauthorizedError,
+  ValidationError,
+} from '../../helpers/errors.js';
 
 const buildUserPayload = async (userDoc) => {
   const role = userDoc.role || 'viewer';
@@ -20,9 +24,7 @@ export const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({
-        error: 'Email and password are required',
-      });
+      throw new ValidationError('Email and password are required');
     }
 
     const user = await User.findOne({
@@ -31,17 +33,13 @@ export const login = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(401).json({
-        error: 'Invalid email or password',
-      });
+      throw new UnauthorizedError('Invalid email or password');
     }
 
     const isPasswordValid = await user.comparePassword(password);
 
     if (!isPasswordValid) {
-      return res.status(401).json({
-        error: 'Invalid email or password',
-      });
+      throw new UnauthorizedError('Invalid email or password');
     }
 
     const role = user.role || 'viewer';
@@ -87,7 +85,7 @@ export const getAuthStatus = async (req, res, next) => {
       .lean();
 
     if (!userDoc) {
-      return res.status(401).json({ error: 'User not found' });
+      throw new UnauthorizedError('User not found');
     }
 
     const user = await buildUserPayload(userDoc);

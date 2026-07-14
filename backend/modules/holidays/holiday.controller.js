@@ -1,6 +1,11 @@
 import { Holiday, HOLIDAY_RULES } from './holiday.model.js';
 import { Location } from '../locations/location.model.js';
 import { holidayToYmdUTC, ymdUTC } from './holidayRule.service.js';
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from '../../helpers/errors.js';
 
 const RULE_LABELS = {
   good_friday: 'Good Friday (Easter)',
@@ -53,7 +58,7 @@ export const listHolidays = async (req, res, next) => {
     const filter = {};
     if (locationId) {
       if (!/^[a-f\d]{24}$/i.test(locationId)) {
-        return res.status(400).json({ error: 'Invalid locationId' });
+        throw new ValidationError('Invalid locationId');
       }
       filter.location = locationId;
     }
@@ -85,31 +90,31 @@ export const createHoliday = async (req, res, next) => {
     const { name, locationId, rule, month, day, date } = req.body;
 
     if (!name?.trim() || !locationId) {
-      return res.status(400).json({ error: 'name and locationId are required' });
+      throw new ValidationError('name and locationId are required');
     }
 
     const hasRule = Boolean(rule);
     const hasMD = month != null && day != null;
     const hasDate = Boolean(date);
     if (!hasRule && !hasMD && !hasDate) {
-      return res.status(400).json({
-        error: 'Provide one of: rule, or (month and day), or date (one-off; stored as annual month/day)',
-      });
+      throw new ValidationError(
+        'Provide one of: rule, or (month and day), or date (one-off; stored as annual month/day)'
+      );
     }
     if (hasRule && (hasMD || hasDate)) {
-      return res.status(400).json({ error: 'Do not combine rule with month/day or date' });
+      throw new ValidationError('Do not combine rule with month/day or date');
     }
     if (hasMD && hasDate) {
-      return res.status(400).json({ error: 'Use either (month, day) or date, not both' });
+      throw new ValidationError('Use either (month, day) or date, not both');
     }
 
     const location = await Location.findById(locationId).lean();
     if (!location) {
-      return res.status(404).json({ error: 'Location not found' });
+      throw new NotFoundError('Location not found');
     }
 
     if (hasRule && !HOLIDAY_RULES.includes(rule)) {
-      return res.status(400).json({ error: `Invalid rule. Allowed: ${HOLIDAY_RULES.join(', ')}` });
+      throw new ValidationError(`Invalid rule. Allowed: ${HOLIDAY_RULES.join(', ')}`);
     }
 
     let monthNum = hasMD ? parseInt(String(month), 10) : null;
@@ -136,7 +141,9 @@ export const createHoliday = async (req, res, next) => {
       day: !hasRule ? dayNum : null,
     });
     if (existing) {
-      return res.status(409).json({ error: 'A holiday with the same rule or same calendar day already exists for this location' });
+      throw new ConflictError(
+        'A holiday with the same rule or same calendar day already exists for this location'
+      );
     }
 
     let holiday;
@@ -144,7 +151,9 @@ export const createHoliday = async (req, res, next) => {
       holiday = await Holiday.create(payload);
     } catch (e) {
       if (e.code === 11000) {
-        return res.status(409).json({ error: 'A holiday with the same rule or day already exists for this location' });
+        throw new ConflictError(
+          'A holiday with the same rule or day already exists for this location'
+        );
       }
       throw e;
     }
@@ -161,7 +170,7 @@ export const deleteHoliday = async (req, res, next) => {
     const holiday = await Holiday.findByIdAndDelete(id);
 
     if (!holiday) {
-      return res.status(404).json({ error: 'Holiday not found' });
+      throw new NotFoundError('Holiday not found');
     }
 
     res.json({ success: true });

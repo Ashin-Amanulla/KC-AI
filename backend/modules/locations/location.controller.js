@@ -4,6 +4,11 @@ import { dirname, join } from 'path';
 import { Location } from './location.model.js';
 import { Holiday } from '../holidays/holiday.model.js';
 import { normaliseFixtureEntry } from '../holidays/holidayFixture.util.js';
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from '../../helpers/errors.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -21,7 +26,7 @@ export const createLocation = async (req, res, next) => {
     const { name, code, timezone, pricingRegion } = req.body;
 
     if (!name || !code) {
-      return res.status(400).json({ error: 'name and code are required' });
+      throw new ValidationError('name and code are required');
     }
 
     const location = await Location.create({
@@ -35,7 +40,7 @@ export const createLocation = async (req, res, next) => {
     res.status(201).json({ location });
   } catch (error) {
     if (error.code === 11000) {
-      return res.status(409).json({ error: 'A location with that name or code already exists' });
+      return next(new ConflictError('A location with that name or code already exists'));
     }
     next(error);
   }
@@ -45,7 +50,9 @@ export const deleteLocation = async (req, res, next) => {
   try {
     const { id } = req.params;
     const location = await Location.findByIdAndDelete(id);
-    if (!location) return res.status(404).json({ error: 'Location not found' });
+    if (!location) {
+      throw new NotFoundError('Location not found');
+    }
     res.json({ success: true });
   } catch (error) {
     next(error);
@@ -66,14 +73,16 @@ export const loadHolidayFixture = async (req, res, next) => {
     const replaceExisting = req.body.replaceExisting !== false;
 
     const location = await Location.findById(id).lean();
-    if (!location) return res.status(404).json({ error: 'Location not found' });
+    if (!location) {
+      throw new NotFoundError('Location not found');
+    }
 
     const fixturePath = join(__dirname, '../../fixtures', `${fileBase}.json`);
     let fixtureData;
     try {
       fixtureData = JSON.parse(readFileSync(fixturePath, 'utf8'));
     } catch {
-      return res.status(404).json({ error: `No holiday fixture file: ${fileBase}.json` });
+      throw new NotFoundError(`No holiday fixture file: ${fileBase}.json`);
     }
 
     let holidays;
@@ -95,7 +104,7 @@ export const loadHolidayFixture = async (req, res, next) => {
     }
 
     if (!holidays.length) {
-      return res.status(404).json({ error: `No holidays found in fixture for location code "${location.code}"` });
+      throw new NotFoundError(`No holidays found in fixture for location code "${location.code}"`);
     }
 
     let created = 0;

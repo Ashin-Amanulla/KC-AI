@@ -41,6 +41,13 @@ export class ForbiddenError extends AppError {
   }
 }
 
+export class ConflictError extends AppError {
+  constructor(message = 'Conflict') {
+    super(message, 409, 'CONFLICT');
+    this.name = 'ConflictError';
+  }
+}
+
 /**
  * Standard API error response format
  */
