@@ -26,13 +26,11 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
+import { useUiPreferencesStore } from '../store/uiPreferences';
 import { getNavGroupsForPermissions } from '../config/nav';
 import { PERMISSIONS } from '../config/permissions';
 import { Button } from '../ui/button';
 import { cn } from '../lib/utils';
-
-const SIDEBAR_COLLAPSED_KEY = 'sidebar_collapsed';
-const SIDEBAR_OPEN_GROUPS_KEY = 'sidebar_open_groups';
 
 const iconMap = {
   LayoutDashboard,
@@ -55,15 +53,6 @@ const iconMap = {
   DollarSign,
 };
 
-function loadOpenGroups() {
-  try {
-    const raw = localStorage.getItem(SIDEBAR_OPEN_GROUPS_KEY);
-    return raw ? new Set(JSON.parse(raw)) : null;
-  } catch {
-    return null;
-  }
-}
-
 function isItemActive(item, pathname, hasFullRoster) {
   if (item.path === '/roster-coverage') {
     return pathname.startsWith('/roster-coverage') && hasFullRoster;
@@ -78,60 +67,35 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const collapsed = useUiPreferencesStore((s) => s.sidebarCollapsed);
+  const sidebarOpenGroups = useUiPreferencesStore((s) => s.sidebarOpenGroups);
+  const toggleSidebarCollapsed = useUiPreferencesStore((s) => s.toggleSidebarCollapsed);
+  const toggleOpenGroup = useUiPreferencesStore((s) => s.toggleOpenGroup);
+  const ensureOpenGroup = useUiPreferencesStore((s) => s.ensureOpenGroup);
+  const setOpenGroups = useUiPreferencesStore((s) => s.setOpenGroups);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const permissions = user?.permissions ?? [];
   const navGroups = getNavGroupsForPermissions(permissions);
   const hasFullRoster = permissions.includes(PERMISSIONS.ROSTER_VIEW);
 
-  const [openGroups, setOpenGroups] = useState(() => {
-    const stored = loadOpenGroups();
-    if (stored) return stored;
-    // Default: every group open on first visit.
-    return new Set(navGroups.map((g) => g.id));
-  });
-
   useEffect(() => {
-    try {
-      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
-    } catch {}
-  }, [collapsed]);
+    if (sidebarOpenGroups.length === 0 && navGroups.length > 0) {
+      setOpenGroups(navGroups.map((group) => group.id));
+    }
+  }, [navGroups, sidebarOpenGroups.length, setOpenGroups]);
 
-  // Auto-expand whichever group contains the active route.
   useEffect(() => {
     const activeGroup = navGroups.find((group) =>
       group.items.some((item) => isItemActive(item, location.pathname, hasFullRoster))
     );
-    if (activeGroup && !openGroups.has(activeGroup.id)) {
-      setOpenGroups((prev) => {
-        const next = new Set(prev);
-        next.add(activeGroup.id);
-        try {
-          localStorage.setItem(SIDEBAR_OPEN_GROUPS_KEY, JSON.stringify([...next]));
-        } catch {}
-        return next;
-      });
+    if (activeGroup) {
+      ensureOpenGroup(activeGroup.id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, [location.pathname, navGroups, hasFullRoster, ensureOpenGroup]);
 
   const toggleGroup = (groupId) => {
-    setOpenGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupId)) next.delete(groupId);
-      else next.add(groupId);
-      try {
-        localStorage.setItem(SIDEBAR_OPEN_GROUPS_KEY, JSON.stringify([...next]));
-      } catch {}
-      return next;
-    });
+    toggleOpenGroup(groupId);
   };
 
   const handleLogout = async () => {
@@ -163,7 +127,7 @@ export function Sidebar() {
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
         {navGroups.map((group) => {
           const isSingleItem = group.items.length === 1 && group.id === 'overview';
-          const open = collapsed || isSingleItem || openGroups.has(group.id);
+          const open = collapsed || isSingleItem || sidebarOpenGroups.includes(group.id);
           return (
             <div key={group.id} className="flex flex-col">
               {!collapsed && !isSingleItem && (
@@ -227,11 +191,7 @@ export function Sidebar() {
           </Button>
           <button
             type="button"
-            onClick={() => {
-              const next = !collapsed;
-              setCollapsed(next);
-              window.dispatchEvent(new CustomEvent('sidebar-toggle', { detail: { collapsed: next } }));
-            }}
+            onClick={toggleSidebarCollapsed}
             className="flex items-center justify-center rounded-md p-2 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}

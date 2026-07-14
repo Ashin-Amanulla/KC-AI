@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '../ui/table';
 import { LoadingScreen } from '../ui/LoadingSpinner';
+import { QueryErrorState } from '../components/QueryErrorState';
 import { StatCard } from '../ui/stat-card';
 import { PageHeader } from '../components/PageHeader';
 import { CalendarClock, Users2, HeartHandshake, Banknote } from 'lucide-react';
@@ -193,10 +194,10 @@ export const Dashboard = () => {
     [fromDate, toDate]
   );
 
-  const { data: shiftsData, isLoading: shiftsLoading } = useShifts(shiftsParams);
-  const { data: staffData, isLoading: staffLoading } = useStaff({ per_page: 1, include_metadata: true });
-  const { data: clientsData, isLoading: clientsLoading } = useClients({ per_page: 1, include_metadata: true });
-  const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
+  const { data: shiftsData, isLoading: shiftsLoading, isError: shiftsError, error: shiftsQueryError, refetch: refetchShifts } = useShifts(shiftsParams);
+  const { data: staffData, isLoading: staffLoading, isError: staffError, error: staffQueryError, refetch: refetchStaff } = useStaff({ per_page: 1, include_metadata: true });
+  const { data: clientsData, isLoading: clientsLoading, isError: clientsError, error: clientsQueryError, refetch: refetchClients } = useClients({ per_page: 1, include_metadata: true });
+  const { data: summary, isLoading: summaryLoading, isError: summaryError, error: summaryQueryError, refetch: refetchSummary } = useDashboardSummary();
 
   const shifts = shiftsData?.shifts || [];
   const shiftsMetadata = shiftsData?._metadata;
@@ -214,6 +215,9 @@ export const Dashboard = () => {
   const totalExceptions = exceptions
     ? exceptions.minimumEngagement + exceptions.shortTurnaround + exceptions.brokenShift + exceptions.missingRateCard
     : 0;
+
+  const hasQueryError = summaryError || shiftsError || staffError || clientsError;
+  const primaryQueryError = summaryQueryError || shiftsQueryError || staffQueryError || clientsQueryError;
 
   return (
     <div className="space-y-4">
@@ -233,6 +237,19 @@ export const Dashboard = () => {
           className="h-8 w-36"
         />
       </PageHeader>
+
+      {hasQueryError && (
+        <QueryErrorState
+          error={primaryQueryError}
+          title="Some dashboard data could not be loaded"
+          onRetry={() => {
+            if (summaryError) refetchSummary();
+            if (shiftsError) refetchShifts();
+            if (staffError) refetchStaff();
+            if (clientsError) refetchClients();
+          }}
+        />
+      )}
 
       {/* Summary Cards */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -271,6 +288,13 @@ export const Dashboard = () => {
         <CardContent>
           {shiftsLoading ? (
             <LoadingScreen message="Loading shifts..." />
+          ) : shiftsError ? (
+            <QueryErrorState
+              error={shiftsQueryError}
+              title="Failed to load shifts"
+              onRetry={refetchShifts}
+              className="border-0 shadow-none"
+            />
           ) : shifts.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No shifts found in the selected date range

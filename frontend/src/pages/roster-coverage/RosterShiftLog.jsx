@@ -754,7 +754,7 @@ function LogShiftModal({ onClose, onSubmit, participants = [] }) {
 
 export function RosterShiftLog() {
   const navigate = useNavigate();
-  const { data, isLoading, dataUpdatedAt } = useShiftDashboard(15000);
+  const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useShiftDashboard(15000);
   const { data: participantData } = useRosterParticipants();
   const createShift = useCreateVacantShift();
   const patchShift = usePatchVacantShift();
@@ -1006,6 +1006,18 @@ export function RosterShiftLog() {
           <div style={{ textAlign: 'center', padding: '80px 0', color: C.muted }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
             <div style={{ fontSize: 14 }}>Loading shift log…</div>
+          </div>
+        ) : isError ? (
+          <div style={{ textAlign: 'center', padding: '80px 0', color: '#F43F5E' }}>
+            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Failed to load shift log</div>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>{getErrorMessage(error)}</div>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              style={{ background: C.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Retry
+            </button>
           </div>
         ) : visible.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0', color: C.muted }}>

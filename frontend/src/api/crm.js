@@ -10,6 +10,38 @@ const Q = {
   marketingActivities: (params) => ['crm', 'marketing-activities', params],
 };
 
+function patchCrmListCache(old, rowsKey, id, body) {
+  if (!old?.[rowsKey]) return old;
+  return {
+    ...old,
+    [rowsKey]: old[rowsKey].map((row) =>
+      String(row._id) === String(id) ? { ...row, ...body } : row
+    ),
+  };
+}
+
+function withOptimisticCrmUpdate(qc, queryKeyPrefix, rowsKey) {
+  return {
+    onMutate: async ({ id, ...body }) => {
+      await qc.cancelQueries({ queryKey: queryKeyPrefix });
+      const previous = qc.getQueriesData({ queryKey: queryKeyPrefix });
+      qc.setQueriesData({ queryKey: queryKeyPrefix }, (old) =>
+        patchCrmListCache(old, rowsKey, id, body)
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous?.forEach(([key, data]) => {
+        qc.setQueryData(key, data);
+      });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeyPrefix });
+      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
+    },
+  };
+}
+
 export function useCrmBdmOwners(enabled = true) {
   return useQuery({
     queryKey: Q.bdmOwners,
@@ -50,10 +82,7 @@ export function useUpdateCrmSupportCoordinator() {
   return useMutation({
     mutationFn: async ({ id, ...body }) =>
       (await api.put(`/api/crm/support-coordinators/${id}`, body)).data,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['crm', 'support-coordinators'] });
-      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
-    },
+    ...withOptimisticCrmUpdate(qc, ['crm', 'support-coordinators'], 'supportCoordinators'),
   });
 }
 
@@ -92,10 +121,7 @@ export function useUpdateCrmLead() {
   return useMutation({
     mutationFn: async ({ id, ...body }) =>
       (await api.put(`/api/crm/leads/${id}`, body)).data,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['crm', 'leads'] });
-      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
-    },
+    ...withOptimisticCrmUpdate(qc, ['crm', 'leads'], 'leads'),
   });
 }
 
@@ -135,10 +161,7 @@ export function useUpdateCrmMarketingActivity() {
   return useMutation({
     mutationFn: async ({ id, ...body }) =>
       (await api.put(`/api/crm/marketing-activities/${id}`, body)).data,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['crm', 'marketing-activities'] });
-      qc.invalidateQueries({ queryKey: ['crm', 'dashboard'] });
-    },
+    ...withOptimisticCrmUpdate(qc, ['crm', 'marketing-activities'], 'marketingActivities'),
   });
 }
 

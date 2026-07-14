@@ -2,15 +2,26 @@ import { Link } from 'react-router-dom';
 import { useRosterDashboard, useRosterVacantShifts } from '../../api/rosterCoverage';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { LoadingScreen } from '../../ui/LoadingSpinner';
+import { QueryErrorState } from '../../components/QueryErrorState';
 import { Button } from '../../ui/button';
 
 export function RosterDashboard() {
-  const { data: dash, isLoading } = useRosterDashboard();
+  const { data: dash, isLoading, isError, error, refetch } = useRosterDashboard();
   const { data: vacantData } = useRosterVacantShifts('open');
   const vacancies = vacantData?.vacantShifts ?? [];
 
   if (isLoading) {
     return <LoadingScreen message="Loading roster summary…" />;
+  }
+
+  if (isError) {
+    return (
+      <QueryErrorState
+        error={error}
+        title="Failed to load roster dashboard"
+        onRetry={refetch}
+      />
+    );
   }
 
   return (

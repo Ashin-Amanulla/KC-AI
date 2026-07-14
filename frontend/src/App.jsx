@@ -5,6 +5,7 @@ import { Toaster } from 'sonner';
 import { useAuthStore } from './store/auth';
 import { useAwardRatesStore } from './store/awardRates';
 import { Layout } from './components/Layout';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { LoginForm } from './components/LoginForm';
 import { Dashboard } from './pages/Dashboard';
 import { Staff } from './pages/Staff';
@@ -81,7 +82,11 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to={defaultPath} replace />;
   }
 
-  return <Layout>{children}</Layout>;
+  return (
+    <Layout>
+      <AppErrorBoundary>{children}</AppErrorBoundary>
+    </Layout>
+  );
 };
 
 function App() {

@@ -20,6 +20,7 @@ import {
 } from '../api/payHours';
 import { getErrorMessage } from '../utils/api';
 import { LoadingScreen } from '../ui/LoadingSpinner';
+import { QueryErrorState } from '../components/QueryErrorState';
 import { VEHICLE_RATE } from '../lib/schadsWageCalc';
 
 // ─── Shift Pay Hours Detail (lazy-loaded on row expand) ──────────────────────
@@ -346,7 +347,7 @@ export const PayHours = ({
   if (locationId) payHoursParams.locationId = locationId;
   if (staffFilter) payHoursParams.staffName = staffFilter;
 
-  const { data: payHoursData, isLoading, refetch } = usePayHours(payHoursParams);
+  const { data: payHoursData, isLoading, isError, error, refetch } = usePayHours(payHoursParams);
 
   const payHours = payHoursData?.payHours || [];
   const periodStart = payHoursData?.periodStart;
@@ -444,6 +445,13 @@ export const PayHours = ({
     <>
       {isLoading ? (
         <LoadingScreen message="Loading pay hours…" />
+      ) : isError ? (
+        <QueryErrorState
+          error={error}
+          title="Failed to load pay hours"
+          onRetry={refetch}
+          className="border-0 shadow-none"
+        />
       ) : payHours.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Calculator className="mx-auto h-12 w-12 mb-3 opacity-30" />
