@@ -9,6 +9,8 @@
     "dev": "node --watch server.js",
     "test": "node --test",
     "seed:user": "node seeds/user.seed.js",
+    "seed:award-rates": "node seeds/seed_award_rates.js",
+    "docs:rules": "node scripts/generateRulesDoc.js",
     "seed:melbourne-holidays": "node seeds/seed_melbourne_location_holidays.js",
     "seed:melbourne-holidays-2026": "node seeds/seed_melbourne_location_holidays.js",
     "migrate:holidays-legacy": "node seeds/migrate_holidays_legacy_date_to_recurring.js"

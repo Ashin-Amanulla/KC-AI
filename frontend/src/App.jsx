@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { useAuthStore } from './store/auth';
+import { useAwardRatesStore } from './store/awardRates';
 import { Layout } from './components/Layout';
 import { LoginForm } from './components/LoginForm';
 import { Dashboard } from './pages/Dashboard';
@@ -13,7 +14,11 @@ import { ShiftAnalysis } from './pages/ShiftAnalysis';
 import { ForecastAnalysis } from './pages/ForecastAnalysis';
 import { AccessManagement } from './pages/admin/AccessManagement';
 import { WorkforceHub } from './pages/WorkforceHub';
-import { PayHoursTests } from './pages/PayHoursTests';
+import { RuleEngineLayout } from './pages/rule-engine/RuleEngineLayout';
+import { RulesReference } from './pages/rule-engine/RulesReference';
+import { TestMonitor } from './pages/rule-engine/TestMonitor';
+import { AwardRatesPage } from './pages/rule-engine/AwardRatesPage';
+import { RateCardCoverage } from './pages/rule-engine/RateCardCoverage';
 import { RosterCoverageLayout } from './pages/roster-coverage/RosterCoverageLayout';
 import { RosterDashboard } from './pages/roster-coverage/RosterDashboard';
 import { RosterFindCover } from './pages/roster-coverage/RosterFindCover';
@@ -46,10 +51,15 @@ const queryClient = new QueryClient({
 const ProtectedRoute = ({ children }) => {
   const location = useLocation();
   const { isAuthenticated, checkAuthStatus, isLoading, user } = useAuthStore();
+  const hydrateAwardRates = useAwardRatesStore((s) => s.hydrate);
 
   useEffect(() => {
     checkAuthStatus();
   }, [checkAuthStatus]);
+
+  useEffect(() => {
+    if (isAuthenticated) hydrateAwardRates();
+  }, [isAuthenticated, hydrateAwardRates]);
 
   if (isLoading) {
     return (
@@ -167,14 +177,20 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/pay-hours-tests" element={<Navigate to="/rule-engine/tests" replace />} />
           <Route
-            path="/pay-hours-tests"
+            path="/rule-engine"
             element={
               <ProtectedRoute>
-                <PayHoursTests />
+                <RuleEngineLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<RulesReference />} />
+            <Route path="tests" element={<TestMonitor />} />
+            <Route path="rates" element={<AwardRatesPage />} />
+            <Route path="coverage" element={<RateCardCoverage />} />
+          </Route>
           <Route
             path="/workforce"
             element={

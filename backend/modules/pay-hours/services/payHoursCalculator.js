@@ -1084,9 +1084,6 @@ function apply76HourCap(data, hourLedger) {
       perShiftOt76[entry.shiftId][entry.dayType] = r2(
         (perShiftOt76[entry.shiftId][entry.dayType] || 0) + deduct
       );
-      // #region agent log
-      fetch('http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa72d1'},body:JSON.stringify({sessionId:'aa72d1',location:'payHoursCalculator.js:apply76HourCap',message:'76h cap deducted from shift',data:{shiftId:entry.shiftId,dayType:entry.dayType,deduct,entryHoursAfter:entry.hours,fieldName:entry.fieldName},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
     }
 
     // Accumulate by day type
@@ -1603,23 +1600,12 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
     if (otByDayType.saturday) bd.otAfter76Saturday = r2(otByDayType.saturday);
     if (otByDayType.sunday) bd.otAfter76Sunday = r2(otByDayType.sunday);
     if (otByDayType.holiday) bd.otAfter76Holiday = r2(otByDayType.holiday);
-    // #region agent log
-    fetch('http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa72d1'},body:JSON.stringify({sessionId:'aa72d1',location:'payHoursCalculator.js:buildPerShiftBreakdowns:ot76',message:'per-shift OT>76 applied',data:{shiftId:sid,otByDayType,sundayHours:bd.sundayHours,payableTotal:shiftBreakdownPayableHours(bd)},timestamp:Date.now(),hypothesisId:'F',runId:'post-fix'})}).catch(()=>{});
-    // #endregion
   }
 
   for (const shift of shifts) {
     const sid = String(shift._id);
     if (!breakdowns.has(sid)) continue;
-    const bd = breakdowns.get(sid);
-    const before = shiftBreakdownPayableHours(bd);
-    ensureShiftBreakdownHasPayableHours(bd, shift);
-    const after = shiftBreakdownPayableHours(bd);
-    if (after > before) {
-      // #region agent log
-      fetch('http://127.0.0.1:7867/ingest/958becaf-9dde-43bb-ad1b-fc2b311fb486',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'aa72d1'},body:JSON.stringify({sessionId:'aa72d1',location:'payHoursCalculator.js:ensureShiftBreakdownHasPayableHours',message:'backfilled payable hours',data:{shiftId:sid,before,after,sundayHours:bd.sundayHours,otAfter76Sunday:bd.otAfter76Sunday},timestamp:Date.now(),hypothesisId:'F',runId:'post-fix'})}).catch(()=>{});
-      // #endregion
-    }
+    ensureShiftBreakdownHasPayableHours(breakdowns.get(sid), shift);
   }
 
   return breakdowns;
@@ -1796,9 +1782,15 @@ function processShiftForPayHours(shift, ctx, sleepovernAttachedNight = false, is
  *
  * @param {Array} shifts - Mongoose Shift documents, sorted by startDatetime ASC
  * @param {Set<string>} holidaySet - Set of "YYYY-MM-DD" local date strings
+ * @param {Object} [options]
+ * @param {Object} [options.awardConstants] - Effective-dated SCHADS constants
+ *   (see modules/award-rates). Hours classification does not depend on these;
+ *   they ride along so downstream wage calculation uses the same resolved set.
+ * @param {Array} [options.trace] - When provided, rule application events are
+ *   appended as { ruleId, shiftId, detail } for the calculation explainer.
  * @returns {{ data: PayHoursData, shiftBreakdowns: Map<shiftId, breakdown> }}
  */
-export function computePayHoursForStaff(shifts, holidaySet) {
+export function computePayHoursForStaff(shifts, holidaySet, options = {}) {
   const data = newPayHoursData();
 
   if (!shifts.length) {
@@ -1810,6 +1802,8 @@ export function computePayHoursForStaff(shifts, holidaySet) {
 
   const ctx = {
     holidaySet,
+    awardConstants: options.awardConstants || null,
+    trace: Array.isArray(options.trace) ? options.trace : null,
     data,
     pendingSegments: [],
     nursingWeekdayLedger: [],

@@ -73,7 +73,7 @@ function shiftBrisbane(overrides, ymd, h1, m1, h2, m2) {
   });
 }
 
-test('broken shift: same local day uses local date (AU) not UTC for span grouping', () => {
+test('[R074] broken shift: same local day uses local date (AU) not UTC for span grouping', () => {
   // 6pm Brisbane Mon → appears as Sun UTC; second shift same calendar Mon AU
   const s1 = shift({
     _id: 'aaaaaaaaaaaaaaaaaaaaaaaa',
@@ -93,7 +93,7 @@ test('broken shift: same local day uses local date (AU) not UTC for span groupin
   assert.ok(data.brokenShiftCount >= 1, 'broken shift should be recognised same AU day');
 });
 
-test('long-span broken shift: no double-count ordinary + 2× OT for last shift', () => {
+test('[R086] long-span broken shift: no double-count ordinary + 2× OT for last shift', () => {
   const s1 = shift({
     _id: 'c1c1c1c1c1c1c1c1c1c1c1c1',
     start: '2026-03-11T21:00:00.000Z',
@@ -121,7 +121,7 @@ test('long-span broken shift: no double-count ordinary + 2× OT for last shift',
   );
 });
 
-test('weekday chain: preserves separate time bands (not one lump at highest penalty)', () => {
+test('[R098] weekday chain: preserves separate time bands (not one lump at highest penalty)', () => {
   const s1 = shift({
     _id: 'd1d1d1d1d1d1d1d1d1d1d1d1',
     start: '2026-03-11T21:00:00.000Z',
@@ -151,7 +151,7 @@ test('weekday chain: preserves separate time bands (not one lump at highest pena
   );
 });
 
-test('sleepover weekday billable excess is night band, not morning/afternoon', () => {
+test('[R048] sleepover weekday billable excess is night band, not morning/afternoon', () => {
   // 12h same local day, +10: 8:00–20:00 → 4h excess after 8h sleepover deduction → all night
   const s = shift({
     _id: 'sosososososososososososo',
@@ -167,7 +167,7 @@ test('sleepover weekday billable excess is night band, not morning/afternoon', (
   assert.strictEqual(data.afternoonHours, 0);
 });
 
-test('personal care immediately after sleepover (within 8h gap) is night band', () => {
+test('[R054] personal care immediately after sleepover (within 8h gap) is night band', () => {
   const sleepover = shift({
     _id: 'so1111111111111111111111',
     start: '2026-06-01T10:00:00.000Z',
@@ -192,7 +192,7 @@ test('personal care immediately after sleepover (within 8h gap) is night band', 
   assert.strictEqual(data.afternoonHours, 0.01);
 });
 
-test('weekday 2pm–10pm local (+10): whole shift paid as evening (highest band)', () => {
+test('[R034][R037] weekday 2pm–10pm local (+10): whole shift paid as evening (highest band)', () => {
   // 2026-04-07 = Tuesday AU. Crosses 8pm band boundary; entire shift must be evening.
   const s = shift({
     _id: 'e8e8e8e8e8e8e8e8e8e8e8e8',
@@ -207,7 +207,7 @@ test('weekday 2pm–10pm local (+10): whole shift paid as evening (highest band)
   assert.strictEqual(data.nightHours, 0);
 });
 
-test('weekday 11am–9pm local (+10): whole shift paid as evening (highest band)', () => {
+test('[R034][R037] weekday 11am–9pm local (+10): whole shift paid as evening (highest band)', () => {
   const s = shift({
     _id: 'f1f1f1f1f1f1f1f1f1f1f1f1',
     start: '2026-04-07T01:00:00.000Z',
@@ -224,7 +224,7 @@ test('weekday 11am–9pm local (+10): whole shift paid as evening (highest band)
 // ─── SCHADS-style regression suite (engine behaviour; timezone +10:00) ───────
 
 describe('weekday time bands (6am / 8pm local)', () => {
-  test('before 6am start: whole same-day segment is night band', () => {
+  test('[R032] before 6am start: whole same-day segment is night band', () => {
     const s = shiftBrisbane({ _id: 'tb01' }, '2026-04-07', 5, 0, 13, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.nightHours, 8, 'whole shift is night band (starts before 6am)');
@@ -232,7 +232,7 @@ describe('weekday time bands (6am / 8pm local)', () => {
     assert.strictEqual(data.afternoonHours, 0);
   });
 
-  test('9am–5pm: all daytime (≤8pm) ordinary', () => {
+  test('[R035] 9am–5pm: all daytime (≤8pm) ordinary', () => {
     const s = shiftBrisbane({ _id: 'tb02' }, '2026-04-07', 9, 0, 17, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.morningHours, 8);
@@ -240,14 +240,14 @@ describe('weekday time bands (6am / 8pm local)', () => {
     assert.strictEqual(data.nightHours, 0);
   });
 
-  test('ends exactly 8pm: still daytime band (endHour 20:00 inclusive)', () => {
+  test('[R035] ends exactly 8pm: still daytime band (endHour 20:00 inclusive)', () => {
     const s = shiftBrisbane({ _id: 'tb03' }, '2026-04-07', 12, 0, 20, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.morningHours, 8);
     assert.strictEqual(data.afternoonHours, 0);
   });
 
-  test('8pm–10pm only: all evening (>8pm) band', () => {
+  test('[R034] 8pm–10pm only: all evening (>8pm) band', () => {
     const s = shiftBrisbane({ _id: 'tb04' }, '2026-04-07', 20, 0, 22, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.afternoonHours, 2);
@@ -255,7 +255,7 @@ describe('weekday time bands (6am / 8pm local)', () => {
     assert.strictEqual(data.nightHours, 0);
   });
 
-  test('3:30pm–12:00am: exact midnight finish remains evening', () => {
+  test('[R036] 3:30pm–12:00am: exact midnight finish remains evening', () => {
     const start = brisbaneLocal('2026-04-07', 15, 30);
     const end = brisbaneLocal('2026-04-08', 0, 0);
     const s = shift({ _id: 'tb05', start: start.toISOString(), end: end.toISOString(), hours: 8.5 });
@@ -267,7 +267,7 @@ describe('weekday time bands (6am / 8pm local)', () => {
 });
 
 describe('day types (Sat / Sun / public holiday)', () => {
-  test('Saturday 9am–5pm: saturdayHours only', () => {
+  test('[R024] Saturday 9am–5pm: saturdayHours only', () => {
     const s = shiftBrisbane({ _id: 'dt01' }, '2026-04-11', 9, 0, 17, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.saturdayHours, 8);
@@ -276,7 +276,7 @@ describe('day types (Sat / Sun / public holiday)', () => {
     assert.strictEqual(data.morningHours, 0);
   });
 
-  test('Sunday 9am–5pm: sundayHours only', () => {
+  test('[R025] Sunday 9am–5pm: sundayHours only', () => {
     const s = shiftBrisbane({ _id: 'dt02' }, '2026-04-12', 9, 0, 17, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.sundayHours, 8);
@@ -284,7 +284,7 @@ describe('day types (Sat / Sun / public holiday)', () => {
     assert.strictEqual(data.morningHours, 0);
   });
 
-  test('calendar PH overrides weekday: all holidayHours', () => {
+  test('[R027] calendar PH overrides weekday: all holidayHours', () => {
     const s = shiftBrisbane({ _id: 'dt03' }, '2026-04-07', 9, 0, 17, 0);
     const { data } = computePayHoursForStaff([s], new Set(['2026-04-07']));
     assert.strictEqual(data.holidayHours, 8);
@@ -293,7 +293,7 @@ describe('day types (Sat / Sun / public holiday)', () => {
 });
 
 describe('midnight crossings', () => {
-  test('weekday → weekday (overnight): single night segment', () => {
+  test('[R038] weekday → weekday (overnight): single night segment', () => {
     const start = brisbaneLocal('2026-04-07', 22, 0);
     const end = brisbaneLocal('2026-04-08', 2, 0);
     const s = shift({ _id: 'mc01', start: start.toISOString(), end: end.toISOString(), hours: 4 });
@@ -302,7 +302,7 @@ describe('midnight crossings', () => {
     assert.strictEqual(data.morningHours, 0);
   });
 
-  test('Friday → Saturday: split 2h weekday night + 2h Saturday', () => {
+  test('[R039][R040] Friday → Saturday: split 2h weekday night + 2h Saturday', () => {
     const start = brisbaneLocal('2026-04-10', 22, 0);
     const end = brisbaneLocal('2026-04-11', 2, 0);
     const s = shift({ _id: 'mc02', start: start.toISOString(), end: end.toISOString(), hours: 4 });
@@ -311,7 +311,7 @@ describe('midnight crossings', () => {
     assert.strictEqual(data.saturdayHours, 2);
   });
 
-  test('5:30pm Thu → 1:30am Fri: both weekdays → single night segment', () => {
+  test('[R038] 5:30pm Thu → 1:30am Fri: both weekdays → single night segment', () => {
     const start = brisbaneLocal('2026-04-23', 17, 30);
     const end = brisbaneLocal('2026-04-24', 1, 30);
     const s = shift({ _id: 'mc02b', start: start.toISOString(), end: end.toISOString(), hours: 8 });
@@ -319,7 +319,7 @@ describe('midnight crossings', () => {
     assert.strictEqual(data.nightHours, 8, 'both weekdays → entire shift is night');
   });
 
-  test('5:30pm Fri → 1:30am Sat: split at midnight gives exact 6.5h + 1.5h', () => {
+  test('[R039] 5:30pm Fri → 1:30am Sat: split at midnight gives exact 6.5h + 1.5h', () => {
     const start = brisbaneLocal('2026-04-10', 17, 30);
     const end = brisbaneLocal('2026-04-11', 1, 30);
     const s = shift({ _id: 'mc02c', start: start.toISOString(), end: end.toISOString(), hours: 8 });
@@ -328,7 +328,7 @@ describe('midnight crossings', () => {
     assert.strictEqual(data.saturdayHours, 1.5, 'midnight–1:30am = 1.5h Saturday');
   });
 
-  test('weekday → public holiday: split into weekday night + holiday hours', () => {
+  test('[R042] weekday → public holiday: split into weekday night + holiday hours', () => {
     const start = brisbaneLocal('2026-04-24', 22, 0);
     const end = brisbaneLocal('2026-04-25', 6, 0);
     const s = shift({ _id: 'mc03', start: start.toISOString(), end: end.toISOString(), hours: 8 });
@@ -340,7 +340,7 @@ describe('midnight crossings', () => {
     assert.strictEqual(data.holidayHours, 6);
   });
 
-  test('public holiday → sunday: split into holiday + sunday hours', () => {
+  test('[R043][R045] public holiday → sunday: split into holiday + sunday hours', () => {
     const start = brisbaneLocal('2026-04-25', 22, 0);
     const end = brisbaneLocal('2026-04-26', 8, 0);
     const s = shift({ _id: 'mc04', start: start.toISOString(), end: end.toISOString(), hours: 10 });
@@ -351,21 +351,21 @@ describe('midnight crossings', () => {
 });
 
 describe('Christmas Eve (local 6pm boundary)', () => {
-  test('10am–1pm Dec 24: ordinary weekday only (before 6pm PH)', () => {
+  test('[R028] 10am–1pm Dec 24: ordinary weekday only (before 6pm PH)', () => {
     const s = shiftBrisbane({ _id: 'ce01' }, '2026-12-24', 10, 0, 13, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.morningHours, 3);
     assert.strictEqual(data.holidayHours, 0);
   });
 
-  test('4pm–9pm Dec 24: split weekday + public holiday at 6pm', () => {
+  test('[R029][R030] 4pm–9pm Dec 24: split weekday + public holiday at 6pm', () => {
     const s = shiftBrisbane({ _id: 'ce02' }, '2026-12-24', 16, 0, 21, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.morningHours, 2);
     assert.strictEqual(data.holidayHours, 3);
   });
 
-  test('10pm Dec 24 – 6am Dec 25: split holiday + weekday night at midnight', () => {
+  test('[R029][R030] 10pm Dec 24 – 6am Dec 25: split holiday + weekday night at midnight', () => {
     const start = brisbaneLocal('2026-12-24', 22, 0);
     const end = brisbaneLocal('2026-12-25', 6, 0);
     const s = shift({ _id: 'ce03', start: start.toISOString(), end: end.toISOString(), hours: 8 });
@@ -375,7 +375,7 @@ describe('Christmas Eve (local 6pm boundary)', () => {
     assert.strictEqual(data.afternoonHours, 0, 'no evening portion');
   });
 
-  test('10pm–11pm Dec 24: same-day holiday (after 6pm, no midnight cross)', () => {
+  test('[R029] 10pm–11pm Dec 24: same-day holiday (after 6pm, no midnight cross)', () => {
     const s = shiftBrisbane({ _id: 'ce04' }, '2026-12-24', 22, 0, 23, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.holidayHours, 1);
@@ -384,7 +384,7 @@ describe('Christmas Eve (local 6pm boundary)', () => {
 });
 
 describe('sleepover', () => {
-  test('8h sleepover: no billable excess; sleepover counted', () => {
+  test('[R046][R047][R050] 8h sleepover: no billable excess; sleepover counted', () => {
     const s = shiftBrisbane(
       { _id: 'so01', shiftType: 'sleepover', hours: 8 },
       '2026-06-01',
@@ -399,7 +399,7 @@ describe('sleepover', () => {
     assert.strictEqual(data.morningHours, 0);
   });
 
-  test('9h sleepover: 1h billable excess as night', () => {
+  test('[R046][R048] 9h sleepover: 1h billable excess as night', () => {
     const s = shift({
       _id: 'so02',
       start: '2026-06-01T22:00:00.000Z',
@@ -414,7 +414,7 @@ describe('sleepover', () => {
     assert.strictEqual(data.sleepoversCount, 1);
   });
 
-  test('PC within 8h after sleepover end: NOT forced night band (SCHADS split-loading)', () => {
+  test('[R055] PC within 8h after sleepover end: NOT forced night band (SCHADS split-loading)', () => {
     const sleepover = shift({
       _id: 'so03a',
       start: '2026-06-01T10:00:00.000Z',
@@ -437,7 +437,7 @@ describe('sleepover', () => {
     assert.strictEqual(data.morningHours, 4.66);
   });
 
-  test('PC gap ≥8h after sleepover: not attached; still follows highest weekday band rule', () => {
+  test('[R054][R037] PC gap ≥8h after sleepover: not attached; still follows highest weekday band rule', () => {
     const sleepover = shift({
       _id: 'so04a',
       start: '2026-06-01T10:00:00.000Z',
@@ -464,7 +464,7 @@ describe('sleepover', () => {
     assert.strictEqual(data.afternoonHours, 4.01);
   });
 
-  test('short turnaround: shift after sleepover uses 8h minimum break', () => {
+  test('[R059][R094] short turnaround: shift after sleepover uses 8h minimum break', () => {
     const sleepoverStart = brisbaneLocal('2026-06-01', 22, 0);
     const sleepoverEnd = brisbaneLocal('2026-06-02', 6, 0);
     const sleepover = shift({
@@ -489,7 +489,7 @@ describe('sleepover', () => {
     assert.strictEqual(data.morningHours, 4);
   });
 
-  test('sleepover-linked post shift keeps 8h turnaround for the following shift', () => {
+  test('[R059] sleepover-linked post shift keeps 8h turnaround for the following shift', () => {
     const pre = shiftBrisbane(
       { _id: 'st04a', shiftType: 'personal_care', timezoneOffset: '+10:00' },
       '2026-06-12',
@@ -529,7 +529,7 @@ describe('sleepover', () => {
     assert.strictEqual(data.shortTurnaroundHours || 0, 0);
   });
 
-  test('short turnaround: shift after sleepover under 8h gap is penalized', () => {
+  test('[R094][R095] short turnaround: shift after sleepover under 8h gap is penalized', () => {
     const sleepoverStart = brisbaneLocal('2026-06-01', 22, 0);
     const sleepoverEnd = brisbaneLocal('2026-06-02', 6, 0);
     const sleepover = shift({
@@ -553,7 +553,7 @@ describe('sleepover', () => {
     assert.strictEqual(shiftBreakdowns.get('st02b')?.shortTurnaroundHours || 0, 4);
   });
 
-  test('sleepover must not bridge daily OT chains', () => {
+  test('[R058][R105] sleepover must not bridge daily OT chains', () => {
     const pcBefore = shiftBrisbane(
       { _id: 'soot01', shiftType: 'personal_care', timezoneOffset: '+10:00' },
       '2026-06-05',
@@ -597,7 +597,7 @@ describe('sleepover', () => {
 });
 
 describe('short turnaround thresholds', () => {
-  test('non-sleepover previous shift still requires 10h break', () => {
+  test('[R093] non-sleepover previous shift still requires 10h break', () => {
     const first = shiftBrisbane(
       { _id: 'st03a', shiftType: 'personal_care', timezoneOffset: '+10:00' },
       '2026-06-03',
@@ -619,7 +619,7 @@ describe('short turnaround thresholds', () => {
     assert.strictEqual(shiftBreakdowns.get('st03b')?.shortTurnaroundHours || 0, 4);
   });
 
-  test('broken-shift split: prefer broken OT over short-turnaround 2× bucket (no double penalty)', () => {
+  test('[R084][R097] broken-shift split: prefer broken OT over short-turnaround 2× bucket (no double penalty)', () => {
     const first = shiftBrisbane(
       { _id: 'st05a', shiftType: 'personal_care', timezoneOffset: '+10:00' },
       '2026-06-14',
@@ -647,21 +647,21 @@ describe('short turnaround thresholds', () => {
 });
 
 describe('nursing_support', () => {
-  test('weekday nursing: hours in nursingCareHours not morning/afternoon', () => {
+  test('[R061] weekday nursing: hours in nursingCareHours not morning/afternoon', () => {
     const s = shiftBrisbane({ _id: 'ns01', shiftType: 'nursing_support' }, '2026-04-07', 9, 0, 17, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.nursingCareHours, 8);
     assert.strictEqual(data.morningHours, 0);
   });
 
-  test('Saturday nursing: saturday penalty hours; no nursingCareHours', () => {
+  test('[R062] Saturday nursing: saturday penalty hours; no nursingCareHours', () => {
     const s = shiftBrisbane({ _id: 'ns02', shiftType: 'nursing_support' }, '2026-04-11', 9, 0, 17, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.saturdayHours, 8);
     assert.strictEqual(data.nursingCareHours, 0);
   });
 
-  test('continuous nursing Sat → Sun: split across day types', () => {
+  test('[R060] continuous nursing Sat → Sun: split across day types', () => {
     const s1 = shift({
       _id: 'ns03a',
       start: brisbaneLocal('2026-04-11', 23, 0).toISOString(),
@@ -684,7 +684,7 @@ describe('nursing_support', () => {
 });
 
 describe('daily ordinary cap (10h) & OT tiers', () => {
-  test('single weekday 12h: 10 ordinary + 2h OT tier1', () => {
+  test('[R107][R108] single weekday 12h: 10 ordinary + 2h OT tier1', () => {
     const s = shiftBrisbane({ _id: 'ot01' }, '2026-04-07', 9, 0, 21, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.afternoonHours, 10, '9am-9pm → afternoon (extends past 8pm, highest band)');
@@ -694,7 +694,7 @@ describe('daily ordinary cap (10h) & OT tiers', () => {
     assert.ok(data.mealAllowanceCount >= 1);
   });
 
-  test('Sunday 15h: 10 + 2 tier1 + 3 tier2; meal when OT>4', () => {
+  test('[R110][R104] Sunday 15h: 10 + 2 tier1 + 3 tier2; meal when OT>4', () => {
     const start = brisbaneLocal('2026-04-12', 9, 0);
     const end = brisbaneLocal('2026-04-13', 0, 0);
     const sAdj = shift({
@@ -710,7 +710,7 @@ describe('daily ordinary cap (10h) & OT tiers', () => {
     assert.strictEqual(data.mealAllowanceCount, 2);
   });
 
-  test('public holiday 12h: 10 holiday + 2 OT tier1', () => {
+  test('[R110] public holiday 12h: 10 holiday + 2 OT tier1', () => {
     const s = shiftBrisbane({ _id: 'ot03' }, '2026-04-07', 9, 0, 21, 0);
     const { data } = computePayHoursForStaff([s], new Set(['2026-04-07']));
     assert.strictEqual(data.holidayHours, 10);
@@ -718,14 +718,14 @@ describe('daily ordinary cap (10h) & OT tiers', () => {
     assert.strictEqual(data.holidayOtAfter2, 0);
   });
 
-  test('Saturday 12h: 10 + 2 OT tier1', () => {
+  test('[R110] Saturday 12h: 10 + 2 OT tier1', () => {
     const s = shiftBrisbane({ _id: 'ot04' }, '2026-04-11', 9, 0, 21, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.saturdayHours, 10);
     assert.strictEqual(data.saturdayOtUpto2, 2);
   });
 
-  test('weekday 13h: OT tier1 (2h) + tier2 (1h)', () => {
+  test('[R108][R109] weekday 13h: OT tier1 (2h) + tier2 (1h)', () => {
     const s = shiftBrisbane({ _id: 'ot05' }, '2026-04-07', 9, 0, 22, 0);
     const { data } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.afternoonHours, 10, '9am-10pm → afternoon (extends past 8pm, highest band)');
@@ -734,7 +734,7 @@ describe('daily ordinary cap (10h) & OT tiers', () => {
     assert.strictEqual(data.weekdayOtAfter2, 1);
   });
 
-  test('public holiday 13h: holiday OT tier1 + tier2', () => {
+  test('[R109][R110] public holiday 13h: holiday OT tier1 + tier2', () => {
     const s = shiftBrisbane({ _id: 'ot06' }, '2026-04-07', 9, 0, 22, 0);
     const { data } = computePayHoursForStaff([s], new Set(['2026-04-07']));
     assert.strictEqual(data.holidayHours, 10);
@@ -742,7 +742,7 @@ describe('daily ordinary cap (10h) & OT tiers', () => {
     assert.strictEqual(data.holidayOtAfter2, 1);
   });
 
-  test('continuous overnight chain locks first 10h to night before OT extraction', () => {
+  test('[R101] continuous overnight chain locks first 10h to night before OT extraction', () => {
     const s1 = shift({
       _id: 'ot07a',
       start: brisbaneLocal('2026-04-28', 22, 0).toISOString(),
@@ -770,7 +770,7 @@ describe('daily ordinary cap (10h) & OT tiers', () => {
 
 
 describe('detectBrokenShifts gap boundaries', () => {
-  test('exactly 10h gap after overnight PC is not broken (adequate rest)', () => {
+  test('[R072] exactly 10h gap after overnight PC is not broken (adequate rest)', () => {
     const s1 = shift({
       _id: 'bs10a',
       shiftType: 'personal_care',
@@ -789,7 +789,7 @@ describe('detectBrokenShifts gap boundaries', () => {
     assert.strictEqual(s2.isBrokenShift, false);
   });
 
-  test('just under 10h gap after overnight PC is broken', () => {
+  test('[R069] just under 10h gap after overnight PC is broken', () => {
     const s1 = shift({
       _id: 'bs09a',
       shiftType: 'personal_care',
@@ -808,7 +808,7 @@ describe('detectBrokenShifts gap boundaries', () => {
     assert.strictEqual(s2.isBrokenShift, true);
   });
 
-  test('exactly 8h gap after sleepover is not broken', () => {
+  test('[R070][R072] exactly 8h gap after sleepover is not broken', () => {
     const s1 = shift({
       _id: 'bs08a',
       shiftType: 'sleepover',
@@ -829,7 +829,7 @@ describe('detectBrokenShifts gap boundaries', () => {
 });
 
 describe('continuous overnight PC chains (split ShiftCare rows)', () => {
-  test('20:00–22:00 + 22:00–06:00 Wed: evening block upgrades to night (matches single 10h shift)', () => {
+  test('[R099] 20:00–22:00 + 22:00–06:00 Wed: evening block upgrades to night (matches single 10h shift)', () => {
     const s1 = shift({
       _id: 'co01a',
       shiftType: 'personal_care',
@@ -854,7 +854,7 @@ describe('continuous overnight PC chains (split ShiftCare rows)', () => {
     assert.strictEqual(shiftBreakdowns.get('co01b')?.nightHours, 8);
   });
 
-  test('20:00–22:00 + 22:00–06:00 Fri→Sat: evening upgrades to night on weekday portion', () => {
+  test('[R099] 20:00–22:00 + 22:00–06:00 Fri→Sat: evening upgrades to night on weekday portion', () => {
     const s1 = shift({
       _id: 'co02a',
       shiftType: 'personal_care',
@@ -880,7 +880,7 @@ describe('continuous overnight PC chains (split ShiftCare rows)', () => {
 
 describe('broken shift (same local day)', () => {
   // Engine adds both full chain ordinary hours and broken-shift OT hours (see processBrokenShiftOvertime + processSingleChain when hasBroken).
-  test('short span (<12h) over 10h active: extra goes to WD OT tier1 via broken rule', () => {
+  test('[R085] short span (<12h) over 10h active: extra goes to WD OT tier1 via broken rule', () => {
     const s1 = shiftBrisbane({ _id: 'br01a', isBrokenShift: false }, '2026-04-07', 9, 0, 15, 0);
     const s2 = shiftBrisbane({ _id: 'br01b', isBrokenShift: true }, '2026-04-07', 15, 0, 20, 0);
     const { data } = computePayHoursForStaff([s1, s2], new Set());
@@ -891,7 +891,7 @@ describe('broken shift (same local day)', () => {
     assert.strictEqual(data.weekdayOtAfter2, 0);
   });
 
-  test('PC → sleepover → PC: one unpaid gap = 1-break allowance only (not 2-break)', () => {
+  test('[R080][R081] PC → sleepover → PC: one unpaid gap = 1-break allowance only (not 2-break)', () => {
     const s1 = shift({
       _id: 'bs-so01',
       shiftType: 'personal_care',
@@ -922,7 +922,7 @@ describe('broken shift (same local day)', () => {
     assert.strictEqual(data.brokenShift2BreakCount, 0);
   });
 
-  test('two inadequate gaps same day: 2-break allowance', () => {
+  test('[R082] two inadequate gaps same day: 2-break allowance', () => {
     const s1 = shiftBrisbane({ _id: 'bs2a', isBrokenShift: false }, '2026-04-07', 9, 0, 12, 0);
     const s2 = shiftBrisbane({ _id: 'bs2b', isBrokenShift: true }, '2026-04-07', 15, 0, 17, 0);
     const s3 = shiftBrisbane({ _id: 'bs2c', isBrokenShift: true }, '2026-04-07', 19, 0, 21, 0);
@@ -933,7 +933,7 @@ describe('broken shift (same local day)', () => {
 });
 
 describe('76-hour ordinary cap', () => {
-  test('10× Tuesday 8h (non-continuous): last 4h moved to otAfter76 (weekday)', () => {
+  test('[R112][R113] 10× Tuesday 8h (non-continuous): last 4h moved to otAfter76 (weekday)', () => {
     const shifts = [];
     for (let w = 0; w < 10; w++) {
       const start = new Date(Date.UTC(2026, 3, 7 + w * 7, 23, 0, 0));
@@ -953,7 +953,7 @@ describe('76-hour ordinary cap', () => {
     assert.strictEqual(data.otAfter76Weekday, 4);
   });
 
-  test('76h cap: per-shift breakdown keeps OT>76 hours on affected shifts', () => {
+  test('[R117] 76h cap: per-shift breakdown keeps OT>76 hours on affected shifts', () => {
     const dora = loadDora76hCapShifts();
     const { data, shiftBreakdowns } = computePayHoursForStaff(dora, new Set());
     const sharonSat = shiftBreakdowns.get('145463996');
@@ -968,7 +968,7 @@ describe('76-hour ordinary cap', () => {
     assert.strictEqual(data.otAfter76Saturday, 6);
   });
 
-  test('76h cap: global OT>76 tier — first 2h only once across weekday + Saturday', () => {
+  test('[R118][R119] 76h cap: global OT>76 tier — first 2h only once across weekday + Saturday', () => {
     const dora = loadDora76hCapShifts();
     const { data } = computePayHoursForStaff(dora, new Set());
     const tier1Total = r2(
@@ -980,7 +980,7 @@ describe('76-hour ordinary cap', () => {
     assert.strictEqual(data.otAfter76SaturdayAfter2 || 0, data.otAfter76Saturday || 0);
   });
 
-  test('76h cap: no double-count when OT>76 fully reclassifies a Sunday shift', () => {
+  test('[R123] 76h cap: no double-count when OT>76 fully reclassifies a Sunday shift', () => {
     const dora = loadDora76hCapShifts();
     const { shiftBreakdowns } = computePayHoursForStaff(dora, new Set());
     const sunNight = shiftBreakdowns.get('148432639');
@@ -1017,14 +1017,14 @@ describe('76-hour ordinary cap', () => {
 });
 
 describe('hours normalization from timestamps', () => {
-  test('minimum engagement: 1h personal care remains 1h and is flagged as exception', () => {
+  test('[R125][R132] minimum engagement: 1h personal care remains 1h and is flagged as exception', () => {
     const s = shiftBrisbane({ _id: 'hn00' }, '2026-04-07', 9, 0, 10, 0);
     const { data, shiftBreakdowns } = computePayHoursForStaff([s], new Set());
     assert.strictEqual(data.morningHours, 1);
     assert.strictEqual(shiftBreakdowns.get('hn00')?.minimumEngagementException, true);
   });
 
-  test('minimum engagement: two 1h PC back-to-back clear exception (linked chain)', () => {
+  test('[R126][R128] minimum engagement: two 1h PC back-to-back clear exception (linked chain)', () => {
     const [a, b] = shiftBrisbaneTwoParts(
       { _id: 'me01a' },
       { _id: 'me01b' },
@@ -1043,7 +1043,7 @@ describe('hours normalization from timestamps', () => {
     assert.strictEqual(shiftBreakdowns.get('me01b')?.minimumEngagementException, false);
   });
 
-  test('minimum engagement: 0.5h + 7.5h PC broken gap keeps first segment flagged', () => {
+  test('[R127] minimum engagement: 0.5h + 7.5h PC broken gap keeps first segment flagged', () => {
     const [a, b] = shiftBrisbaneTwoParts(
       { _id: 'me02a', clientName: 'Client A' },
       { _id: 'me02b', clientName: 'Client A', isBrokenShift: true },
@@ -1062,7 +1062,7 @@ describe('hours normalization from timestamps', () => {
     assert.strictEqual(shiftBreakdowns.get('me02b')?.minimumEngagementException, false);
   });
 
-  test('minimum engagement: sleepover cannot bridge two personal care segments', () => {
+  test('[R129] minimum engagement: sleepover cannot bridge two personal care segments', () => {
     const pcBefore = shiftBrisbane(
       { _id: 'me04a', shiftType: 'personal_care', timezoneOffset: '+10:00' },
       '2026-06-07',
@@ -1096,7 +1096,7 @@ describe('hours normalization from timestamps', () => {
     assert.strictEqual(shiftBreakdowns.get('me04c')?.minimum4hEngagementReview, true);
   });
 
-  test('minimum engagement: Ross Daly sleepover chain — no min 2h on post, min 4h on pre under 4h', () => {
+  test('[R130][R131] minimum engagement: Ross Daly sleepover chain — no min 2h on post, min 4h on pre under 4h', () => {
     const pre = shiftBrisbane(
       { _id: 'ross-pre', shiftType: 'personal_care', timezoneOffset: '+10:00' },
       '2026-06-03',
@@ -1130,7 +1130,7 @@ describe('hours normalization from timestamps', () => {
     assert.strictEqual(shiftBreakdowns.get('ross-post')?.minimum4hEngagementReview, false);
   });
 
-  test('minimum engagement: post-sleepover under 2h is allowed when pre-sleepover is >=4h', () => {
+  test('[R129][R131] minimum engagement: post-sleepover under 2h is allowed when pre-sleepover is >=4h', () => {
     const pre = shiftBrisbane(
       { _id: 'me05a', shiftType: 'personal_care', timezoneOffset: '+10:00' },
       '2026-06-09',
@@ -1163,7 +1163,7 @@ describe('hours normalization from timestamps', () => {
     assert.strictEqual(shiftBreakdowns.get('me05c')?.minimum4hEngagementReview, false);
   });
 
-  test('minimum engagement: unrelated PC same day (no link) keeps short shift flagged', () => {
+  test('[R127] minimum engagement: unrelated PC same day (no link) keeps short shift flagged', () => {
     const a = shiftBrisbane({ _id: 'me03a', clientName: 'Client A' }, '2026-04-07', 9, 0, 10, 0);
     const b = shiftBrisbane(
       { _id: 'me03b', clientName: 'Client B', isBrokenShift: true },
@@ -1178,7 +1178,7 @@ describe('hours normalization from timestamps', () => {
     assert.strictEqual(shiftBreakdowns.get('me03b')?.minimumEngagementException, true);
   });
 
-  test('weekday overnight with negative imported hours uses derived duration', () => {
+  test('[R133][R134] weekday overnight with negative imported hours uses derived duration', () => {
     const s = shift({
       _id: 'hn01',
       start: brisbaneLocal('2026-04-07', 20, 0).toISOString(),
@@ -1191,7 +1191,7 @@ describe('hours normalization from timestamps', () => {
     assert.strictEqual(data.afternoonHours, 0);
   });
 
-  test('fri to sat overnight with negative imported hours keeps split and OT', () => {
+  test('[R134] fri to sat overnight with negative imported hours keeps split and OT', () => {
     const s = shift({
       _id: 'hn02',
       start: brisbaneLocal('2026-04-10', 10, 0).toISOString(),
@@ -1210,7 +1210,7 @@ describe('hours normalization from timestamps', () => {
 });
 
 describe('KC Studio evidence fixtures (May 2026 FN)', () => {
-  test('Rahul Rahul: cross-midnight gap marks Jennifer shift broken with 2× OT', () => {
+  test('[R074][R086] Rahul Rahul: cross-midnight gap marks Jennifer shift broken with 2× OT', () => {
     const shifts = loadEvidenceFixture('rahulBrokenShiftMay22');
     detectBrokenShifts(shifts);
     const jennifer = shifts.find((s) => s.clientName.includes('Jennifer'));
@@ -1224,14 +1224,14 @@ describe('KC Studio evidence fixtures (May 2026 FN)', () => {
     assert.strictEqual(bd?.afternoonHours || 0, 0);
   });
 
-  test('Krishna jith: exactly 10h rest after PC is adequate (not broken)', () => {
+  test('[R072] Krishna jith: exactly 10h rest after PC is adequate (not broken)', () => {
     const shifts = loadEvidenceFixture('krishnaBrokenShiftMay25');
     detectBrokenShifts(shifts);
     const broken = shifts.filter((s) => s.isBrokenShift);
     assert.strictEqual(broken.length, 0);
   });
 
-  test('Sona Sara Paul: post-sleepover PC on May 22 lands in payable bucket', () => {
+  test('[R055] Sona Sara Paul: post-sleepover PC on May 22 lands in payable bucket', () => {
     const shifts = loadEvidenceFixture('sonaSleepoverChainMay22');
     detectBrokenShifts(shifts);
     const { shiftBreakdowns } = computePayHoursForStaff(shifts, new Set());
@@ -1246,7 +1246,7 @@ describe('KC Studio evidence fixtures (May 2026 FN)', () => {
     );
   });
 
-  test('Sona Sara Paul: May 19 sleepover chain keeps pre/post PC hours payable', () => {
+  test('[R058] Sona Sara Paul: May 19 sleepover chain keeps pre/post PC hours payable', () => {
     const shifts = loadEvidenceFixture('sonaSleepoverChainMay19');
     detectBrokenShifts(shifts);
     const { shiftBreakdowns } = computePayHoursForStaff(shifts, new Set());
@@ -1260,5 +1260,60 @@ describe('KC Studio evidence fixtures (May 2026 FN)', () => {
         (bd?.sundayHours || 0);
       assert.ok(payable > 0, `PC shift ${shift._id} should have payable hours`);
     }
+  });
+});
+
+describe('regression scenarios formalized from root investigation scripts (2026 pay audits)', () => {
+  // Source: test-double-count.mjs / check_broken.mjs — morning shift + broken evening
+  // shift on the same day was once counted as both ordinary AND 2x OT.
+  test('[R085][R086][R089] broken evening shift: buckets sum to total hours, no double count', () => {
+    const s1 = shiftBrisbane({ _id: 'a1a1a1a1a1a1a1a1a1a1a1a1' }, '2026-04-07', 8, 0, 12, 0);
+    const s2 = shiftBrisbane(
+      { _id: 'a2a2a2a2a2a2a2a2a2a2a2a2', isBrokenShift: true },
+      '2026-04-07', 21, 0, 23, 0
+    );
+    const { data } = computePayHoursForStaff([s1, s2], new Set());
+    // Span 08:00–23:00 = 15h (≥12h) → last shift fully reclassified to 2x OT;
+    // span ends after 20:00 → earlier weekday hours retroactively evening.
+    assert.strictEqual(data.afternoonHours, 4, 'first shift retro-loaded to evening');
+    assert.strictEqual(data.weekdayOtAfter2, 2, 'broken last shift fully at 2x');
+    assert.strictEqual(data.morningHours, 0);
+    assert.strictEqual(data.brokenShiftCount, 1);
+    const bucketTotal = r2(
+      data.morningHours + data.afternoonHours + data.nightHours +
+      data.weekdayOtUpto2 + data.weekdayOtAfter2 + data.shortTurnaroundHours
+    );
+    assert.strictEqual(bucketTotal, 6, 'buckets must equal total worked hours (no double count)');
+  });
+
+  // Source: check_gap.mjs — gapless same-day 10:00–14:00 + 14:00–21:00 PC chain.
+  test('[R099][R100][R103] gapless chain ending after 8pm: retro evening + 1h OT at 1.5x', () => {
+    const s1 = shiftBrisbane({ _id: 'b1b1b1b1b1b1b1b1b1b1b1b1' }, '2026-04-07', 10, 0, 14, 0);
+    const s2 = shiftBrisbane({ _id: 'b2b2b2b2b2b2b2b2b2b2b2b2' }, '2026-04-07', 14, 0, 21, 0);
+    const { data } = computePayHoursForStaff([s1, s2], new Set());
+    assert.strictEqual(data.afternoonHours, 10, 'ordinary 10h retro-loaded to evening band');
+    assert.strictEqual(data.weekdayOtUpto2, 1, '11th chain hour is daily OT at 1.5x');
+    assert.strictEqual(data.weekdayOtAfter2, 0);
+    assert.strictEqual(data.morningHours, 0);
+  });
+
+  // Source: check_dona.mjs — ANZAC Day 2026-04-25 attribution for cross-midnight shifts.
+  test('[R042][R027] weekday → ANZAC PH cross-midnight: split into weekday night + holiday', () => {
+    const s = shift({
+      _id: 'd1d1d1d1d1d1d1d1d1d1d1d1',
+      start: brisbaneLocal('2026-04-24', 20).toISOString(),
+      end: brisbaneLocal('2026-04-25', 4).toISOString(),
+    });
+    const { data } = computePayHoursForStaff([s], new Set(['2026-04-25']));
+    assert.strictEqual(data.nightHours, 4, 'pre-midnight Friday hours are weekday night');
+    assert.strictEqual(data.holidayHours, 4, 'post-midnight hours belong to the public holiday');
+    assert.strictEqual(data.saturdayHours, 0, 'PH takes precedence over Saturday');
+  });
+
+  test('[R027] shift fully inside ANZAC Saturday: all holiday hours, none Saturday', () => {
+    const s = shiftBrisbane({ _id: 'd2d2d2d2d2d2d2d2d2d2d2d2' }, '2026-04-25', 9, 0, 17, 0);
+    const { data } = computePayHoursForStaff([s], new Set(['2026-04-25']));
+    assert.strictEqual(data.holidayHours, 8);
+    assert.strictEqual(data.saturdayHours, 0);
   });
 });

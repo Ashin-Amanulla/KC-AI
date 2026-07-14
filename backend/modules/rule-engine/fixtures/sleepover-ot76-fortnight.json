@@ -1,0 +1,98 @@
+{
+  "name": "sleepover-ot76-fortnight",
+  "description": "Full synthetic fortnight: ordinary weekday PC, an 8h sleepover (allowance only), a post-sleepover afternoon shift, Saturday + Sunday penalty days, then a 50h second week pushing total ordinary hours past the 76h fortnight cap into OT>76.",
+  "sourceIncident": "synthetic — exercises sleepover, penalty days and the 76h cap together",
+  "holidays": [],
+  "shifts": [
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-01T23:00:00.000Z",
+      "endDatetime": "2026-03-02T07:00:00.000Z",
+      "hours": 8,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "sleepover",
+      "startDatetime": "2026-03-03T12:00:00.000Z",
+      "endDatetime": "2026-03-03T20:00:00.000Z",
+      "hours": 8,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-04T04:15:00.000Z",
+      "endDatetime": "2026-03-04T10:00:00.000Z",
+      "hours": 5.75,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-06T23:00:00.000Z",
+      "endDatetime": "2026-03-07T07:00:00.000Z",
+      "hours": 8,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-07T23:00:00.000Z",
+      "endDatetime": "2026-03-08T07:00:00.000Z",
+      "hours": 8,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-08T22:00:00.000Z",
+      "endDatetime": "2026-03-09T08:00:00.000Z",
+      "hours": 10,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-09T22:00:00.000Z",
+      "endDatetime": "2026-03-10T08:00:00.000Z",
+      "hours": 10,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-10T22:00:00.000Z",
+      "endDatetime": "2026-03-11T08:00:00.000Z",
+      "hours": 10,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-11T22:00:00.000Z",
+      "endDatetime": "2026-03-12T08:00:00.000Z",
+      "hours": 10,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-12T22:00:00.000Z",
+      "endDatetime": "2026-03-13T08:00:00.000Z",
+      "hours": 10,
+      "timezoneOffset": "+10:00"
+    }
+  ],
+  "expected": {
+    "morningHours": 60,
+    "saturdayHours": 8,
+    "sundayHours": 8,
+    "otAfter76Hours": 3.75,
+    "otAfter76Weekday": 3.75,
+    "otAfter76WeekdayUpto2": 2,
+    "otAfter76WeekdayAfter2": 1.75,
+    "sleepoversCount": 1
+  }
+}

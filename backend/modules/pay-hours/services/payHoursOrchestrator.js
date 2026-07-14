@@ -14,7 +14,50 @@ import { PayHours } from '../payHours.model.js';
 import { ShiftPayHours } from '../shiftPayHours.model.js';
 import { PayHoursJob } from '../payHoursJob.model.js';
 import { computePayHoursForStaff } from './payHoursCalculator.js';
+import { getConstantsEffectiveAt } from '../../award-rates/awardRateResolver.js';
+import { StaffSchadsRate } from '../../staff-rates/staffSchadsRate.model.js';
+import { applyAwardConstants, calcBreakdownFromRates } from './wageCalculator.js';
+import { nameMatchKeys, normStaffNameForMatch } from '../../../utils/staffNameNorm.js';
 import { manualFieldsToObject } from '../payHoursManualFields.js';
+
+/** Rate cards keyed by every match key (normName, aliases, comma-form). */
+async function loadRateCardMap(locationId) {
+  const filter = locationId ? { locationId: new mongoose.Types.ObjectId(locationId) } : {};
+  const rows = await StaffSchadsRate.find(filter).select('staffName normName aliases rates').lean();
+  const map = new Map();
+  for (const row of rows) {
+    const keys = new Set(nameMatchKeys(row.staffName));
+    if (row.normName) keys.add(row.normName);
+    for (const alias of row.aliases || []) {
+      const k = normStaffNameForMatch(alias);
+      if (k) keys.add(k);
+    }
+    for (const key of keys) {
+      if (!map.has(key)) map.set(key, row.rates);
+    }
+  }
+  return map;
+}
+
+function computeGrossForStaff(staffName, data, rateCardMap) {
+  const rates = [...nameMatchKeys(staffName)]
+    .map((k) => rateCardMap.get(k))
+    .find(Boolean);
+  if (!rates) return { gross: null, grossSource: null, breakdownLines: [] };
+  const breakdown = calcBreakdownFromRates(data, rates);
+  if (!breakdown) return { gross: null, grossSource: null, breakdownLines: [] };
+  return {
+    gross: breakdown.gross,
+    grossSource: 'rate-card',
+    breakdownLines: breakdown.lines.map(({ label, hours, effRate, pay, cat }) => ({
+      label,
+      hours,
+      effRate,
+      pay,
+      cat,
+    })),
+  };
+}
 import mongoose from 'mongoose';
 
 function preserveManualMeta(existing) {
@@ -74,6 +117,12 @@ export async function computeAllPayHours(jobId, locationId = null) {
     job.periodEnd   = maxEnd;
     await job.save();
 
+    // Resolve the SCHADS award-rate set effective at the period start so this
+    // run (and any historical recompute) is stamped with the constants that
+    // applied at the time.
+    const awardRates = await getConstantsEffectiveAt(minStart);
+    applyAwardConstants(awardRates.constants);
+
     // Group shifts by location (each location needs its own holiday set)
     // Shifts without a location are grouped under the key 'null'
     const byLocation = new Map();
@@ -81,6 +130,12 @@ export async function computeAllPayHours(jobId, locationId = null) {
       const locKey = shift.location ? shift.location.toString() : null;
       if (!byLocation.has(locKey)) byLocation.set(locKey, []);
       byLocation.get(locKey).push(shift);
+    }
+
+    // Pre-fetch rate cards per location so gross pay is computed alongside hours.
+    const rateCardMapByLocation = new Map();
+    for (const locKey of byLocation.keys()) {
+      rateCardMapByLocation.set(locKey, await loadRateCardMap(locKey));
     }
 
     // Pre-fetch holiday sets per location — mirrors KC Studio get_holidays_in_range(location, ...)
@@ -136,7 +191,9 @@ export async function computeAllPayHours(jobId, locationId = null) {
       const holidaySet = holidaySetByLocation.get(locKey) ?? new Set();
 
       try {
-        const { data, shiftBreakdowns } = computePayHoursForStaff(staffShifts, holidaySet);
+        const { data, shiftBreakdowns } = computePayHoursForStaff(staffShifts, holidaySet, {
+          awardConstants: awardRates.constants,
+        });
 
         const staffStart = staffShifts.reduce((min, s) => s.startDatetime < min ? s.startDatetime : min, staffShifts[0].startDatetime);
         const staffEnd   = staffShifts.reduce((max, s) => s.endDatetime   > max ? s.endDatetime   : max, staffShifts[0].endDatetime);
@@ -147,6 +204,11 @@ export async function computeAllPayHours(jobId, locationId = null) {
           (bd) => bd.minimumEngagementException
         ).length;
         const preservedStaff = preserveManualMeta(staffManualByName.get(staffName));
+        const wage = computeGrossForStaff(
+          staffName,
+          { ...data, totalKm },
+          rateCardMapByLocation.get(locKey) ?? new Map()
+        );
         payHoursDocs.push({
           _id: payHoursId,
           location: locKey ? new mongoose.Types.ObjectId(locKey) : null,
@@ -156,6 +218,11 @@ export async function computeAllPayHours(jobId, locationId = null) {
           ...data,
           minimumEngagementExceptionCount,
           totalKm,
+          awardRateSetId: awardRates.setId,
+          awardRateSetLabel: awardRates.setLabel,
+          gross: wage.gross,
+          grossSource: wage.grossSource,
+          breakdownLines: wage.breakdownLines,
           computedAt: new Date(),
           ...preservedStaff,
         });

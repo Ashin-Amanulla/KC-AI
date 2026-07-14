@@ -1,0 +1,47 @@
+{
+  "name": "broken-shift-boundary",
+  "description": "Exactly-10h rest after an overnight PC shift is adequate (not broken); a 9.5h gap the following days is broken. Guards the June 2026 < vs <= boundary regression.",
+  "sourceIncident": "scripts/output/broken-shift-boundary-regression-report.md (fixed 15 Jun 2026, commit ebdcbc2)",
+  "holidays": [],
+  "shifts": [
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-02T10:00:00.000Z",
+      "endDatetime": "2026-03-02T20:00:00.000Z",
+      "hours": 10,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-03T06:00:00.000Z",
+      "endDatetime": "2026-03-03T10:00:00.000Z",
+      "hours": 4,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-05T10:00:00.000Z",
+      "endDatetime": "2026-03-05T20:00:00.000Z",
+      "hours": 10,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-03-06T05:30:00.000Z",
+      "endDatetime": "2026-03-06T09:00:00.000Z",
+      "hours": 3.5,
+      "timezoneOffset": "+10:00"
+    }
+  ],
+  "expected": {
+    "morningHours": 4,
+    "nightHours": 20,
+    "weekdayOtAfter2": 3.5,
+    "brokenShiftCount": 1,
+    "mealAllowanceCount": 1
+  }
+}

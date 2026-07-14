@@ -6,6 +6,8 @@ export const PERMISSIONS = {
   WORKFORCE_VIEW: 'workforce:view',
   WORKFORCE_COST_VIEW: 'workforce:cost:view',
   PAY_HOURS_TESTS_VIEW: 'pay_hours_tests:view',
+  RULE_ENGINE_VIEW: 'rule_engine:view',
+  RULE_ENGINE_MANAGE: 'rule_engine:manage',
   SHIFT_ANALYSIS_VIEW: 'shift_analysis:view',
   FORECAST_ANALYSIS_VIEW: 'forecast_analysis:view',
   ROSTER_VIEW: 'roster:view',
@@ -62,7 +64,18 @@ export const canAccessPath = (permissions, path) => {
   if (path === '/staff') return hasPermission(permissions, PERMISSIONS.STAFF_VIEW);
   if (path === '/clients') return hasPermission(permissions, PERMISSIONS.CLIENTS_VIEW);
   if (path === '/timesheets') return hasPermission(permissions, PERMISSIONS.TIMESHEETS_VIEW);
-  if (path === '/pay-hours-tests') return hasPermission(permissions, PERMISSIONS.PAY_HOURS_TESTS_VIEW);
+  if (path === '/pay-hours-tests') {
+    return hasAnyPermission(permissions, [
+      PERMISSIONS.PAY_HOURS_TESTS_VIEW,
+      PERMISSIONS.RULE_ENGINE_VIEW,
+    ]);
+  }
+  if (path.startsWith('/rule-engine')) {
+    return hasAnyPermission(permissions, [
+      PERMISSIONS.RULE_ENGINE_VIEW,
+      PERMISSIONS.PAY_HOURS_TESTS_VIEW,
+    ]);
+  }
   if (path === '/shift-analysis') return hasPermission(permissions, PERMISSIONS.SHIFT_ANALYSIS_VIEW);
   if (path.startsWith('/crm')) return hasPermission(permissions, PERMISSIONS.CRM_VIEW);
   if (path.startsWith('/hr-requirements')) return hasPermission(permissions, PERMISSIONS.CRM_VIEW);

@@ -1,8 +1,13 @@
 /**
- * SCHADS award wage calculations — shared by SchadsCalculator and Cost Analysis.
+ * SCHADS award wage calculations (hours × rate card → dollars).
+ *
+ * Backend port of frontend/src/lib/schadsWageCalc.js — bug-for-bug for now;
+ * wageParity.test.js enforces functional equality between the two until the
+ * frontend copy is retired. Award-indexed amounts are injected via
+ * applyAwardConstants() from the effective-dated award-rates module.
  */
 
-import { resolveOt76PayTiers } from './ot76GlobalTier.js';
+import { resolveOt76PayTiers } from '../utils/ot76GlobalTier.js';
 
 // Award constants are `let` + live ES-module bindings: applyAwardConstants()
 // (called by the award-rates store at app boot) updates them from the

@@ -1,0 +1,30 @@
+{
+  "name": "double-count-broken-evening",
+  "description": "Morning PC 8-12 plus broken evening PC 21-23 on the same weekday: buckets must sum to 6h total, first shift retro-loaded to evening, broken last shift fully at 2x OT.",
+  "sourceIncident": "test-double-count.mjs / check_broken.mjs root investigation scripts (2026 double-count audit)",
+  "holidays": [],
+  "shifts": [
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-04-06T22:00:00.000Z",
+      "endDatetime": "2026-04-07T02:00:00.000Z",
+      "hours": 4,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-04-07T11:00:00.000Z",
+      "endDatetime": "2026-04-07T13:00:00.000Z",
+      "hours": 2,
+      "timezoneOffset": "+10:00"
+    }
+  ],
+  "expected": {
+    "afternoonHours": 4,
+    "weekdayOtAfter2": 2,
+    "brokenShiftCount": 1,
+    "mealAllowanceCount": 1
+  }
+}

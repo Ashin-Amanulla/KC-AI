@@ -1,0 +1,30 @@
+{
+  "name": "anzac-cross-midnight",
+  "description": "Friday-night shift crossing midnight into ANZAC Day (Sat 25 Apr 2026, public holiday): pre-midnight weekday night + post-midnight holiday; a later same-holiday shift is all holiday hours (PH beats Saturday).",
+  "sourceIncident": "check_dona.mjs root investigation script (ANZAC day attribution audit)",
+  "holidays": [
+    "2026-04-25"
+  ],
+  "shifts": [
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-04-24T10:00:00.000Z",
+      "endDatetime": "2026-04-24T18:00:00.000Z",
+      "hours": 8,
+      "timezoneOffset": "+10:00"
+    },
+    {
+      "staffName": "Golden Staff",
+      "shiftType": "personal_care",
+      "startDatetime": "2026-04-25T05:00:00.000Z",
+      "endDatetime": "2026-04-25T09:00:00.000Z",
+      "hours": 4,
+      "timezoneOffset": "+10:00"
+    }
+  ],
+  "expected": {
+    "nightHours": 4,
+    "holidayHours": 8
+  }
+}

@@ -22,6 +22,32 @@ const payHoursSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Snapshot of the effective-dated SCHADS award-rate set used for this
+    // compute (resolved by periodStart) — recomputes of historical fortnights
+    // must reproduce historical dollars.
+    awardRateSetId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'AwardRateSet',
+      default: null,
+    },
+    awardRateSetLabel: { type: String, default: null },
+    // Backend-computed dollars (hours × staff rate card via wageCalculator).
+    // null when the staff member has no matching rate card.
+    gross: { type: Number, default: null },
+    grossSource: { type: String, default: null }, // 'rate-card' when computed
+    breakdownLines: {
+      type: [
+        {
+          _id: false,
+          label: String,
+          hours: Number,
+          effRate: Number,
+          pay: Number,
+          cat: String, // 'ord' | 'penalty' | 'ot' | 'ot76'
+        },
+      ],
+      default: [],
+    },
     // Personal Care — time of day (weekdays only)
     morningHours: { type: Number, default: 0 },
     afternoonHours: { type: Number, default: 0 },

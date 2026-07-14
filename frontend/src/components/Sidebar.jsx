@@ -9,6 +9,7 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Menu,
   LogOut,
   Calculator,
@@ -20,14 +21,18 @@ import {
   Briefcase,
   ClipboardList,
   ListChecks,
+  BookOpen,
+  FlaskConical,
+  DollarSign,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
-import { getNavItemsForPermissions } from '../config/nav';
+import { getNavGroupsForPermissions } from '../config/nav';
 import { PERMISSIONS } from '../config/permissions';
 import { Button } from '../ui/button';
 import { cn } from '../lib/utils';
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebar_collapsed';
+const SIDEBAR_OPEN_GROUPS_KEY = 'sidebar_open_groups';
 
 const iconMap = {
   LayoutDashboard,
@@ -45,7 +50,29 @@ const iconMap = {
   Briefcase,
   ClipboardList,
   ListChecks,
+  BookOpen,
+  FlaskConical,
+  DollarSign,
 };
+
+function loadOpenGroups() {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_OPEN_GROUPS_KEY);
+    return raw ? new Set(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+function isItemActive(item, pathname, hasFullRoster) {
+  if (item.path === '/roster-coverage') {
+    return pathname.startsWith('/roster-coverage') && hasFullRoster;
+  }
+  if (item.path === '/rule-engine') {
+    return pathname === '/rule-engine';
+  }
+  return pathname === item.path || (item.path !== '/' && pathname.startsWith(`${item.path}/`));
+}
 
 export function Sidebar() {
   const location = useLocation();
@@ -60,15 +87,52 @@ export function Sidebar() {
   });
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const permissions = user?.permissions ?? [];
+  const navGroups = getNavGroupsForPermissions(permissions);
+  const hasFullRoster = permissions.includes(PERMISSIONS.ROSTER_VIEW);
+
+  const [openGroups, setOpenGroups] = useState(() => {
+    const stored = loadOpenGroups();
+    if (stored) return stored;
+    // Default: every group open on first visit.
+    return new Set(navGroups.map((g) => g.id));
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
     } catch {}
   }, [collapsed]);
 
-  const permissions = user?.permissions ?? [];
-  const navItems = getNavItemsForPermissions(permissions);
-  const hasFullRoster = permissions.includes(PERMISSIONS.ROSTER_VIEW);
+  // Auto-expand whichever group contains the active route.
+  useEffect(() => {
+    const activeGroup = navGroups.find((group) =>
+      group.items.some((item) => isItemActive(item, location.pathname, hasFullRoster))
+    );
+    if (activeGroup && !openGroups.has(activeGroup.id)) {
+      setOpenGroups((prev) => {
+        const next = new Set(prev);
+        next.add(activeGroup.id);
+        try {
+          localStorage.setItem(SIDEBAR_OPEN_GROUPS_KEY, JSON.stringify([...next]));
+        } catch {}
+        return next;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const toggleGroup = (groupId) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      try {
+        localStorage.setItem(SIDEBAR_OPEN_GROUPS_KEY, JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
 
   const handleLogout = async () => {
     setMobileOpen(false);
@@ -88,32 +152,49 @@ export function Sidebar() {
           </span>
         )}
       </div>
-      <nav className="flex flex-1 flex-col gap-1 p-2">
-        {navItems.map((item) => {
-          const Icon = iconMap[item.icon];
-          const isActive =
-            location.pathname === item.path ||
-            (item.path === '/roster-coverage' &&
-              location.pathname.startsWith('/roster-coverage') &&
-              hasFullRoster);
-          const link = (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={() => setMobileOpen(false)}
-              title={collapsed ? item.label : undefined}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
+        {navGroups.map((group) => {
+          const isSingleItem = group.items.length === 1 && group.id === 'overview';
+          const open = collapsed || isSingleItem || openGroups.has(group.id);
+          return (
+            <div key={group.id} className="flex flex-col">
+              {!collapsed && !isSingleItem && (
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  className="flex items-center justify-between rounded-md px-3 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+                >
+                  <span>{group.label}</span>
+                  <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !open && '-rotate-90')} />
+                </button>
               )}
-            >
-              {Icon && <Icon className="h-5 w-5 shrink-0" />}
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
+              {open && (
+                <div className="flex flex-col gap-1">
+                  {group.items.map((item) => {
+                    const Icon = iconMap[item.icon];
+                    const isActive = isItemActive(item, location.pathname, hasFullRoster);
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setMobileOpen(false)}
+                        title={collapsed ? item.label : undefined}
+                        className={cn(
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                        )}
+                      >
+                        {Icon && <Icon className="h-5 w-5 shrink-0" />}
+                        {!collapsed && <span>{item.label}</span>}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
-          return link;
         })}
       </nav>
       <div className="border-t p-2">
