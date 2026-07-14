@@ -36,6 +36,10 @@ export const startCsvAnalysisWorker = () => {
     console.error(`CSV analysis job ${job?.id} failed:`, err.message);
   });
 
+  worker.on('error', (err) => {
+    console.error('CSV analysis worker error:', err);
+  });
+
   console.log('CSV analysis worker started');
   return worker;
 };

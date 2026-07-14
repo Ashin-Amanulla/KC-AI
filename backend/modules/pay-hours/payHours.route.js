@@ -14,6 +14,7 @@ import {
   runPayHoursEngineTests,
 } from './payHours.controller.js';
 import { PERMISSIONS } from '../../config/permissionCatalog.js';
+import { spawnJobLimiter } from '../../middlewares/rateLimit.js';
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ const authPayHours = [
 ];
 
 router.post('/pay-hours/compute', ...authPayHours, computePayHours);
-router.post('/pay-hours/tests/run', ...authPayHours, runPayHoursEngineTests);
+router.post('/pay-hours/tests/run', spawnJobLimiter, ...authPayHours, runPayHoursEngineTests);
 router.get('/pay-hours/jobs/:id/status', ...authPayHours, getJobStatus);
 router.get('/pay-hours/export', ...authPayHours, exportPayHoursCsv);
 router.patch('/pay-hours/:id', ...authPayHours, patchPayHoursManual);

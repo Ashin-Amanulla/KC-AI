@@ -3,10 +3,11 @@ import { login, logout, getAuthStatus } from './auth.controller.js';
 import { authenticateJWT } from '../../middlewares/auth.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
 import { loginSchema } from '../../validators/auth.validator.js';
+import { loginLimiter } from '../../middlewares/rateLimit.js';
 
 const router = express.Router();
 
-router.post('/login', validate(loginSchema), login);
+router.post('/login', loginLimiter, validate(loginSchema), login);
 router.post('/logout', logout);
 router.get('/status', authenticateJWT, getAuthStatus);
 

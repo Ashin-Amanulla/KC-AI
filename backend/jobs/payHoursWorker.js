@@ -31,6 +31,10 @@ export const startPayHoursWorker = () => {
     console.error(`Pay hours job ${job?.id} failed:`, err.message);
   });
 
+  worker.on('error', (err) => {
+    console.error('Pay hours worker error:', err);
+  });
+
   console.log('Pay hours worker started');
   return worker;
 };
