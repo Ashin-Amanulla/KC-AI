@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -10,9 +10,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Menu,
-  LogOut,
-  Calculator,
   CalendarDays,
   Calendar,
   TrendingDown,
@@ -22,14 +19,11 @@ import {
   ClipboardList,
   ListChecks,
   BookOpen,
-  FlaskConical,
-  DollarSign,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { useUiPreferencesStore } from '../store/uiPreferences';
 import { getNavGroupsForPermissions } from '../config/nav';
 import { PERMISSIONS } from '../config/permissions';
-import { Button } from '../ui/button';
 import { cn } from '../lib/utils';
 
 const iconMap = {
@@ -39,7 +33,6 @@ const iconMap = {
   Clock,
   FileBarChart,
   Shield,
-  Calculator,
   CalendarDays,
   Calendar,
   TrendingDown,
@@ -49,8 +42,6 @@ const iconMap = {
   ClipboardList,
   ListChecks,
   BookOpen,
-  FlaskConical,
-  DollarSign,
 };
 
 function isItemActive(item, pathname, hasFullRoster) {
@@ -58,22 +49,25 @@ function isItemActive(item, pathname, hasFullRoster) {
     return pathname.startsWith('/roster-coverage') && hasFullRoster;
   }
   if (item.path === '/rule-engine') {
-    return pathname === '/rule-engine';
+    return pathname.startsWith('/rule-engine');
+  }
+  if (item.path === '/crm') {
+    return pathname.startsWith('/crm');
   }
   return pathname === item.path || (item.path !== '/' && pathname.startsWith(`${item.path}/`));
 }
 
-export function Sidebar() {
+export function Sidebar({ mobileOpen = false, onMobileOpenChange }) {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const collapsed = useUiPreferencesStore((s) => s.sidebarCollapsed);
   const sidebarOpenGroups = useUiPreferencesStore((s) => s.sidebarOpenGroups);
   const toggleSidebarCollapsed = useUiPreferencesStore((s) => s.toggleSidebarCollapsed);
   const toggleOpenGroup = useUiPreferencesStore((s) => s.toggleOpenGroup);
   const ensureOpenGroup = useUiPreferencesStore((s) => s.ensureOpenGroup);
   const setOpenGroups = useUiPreferencesStore((s) => s.setOpenGroups);
-  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const setMobileOpen = (open) => onMobileOpenChange?.(open);
 
   const permissions = user?.permissions ?? [];
   const navGroups = getNavGroupsForPermissions(permissions);
@@ -98,12 +92,6 @@ export function Sidebar() {
     toggleOpenGroup(groupId);
   };
 
-  const handleLogout = async () => {
-    setMobileOpen(false);
-    await logout();
-    navigate('/');
-  };
-
   const sidebarContent = (
     <>
       <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-4">
@@ -118,7 +106,7 @@ export function Sidebar() {
             <span className="truncate text-sm font-semibold text-sidebar-accent-foreground">
               Kangaroo Care
             </span>
-            <span className="truncate text-[11px] text-sidebar-foreground/60">
+            <span className="truncate text-2xs text-sidebar-foreground/60">
               Workforce console
             </span>
           </span>
@@ -134,7 +122,7 @@ export function Sidebar() {
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.id)}
-                  className="mt-1.5 flex items-center justify-between rounded-md px-3 py-1 text-left text-[10.5px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 hover:text-sidebar-foreground"
+                  className="mt-1.5 flex items-center justify-between rounded-md px-3 py-1 text-left text-2xs font-semibold uppercase tracking-wider text-sidebar-foreground/50 hover:text-sidebar-foreground"
                 >
                   <span>{group.label}</span>
                   <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !open && '-rotate-90')} />
@@ -152,9 +140,9 @@ export function Sidebar() {
                         onClick={() => setMobileOpen(false)}
                         title={collapsed ? item.label : undefined}
                         className={cn(
-                          'flex items-center gap-2.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors',
+                          'relative flex items-center gap-2.5 rounded-md px-3 py-1.5 text-2sm font-medium transition-colors',
                           isActive
-                            ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                            ? 'bg-sidebar-primary text-sidebar-primary-foreground before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-sidebar-primary-foreground'
                             : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                         )}
                       >
@@ -170,55 +158,28 @@ export function Sidebar() {
         })}
       </nav>
       <div className="shrink-0 border-t border-sidebar-border p-2">
-        {!collapsed && user && (
-          <div className="mb-1 px-3 py-1.5 text-[11px] text-sidebar-foreground/60">
-            <div className="truncate text-xs font-medium text-sidebar-accent-foreground">
-              {user.name || user.email}
-            </div>
-            <div className="truncate">{user.email}</div>
-          </div>
-        )}
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1 justify-start gap-2.5 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            onClick={handleLogout}
-            title={collapsed ? 'Logout' : undefined}
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Logout</span>}
-          </Button>
-          <button
-            type="button"
-            onClick={toggleSidebarCollapsed}
-            className="flex items-center justify-center rounded-md p-2 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={toggleSidebarCollapsed}
+          className={cn(
+            'flex w-full items-center justify-center rounded-md p-2 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+            !collapsed && 'justify-end'
+          )}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </button>
       </div>
     </>
   );
 
   return (
     <>
-      {/* Mobile menu button */}
-      <button
-        type="button"
-        className="fixed left-4 top-4 z-50 rounded-lg p-2 md:hidden"
-        onClick={() => setMobileOpen(true)}
-        aria-label="Open menu"
-      >
-        <Menu className="h-6 w-6" />
-      </button>
-
       {/* Mobile overlay */}
       {mobileOpen && (
         <div

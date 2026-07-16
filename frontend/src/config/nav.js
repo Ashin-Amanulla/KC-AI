@@ -55,26 +55,8 @@ export const NAV_GROUPS = [
     items: [
       {
         path: '/rule-engine',
-        label: 'Rules Reference',
+        label: 'Rule Engine',
         icon: 'BookOpen',
-        anyOf: [PERMISSIONS.RULE_ENGINE_VIEW, PERMISSIONS.PAY_HOURS_TESTS_VIEW],
-      },
-      {
-        path: '/rule-engine/tests',
-        label: 'Test Monitor',
-        icon: 'FlaskConical',
-        anyOf: [PERMISSIONS.RULE_ENGINE_VIEW, PERMISSIONS.PAY_HOURS_TESTS_VIEW],
-      },
-      {
-        path: '/rule-engine/rates',
-        label: 'Award Rates',
-        icon: 'DollarSign',
-        anyOf: [PERMISSIONS.RULE_ENGINE_VIEW, PERMISSIONS.PAY_HOURS_TESTS_VIEW],
-      },
-      {
-        path: '/rule-engine/coverage',
-        label: 'Rate-card Coverage',
-        icon: 'Calculator',
         anyOf: [PERMISSIONS.RULE_ENGINE_VIEW, PERMISSIONS.PAY_HOURS_TESTS_VIEW],
       },
     ],

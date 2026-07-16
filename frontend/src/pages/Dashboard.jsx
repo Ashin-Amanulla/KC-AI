@@ -20,14 +20,15 @@ import { LoadingScreen } from '../ui/LoadingSpinner';
 import { QueryErrorState } from '../components/QueryErrorState';
 import { StatCard } from '../ui/stat-card';
 import { PageHeader } from '../components/PageHeader';
+import { InfoHint } from '../components/InfoHint';
+import { Badge } from '../ui/badge';
 import { CalendarClock, Users2, HeartHandshake, Banknote } from 'lucide-react';
-import { cn } from '../lib/utils';
 
 const JOB_STATUS_META = {
-  completed: { label: 'Completed', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
-  processing: { label: 'Processing', cls: 'bg-sky-500/15 text-sky-700 dark:text-sky-400' },
-  pending: { label: 'Pending', cls: 'bg-muted text-muted-foreground' },
-  failed: { label: 'Failed', cls: 'bg-destructive/15 text-destructive' },
+  completed: { label: 'Completed', variant: 'success' },
+  processing: { label: 'Processing', variant: 'primary' },
+  pending: { label: 'Pending', variant: 'default' },
+  failed: { label: 'Failed', variant: 'destructive' },
 };
 
 function PayRunStatusCard({ payRun }) {
@@ -42,14 +43,9 @@ function PayRunStatusCard({ payRun }) {
         ) : (
           <div className="space-y-1 text-sm">
             <div className="flex items-center gap-2">
-              <span
-                className={cn(
-                  'rounded-full px-2 py-0.5 text-xs font-medium',
-                  JOB_STATUS_META[payRun.status]?.cls ?? JOB_STATUS_META.pending.cls
-                )}
-              >
+              <Badge variant={JOB_STATUS_META[payRun.status]?.variant ?? JOB_STATUS_META.pending.variant}>
                 {JOB_STATUS_META[payRun.status]?.label ?? payRun.status}
-              </span>
+              </Badge>
               {payRun.errorCount > 0 && (
                 <span className="text-xs text-destructive">{payRun.errorCount} errors</span>
               )}
@@ -77,7 +73,7 @@ function RuleEngineHealthCard({ awardRates, canViewRuleEngine }) {
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
         {awardRates?.needsAttention ? (
-          <p className="rounded-md bg-amber-500/10 px-3 py-2 text-amber-700 dark:text-amber-400">
+          <p className="rounded-md bg-warning/10 px-3 py-2 text-warning">
             ⚠️ {awardRates.isFallback
               ? 'No award rate set covers today — using fallback constants.'
               : `${awardRates.setLabel} rates need verification against the FWC determination.`}
@@ -135,22 +131,16 @@ function ExceptionQueue({ exceptions, canViewRuleEngine }) {
         {rows.map((row) => {
           const content = (
             <div className="flex items-center justify-between gap-3 px-4 py-3">
-              <div>
+              <div className="flex items-center gap-1">
                 <div className="text-sm font-medium">{row.label}</div>
-                <div className="text-xs text-muted-foreground">{row.hint}</div>
+                <InfoHint content={row.hint} label={row.label} />
               </div>
-              <span
-                className={cn(
-                  'rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums',
-                  row.count > 0
-                    ? row.severe
-                      ? 'bg-destructive/15 text-destructive'
-                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
-                )}
+              <Badge
+                variant={row.count > 0 ? (row.severe ? 'destructive' : 'warning') : 'success'}
+                className="px-2.5 py-1 text-sm font-semibold tabular-nums"
               >
                 {row.count}
-              </span>
+              </Badge>
             </div>
           );
           return canViewRuleEngine ? (
@@ -221,7 +211,10 @@ export const Dashboard = () => {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Dashboard" description="Operations, pay-run health, and exceptions at a glance.">
+      <PageHeader
+        title="Dashboard"
+        hint="Operations snapshot — pay-run health, headcount, and exceptions in the selected date range."
+      >
         <label className="text-xs font-medium text-muted-foreground">From</label>
         <Input
           type="date"
@@ -285,23 +278,26 @@ export const Dashboard = () => {
         <CardHeader>
           <CardTitle>Recent Shifts</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 pb-4">
           {shiftsLoading ? (
-            <LoadingScreen message="Loading shifts..." />
+            <div className="px-4 py-8">
+              <LoadingScreen message="Loading shifts..." />
+            </div>
           ) : shiftsError ? (
-            <QueryErrorState
-              error={shiftsQueryError}
-              title="Failed to load shifts"
-              onRetry={refetchShifts}
-              className="border-0 shadow-none"
-            />
+            <div className="px-4 py-4">
+              <QueryErrorState
+                error={shiftsQueryError}
+                title="Failed to load shifts"
+                onRetry={refetchShifts}
+                className="border-0 shadow-none"
+              />
+            </div>
           ) : shifts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="px-4 py-8 text-center text-muted-foreground">
               No shifts found in the selected date range
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
@@ -318,16 +314,9 @@ export const Dashboard = () => {
                       <TableCell>{formatDateTime(shift.start_at)}</TableCell>
                       <TableCell>{formatDateTime(shift.end_at)}</TableCell>
                       <TableCell>
-                        <span
-                          className={cn(
-                            'px-2 py-1 rounded-full text-xs',
-                            shift.is_approved
-                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
-                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-                          )}
-                        >
+                        <Badge variant={shift.is_approved ? 'success' : 'warning'}>
                           {shift.is_approved ? 'Approved' : 'Pending'}
-                        </span>
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {shift.clients?.length > 0
@@ -337,8 +326,7 @@ export const Dashboard = () => {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </div>
+            </Table>
           )}
           {shiftsMetadata && (
             <div className="mt-4 text-sm text-muted-foreground">

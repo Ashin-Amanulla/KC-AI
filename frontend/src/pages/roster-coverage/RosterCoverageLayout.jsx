@@ -1,15 +1,16 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { cn } from '../../lib/utils';
+import { Outlet } from 'react-router-dom';
+import { InfoHint } from '../../components/InfoHint';
+import { TabNav, TabNavLink } from '../../ui/tabs';
 import { useAuthStore } from '../../store/auth';
 
 const ALL_LINKS = [
-  { to: '/roster-coverage', end: true, label: 'Home' },
-  { to: '/roster-coverage/shift-log', label: 'Shift Log' },
-  { to: '/roster-coverage/find-cover', label: 'Find cover' },
-  { to: '/roster-coverage/participants', label: 'Participants' },
-  { to: '/roster-coverage/team', label: 'Team' },
-  { to: '/roster-coverage/timesheet', label: 'Timesheet upload' },
-  { to: '/roster-coverage/reports', label: 'Reports' },
+  { to: '/roster-coverage', end: true, label: 'Home', short: 'Home' },
+  { to: '/roster-coverage/shift-log', label: 'Shift Log', short: 'Shifts' },
+  { to: '/roster-coverage/find-cover', label: 'Find cover', short: 'Cover' },
+  { to: '/roster-coverage/participants', label: 'Participants', short: 'Participants' },
+  { to: '/roster-coverage/team', label: 'Team', short: 'Team' },
+  { to: '/roster-coverage/timesheet', label: 'Timesheet upload', short: 'Timesheet' },
+  { to: '/roster-coverage/reports', label: 'Reports', short: 'Reports' },
 ];
 
 export function RosterCoverageLayout() {
@@ -22,38 +23,25 @@ export function RosterCoverageLayout() {
         )
       : ALL_LINKS;
 
+  const isViewer = role === 'shifts_viewer';
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-          {role === 'shifts_viewer' ? 'Shift log' : 'Roster coverage'}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {role === 'shifts_viewer'
-            ? 'Vacant shifts and updates for coverage.'
-            : 'Sick call and vacant shift coverage — eligibility, hours, and rest gaps.'}
-        </p>
-      </div>
+    <div className="page-stack-tight">
+      {!isViewer && (
+        <InfoHint
+          variant="help"
+          label="About roster coverage"
+          content="Sick call and vacant shift coverage — eligibility, hours, and rest gaps."
+        />
+      )}
       {links.length > 1 && (
-        <nav className="flex flex-wrap gap-2 border-b pb-2">
-          {links.map(({ to, end, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                cn(
-                  'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                )
-              }
-            >
-              {label}
-            </NavLink>
+        <TabNav>
+          {links.map(({ to, end, short, label }) => (
+            <TabNavLink key={to} to={to} end={end} className="px-2.5 py-1 text-xs">
+              {short ?? label}
+            </TabNavLink>
           ))}
-        </nav>
+        </TabNav>
       )}
       <Outlet />
     </div>

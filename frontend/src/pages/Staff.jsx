@@ -1,26 +1,35 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { useStaff, fetchAllStaffForRatesImport } from '../api/staff';
+import { useAllStaff, fetchAllStaffForRatesImport } from '../api/staff';
 import { useLocations } from '../api/locations';
 import { useStaffRates, useUpsertStaffRate, useDeleteStaffRate, useBulkImportStaffRates } from '../api/staffRates';
 import { loadStaffRatesMapFromXlsx } from '../lib/staffRatesFromXlsx';
 import { useAuthStore } from '../store/auth';
 import { getErrorMessage } from '../utils/api';
+import { cn } from '../lib/utils';
 import { STAFF_RATES_TABLE_FIELDS, STAFF_RATES_NUMERIC_KEYS } from '../lib/staffRateFieldMeta';
 import { r2, VEHICLE_RATE, normName } from '../lib/schadsWageCalc';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader } from '../ui/card';
 import { Input } from '../ui/input';
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '../ui/table';
+import { SortableTableHead } from '../ui/sortable-table-head';
 import { Button } from '../ui/button';
 import { LoadingScreen } from '../ui/LoadingSpinner';
-import { Pencil, X, FileSpreadsheet } from 'lucide-react';
+import { QueryErrorState } from '../components/QueryErrorState';
+import { PageHeader } from '../components/PageHeader';
+import { FieldLabel, InfoHint } from '../components/InfoHint';
+import { Badge } from '../ui/badge';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Pencil, FileSpreadsheet, Users, CheckCircle2, AlertCircle } from 'lucide-react';
+import { StatCard } from '../ui/stat-card';
 
 function defaultRatesRow(displayName) {
   const v = 0;
@@ -72,6 +81,70 @@ function staffByNormName(members) {
   return m;
 }
 
+function memberDisplayName(member) {
+  return member.name || `${member.first_name || ''} ${member.family_name || ''}`.trim();
+}
+
+function memberPhone(member) {
+  return member.mobile_number || member.phone_number || '';
+}
+
+function filterStaffByName(rows, term) {
+  const q = term.trim().toLowerCase();
+  if (!q) return rows;
+  return rows.filter((member) => memberDisplayName(member).toLowerCase().includes(q));
+}
+
+function sortStaff(rows, sortBy, sortType, ratesByStaffId, locationId) {
+  const dir = sortType === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    let cmp = 0;
+    switch (sortBy) {
+      case 'id':
+        cmp = String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
+        break;
+      case 'name':
+        cmp = memberDisplayName(a).localeCompare(memberDisplayName(b));
+        break;
+      case 'email':
+        cmp = (a.email || '').localeCompare(b.email || '');
+        break;
+      case 'role':
+        cmp = (a.role || '').localeCompare(b.role || '');
+        break;
+      case 'phone':
+        cmp = memberPhone(a).localeCompare(memberPhone(b), undefined, { numeric: true });
+        break;
+      case 'rates':
+        if (locationId) {
+          const aHas = ratesByStaffId.has(String(a.id)) ? 1 : 0;
+          const bHas = ratesByStaffId.has(String(b.id)) ? 1 : 0;
+          cmp = aHas - bHas;
+        }
+        break;
+      default:
+        cmp = memberDisplayName(a).localeCompare(memberDisplayName(b));
+    }
+    if (cmp !== 0) return cmp * dir;
+    return memberDisplayName(a).localeCompare(memberDisplayName(b)) * dir;
+  });
+}
+
+function paginateList(rows, page, perPage) {
+  const totalCount = rows.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+  const start = (currentPage - 1) * perPage;
+  return {
+    slice: rows.slice(start, start + perPage),
+    metadata: {
+      total_count: totalCount,
+      total_pages: totalPages,
+      current_page: currentPage,
+    },
+  };
+}
+
 export const Staff = () => {
   const user = useAuthStore((s) => s.user);
   const canEditRates = user?.role === 'super_admin' || user?.role === 'finance';
@@ -88,6 +161,8 @@ export const Staff = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortType, setSortType] = useState('asc');
   const perPage = 20;
 
   useEffect(() => {
@@ -98,25 +173,13 @@ export const Staff = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const params = {
-    filter_by_name: debouncedSearchTerm || undefined,
-    include_metadata: true,
-    per_page: perPage,
-    page,
-    sort_by: 'name',
-    sort_type: 'asc',
-  };
-
-  const { data, isLoading, error } = useStaff(params);
+  const { data: allStaff = [], isLoading, error } = useAllStaff();
   const { data: staffRatesData, isLoading: ratesLoading } = useStaffRates(locationId);
   const upsertMutation = useUpsertStaffRate();
   const deleteMutation = useDeleteStaffRate();
   const bulkImportMutation = useBulkImportStaffRates();
   const ratesImportInputRef = useRef(null);
   const [importingXlsx, setImportingXlsx] = useState(false);
-
-  const staff = data?.staff || [];
-  const metadata = data?._metadata;
 
   const ratesByStaffId = useMemo(() => {
     const m = new Map();
@@ -125,6 +188,46 @@ export const Staff = () => {
     }
     return m;
   }, [staffRatesData]);
+
+  const { displayedStaff, metadata, hasResults } = useMemo(() => {
+    const filtered = filterStaffByName(allStaff, debouncedSearchTerm);
+    const sorted = sortStaff(filtered, sortBy, sortType, ratesByStaffId, locationId);
+    const { slice, metadata: pageMeta } = paginateList(sorted, page, perPage);
+    return {
+      displayedStaff: slice,
+      metadata: pageMeta,
+      hasResults: filtered.length > 0,
+    };
+  }, [allStaff, debouncedSearchTerm, sortBy, sortType, ratesByStaffId, locationId, page, perPage]);
+
+  useEffect(() => {
+    if (page > metadata.total_pages) {
+      setPage(metadata.total_pages);
+    }
+  }, [page, metadata.total_pages]);
+
+  const handleSort = useCallback((key) => {
+    setPage(1);
+    setSortBy((prev) => {
+      if (prev === key) {
+        setSortType((t) => (t === 'asc' ? 'desc' : 'asc'));
+        return prev;
+      }
+      setSortType('asc');
+      return key;
+    });
+  }, []);
+
+  const rateKpis = useMemo(() => {
+    const total = allStaff.length;
+    if (!locationId) {
+      return { total, saved: null, notSet: null, coverage: null };
+    }
+    const saved = staffRatesData?.staffRates?.length ?? 0;
+    const notSet = Math.max(0, total - saved);
+    const coverage = total > 0 ? Math.round((saved / total) * 100) : 0;
+    return { total, saved, notSet, coverage };
+  }, [allStaff.length, locationId, staffRatesData?.staffRates?.length]);
 
   const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState(null);
@@ -249,107 +352,208 @@ export const Staff = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold">Staff</h2>
+    <div className="page-stack">
+      <PageHeader title="Staff" />
+
+      <div className={cn('grid gap-2', locationId ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-1 max-w-xs')}>
+        <StatCard icon={Users} label="Total staff" value={rateKpis.total} className="px-3 py-2" />
+        {locationId && (
+          <>
+            <StatCard
+              icon={CheckCircle2}
+              tone="success"
+              label="Rates saved"
+              value={ratesLoading ? '…' : rateKpis.saved}
+              sub={`${rateKpis.coverage}% coverage`}
+              className="px-3 py-2"
+            />
+            <StatCard
+              icon={AlertCircle}
+              tone={rateKpis.notSet > 0 ? 'warning' : 'default'}
+              label="Not set"
+              value={ratesLoading ? '…' : rateKpis.notSet}
+              sub="No rates at this site"
+              className="px-3 py-2"
+            />
+            <StatCard
+              label="This page"
+              value={displayedStaff.length}
+              sub={
+                displayedStaff.length
+                  ? `${displayedStaff.filter((m) => ratesByStaffId.has(String(m.id))).length} saved · ${displayedStaff.filter((m) => !ratesByStaffId.has(String(m.id))).length} not set`
+                  : undefined
+              }
+              className="px-3 py-2"
+            />
+          </>
+        )}
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Location for SCHADS rates</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Pay rates are stored per <strong>site</strong> (and ShiftCare ID). Select a location before editing.
-          </p>
-          <div className="pt-2 max-w-md">
-            <label className="text-xs text-muted-foreground block mb-1">Location</label>
-            <select
-              className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm"
-              value={locationId}
-              onChange={(e) => setLocationId(e.target.value)}
-            >
-              <option value="">— Select —</option>
-              {locations.map((loc) => (
-                <option key={loc._id} value={loc._id}>
-                  {loc.name} ({loc.code})
-                </option>
-              ))}
-            </select>
-            {!locations.length && (
-              <p className="text-xs text-amber-700 mt-1">Create a location under Workforce → Setup first.</p>
-            )}
-          </div>
-          <div className="pt-4 border-t border-border/60 space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Upload a <strong>Support Staff Rates</strong>–style .xlsx (first sheet: Employee name, daytime, afternoon, …). Rows are
-              matched to ShiftCare staff by <strong>name</strong> and stored for the selected location.
-            </p>
-            <input
-              ref={ratesImportInputRef}
-              type="file"
-              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-              className="hidden"
-              onChange={handleRatesXlsx}
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              className="gap-2"
-              disabled={!locationId || !canEditRates || importingXlsx}
-              onClick={() => ratesImportInputRef.current?.click()}
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              {importingXlsx || bulkImportMutation.isPending ? 'Importing…' : 'Import rates from Excel'}
-            </Button>
-            {!canEditRates && (
-              <p className="text-xs text-muted-foreground">Import requires super admin or finance role.</p>
-            )}
+        <CardHeader className="gap-4 border-b pb-4">
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
+            <div className="min-w-[220px] flex-1 max-w-sm space-y-1.5">
+              <FieldLabel
+                hint={
+                  <>
+                    Pay rates are stored per <strong>site</strong> and ShiftCare staff ID. Pick a location before
+                    editing or importing rates.
+                  </>
+                }
+                hintLabel="About location selection"
+              >
+                Location
+              </FieldLabel>
+              <Select value={locationId || undefined} onValueChange={(value) => setLocationId(value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select location…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc._id} value={loc._id}>
+                      {loc.name} ({loc.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!locations.length && (
+                <Badge variant="warning" className="mt-1">
+                  No locations — add under Workforce → Setup
+                </Badge>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <input
+                ref={ratesImportInputRef}
+                type="file"
+                accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                className="hidden"
+                onChange={handleRatesXlsx}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="gap-2"
+                disabled={!locationId || !canEditRates || importingXlsx}
+                onClick={() => ratesImportInputRef.current?.click()}
+                title={!canEditRates ? 'Requires super admin or finance role' : undefined}
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                {importingXlsx || bulkImportMutation.isPending ? 'Importing…' : 'Import Excel'}
+              </Button>
+              <InfoHint
+                variant="help"
+                side="bottom"
+                label="How Excel import works"
+                content={
+                  <>
+                    Upload a <strong>Support Staff Rates</strong> workbook (.xlsx). The first sheet should include{' '}
+                    <strong>Employee name</strong>, daytime, afternoon, and other rate columns. Rows are matched to
+                    ShiftCare staff by name and saved for the selected location.
+                    {!canEditRates && (
+                      <>
+                        {' '}
+                        Import requires <strong>super admin</strong> or <strong>finance</strong> role.
+                      </>
+                    )}
+                  </>
+                }
+              />
+            </div>
           </div>
         </CardHeader>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Staff List</CardTitle>
-          <form onSubmit={handleSearch} className="mt-4">
-            <div className="flex gap-2">
+        <CardContent className="p-0 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2.5">
+            <span className="text-sm font-semibold">Directory</span>
+            <form onSubmit={handleSearch} className="flex gap-2">
               <Input
-                type="text"
-                placeholder="Search by name..."
+                type="search"
+                placeholder="Search by name…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
+                className="h-8 w-48 sm:w-56"
               />
-              <Button type="submit">Search</Button>
-            </div>
-          </form>
-        </CardHeader>
-        <CardContent>
+              <Button type="submit" size="sm">
+                Search
+              </Button>
+            </form>
+          </div>
+
           {isLoading ? (
-            <LoadingScreen message="Loading staff..." />
-          ) : error ? (
-            <div className="text-center py-8 text-destructive">
-              Error loading staff: {error.message}
+            <div className="px-4 py-8">
+              <LoadingScreen message="Loading staff..." />
             </div>
-          ) : staff.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+          ) : error ? (
+            <div className="px-4 py-4">
+              <QueryErrorState error={error} title="Failed to load staff" className="border-0 shadow-none" />
+            </div>
+          ) : !hasResults ? (
+            <div className="px-4 py-8 text-center text-muted-foreground">
               No staff found
             </div>
           ) : (
             <>
-              <div className="rounded-md border">
-                <Table>
+              <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead className="w-[200px]">SCHADS rates</TableHead>
+                      <SortableTableHead
+                        label="ID"
+                        sortKey="id"
+                        activeSortKey={sortBy}
+                        sortType={sortType}
+                        onSort={handleSort}
+                      />
+                      <SortableTableHead
+                        label="Name"
+                        sortKey="name"
+                        activeSortKey={sortBy}
+                        sortType={sortType}
+                        onSort={handleSort}
+                      />
+                      <SortableTableHead
+                        label="Email"
+                        sortKey="email"
+                        activeSortKey={sortBy}
+                        sortType={sortType}
+                        onSort={handleSort}
+                      />
+                      <SortableTableHead
+                        label="Role"
+                        sortKey="role"
+                        activeSortKey={sortBy}
+                        sortType={sortType}
+                        onSort={handleSort}
+                      />
+                      <SortableTableHead
+                        label="Phone"
+                        sortKey="phone"
+                        activeSortKey={sortBy}
+                        sortType={sortType}
+                        onSort={handleSort}
+                      />
+                      <SortableTableHead
+                        sortKey="rates"
+                        activeSortKey={sortBy}
+                        sortType={sortType}
+                        onSort={handleSort}
+                        className="w-[200px]"
+                      >
+                        <span className="inline-flex items-center gap-1 normal-case">
+                          SCHADS rates
+                          <InfoHint
+                            side="left"
+                            label="About SCHADS rates column"
+                            content="Per-location hourly rates used by the pay calculator and cost analysis. Green Saved means rates exist for this staff member at the selected location."
+                          />
+                        </span>
+                      </SortableTableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {staff.map((member) => {
+                    {displayedStaff.map((member) => {
                       const hasRate = locationId && ratesByStaffId.has(String(member.id));
                       return (
                         <TableRow key={member.id}>
@@ -360,13 +564,17 @@ export const Staff = () => {
                           <TableCell>{member.mobile_number || member.phone_number || 'N/A'}</TableCell>
                           <TableCell>
                             {!locationId ? (
-                              <span className="text-xs text-muted-foreground">Select a location</span>
+                              <span className="text-2xs text-muted-foreground">—</span>
                             ) : (
                               <div className="flex items-center gap-2">
-                                {hasRate && (
-                                  <span className="text-[10px] uppercase font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                                {hasRate ? (
+                                  <Badge variant="success" className="uppercase">
                                     Saved
-                                  </span>
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive" className="uppercase">
+                                    Unsaved
+                                  </Badge>
                                 )}
                                 {ratesLoading && (
                                   <span className="text-xs text-muted-foreground">…</span>
@@ -375,7 +583,11 @@ export const Staff = () => {
                                   type="button"
                                   size="sm"
                                   variant="outline"
-                                  className="h-8 gap-1"
+                                  className={cn(
+                                    'h-8 gap-1',
+                                    !hasRate &&
+                                      'border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive'
+                                  )}
                                   onClick={() => openEdit(member)}
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
@@ -388,10 +600,9 @@ export const Staff = () => {
                       );
                     })}
                   </TableBody>
-                </Table>
-              </div>
+              </Table>
               {metadata && (
-                <div className="mt-4 flex items-center justify-between">
+                <div className="flex items-center justify-between px-4 pt-4">
                   <div className="text-sm text-muted-foreground">
                     Showing page {metadata.current_page} of {metadata.total_pages} (
                     {metadata.total_count} total)
@@ -409,7 +620,7 @@ export const Staff = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => setPage((p) => p + 1)}
-                      disabled={page >= metadata.total_pages}
+                      disabled={page >= metadata.total_pages || metadata.current_page >= metadata.total_pages}
                     >
                       Next
                     </Button>
@@ -422,28 +633,26 @@ export const Staff = () => {
       </Card>
 
       {editing && draft && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-        >
-          <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-lg">
-                SCHADS rates — {editing.displayName}
-              </CardTitle>
-              <Button type="button" variant="ghost" size="icon" onClick={closeEdit} aria-label="Close">
-                <X className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-xs text-muted-foreground">
-                Location-scoped. Calculator and cost for this site use these values unless overridden by a rates file in
-                the award calculator.
-              </p>
+        <Dialog open onOpenChange={(open) => { if (!open) closeEdit(); }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <div className="flex items-center gap-2 pr-8">
+                <DialogTitle>SCHADS rates — {editing.displayName}</DialogTitle>
+                <InfoHint
+                  label="About location-scoped rates"
+                  content="These rates apply at the selected location. The award calculator and cost analysis use them unless overridden by an uploaded rates file."
+                />
+              </div>
+            </DialogHeader>
+            <div className="space-y-4">
               {canEditRates && (
-                <div className="space-y-1">
-                  <span className="text-[10px] uppercase text-muted-foreground">Aliases (comma-separated alternate names for file matching)</span>
+                <div className="space-y-1.5">
+                  <FieldLabel
+                    hint="Alternate spellings or nicknames used in Excel imports, comma-separated (e.g. J. Smith, John S)."
+                    hintLabel="About aliases"
+                  >
+                    Aliases
+                  </FieldLabel>
                   <Input
                     type="text"
                     className="h-8 text-xs"
@@ -456,7 +665,7 @@ export const Staff = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {STAFF_RATES_TABLE_FIELDS.map(([field, label]) => (
                   <div key={field} className="space-y-1">
-                    <span className="text-[10px] uppercase text-muted-foreground">{label}</span>
+                    <Label className="block text-2xs font-normal uppercase text-muted-foreground">{label}</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -500,15 +709,21 @@ export const Staff = () => {
                     )}
                   </>
                 ) : (
-                  <p className="text-sm text-muted-foreground">View only. Ask an admin to change rates.</p>
+                  <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    View only
+                    <InfoHint
+                      content="Only super admin and finance roles can edit SCHADS rates."
+                      label="Why view only"
+                    />
+                  </p>
                 )}
                 <Button type="button" variant="outline" onClick={closeEdit}>
                   Cancel
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

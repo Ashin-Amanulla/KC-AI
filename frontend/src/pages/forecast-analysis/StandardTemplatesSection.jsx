@@ -13,9 +13,12 @@ import { getErrorMessage } from '../../utils/api';
 import { normalizeRatio } from '../../utils/normalizeRatio';
 import { validateTabularFile, TABULAR_ACCEPT } from '../../config/upload';
 import { TabularExportButtons } from '../../components/TabularExportButtons';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Card, CardContent, CardHeader } from '../../ui/card';
+import { CardTitleHint, InfoHint } from '../../components/InfoHint';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, nativeSelectClass } from '../../ui/select';
 import {
   Table,
   TableBody,
@@ -207,14 +210,19 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
 
   if (!locationId) {
     return (
-      <p className="text-sm text-muted-foreground">Select a location above to manage standard templates.</p>
+      <p className="flex items-center gap-1.5 text-2sm text-muted-foreground">
+        Select a location in Scope above
+        <InfoHint content="Standard templates are stored per location." label="Location required" />
+      </p>
     );
   }
 
   return (
     <Card>
-          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-            <CardTitle>Standard data</CardTitle>
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 border-b pb-3">
+            <CardTitleHint hint="Baseline shift patterns per client. Bulk upload (CSV/Excel) replaces all rows for this location; use Add row for single entries.">
+              Standard data
+            </CardTitleHint>
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -255,9 +263,9 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                 <p className="text-sm font-medium">{editingId ? 'Edit shift line' : 'Add a shift line'}</p>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <div className="space-y-1 sm:col-span-2 lg:col-span-1">
-                    <label className="text-sm font-medium">Client</label>
+                    <Label>Client</Label>
                     <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className={cn(nativeSelectClass, 'w-full')}
                       value={rowForm.clientDirectoryId}
                       onChange={(e) => updateRowField('clientDirectoryId', e.target.value)}
                       required
@@ -271,22 +279,22 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Day</label>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      value={rowForm.day}
-                      onChange={(e) => updateRowField('day', e.target.value)}
-                      required
-                    >
-                      {WEEKDAYS.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
+                    <Label>Day</Label>
+                    <Select value={rowForm.day} onValueChange={(v) => updateRowField('day', v)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WEEKDAYS.map((d) => (
+                          <SelectItem key={d} value={d}>
+                            {d}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Start time</label>
+                    <Label>Start time</Label>
                     <Input
                       placeholder="06:00 or 6:00 AM"
                       value={rowForm.startTime}
@@ -295,7 +303,7 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">End time</label>
+                    <Label>End time</Label>
                     <Input
                       placeholder="10:00 or 10:00 AM"
                       value={rowForm.endTime}
@@ -304,7 +312,7 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Duration (hours)</label>
+                    <Label>Duration (hours)</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -316,7 +324,7 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Total cost</label>
+                    <Label>Total cost</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -328,21 +336,21 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                     />
                   </div>
                   <div className="space-y-1 sm:col-span-2">
-                    <label className="text-sm font-medium">Rate groups</label>
+                    <Label>Rate groups</Label>
                     <Input
                       value={rowForm.rateGroups}
                       onChange={(e) => updateRowField('rateGroups', e.target.value)}
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Reference no</label>
+                    <Label>Reference no</Label>
                     <Input
                       value={rowForm.referenceNo}
                       onChange={(e) => updateRowField('referenceNo', e.target.value)}
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Shift type</label>
+                    <Label>Shift type</Label>
                     <Input
                       placeholder="Personal Care"
                       value={rowForm.shiftType}
@@ -350,7 +358,7 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Ratio</label>
+                    <Label>Ratio</Label>
                     <Input
                       placeholder="1:2"
                       value={rowForm.ratio}
@@ -379,11 +387,9 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
               )}
             >
               <input {...dropzone.getInputProps()} />
-              <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                {uploadM.isPending
-                  ? 'Uploading…'
-                  : 'Drop CSV or Excel here or click to bulk-replace all standard rows for this location'}
+              <Upload className="mx-auto h-6 w-6 text-muted-foreground mb-1" />
+              <p className="text-2sm text-muted-foreground">
+                {uploadM.isPending ? 'Uploading…' : 'Drop CSV/Excel or click to bulk-replace'}
               </p>
             </div>
 
@@ -466,9 +472,9 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                   </Table>
                 </div>
                 {tableRecords.length > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    {tableRecords.length} standard row{tableRecords.length === 1 ? '' : 's'}
-                    {client !== 'all' && selectedClientLabel ? ` for ${selectedClientLabel}` : ''}
+                  <p className="text-2xs text-muted-foreground tabular-nums">
+                    {tableRecords.length} row{tableRecords.length === 1 ? '' : 's'}
+                    {client !== 'all' && selectedClientLabel ? ` · ${selectedClientLabel}` : ''}
                   </p>
                 )}
               </>

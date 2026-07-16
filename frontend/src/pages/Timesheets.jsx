@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTimesheets } from '../api/timesheets';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
@@ -11,7 +11,18 @@ import {
   TableRow,
 } from '../ui/table';
 import { Button } from '../ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { LoadingScreen } from '../ui/LoadingSpinner';
+import { QueryErrorState } from '../components/QueryErrorState';
+import { PageHeader } from '../components/PageHeader';
+import { StatCard } from '../ui/stat-card';
+import { Badge } from '../ui/badge';
+import { ClipboardList, Clock, CheckCircle2, CircleDashed } from 'lucide-react';
+
+const STATUS_FILTERS = [
+  { key: 'all', label: 'All status' },
+  { key: 'approved', label: 'Approved only' },
+];
 
 export const Timesheets = () => {
   const [fromDate, setFromDate] = useState(() => {
@@ -107,90 +118,70 @@ export const Timesheets = () => {
   };
 
   const totals = calculateTotals();
+  const statusFilter = approvedOnly ? 'approved' : 'all';
 
-  const handleSearch = (e) => {
-    e.preventDefault();
+  useEffect(() => {
     setPage(1);
     setExpandedRows({});
-  };
+  }, [fromDate, toDate, approvedOnly]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold">Timesheets</h2>
-      </div>
+    <div className="page-stack">
+      <PageHeader
+        title="Timesheets"
+        hint="ShiftCare timesheet entries — filter by date range and approval status."
+      />
 
-      {/* Filters Card */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSearch}>
-            <div className="flex flex-wrap gap-4 items-end">
-              <div>
-                <label className="text-sm font-medium block mb-1">From Date</label>
-                <Input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="w-44"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1">To Date</label>
-                <Input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="w-44"
-                />
-              </div>
-              <div className="flex items-center gap-2 pb-2">
-                <input
-                  type="checkbox"
-                  id="approvedOnly"
-                  checked={approvedOnly}
-                  onChange={(e) => setApprovedOnly(e.target.checked)}
-                  className="rounded border-gray-300 h-4 w-4"
-                />
-                <label htmlFor="approvedOnly" className="text-sm font-medium">
-                  Approved Only
-                </label>
-              </div>
-              <Button type="submit">Apply Filters</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <div className="filter-toolbar">
+        <div className="flex items-center gap-1.5">
+          <span className="text-2xs text-muted-foreground">From</span>
+          <Input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            aria-label="From date"
+            className="filter-control-date"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-2xs text-muted-foreground">To</span>
+          <Input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            aria-label="To date"
+            className="filter-control-date"
+          />
+        </div>
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => setApprovedOnly(value === 'approved')}
+        >
+          <SelectTrigger className="filter-control w-[8.5rem]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_FILTERS.map(({ key, label }) => (
+              <SelectItem key={key} value={key} className="text-2xs">
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="ml-auto text-2xs tabular-nums text-muted-foreground">
+          {isLoading
+            ? 'Loading…'
+            : `${metadata?.total_count ?? timesheets.length} record${(metadata?.total_count ?? timesheets.length) !== 1 ? 's' : ''}`}
+        </span>
+      </div>
 
       {/* Summary Cards */}
       {!isLoading && timesheets.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{timesheets.length}</div>
-              <p className="text-xs text-muted-foreground">Total Records</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{formatDuration(totals.totalMinutes)}</div>
-              <p className="text-xs text-muted-foreground">Total Hours</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-green-600">{totals.approvedCount}</div>
-              <p className="text-xs text-muted-foreground">Approved</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-yellow-600">{totals.pendingCount}</div>
-              <p className="text-xs text-muted-foreground">Pending</p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-2 sm:grid-cols-4">
+          <StatCard icon={ClipboardList} label="Total Records" value={timesheets.length} className="px-3 py-2" />
+          <StatCard icon={Clock} label="Total Hours" value={formatDuration(totals.totalMinutes)} className="px-3 py-2" />
+          <StatCard icon={CheckCircle2} tone="success" label="Approved" value={totals.approvedCount} className="px-3 py-2" />
+          <StatCard icon={CircleDashed} tone="warning" label="Pending" value={totals.pendingCount} className="px-3 py-2" />
         </div>
       )}
 
@@ -199,25 +190,25 @@ export const Timesheets = () => {
         <CardHeader>
           <CardTitle>Timesheet Records</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 pb-4">
           {isLoading ? (
-            <LoadingScreen message="Loading timesheets..." />
+            <div className="px-4 py-8">
+              <LoadingScreen message="Loading timesheets..." />
+            </div>
           ) : error ? (
-            <div className="text-center py-12 text-destructive">
-              <p className="font-semibold">Error loading timesheets</p>
-              <p className="text-sm mt-1">{error.message}</p>
+            <div className="px-4 py-4">
+              <QueryErrorState error={error} title="Failed to load timesheets" className="border-0 shadow-none" />
             </div>
           ) : timesheets.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="px-4 py-12 text-center text-muted-foreground">
               <p className="text-lg">No timesheets found</p>
               <p className="text-sm mt-1">Try adjusting your date range or filters</p>
             </div>
           ) : (
             <>
-              <div className="rounded-md border overflow-hidden">
-                <Table>
+              <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/50">
+                    <TableRow>
                       <TableHead className="w-10"></TableHead>
                       <TableHead>ID</TableHead>
                       <TableHead>Staff</TableHead>
@@ -242,7 +233,7 @@ export const Timesheets = () => {
                               ▶
                             </span>
                           </TableCell>
-                          <TableCell className="font-mono text-sm">{timesheet.id}</TableCell>
+                          <TableCell className="font-mono text-sm tabular-nums">{timesheet.id}</TableCell>
                           <TableCell>
                             <div className="font-medium">
                               {timesheet.staff?.name || timesheet.staff?.first_name || 'Unknown'}
@@ -252,32 +243,26 @@ export const Timesheets = () => {
                             )}
                           </TableCell>
                           <TableCell>{formatDate(timesheet.date || timesheet.start_at)}</TableCell>
-                          <TableCell className="font-mono text-sm">
+                          <TableCell className="font-mono text-sm tabular-nums">
                             {timesheet.start_at ? new Date(timesheet.start_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : '-'}
                           </TableCell>
-                          <TableCell className="font-mono text-sm">
+                          <TableCell className="font-mono text-sm tabular-nums">
                             {timesheet.end_at ? new Date(timesheet.end_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : '-'}
                           </TableCell>
                           <TableCell>
-                            <span className="font-semibold">
+                            <span className="font-semibold tabular-nums">
                               {formatDuration(timesheet.total_minutes || timesheet.duration_minutes)}
                             </span>
                           </TableCell>
                           <TableCell>
-                            <span
-                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                timesheet.approved || timesheet.is_approved
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}
-                            >
+                            <Badge variant={timesheet.approved || timesheet.is_approved ? 'success' : 'warning'}>
                               {timesheet.approved || timesheet.is_approved ? '✓ Approved' : '◐ Pending'}
-                            </span>
+                            </Badge>
                           </TableCell>
                           <TableCell>
-                            <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-medium">
+                            <Badge variant="primary">
                               {timesheet.items?.length || timesheet.pay_items?.length || 0} items
-                            </span>
+                            </Badge>
                           </TableCell>
                         </TableRow>
                         
@@ -325,7 +310,7 @@ export const Timesheets = () => {
                                   {(timesheet.total_amount || timesheet.amount) && (
                                     <div>
                                       <span className="text-muted-foreground block">Total Amount</span>
-                                      <span className="font-semibold text-green-600">
+                                      <span className="font-semibold text-success tabular-nums">
                                         {formatCurrency(timesheet.total_amount || timesheet.amount)}
                                       </span>
                                     </div>
@@ -354,15 +339,13 @@ export const Timesheets = () => {
                                                 {item.pay_item_name || item.name || `Item ${idx + 1}`}
                                               </TableCell>
                                               <TableCell>
-                                                <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                                                  {item.pay_item_type || item.type || 'Standard'}
-                                                </span>
+                                                <Badge>{item.pay_item_type || item.type || 'Standard'}</Badge>
                                               </TableCell>
-                                              <TableCell>
+                                              <TableCell className="tabular-nums">
                                                 {item.units || item.quantity || formatDuration(item.minutes)}
                                               </TableCell>
-                                              <TableCell>{formatCurrency(item.rate)}</TableCell>
-                                              <TableCell className="font-semibold">
+                                              <TableCell className="tabular-nums">{formatCurrency(item.rate)}</TableCell>
+                                              <TableCell className="font-semibold tabular-nums">
                                                 {formatCurrency(item.amount || item.total)}
                                               </TableCell>
                                             </TableRow>
@@ -399,8 +382,7 @@ export const Timesheets = () => {
                       </>
                     ))}
                   </TableBody>
-                </Table>
-              </div>
+              </Table>
 
               {/* Pagination */}
               {metadata && (

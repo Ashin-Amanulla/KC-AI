@@ -3,6 +3,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-2sm: 0.8125rem;
+  --text-2sm--line-height: 1.25rem;
+  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  --shadow-popover: 0 6px 20px -4px oklch(0 0 0 / 0.14);
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -26,6 +36,8 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -44,13 +56,6 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/*
- * Kangaroo Care brand palette (kangaroocare.com.au):
- *   teal-cyan #11acc8 (primary) · slate-navy #2d4356 · deep blue #0e3e86
- *   warm orange #d68751 · green #00dba8 · pink #e162a1 · surface #e1ebf4
- * Expressed as OKLCH design tokens; teal darkened slightly for AA contrast
- * on white button text.
- */
 :root {
   --radius: 0.625rem;
   --background: oklch(0.976 0.006 230);
@@ -59,7 +64,7 @@
   --card-foreground: oklch(0.28 0.03 245);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.28 0.03 245);
-  --primary: oklch(0.58 0.104 213);
+  --primary: oklch(0.56 0.115 210);
   --primary-foreground: oklch(0.99 0.003 230);
   --secondary: oklch(0.94 0.014 225);
   --secondary-foreground: oklch(0.34 0.035 245);
@@ -68,9 +73,11 @@
   --accent: oklch(0.93 0.026 215);
   --accent-foreground: oklch(0.32 0.045 235);
   --destructive: oklch(0.577 0.245 27.325);
+  --success: oklch(0.55 0.13 165);
+  --warning: oklch(0.6 0.13 70);
   --border: oklch(0.905 0.012 230);
   --input: oklch(0.89 0.014 230);
-  --ring: oklch(0.62 0.1 213);
+  --ring: oklch(0.6 0.11 210);
   --chart-1: oklch(0.65 0.11 213);
   --chart-2: oklch(0.45 0.13 262);
   --chart-3: oklch(0.7 0.11 55);
@@ -84,40 +91,44 @@
   --sidebar-accent-foreground: oklch(0.96 0.008 230);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.62 0.1 213);
+  color-scheme: light;
 }
 
 .dark {
-  --background: oklch(0.17 0.02 245);
-  --foreground: oklch(0.94 0.01 230);
-  --card: oklch(0.215 0.024 245);
-  --card-foreground: oklch(0.94 0.01 230);
-  --popover: oklch(0.215 0.024 245);
-  --popover-foreground: oklch(0.94 0.01 230);
-  --primary: oklch(0.72 0.105 213);
-  --primary-foreground: oklch(0.16 0.02 245);
-  --secondary: oklch(0.28 0.028 245);
-  --secondary-foreground: oklch(0.94 0.01 230);
-  --muted: oklch(0.27 0.026 245);
-  --muted-foreground: oklch(0.7 0.02 235);
-  --accent: oklch(0.3 0.035 235);
-  --accent-foreground: oklch(0.95 0.01 230);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.7 0.1 213);
-  --chart-1: oklch(0.72 0.11 213);
-  --chart-2: oklch(0.6 0.13 262);
-  --chart-3: oklch(0.74 0.12 55);
-  --chart-4: oklch(0.78 0.14 168);
-  --chart-5: oklch(0.7 0.16 356);
-  --sidebar: oklch(0.2 0.024 245);
+  --background: oklch(0.145 0.008 250);
+  --foreground: oklch(0.95 0.005 230);
+  --card: oklch(0.18 0.01 248);
+  --card-foreground: oklch(0.95 0.005 230);
+  --popover: oklch(0.21 0.012 248);
+  --popover-foreground: oklch(0.95 0.005 230);
+  --primary: oklch(0.78 0.14 205);
+  --primary-foreground: oklch(0.13 0.015 245);
+  --secondary: oklch(0.22 0.012 248);
+  --secondary-foreground: oklch(0.95 0.005 230);
+  --muted: oklch(0.205 0.01 248);
+  --muted-foreground: oklch(0.68 0.015 240);
+  --accent: oklch(0.235 0.02 235);
+  --accent-foreground: oklch(0.95 0.005 230);
+  --destructive: oklch(0.68 0.19 25);
+  --success: oklch(0.75 0.15 165);
+  --warning: oklch(0.8 0.14 80);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.78 0.12 205);
+  --chart-1: oklch(0.78 0.14 205);
+  --chart-2: oklch(0.72 0.12 280);
+  --chart-3: oklch(0.8 0.14 80);
+  --chart-4: oklch(0.75 0.15 165);
+  --chart-5: oklch(0.68 0.19 25);
+  --sidebar: oklch(0.16 0.01 248);
   --sidebar-foreground: oklch(0.88 0.012 230);
-  --sidebar-primary: oklch(0.68 0.105 213);
-  --sidebar-primary-foreground: oklch(0.15 0.02 245);
-  --sidebar-accent: oklch(0.27 0.03 245);
+  --sidebar-primary: oklch(0.78 0.14 205);
+  --sidebar-primary-foreground: oklch(0.13 0.015 245);
+  --sidebar-accent: oklch(0.22 0.012 248);
   --sidebar-accent-foreground: oklch(0.96 0.008 230);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.7 0.1 213);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-ring: oklch(0.78 0.12 205);
+  color-scheme: dark;
 }
 
 @layer base {
@@ -125,7 +136,72 @@
     border-color: var(--border);
   }
   body {
+    font-family: var(--font-sans);
     background-color: var(--background);
     color: var(--foreground);
   }
+}
+
+@layer components {
+  .page-stack {
+    @apply space-y-4;
+  }
+  .page-stack-tight {
+    @apply space-y-3;
+  }
+  .page-stack-dense {
+    @apply space-y-2;
+  }
+
+  .filter-toolbar {
+    @apply flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1.5;
+  }
+  .filter-control {
+    @apply h-8 border-0 bg-background/80 text-2xs shadow-none;
+  }
+  .filter-control-date {
+    @apply h-8 w-[9.5rem] shrink-0 rounded-md border border-border/50 bg-background px-2 text-xs tabular-nums shadow-none;
+    color-scheme: light;
+  }
+  .dark .filter-control-date {
+    color-scheme: dark;
+  }
+  .filter-control-date::-webkit-datetime-edit {
+    @apply flex min-w-0 items-center overflow-hidden py-0;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+  .filter-control-date::-webkit-datetime-edit-fields-wrapper {
+    @apply min-w-0 py-0;
+  }
+  .filter-control-date::-webkit-datetime-edit-text,
+  .filter-control-date::-webkit-datetime-edit-month-field,
+  .filter-control-date::-webkit-datetime-edit-day-field,
+  .filter-control-date::-webkit-datetime-edit-year-field {
+    padding: 0;
+    font-size: 0.75rem;
+  }
+  .filter-control-date::-webkit-calendar-picker-indicator {
+    @apply h-3.5 w-3.5 shrink-0 cursor-pointer opacity-60;
+    margin: 0;
+  }
+
+  .muted-strip {
+    @apply rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground;
+  }
+  .detail-panel {
+    @apply rounded-lg border border-border bg-muted/30 p-4;
+  }
+
+  .section-label {
+    @apply text-2xs font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+  .section-label-sticky {
+    @apply sticky top-0 z-10 border-b border-border/60 bg-background/90 px-2.5 py-1 backdrop-blur-sm;
+  }
+}
+
+@utility scroll-pane {
+  max-height: calc(100vh - var(--scroll-offset, 12rem));
+  overflow-y: auto;
 }

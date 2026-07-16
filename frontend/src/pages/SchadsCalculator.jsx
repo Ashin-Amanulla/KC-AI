@@ -204,15 +204,15 @@ function computeManual(baseRate, empType, days, customAllowances = []) {
   return { gross, basePay, penaltyExtra, otPay, allowances, totalHours, ordHours, totalOtHours, tableRows };
 }
 
-const ROW_CLS = { sat: 'text-purple-700', sun: 'text-red-600', ph: 'text-blue-700', ot: 'text-orange-600', allow: 'text-amber-700' };
+const ROW_CLS = { sat: 'text-chart-2', sun: 'text-destructive', ph: 'text-primary', ot: 'text-warning', allow: 'text-warning' };
 function rowClass(cls) { if (!cls) return ''; for (const c of cls.split(' ')) if (ROW_CLS[c]) return ROW_CLS[c]; return ''; }
 
 // ── Pay Breakdown panel (rendered inside the table as an expanded row) ──
 const CAT_STYLE = {
   ord:     { cls: 'text-foreground',     label: 'Ordinary',           bg: '' },
-  penalty: { cls: 'text-orange-600',     label: 'Penalty loading',    bg: 'bg-orange-50/40' },
-  ot:      { cls: 'text-rose-600 font-semibold', label: 'Overtime',   bg: 'bg-rose-50/40' },
-  ot76:    { cls: 'text-rose-700 font-semibold', label: 'OT >76h',    bg: 'bg-rose-100/50' },
+  penalty: { cls: 'text-warning',     label: 'Penalty loading',    bg: 'bg-warning/15' },
+  ot:      { cls: 'text-destructive font-semibold', label: 'Overtime',   bg: 'bg-destructive/10' },
+  ot76:    { cls: 'text-destructive font-semibold', label: 'OT >76h',    bg: 'bg-destructive/15' },
 };
 
 const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staffRates }) => {
@@ -231,15 +231,15 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
       {/* Hero */}
       <div className="flex items-end justify-between flex-wrap gap-3 bg-foreground text-background rounded p-4">
         <div>
-          <p className="text-[10px] uppercase tracking-widest opacity-60 mb-1">Gross Pay — {staffName}</p>
+          <p className="text-2xs uppercase tracking-widest opacity-60 mb-1">Gross Pay — {staffName}</p>
           <p className="font-bold text-2xl font-mono">{fmt(showGross)}</p>
           {bd.fromRates
-            ? <p className="text-[11px] opacity-70 mt-0.5">Rates from file · daytime ${bd.base.toFixed(2)}/h</p>
-            : isCasual && <p className="text-[11px] opacity-70 mt-0.5">Casual rate · base ${(bd.base||0).toFixed(2)}/h + ${(bd.load||0).toFixed(2)} loading</p>
+            ? <p className="text-2xs opacity-70 mt-0.5">Rates from file · daytime ${bd.base.toFixed(2)}/h</p>
+            : isCasual && <p className="text-2xs opacity-70 mt-0.5">Casual rate · base ${(bd.base||0).toFixed(2)}/h + ${(bd.load||0).toFixed(2)} loading</p>
           }
         </div>
         <div className="text-right">
-          <p className="text-[10px] uppercase tracking-widest opacity-60 mb-1">Total Hours</p>
+          <p className="text-2xs uppercase tracking-widest opacity-60 mb-1">Total Hours</p>
           <p className="font-bold text-xl font-mono">{fmtH(bd.totalHours)}</p>
         </div>
       </div>
@@ -248,14 +248,14 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-px bg-border rounded overflow-hidden text-xs">
         {[
           { label: 'Base Pay',         val: fmt(bd.basePay),      cls: '' },
-          { label: 'Penalty Loadings', val: fmt(bd.penaltyExtra), cls: 'text-orange-600' },
-          { label: 'Overtime Pay',     val: fmt(bd.otPay),        cls: 'text-rose-600' },
-          { label: 'Allowances',       val: fmt(r2(bd.allow.total + addAl)),  cls: 'text-amber-600' },
+          { label: 'Penalty Loadings', val: fmt(bd.penaltyExtra), cls: 'text-warning' },
+          { label: 'Overtime Pay',     val: fmt(bd.otPay),        cls: 'text-destructive' },
+          { label: 'Allowances',       val: fmt(r2(bd.allow.total + addAl)),  cls: 'text-warning' },
           { label: 'Ordinary Hrs',     val: fmtH(bd.ordHours),    cls: '' },
-          { label: 'OT Hours',         val: fmtH(bd.otHours),     cls: 'text-rose-600' },
+          { label: 'OT Hours',         val: fmtH(bd.otHours),     cls: 'text-destructive' },
         ].map(({ label, val, cls }) => (
           <div key={label} className="bg-background p-3">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+            <p className="text-2xs uppercase tracking-wider text-muted-foreground">{label}</p>
             <p className={`font-bold text-sm mt-0.5 font-mono ${cls}`}>{val}</p>
           </div>
         ))}
@@ -263,12 +263,12 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
 
       {/* Line-by-line table */}
       <div className="rounded border border-border overflow-x-auto">
-        <div className="bg-muted/40 px-3 py-2 text-[10px] uppercase tracking-wider font-semibold border-b border-border">
+        <div className="bg-muted/40 px-3 py-2 text-2xs uppercase tracking-wider font-semibold border-b border-border">
           Line-by-line Calculation
         </div>
         <table className="w-full text-xs border-collapse">
           <thead>
-            <tr className="bg-muted/20 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <tr className="bg-muted/20 text-2xs uppercase tracking-wider text-muted-foreground">
               <th className="text-left px-3 py-2 font-medium">Category</th>
               <th className="text-right px-3 py-2 font-medium">Hours</th>
               <th className="text-right px-3 py-2 font-medium">Mult / Rate</th>
@@ -282,7 +282,7 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
                 <tr key={i} className={`border-t border-border/30 ${style.bg}`}>
                   <td className={`px-3 py-2 ${style.cls}`}>
                     {l.label}
-                    <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">{style.label}</span>
+                    <span className="ml-1.5 text-2xs font-normal text-muted-foreground/60 uppercase">{style.label}</span>
                   </td>
                   <td className="text-right px-3 py-2 font-mono">{fmtH(l.hours)}</td>
                   <td className="text-right px-3 py-2 font-mono text-muted-foreground">
@@ -294,89 +294,89 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
             })}
             {/* Allowances */}
             {(mrow.brokenShiftCount || 0) > 0 && (
-              <tr className="border-t border-border/30 bg-amber-50/30">
-                <td className="px-3 py-2 text-amber-700">
+              <tr className="border-t border-border/30 bg-warning/10">
+                <td className="px-3 py-2 text-warning">
                   Broken shift — 1 break ({mrow.brokenShiftCount} × ${
                     (staffRates && Number(staffRates.brokenShift) > 0)
                       ? Number(staffRates.brokenShift).toFixed(2)
                       : BROKEN_ALLOWANCE_1
                   })
-                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                  <span className="ml-1.5 text-2xs font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.brokenShiftCount}</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
-                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.broken1Allow ?? bd.allow.brokenAllow)}</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-warning">{fmt(bd.allow.broken1Allow ?? bd.allow.brokenAllow)}</td>
               </tr>
             )}
             {(mrow.brokenShift2BreakCount || 0) > 0 && (
-              <tr className="border-t border-border/30 bg-amber-50/30">
-                <td className="px-3 py-2 text-amber-700">
+              <tr className="border-t border-border/30 bg-warning/10">
+                <td className="px-3 py-2 text-warning">
                   Broken shift — 2 breaks ({mrow.brokenShift2BreakCount} × ${BROKEN_ALLOWANCE_2})
-                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                  <span className="ml-1.5 text-2xs font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.brokenShift2BreakCount}</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
-                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.broken2Allow ?? 0)}</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-warning">{fmt(bd.allow.broken2Allow ?? 0)}</td>
               </tr>
             )}
             {bd.allow.sleepAllow > 0 && (
-              <tr className="border-t border-border/30 bg-amber-50/30">
-                <td className="px-3 py-2 text-amber-700">
+              <tr className="border-t border-border/30 bg-warning/10">
+                <td className="px-3 py-2 text-warning">
                   Sleepover allowance ({mrow.sleepoversCount} × ${staffRates ? effectiveSleepoverRate(staffRates).toFixed(2) : '0.00'})
                   {(staffRates?.sleepoverExtra || 0) > 0 && (
-                    <span className="block text-[10px] font-normal text-muted-foreground mt-0.5">
+                    <span className="block text-2xs font-normal text-muted-foreground mt-0.5">
                       base ${staffRates.sleepover.toFixed(2)} + extra ${staffRates.sleepoverExtra.toFixed(2)}/night
                     </span>
                   )}
-                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                  <span className="ml-1.5 text-2xs font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.sleepoversCount}</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
-                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.sleepAllow)}</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-warning">{fmt(bd.allow.sleepAllow)}</td>
               </tr>
             )}
             {bd.allow.mealAllow > 0 && (
-              <tr className="border-t border-border/30 bg-amber-50/30">
-                <td className="px-3 py-2 text-amber-600">
+              <tr className="border-t border-border/30 bg-warning/10">
+                <td className="px-3 py-2 text-warning">
                   Meal allowance ({mrow.mealAllowanceCount || 0} × ${MEAL_ALLOWANCE})
-                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                  <span className="ml-1.5 text-2xs font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
-                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-600">{fmt(bd.allow.mealAllow)}</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-warning">{fmt(bd.allow.mealAllow)}</td>
               </tr>
             )}
             {addAl > 0 && (
-              <tr className="border-t border-border/30 bg-amber-50/30">
-                <td className="px-3 py-2 text-amber-800">
+              <tr className="border-t border-border/30 bg-warning/10">
+                <td className="px-3 py-2 text-warning">
                   Additional allowance (summary)
-                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                  <span className="ml-1.5 text-2xs font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
-                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-800">{fmt(addAl)}</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-warning">{fmt(addAl)}</td>
               </tr>
             )}
             {(bd.allow.mileageAllow || 0) > 0 && (
-              <tr className="border-t border-border/30 bg-emerald-50/30">
-                <td className="px-3 py-2 text-emerald-700">
+              <tr className="border-t border-border/30 bg-success/10">
+                <td className="px-3 py-2 text-success">
                   Mileage allowance ({mrow.totalKm || 0} km × ${(staffRates?.kmRate || VEHICLE_RATE).toFixed(2)}/km)
-                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                  <span className="ml-1.5 text-2xs font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">{mrow.totalKm || 0} km</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">${(staffRates?.kmRate || VEHICLE_RATE).toFixed(2)}/km</td>
-                <td className="text-right px-3 py-2 font-mono font-semibold text-emerald-700">{fmt(bd.allow.mileageAllow)}</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-success">{fmt(bd.allow.mileageAllow)}</td>
               </tr>
             )}
             {staffRates && (bd.allow.otherAllow || 0) > 0 && (
-              <tr className="border-t border-border/30 bg-amber-50/30">
-                <td className="px-3 py-2 text-amber-700">
+              <tr className="border-t border-border/30 bg-warning/10">
+                <td className="px-3 py-2 text-warning">
                   Allowance (rates)
-                  <span className="ml-1.5 text-[9px] font-normal text-muted-foreground/60 uppercase">Allowance</span>
+                  <span className="ml-1.5 text-2xs font-normal text-muted-foreground/60 uppercase">Allowance</span>
                 </td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
                 <td className="text-right px-3 py-2 font-mono text-muted-foreground">—</td>
-                <td className="text-right px-3 py-2 font-mono font-semibold text-amber-700">{fmt(bd.allow.otherAllow)}</td>
+                <td className="text-right px-3 py-2 font-mono font-semibold text-warning">{fmt(bd.allow.otherAllow)}</td>
               </tr>
             )}
             {/* Total row */}
@@ -392,20 +392,20 @@ const PayBreakdownPanel = ({ mrow, staffName, baseRate, empType, isCasual, staff
 
       {/* Pct breakdown bar */}
       <div className="space-y-1">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Pay composition</p>
+        <p className="text-2xs uppercase tracking-wider text-muted-foreground">Pay composition</p>
         <div className="flex rounded overflow-hidden h-3 text-[0px]">
-          {showGross > 0 && bd.basePay > 0 && <div title={`Base ${fmt(bd.basePay)}`} style={{ width: `${(bd.basePay / showGross) * 100}%` }} className="bg-slate-400" />}
-          {showGross > 0 && bd.penaltyExtra > 0 && <div title={`Penalty ${fmt(bd.penaltyExtra)}`} style={{ width: `${(bd.penaltyExtra / showGross) * 100}%` }} className="bg-orange-400" />}
-          {showGross > 0 && bd.otPay > 0 && <div title={`OT ${fmt(bd.otPay)}`} style={{ width: `${(bd.otPay / showGross) * 100}%` }} className="bg-rose-500" />}
-          {showGross > 0 && bd.allow.total > 0 && <div title={`Allow. ${fmt(bd.allow.total)}`} style={{ width: `${(bd.allow.total / showGross) * 100}%` }} className="bg-amber-400" />}
-          {showGross > 0 && addAl > 0 && <div title={`Add’l ${fmt(addAl)}`} style={{ width: `${(addAl / showGross) * 100}%` }} className="bg-amber-600" />}
+          {showGross > 0 && bd.basePay > 0 && <div title={`Base ${fmt(bd.basePay)}`} style={{ width: `${(bd.basePay / showGross) * 100}%` }} className="bg-muted-foreground/40" />}
+          {showGross > 0 && bd.penaltyExtra > 0 && <div title={`Penalty ${fmt(bd.penaltyExtra)}`} style={{ width: `${(bd.penaltyExtra / showGross) * 100}%` }} className="bg-warning/70" />}
+          {showGross > 0 && bd.otPay > 0 && <div title={`OT ${fmt(bd.otPay)}`} style={{ width: `${(bd.otPay / showGross) * 100}%` }} className="bg-destructive" />}
+          {showGross > 0 && bd.allow.total > 0 && <div title={`Allow. ${fmt(bd.allow.total)}`} style={{ width: `${(bd.allow.total / showGross) * 100}%` }} className="bg-warning/70" />}
+          {showGross > 0 && addAl > 0 && <div title={`Add’l ${fmt(addAl)}`} style={{ width: `${(addAl / showGross) * 100}%` }} className="bg-warning" />}
         </div>
-        <div className="flex gap-4 flex-wrap text-[10px] text-muted-foreground">
-          <span><span className="inline-block w-2 h-2 rounded-sm bg-slate-400 mr-1" />Base {pct(bd.basePay, showGross)}</span>
-          <span><span className="inline-block w-2 h-2 rounded-sm bg-orange-400 mr-1" />Penalty {pct(bd.penaltyExtra, showGross)}</span>
-          <span><span className="inline-block w-2 h-2 rounded-sm bg-rose-500 mr-1" />OT {pct(bd.otPay, showGross)}</span>
-          {bd.allow.total > 0 && <span><span className="inline-block w-2 h-2 rounded-sm bg-amber-400 mr-1" />Allow. {pct(bd.allow.total, showGross)}</span>}
-          {addAl > 0 && <span><span className="inline-block w-2 h-2 rounded-sm bg-amber-600 mr-1" />Add’l {pct(addAl, showGross)}</span>}
+        <div className="flex gap-4 flex-wrap text-2xs text-muted-foreground">
+          <span><span className="inline-block w-2 h-2 rounded-sm bg-muted-foreground/40 mr-1" />Base {pct(bd.basePay, showGross)}</span>
+          <span><span className="inline-block w-2 h-2 rounded-sm bg-warning/70 mr-1" />Penalty {pct(bd.penaltyExtra, showGross)}</span>
+          <span><span className="inline-block w-2 h-2 rounded-sm bg-destructive mr-1" />OT {pct(bd.otPay, showGross)}</span>
+          {bd.allow.total > 0 && <span><span className="inline-block w-2 h-2 rounded-sm bg-warning/70 mr-1" />Allow. {pct(bd.allow.total, showGross)}</span>}
+          {addAl > 0 && <span><span className="inline-block w-2 h-2 rounded-sm bg-warning mr-1" />Add’l {pct(addAl, showGross)}</span>}
         </div>
       </div>
     </div>
@@ -475,7 +475,7 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
     const isOv = shift.manualFields?.[field] != null;
     return (
       <TableCell
-        className={`text-right font-mono cursor-context-menu ${cls} ${isOv ? 'ring-1 ring-inset ring-blue-400 bg-blue-50/50' : ''}`}
+        className={`text-right font-mono cursor-context-menu ${cls} ${isOv ? 'ring-1 ring-inset ring-primary bg-primary/10' : ''}`}
         onContextMenu={
           onShiftCtx
             ? (e) => onShiftCtx(e, payHoursId, shift._id, field, val ?? 0)
@@ -513,30 +513,30 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">
-              <TableHead className="text-[10px] whitespace-nowrap">Date</TableHead>
-              <TableHead className="text-[10px] whitespace-nowrap">Start</TableHead>
-              <TableHead className="text-[10px] whitespace-nowrap">End</TableHead>
-              <TableHead className="text-[10px] whitespace-nowrap">Client</TableHead>
-              <TableHead className="text-[10px] whitespace-nowrap">Type</TableHead>
-              <TableHead className="text-right text-[10px] whitespace-nowrap">Hrs</TableHead>
-              <TableHead className="text-right text-[10px] text-yellow-800 whitespace-nowrap" title="Weekday ordinary: local 6am–8pm (1× base), not clock AM">Day</TableHead>
-              <TableHead className="text-right text-[10px] text-orange-800 whitespace-nowrap" title="After 8pm local (1.125×), not clock afternoon">Eve</TableHead>
-              <TableHead className="text-right text-[10px] text-indigo-800 whitespace-nowrap">Night</TableHead>
-              <TableHead className="text-right text-[10px] text-cyan-800 whitespace-nowrap">Sat</TableHead>
-              <TableHead className="text-right text-[10px] text-red-800 whitespace-nowrap">Sun</TableHead>
-              <TableHead className="text-right text-[10px] text-blue-800 whitespace-nowrap">Hol</TableHead>
-              <TableHead className="text-right text-[10px] text-teal-800 whitespace-nowrap">Nursing</TableHead>
-              <TableHead className="text-right text-[10px] text-emerald-800 whitespace-nowrap">km</TableHead>
-              <TableHead className="text-[10px] whitespace-nowrap">Flags</TableHead>
+              <TableHead className="text-2xs whitespace-nowrap">Date</TableHead>
+              <TableHead className="text-2xs whitespace-nowrap">Start</TableHead>
+              <TableHead className="text-2xs whitespace-nowrap">End</TableHead>
+              <TableHead className="text-2xs whitespace-nowrap">Client</TableHead>
+              <TableHead className="text-2xs whitespace-nowrap">Type</TableHead>
+              <TableHead className="text-right text-2xs whitespace-nowrap">Hrs</TableHead>
+              <TableHead className="text-right text-2xs text-warning whitespace-nowrap" title="Weekday ordinary: local 6am–8pm (1× base), not clock AM">Day</TableHead>
+              <TableHead className="text-right text-2xs text-warning whitespace-nowrap" title="After 8pm local (1.125×), not clock afternoon">Eve</TableHead>
+              <TableHead className="text-right text-2xs text-chart-3 whitespace-nowrap">Night</TableHead>
+              <TableHead className="text-right text-2xs text-chart-2 whitespace-nowrap">Sat</TableHead>
+              <TableHead className="text-right text-2xs text-destructive whitespace-nowrap">Sun</TableHead>
+              <TableHead className="text-right text-2xs text-primary whitespace-nowrap">Hol</TableHead>
+              <TableHead className="text-right text-2xs text-chart-4 whitespace-nowrap">Nursing</TableHead>
+              <TableHead className="text-right text-2xs text-success whitespace-nowrap">km</TableHead>
+              <TableHead className="text-2xs whitespace-nowrap">Flags</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {shifts.map((shift) => (
               <TableRow
                 key={shift._id}
-                className={`text-[11px] ${
+                className={`text-2xs ${
                   sleepoverChainIds.has(String(shift._id))
-                    ? 'border-l-2 border-l-purple-300 bg-purple-50/20'
+                    ? 'border-l-2 border-l-chart-2/30 bg-chart-2/10'
                     : ''
                 }`}
               >
@@ -552,42 +552,42 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
                 <TableCell className="text-right font-mono font-medium">
                   {h(shiftRowPayableHours(shift))}
                 </TableCell>
-                {shiftOv(shift, 'morningHours', shift.morningHours, 'text-yellow-800')}
-                {shiftOv(shift, 'afternoonHours', shift.afternoonHours, 'text-orange-800')}
-                {shiftOv(shift, 'nightHours', shift.nightHours, 'text-indigo-800')}
-                <TableCell className="text-right font-mono text-cyan-800">
+                {shiftOv(shift, 'morningHours', shift.morningHours, 'text-warning')}
+                {shiftOv(shift, 'afternoonHours', shift.afternoonHours, 'text-warning')}
+                {shiftOv(shift, 'nightHours', shift.nightHours, 'text-chart-3')}
+                <TableCell className="text-right font-mono text-chart-2">
                   {h(r2((shift.saturdayHours || 0) + (shift.saturdayOtUpto2 || 0) + (shift.saturdayOtAfter2 || 0)))}
                 </TableCell>
-                <TableCell className="text-right font-mono text-red-800">
+                <TableCell className="text-right font-mono text-destructive">
                   {h(r2((shift.sundayHours || 0) + (shift.sundayOtUpto2 || 0) + (shift.sundayOtAfter2 || 0)))}
                 </TableCell>
-                <TableCell className="text-right font-mono text-blue-800">
+                <TableCell className="text-right font-mono text-primary">
                   {h(r2((shift.holidayHours || 0) + (shift.holidayOtUpto2 || 0) + (shift.holidayOtAfter2 || 0)))}
                 </TableCell>
-                <TableCell className="text-right font-mono text-teal-800">{h(shift.nursingCareHours)}</TableCell>
-                <TableCell className="text-right font-mono text-emerald-800">
+                <TableCell className="text-right font-mono text-chart-4">{h(shift.nursingCareHours)}</TableCell>
+                <TableCell className="text-right font-mono text-success">
                   {shift.mileage != null && shift.mileage > 0 ? `${shift.mileage}` : '—'}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {shift.isBrokenShift && (
-                      <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-orange-100 text-orange-800">Broken</span>
+                      <span className="inline-block px-1 py-0.5 rounded text-2xs bg-warning/15 text-warning">Broken</span>
                     )}
                     {shift.isSleepover && (
-                      <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-purple-100 text-purple-800">Sleepover</span>
+                      <span className="inline-block px-1 py-0.5 rounded text-2xs bg-chart-2/15 text-chart-2">Sleepover</span>
                     )}
                     {shift.minimumEngagementException && (
-                      <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-amber-100 text-amber-900" title="Personal care shift under 2h — review minimum payment / adjust hours manually">
+                      <span className="inline-block px-1 py-0.5 rounded text-2xs bg-warning/15 text-warning" title="Personal care shift under 2h — review minimum payment / adjust hours manually">
                         Min 2h review
                       </span>
                     )}
                     {shift.minimum4hEngagementReview && (
-                      <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-yellow-100 text-yellow-900" title="Sleepover-flanked personal care — review 4h minimum active care (sleepover excluded)">
+                      <span className="inline-block px-1 py-0.5 rounded text-2xs bg-warning/15 text-warning" title="Sleepover-flanked personal care — review 4h minimum active care (sleepover excluded)">
                         Min 4h review
                       </span>
                     )}
                     {(shift.shortTurnaroundHours || 0) > 0 && (
-                      <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-fuchsia-100 text-fuchsia-800" title="Double Time (No Break)">
+                      <span className="inline-block px-1 py-0.5 rounded text-2xs bg-chart-5/15 text-chart-5" title="Double Time (No Break)">
                         No-break DT {h(shift.shortTurnaroundHours)}
                       </span>
                     )}
@@ -600,7 +600,7 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
                       );
                       if (ot76 <= 0) return null;
                       return (
-                        <span className="inline-block px-1 py-0.5 rounded text-[9px] bg-rose-100 text-rose-800" title="Hours reclassified to OT>76h cap">
+                        <span className="inline-block px-1 py-0.5 rounded text-2xs bg-destructive/15 text-destructive" title="Hours reclassified to OT>76h cap">
                           OT&gt;76 {h(ot76)}
                         </span>
                       );
@@ -619,7 +619,7 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
                       if (holOt > 0) parts.push(`Hol ${holOt.toFixed(2)}h`);
                       return (
                         <span
-                          className="inline-block px-1 py-0.5 rounded text-[9px] bg-rose-100 text-rose-800"
+                          className="inline-block px-1 py-0.5 rounded text-2xs bg-destructive/15 text-destructive"
                           title={parts.join(' · ')}
                         >
                           OT {totalOt.toFixed(2)}h
@@ -633,56 +633,56 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
           </TableBody>
           {mrow && (
             <tfoot>
-              <tr className="border-t-2 border-foreground/20 bg-foreground/5 text-[11px] font-semibold">
-                <td colSpan={5} className="px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+              <tr className="border-t-2 border-foreground/20 bg-foreground/5 text-2xs font-semibold">
+                <td colSpan={5} className="px-3 py-2 text-2xs uppercase tracking-wider text-muted-foreground">
                   Used in calculation
                 </td>
                 <td className="text-right px-3 py-2 font-mono font-bold">
                   {h(staffTotalHours(mrow))}
                 </td>
-                <td className="text-right px-3 py-2 font-mono text-yellow-800" title="Weekday day hours (ordinary, not OT)">
+                <td className="text-right px-3 py-2 font-mono text-warning" title="Weekday day hours (ordinary, not OT)">
                   {h(mrow.morningHours)}
                 </td>
-                <td className="text-right px-3 py-2 font-mono text-orange-800" title="Weekday evening hours (ordinary, not OT)">
+                <td className="text-right px-3 py-2 font-mono text-warning" title="Weekday evening hours (ordinary, not OT)">
                   {h(mrow.afternoonHours)}
                 </td>
-                <td className="text-right px-3 py-2 font-mono text-indigo-800">
+                <td className="text-right px-3 py-2 font-mono text-chart-3">
                   {h(mrow.nightHours)}
                 </td>
-                <td className="text-right px-3 py-2 font-mono text-cyan-800" title="Includes Sat OT">
+                <td className="text-right px-3 py-2 font-mono text-chart-2" title="Includes Sat OT">
                   {h(r2((mrow.saturdayHours || 0) + (mrow.saturdayOtUpto2 || 0) + (mrow.saturdayOtAfter2 || 0)))}
                 </td>
-                <td className="text-right px-3 py-2 font-mono text-red-800" title="Includes Sun OT">
+                <td className="text-right px-3 py-2 font-mono text-destructive" title="Includes Sun OT">
                   {h(r2((mrow.sundayHours || 0) + (mrow.sundayOtUpto2 || 0) + (mrow.sundayOtAfter2 || 0)))}
                 </td>
-                <td className="text-right px-3 py-2 font-mono text-blue-800" title="Includes Holiday OT">
+                <td className="text-right px-3 py-2 font-mono text-primary" title="Includes Holiday OT">
                   {h(r2((mrow.holidayHours || 0) + (mrow.holidayOtUpto2 || 0) + (mrow.holidayOtAfter2 || 0)))}
                 </td>
-                <td className="text-right px-3 py-2 font-mono text-teal-800">
+                <td className="text-right px-3 py-2 font-mono text-chart-4">
                   {h(mrow.nursingCareHours)}
                 </td>
-                <td className="text-right px-3 py-2 font-mono text-emerald-800">
+                <td className="text-right px-3 py-2 font-mono text-success">
                   {(mrow.totalKm || 0) > 0 ? mrow.totalKm : '—'}
                 </td>
-                <td className="px-3 py-2 text-[10px] text-muted-foreground">
+                <td className="px-3 py-2 text-2xs text-muted-foreground">
                   <div className="flex flex-wrap gap-1">
                     {(mrow.weekdayOtUpto2 || 0) + (mrow.weekdayOtAfter2 || 0) > 0 && (
-                      <span className="inline-block px-1 py-0.5 rounded bg-rose-100 text-rose-800 whitespace-nowrap">
+                      <span className="inline-block px-1 py-0.5 rounded bg-destructive/15 text-destructive whitespace-nowrap">
                         WD OT {h(r2((mrow.weekdayOtUpto2 || 0) + (mrow.weekdayOtAfter2 || 0)))}
                       </span>
                     )}
                     {(mrow.saturdayOtUpto2 || 0) + (mrow.saturdayOtAfter2 || 0) > 0 && (
-                      <span className="inline-block px-1 py-0.5 rounded bg-rose-100 text-rose-800 whitespace-nowrap">
+                      <span className="inline-block px-1 py-0.5 rounded bg-destructive/15 text-destructive whitespace-nowrap">
                         Sat OT {h(r2((mrow.saturdayOtUpto2 || 0) + (mrow.saturdayOtAfter2 || 0)))}
                       </span>
                     )}
                     {(mrow.sundayOtUpto2 || 0) + (mrow.sundayOtAfter2 || 0) > 0 && (
-                      <span className="inline-block px-1 py-0.5 rounded bg-rose-100 text-rose-800 whitespace-nowrap">
+                      <span className="inline-block px-1 py-0.5 rounded bg-destructive/15 text-destructive whitespace-nowrap">
                         Sun OT {h(r2((mrow.sundayOtUpto2 || 0) + (mrow.sundayOtAfter2 || 0)))}
                       </span>
                     )}
                     {(mrow.holidayOtUpto2 || 0) + (mrow.holidayOtAfter2 || 0) > 0 && (
-                      <span className="inline-block px-1 py-0.5 rounded bg-rose-100 text-rose-800 whitespace-nowrap">
+                      <span className="inline-block px-1 py-0.5 rounded bg-destructive/15 text-destructive whitespace-nowrap">
                         Hol OT {h(r2((mrow.holidayOtUpto2 || 0) + (mrow.holidayOtAfter2 || 0)))}
                       </span>
                     )}
@@ -712,7 +712,7 @@ const ExpandChevronButton = ({ expanded, onClick, title = 'Show shift breakdown'
     type="button"
     onClick={onClick}
     title={title}
-    className={`shrink-0 w-5 h-5 flex items-center justify-center rounded border text-[11px] transition-all duration-200 ${
+    className={`shrink-0 w-5 h-5 flex items-center justify-center rounded border text-2xs transition-all duration-200 ${
       expanded
         ? 'bg-foreground text-background border-foreground'
         : 'text-muted-foreground border-border hover:border-foreground hover:text-foreground'
@@ -886,10 +886,10 @@ const CellContextMenu = ({ menu, overrides, onSave, onClear, onClose, fieldLabel
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-foreground">{fieldLabels[menu.field] || menu.field}</p>
         {isOverridden && (
-          <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">overridden</span>
+          <span className="text-2xs bg-primary/15 text-primary px-1.5 py-0.5 rounded font-medium">overridden</span>
         )}
       </div>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-2xs text-muted-foreground">
         Staff: <span className="font-medium text-foreground">{menu.staffName}</span>
         &nbsp;·&nbsp;Original: <span className="font-mono">{menu.original ?? 0}</span>
       </p>
@@ -987,7 +987,7 @@ const StaffRatesEditModal = ({ edit, displayNameForRateKey, onSave, onClose }) =
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1">
-            <span className="text-[10px] uppercase text-muted-foreground">Aliases (comma-separated)</span>
+            <span className="text-2xs uppercase text-muted-foreground">Aliases (comma-separated)</span>
             <Input
               type="text"
               className="h-8 text-xs"
@@ -999,7 +999,7 @@ const StaffRatesEditModal = ({ edit, displayNameForRateKey, onSave, onClose }) =
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {STAFF_RATES_TABLE_FIELDS.map(([field, label]) => (
               <div key={field} className="space-y-1">
-                <span className="text-[10px] uppercase text-muted-foreground">{label}</span>
+                <span className="text-2xs uppercase text-muted-foreground">{label}</span>
                 <Input
                   type="number"
                   step="0.01"
@@ -1027,9 +1027,9 @@ const StaffRatesEditModal = ({ edit, displayNameForRateKey, onSave, onClose }) =
 };
 
 function pillCls(type, isPH) {
-  if (isPH) return 'border-blue-400 text-blue-700 bg-blue-50';
-  if (type === 'saturday') return 'border-purple-400 text-purple-700 bg-purple-50';
-  if (type === 'sunday')   return 'border-red-400 text-red-600 bg-red-50';
+  if (isPH) return 'border-primary/40 text-primary bg-primary/10';
+  if (type === 'saturday') return 'border-chart-2/40 text-chart-2 bg-chart-2/10';
+  if (type === 'sunday')   return 'border-destructive/40 text-destructive bg-destructive/10';
   return 'border-border text-muted-foreground bg-background';
 }
 
@@ -1896,7 +1896,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
         <Button size="sm" variant={view === 'exceptions' ? 'default' : 'outline'} onClick={() => setView('exceptions')}>
           Exceptions
           {view !== 'exceptions' && exceptionCount > 0 && (
-            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-orange-500 text-white text-[10px] font-bold w-4 h-4">{exceptionCount}</span>
+            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-warning text-primary-foreground text-2xs font-bold w-4 h-4">{exceptionCount}</span>
           )}
         </Button>
         <Button size="sm" variant={view === 'rates' ? 'default' : 'outline'} onClick={() => setView('rates')}>
@@ -1950,7 +1950,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       onClick={() => ratesFileRef.current?.click()}
                       className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-input bg-background text-sm hover:bg-accent transition-colors"
                     >
-                      <FileSpreadsheet className="h-4 w-4 text-blue-600" />
+                      <FileSpreadsheet className="h-4 w-4 text-primary" />
                       {ratesFileName ? 'Replace rates file' : 'Upload rates file'}
                     </button>
                     {ratesFileName && (
@@ -1973,7 +1973,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       onClick={() => payrollFileRef.current?.click()}
                       className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-input bg-background text-sm hover:bg-accent transition-colors"
                     >
-                      <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                      <FileSpreadsheet className="h-4 w-4 text-success" />
                       {payrollData ? 'Replace payroll file' : 'Upload payroll file'}
                     </button>
                     {payrollData && payrollVarianceStats && (
@@ -2004,7 +2004,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 const base = r2(rate / 1.25);
                 const load = r2(rate - base);
                 return (
-                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 space-y-1">
+                  <div className="mt-3 p-3 bg-primary/10 border border-primary/30 rounded text-xs text-primary space-y-1">
                     <p className="font-semibold">Casual Loading Breakdown — ${rate.toFixed(2)} casual rate</p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
                       {[
@@ -2017,8 +2017,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         ['Public Hol. (2.5×)', `$${r2(base*2.5+load).toFixed(2)}/h`],
                         ['OT 1.5×', `$${r2(base*1.5+load).toFixed(2)}/h`],
                       ].map(([label, value]) => (
-                        <div key={label} className="bg-white/60 rounded px-2 py-1">
-                          <div className="text-[10px] text-blue-600">{label}</div>
+                        <div key={label} className="bg-card/60 rounded px-2 py-1">
+                          <div className="text-2xs text-primary">{label}</div>
                           <div className="font-semibold">{value}</div>
                         </div>
                       ))}
@@ -2053,22 +2053,22 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                   <Table>
                     <TableHeader>
                       {/* Group header row */}
-                      <TableRow className="bg-muted/60 border-b-0 text-[10px] uppercase tracking-wider">
+                      <TableRow className="bg-muted/60 border-b-0 text-2xs uppercase tracking-wider">
                         <TableHead colSpan={3} className="sticky left-0 bg-muted/60 z-10 border-r border-border/50" />
-                        <TableHead colSpan={3} className="text-center text-yellow-800 border-r border-border/50 py-1">Weekday Hrs</TableHead>
-                        <TableHead colSpan={2} className="text-center text-orange-800 border-r border-border/50 py-1">WD Overtime</TableHead>
-                        <TableHead colSpan={3} className="text-center text-cyan-800 border-r border-border/50 py-1">Saturday</TableHead>
-                        <TableHead colSpan={2} className="text-center text-red-800 border-r border-border/50 py-1">Sunday ★</TableHead>
-                        <TableHead colSpan={2} className="text-center text-blue-800 border-r border-border/50 py-1">Holiday ★</TableHead>
-                        <TableHead colSpan={1} className="text-center text-teal-800 border-r border-border/50 py-1">Nursing</TableHead>
-                        <TableHead colSpan={2} className="text-center text-amber-800 border-r border-border/50 py-1">⚠ Exceptions</TableHead>
-                        <TableHead colSpan={4} className="text-center text-rose-800 border-r border-border/50 py-1">OT &gt; 76h by Day</TableHead>
-                        <TableHead colSpan={5} className="text-center text-green-800 border-r border-border/50 py-1">Allowances</TableHead>
+                        <TableHead colSpan={3} className="text-center text-warning border-r border-border/50 py-1">Weekday Hrs</TableHead>
+                        <TableHead colSpan={2} className="text-center text-warning border-r border-border/50 py-1">WD Overtime</TableHead>
+                        <TableHead colSpan={3} className="text-center text-chart-2 border-r border-border/50 py-1">Saturday</TableHead>
+                        <TableHead colSpan={2} className="text-center text-destructive border-r border-border/50 py-1">Sunday ★</TableHead>
+                        <TableHead colSpan={2} className="text-center text-primary border-r border-border/50 py-1">Holiday ★</TableHead>
+                        <TableHead colSpan={1} className="text-center text-chart-4 border-r border-border/50 py-1">Nursing</TableHead>
+                        <TableHead colSpan={2} className="text-center text-warning border-r border-border/50 py-1">⚠ Exceptions</TableHead>
+                        <TableHead colSpan={4} className="text-center text-destructive border-r border-border/50 py-1">OT &gt; 76h by Day</TableHead>
+                        <TableHead colSpan={5} className="text-center text-success border-r border-border/50 py-1">Allowances</TableHead>
                         <TableHead colSpan={1} className="text-center" />
                         {payrollData && (
                           <TableHead
                             colSpan={3}
-                            className="text-center text-emerald-800 border-l border-border/50 py-1"
+                            className="text-center text-success border-l border-border/50 py-1"
                             title="Diff = Gross Pay (this screen) minus Payroll (file). $0 only if the same pay run, the same hours in Pay Hours, and the same effective rates/allowances as ShiftCare. Payroll often includes adjustments, on‑call, higher classification, or a different date range than the roster used here."
                           >
                             Payroll Comparison
@@ -2076,40 +2076,40 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         )}
                       </TableRow>
                       {/* Column header row */}
-                      <TableRow className="bg-muted/30 text-[11px]">
+                      <TableRow className="bg-muted/30 text-2xs">
                         <TableHead className="min-w-[160px] sticky left-0 bg-muted/30 z-10 border-r border-border/50">Staff</TableHead>
                         <TableHead className="min-w-[90px]">Rate ($)</TableHead>
                         <TableHead className="min-w-[100px] border-r border-border/50">Type</TableHead>
-                        <TableHead className="text-right text-yellow-700 whitespace-nowrap" title="Ordinary weekday hours up to 8pm local (1×). Not clock AM.">Day<br/><span className="text-[9px] font-normal opacity-70">≤8pm</span></TableHead>
-                        <TableHead className="text-right text-orange-700 whitespace-nowrap" title="After 8pm local (1.125×). Not clock afternoon.">Eve<br/><span className="text-[9px] font-normal opacity-70">1.125×</span></TableHead>
-                        <TableHead className="text-right text-indigo-700 border-r border-border/50 whitespace-nowrap">Night<br/><span className="text-[9px] font-normal opacity-70">1.15×</span></TableHead>
-                        <TableHead className="text-right text-orange-600 whitespace-nowrap">OT≤2h<br/><span className="text-[9px] font-normal opacity-70">1.5×</span></TableHead>
-                        <TableHead className="text-right text-orange-700 border-r border-border/50 whitespace-nowrap">OT&gt;2h<br/><span className="text-[9px] font-normal opacity-70">2×</span></TableHead>
-                        <TableHead className="text-right text-cyan-700 whitespace-nowrap">Ord<br/><span className="text-[9px] font-normal opacity-70">1.5×</span></TableHead>
-                        <TableHead className="text-right text-cyan-600 whitespace-nowrap">OT≤2h</TableHead>
-                        <TableHead className="text-right text-cyan-600 border-r border-border/50 whitespace-nowrap">OT&gt;2h</TableHead>
-                        <TableHead className="text-right text-red-700 whitespace-nowrap">All Hrs<br/><span className="text-[9px] font-normal opacity-70">2×</span></TableHead>
-                        <TableHead className="text-right text-red-600 border-r border-border/50 whitespace-nowrap">OT hrs</TableHead>
-                        <TableHead className="text-right text-blue-700 whitespace-nowrap">All Hrs<br/><span className="text-[9px] font-normal opacity-70">2.5×</span></TableHead>
-                        <TableHead className="text-right text-blue-600 border-r border-border/50 whitespace-nowrap">OT hrs</TableHead>
-                        <TableHead className="text-right text-teal-700 border-r border-border/50 whitespace-nowrap">Hrs</TableHead>
-                        <TableHead className="text-right text-orange-700 whitespace-nowrap" title="Total OT hours from all shifts">OT Total</TableHead>
+                        <TableHead className="text-right text-warning whitespace-nowrap" title="Ordinary weekday hours up to 8pm local (1×). Not clock AM.">Day<br/><span className="text-2xs font-normal opacity-70">≤8pm</span></TableHead>
+                        <TableHead className="text-right text-warning whitespace-nowrap" title="After 8pm local (1.125×). Not clock afternoon.">Eve<br/><span className="text-2xs font-normal opacity-70">1.125×</span></TableHead>
+                        <TableHead className="text-right text-chart-3 border-r border-border/50 whitespace-nowrap">Night<br/><span className="text-2xs font-normal opacity-70">1.15×</span></TableHead>
+                        <TableHead className="text-right text-warning whitespace-nowrap">OT≤2h<br/><span className="text-2xs font-normal opacity-70">1.5×</span></TableHead>
+                        <TableHead className="text-right text-warning border-r border-border/50 whitespace-nowrap">OT&gt;2h<br/><span className="text-2xs font-normal opacity-70">2×</span></TableHead>
+                        <TableHead className="text-right text-chart-2 whitespace-nowrap">Ord<br/><span className="text-2xs font-normal opacity-70">1.5×</span></TableHead>
+                        <TableHead className="text-right text-chart-2 whitespace-nowrap">OT≤2h</TableHead>
+                        <TableHead className="text-right text-chart-2 border-r border-border/50 whitespace-nowrap">OT&gt;2h</TableHead>
+                        <TableHead className="text-right text-destructive whitespace-nowrap">All Hrs<br/><span className="text-2xs font-normal opacity-70">2×</span></TableHead>
+                        <TableHead className="text-right text-destructive border-r border-border/50 whitespace-nowrap">OT hrs</TableHead>
+                        <TableHead className="text-right text-primary whitespace-nowrap">All Hrs<br/><span className="text-2xs font-normal opacity-70">2.5×</span></TableHead>
+                        <TableHead className="text-right text-primary border-r border-border/50 whitespace-nowrap">OT hrs</TableHead>
+                        <TableHead className="text-right text-chart-4 border-r border-border/50 whitespace-nowrap">Hrs</TableHead>
+                        <TableHead className="text-right text-warning whitespace-nowrap" title="Total OT hours from all shifts">OT Total</TableHead>
                         <TableHead className="text-right border-r border-border/50 whitespace-nowrap" title="Broken shift count">Broken#</TableHead>
                         {/* OT>76 by day type */}
-                        <TableHead className="text-right text-rose-700 whitespace-nowrap" title="OT>76 from weekday shifts (1.5×/2×)">WD<br/><span className="text-[9px] font-normal opacity-70">1.5×/2×</span></TableHead>
-                        <TableHead className="text-right text-rose-600 whitespace-nowrap" title="OT>76 from Saturday shifts (1.5×/2×)">Sat<br/><span className="text-[9px] font-normal opacity-70">1.5×/2×</span></TableHead>
-                        <TableHead className="text-right text-rose-500 whitespace-nowrap" title="OT>76 from Sunday shifts (2.0×)">Sun<br/><span className="text-[9px] font-normal opacity-70">2×</span></TableHead>
-                        <TableHead className="text-right border-r border-border/50 text-rose-800 whitespace-nowrap" title="OT>76 from Holiday shifts (2.5×)">Hol<br/><span className="text-[9px] font-normal opacity-70">2.5×</span></TableHead>
-                        <TableHead className="text-right text-amber-700 whitespace-nowrap">Broken<br/><span className="text-[9px] font-normal opacity-70">allow.</span></TableHead>
-                        <TableHead className="text-right text-amber-600 whitespace-nowrap">Meal<br/><span className="text-[9px] font-normal opacity-70">allow.~</span></TableHead>
-                        <TableHead className="text-right text-amber-800 border-r border-border/50 whitespace-nowrap" title="Right-click to add a one-off allowance (saved with overrides)">Add’l $<br/><span className="text-[9px] font-normal opacity-70">edit</span></TableHead>
-                        <TableHead className="text-right text-emerald-700 whitespace-nowrap">KM</TableHead>
-                        <TableHead className="text-right text-emerald-600 border-r border-border/50 whitespace-nowrap">Km Allow<br/><span className="text-[9px] font-normal opacity-70">${VEHICLE_RATE}/km</span></TableHead>
+                        <TableHead className="text-right text-destructive whitespace-nowrap" title="OT>76 from weekday shifts (1.5×/2×)">WD<br/><span className="text-2xs font-normal opacity-70">1.5×/2×</span></TableHead>
+                        <TableHead className="text-right text-destructive whitespace-nowrap" title="OT>76 from Saturday shifts (1.5×/2×)">Sat<br/><span className="text-2xs font-normal opacity-70">1.5×/2×</span></TableHead>
+                        <TableHead className="text-right text-destructive/80 whitespace-nowrap" title="OT>76 from Sunday shifts (2.0×)">Sun<br/><span className="text-2xs font-normal opacity-70">2×</span></TableHead>
+                        <TableHead className="text-right border-r border-border/50 text-destructive whitespace-nowrap" title="OT>76 from Holiday shifts (2.5×)">Hol<br/><span className="text-2xs font-normal opacity-70">2.5×</span></TableHead>
+                        <TableHead className="text-right text-warning whitespace-nowrap">Broken<br/><span className="text-2xs font-normal opacity-70">allow.</span></TableHead>
+                        <TableHead className="text-right text-warning whitespace-nowrap">Meal<br/><span className="text-2xs font-normal opacity-70">allow.~</span></TableHead>
+                        <TableHead className="text-right text-warning border-r border-border/50 whitespace-nowrap" title="Right-click to add a one-off allowance (saved with overrides)">Add’l $<br/><span className="text-2xs font-normal opacity-70">edit</span></TableHead>
+                        <TableHead className="text-right text-success whitespace-nowrap">KM</TableHead>
+                        <TableHead className="text-right text-success border-r border-border/50 whitespace-nowrap">Km Allow<br/><span className="text-2xs font-normal opacity-70">${VEHICLE_RATE}/km</span></TableHead>
                         <TableHead className="text-right font-semibold whitespace-nowrap min-w-[100px]">Gross Pay</TableHead>
                         {payrollData && <>
-                          <TableHead className="text-right text-emerald-700 whitespace-nowrap border-l border-border/50 min-w-[100px]">Payroll</TableHead>
-                          <TableHead className="text-right text-slate-600 whitespace-nowrap min-w-[100px]">Diff</TableHead>
-                          <TableHead className="text-right text-slate-500 whitespace-nowrap min-w-[60px]">Δ%</TableHead>
+                          <TableHead className="text-right text-success whitespace-nowrap border-l border-border/50 min-w-[100px]">Payroll</TableHead>
+                          <TableHead className="text-right text-muted-foreground whitespace-nowrap min-w-[100px]">Diff</TableHead>
+                          <TableHead className="text-right text-muted-foreground/80 whitespace-nowrap min-w-[60px]">Δ%</TableHead>
                         </>}
                       </TableRow>
                     </TableHeader>
@@ -2140,12 +2140,12 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                           return (
                             <TableCell
                               key={field}
-                              className={`text-right tabular-nums cursor-context-menu select-none ${cls} ${isOv ? 'ring-1 ring-inset ring-blue-400 bg-blue-50/40' : ''}`}
+                              className={`text-right tabular-nums cursor-context-menu select-none ${cls} ${isOv ? 'ring-1 ring-inset ring-primary bg-primary/10' : ''}`}
                               onContextMenu={e => handleCtx(e, row.staffName, field, row[field] ?? 0)}
                               title="Right-click to edit"
                             >
                               {val}
-                              {isOv && <span className="ml-0.5 inline-block w-1.5 h-1.5 rounded-full bg-blue-500 align-middle" />}
+                              {isOv && <span className="ml-0.5 inline-block w-1.5 h-1.5 rounded-full bg-primary align-middle" />}
                             </TableCell>
                           );
                         };
@@ -2163,8 +2163,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         };
                         return (
                           <React.Fragment key={row.staffName}>
-                          <TableRow className={`hover:bg-muted/30 text-xs ${isCasual ? 'bg-blue-50/30' : ''}`}>
-                            <TableCell className={`font-medium sticky left-0 z-10 text-sm border-r border-border/50 ${isCasual ? 'bg-blue-50/60' : 'bg-background'}`}>
+                          <TableRow className={`hover:bg-muted/30 text-xs ${isCasual ? 'bg-primary/10' : ''}`}>
+                            <TableCell className={`font-medium sticky left-0 z-10 text-sm border-r border-border/50 ${isCasual ? 'bg-primary/15' : 'bg-background'}`}>
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <ExpandChevronButton
                                   expanded={!!expandedBreakdown[row.staffName]}
@@ -2207,7 +2207,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               {staffRates ? (
                                 <div className="text-xs font-mono text-foreground">
                                   ${staffRates.daytime.toFixed(2)}
-                                  <div className="text-[9px] text-emerald-600 font-medium">from file</div>
+                                  <div className="text-2xs text-success font-medium">from file</div>
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-1">
@@ -2227,61 +2227,61 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               <select
                                 value={empT}
                                 onChange={e => setEmpType(row.staffName, e.target.value)}
-                                className={`text-[11px] h-7 rounded border px-1 focus:outline-none focus:ring-1 focus:ring-ring w-full ${isCasual ? 'bg-blue-100 border-blue-300 text-blue-800' : 'bg-background border-input'}`}
+                                className={`text-2xs h-7 rounded border px-1 focus:outline-none focus:ring-1 focus:ring-ring w-full ${isCasual ? 'bg-primary/15 border-primary/30 text-primary' : 'bg-background border-input'}`}
                               >
                                 <option value="permanent">Permanent</option>
                                 <option value="casual">Casual</option>
                               </select>
                             </TableCell>
                             {/* Weekday ordinary */}
-                            {ov('morningHours',   h(mrow.morningHours),   'text-yellow-700')}
-                            {ov('afternoonHours', h(mrow.afternoonHours), 'text-orange-700')}
-                            {ov('nightHours',     h(mrow.nightHours),     'text-indigo-700 border-r border-border/50')}
+                            {ov('morningHours',   h(mrow.morningHours),   'text-warning')}
+                            {ov('afternoonHours', h(mrow.afternoonHours), 'text-warning')}
+                            {ov('nightHours',     h(mrow.nightHours),     'text-chart-3 border-r border-border/50')}
                             {/* WD overtime */}
-                            {ov('weekdayOtUpto2',  h(mrow.weekdayOtUpto2),  'text-orange-600')}
-                            {ov('weekdayOtAfter2', h(mrow.weekdayOtAfter2), 'text-orange-700 border-r border-border/50')}
+                            {ov('weekdayOtUpto2',  h(mrow.weekdayOtUpto2),  'text-warning')}
+                            {ov('weekdayOtAfter2', h(mrow.weekdayOtAfter2), 'text-warning border-r border-border/50')}
                             {/* Saturday */}
-                            {ov('saturdayHours',    h(mrow.saturdayHours),    'text-cyan-700')}
-                            {ov('saturdayOtUpto2',  h(mrow.saturdayOtUpto2),  'text-cyan-600')}
-                            {ov('saturdayOtAfter2', h(mrow.saturdayOtAfter2), 'text-cyan-600 border-r border-border/50')}
+                            {ov('saturdayHours',    h(mrow.saturdayHours),    'text-chart-2')}
+                            {ov('saturdayOtUpto2',  h(mrow.saturdayOtUpto2),  'text-chart-2')}
+                            {ov('saturdayOtAfter2', h(mrow.saturdayOtAfter2), 'text-chart-2 border-r border-border/50')}
                             {/* Sunday — editable individually, display consolidated */}
-                            {ov('sundayHours',   sunAll ? <span className="font-medium">{fmtH(sunAll)}</span> : <span className="text-muted-foreground/30">—</span>, 'text-red-700')}
-                            {ov('sundayOtUpto2', sunOT > 0 ? <span className="font-medium">{fmtH(sunOT)}</span> : <span className="text-muted-foreground/30">—</span>, `border-r border-border/50 ${sunOT > 0 ? 'text-orange-600' : 'text-muted-foreground/30'}`)}
+                            {ov('sundayHours',   sunAll ? <span className="font-medium">{fmtH(sunAll)}</span> : <span className="text-muted-foreground/30">—</span>, 'text-destructive')}
+                            {ov('sundayOtUpto2', sunOT > 0 ? <span className="font-medium">{fmtH(sunOT)}</span> : <span className="text-muted-foreground/30">—</span>, `border-r border-border/50 ${sunOT > 0 ? 'text-warning' : 'text-muted-foreground/30'}`)}
                             {/* Holiday */}
-                            {ov('holidayHours',   holAll ? <span className="font-medium">{fmtH(holAll)}</span> : <span className="text-muted-foreground/30">—</span>, 'text-blue-700')}
-                            {ov('holidayOtUpto2', holOT > 0 ? <span className="font-medium">{fmtH(holOT)}</span> : <span className="text-muted-foreground/30">—</span>, `border-r border-border/50 ${holOT > 0 ? 'text-orange-600' : 'text-muted-foreground/30'}`)}
+                            {ov('holidayHours',   holAll ? <span className="font-medium">{fmtH(holAll)}</span> : <span className="text-muted-foreground/30">—</span>, 'text-primary')}
+                            {ov('holidayOtUpto2', holOT > 0 ? <span className="font-medium">{fmtH(holOT)}</span> : <span className="text-muted-foreground/30">—</span>, `border-r border-border/50 ${holOT > 0 ? 'text-warning' : 'text-muted-foreground/30'}`)}
                             {/* Nursing */}
-                            {ov('nursingCareHours', h(mrow.nursingCareHours), 'text-teal-700 border-r border-border/50')}
+                            {ov('nursingCareHours', h(mrow.nursingCareHours), 'text-chart-4 border-r border-border/50')}
                             {/* Exceptions */}
-                            <TableCell className={`text-right tabular-nums ${hasOT ? 'text-orange-600 font-semibold' : 'text-muted-foreground/30'}`}>{hasOT ? fmtH(otTotal) : '—'}</TableCell>
-                            {ov('brokenShiftCount', n(mrow.brokenShiftCount), `border-r border-border/50 ${hasBroken ? 'text-orange-700 font-semibold' : 'text-muted-foreground/30'}`)}
+                            <TableCell className={`text-right tabular-nums ${hasOT ? 'text-warning font-semibold' : 'text-muted-foreground/30'}`}>{hasOT ? fmtH(otTotal) : '—'}</TableCell>
+                            {ov('brokenShiftCount', n(mrow.brokenShiftCount), `border-r border-border/50 ${hasBroken ? 'text-warning font-semibold' : 'text-muted-foreground/30'}`)}
                             {/* OT>76 by day type */}
-                            {ov('otAfter76Weekday',  (mrow.otAfter76Weekday||0)  > 0 ? fmtH(mrow.otAfter76Weekday)  : '—', `${(mrow.otAfter76Weekday||0)  > 0 ? 'text-rose-700 font-medium' : 'text-muted-foreground/30'}`)}
-                            {ov('otAfter76Saturday', (mrow.otAfter76Saturday||0) > 0 ? fmtH(mrow.otAfter76Saturday) : '—', `${(mrow.otAfter76Saturday||0) > 0 ? 'text-rose-600 font-medium' : 'text-muted-foreground/30'}`)}
-                            {ov('otAfter76Sunday',   (mrow.otAfter76Sunday||0)   > 0 ? fmtH(mrow.otAfter76Sunday)   : '—', `${(mrow.otAfter76Sunday||0)   > 0 ? 'text-rose-500 font-medium' : 'text-muted-foreground/30'}`)}
-                            {ov('otAfter76Holiday',  (mrow.otAfter76Holiday||0)  > 0 ? fmtH(mrow.otAfter76Holiday)  : '—', `border-r border-border/50 ${(mrow.otAfter76Holiday||0) > 0 ? 'text-rose-800 font-medium' : 'text-muted-foreground/30'}`)}
+                            {ov('otAfter76Weekday',  (mrow.otAfter76Weekday||0)  > 0 ? fmtH(mrow.otAfter76Weekday)  : '—', `${(mrow.otAfter76Weekday||0)  > 0 ? 'text-destructive font-medium' : 'text-muted-foreground/30'}`)}
+                            {ov('otAfter76Saturday', (mrow.otAfter76Saturday||0) > 0 ? fmtH(mrow.otAfter76Saturday) : '—', `${(mrow.otAfter76Saturday||0) > 0 ? 'text-destructive font-medium' : 'text-muted-foreground/30'}`)}
+                            {ov('otAfter76Sunday',   (mrow.otAfter76Sunday||0)   > 0 ? fmtH(mrow.otAfter76Sunday)   : '—', `${(mrow.otAfter76Sunday||0)   > 0 ? 'text-destructive/80 font-medium' : 'text-muted-foreground/30'}`)}
+                            {ov('otAfter76Holiday',  (mrow.otAfter76Holiday||0)  > 0 ? fmtH(mrow.otAfter76Holiday)  : '—', `border-r border-border/50 ${(mrow.otAfter76Holiday||0) > 0 ? 'text-destructive font-medium' : 'text-muted-foreground/30'}`)}
                             {/* Allowances — derived, not directly editable */}
-                            <TableCell className={`text-right tabular-nums ${allow.brokenAllow > 0 ? 'text-amber-700' : 'text-muted-foreground/30'}`}>{allow.brokenAllow > 0 ? fmt(allow.brokenAllow) : '—'}</TableCell>
-                            <TableCell className={`text-right tabular-nums ${allow.mealAllow > 0 ? 'text-amber-600' : 'text-muted-foreground/30'}`}>{allow.mealAllow > 0 ? fmt(allow.mealAllow) : '—'}</TableCell>
+                            <TableCell className={`text-right tabular-nums ${allow.brokenAllow > 0 ? 'text-warning' : 'text-muted-foreground/30'}`}>{allow.brokenAllow > 0 ? fmt(allow.brokenAllow) : '—'}</TableCell>
+                            <TableCell className={`text-right tabular-nums ${allow.mealAllow > 0 ? 'text-warning' : 'text-muted-foreground/30'}`}>{allow.mealAllow > 0 ? fmt(allow.mealAllow) : '—'}</TableCell>
                             {(() => {
                               const k = `${row.staffName}:additionalAllowance`;
                               const isOv = k in overrides;
                               return (
                                 <TableCell
-                                  className={`text-right tabular-nums border-r border-border/50 cursor-context-menu select-none ${addAlRow > 0 || isOv ? 'text-amber-800 font-medium' : 'text-muted-foreground/30'} ${isOv ? 'ring-1 ring-inset ring-blue-400 bg-blue-50/40' : ''}`}
+                                  className={`text-right tabular-nums border-r border-border/50 cursor-context-menu select-none ${addAlRow > 0 || isOv ? 'text-warning font-medium' : 'text-muted-foreground/30'} ${isOv ? 'ring-1 ring-inset ring-primary bg-primary/10' : ''}`}
                                   onContextMenu={(e) => handleCtx(e, row.staffName, 'additionalAllowance', row.additionalAllowance ?? 0)}
                                   title="Right-click to edit additional allowance ($)"
                                 >
                                   {(addAlRow > 0 || isOv) ? fmt(addAlRow) : '—'}
-                                  {isOv && <span className="ml-0.5 inline-block w-1.5 h-1.5 rounded-full bg-blue-500 align-middle" />}
+                                  {isOv && <span className="ml-0.5 inline-block w-1.5 h-1.5 rounded-full bg-primary align-middle" />}
                                 </TableCell>
                               );
                             })()}
                             {/* KM */}
-                            <TableCell className={`text-right tabular-nums ${(mrow.totalKm || 0) > 0 ? 'text-emerald-700' : 'text-muted-foreground/30'}`}>
+                            <TableCell className={`text-right tabular-nums ${(mrow.totalKm || 0) > 0 ? 'text-success' : 'text-muted-foreground/30'}`}>
                               {(mrow.totalKm || 0) > 0 ? `${mrow.totalKm} km` : '—'}
                             </TableCell>
-                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${allow.mileageAllow > 0 ? 'text-emerald-600' : 'text-muted-foreground/30'}`}>
+                            <TableCell className={`text-right tabular-nums border-r border-border/50 ${allow.mileageAllow > 0 ? 'text-success' : 'text-muted-foreground/30'}`}>
                               {allow.mileageAllow > 0 ? fmt(allow.mileageAllow) : '—'}
                             </TableCell>
                             {/* Gross pay (displayGross = payroll Earnings when "Align" on + name match) */}
@@ -2290,7 +2290,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               title={alignGrossToPayroll && payrollForGross && modeledGross != null && Math.abs(r2(payrollForGross.earnings - modeledGross)) > 0.01 ? `Modeled (incl. add’l): ${fmt(modeledGross)}` : undefined}
                             >
                               {modeledGross !== null ? (
-                                <span className={isCasual && !alignGrossToPayroll ? 'text-blue-700' : isCasual ? 'text-blue-800' : ''}>
+                                <span className={isCasual && !alignGrossToPayroll ? 'text-primary' : isCasual ? 'text-primary' : ''}>
                                   {fmt(displayGross ?? modeledGross)}
                                 </span>
                               ) : (
@@ -2306,9 +2306,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               const payrollEarn = match.earnings;
                               const diff = modeledGross !== null ? r2(displayGross - payrollEarn) : null;
                               const pct  = modeledGross !== null && payrollEarn > 0 ? ((diff / payrollEarn) * 100).toFixed(1) : null;
-                              const diffCls = diff === null ? '' : diff > 0.5 ? 'text-rose-600 font-semibold' : diff < -0.5 ? 'text-amber-600 font-semibold' : 'text-emerald-600';
+                              const diffCls = diff === null ? '' : diff > 0.5 ? 'text-destructive font-semibold' : diff < -0.5 ? 'text-warning font-semibold' : 'text-success';
                               return (<>
-                                <TableCell className="text-right tabular-nums font-medium text-emerald-700 border-l border-border/50">{fmt(payrollEarn)}</TableCell>
+                                <TableCell className="text-right tabular-nums font-medium text-success border-l border-border/50">{fmt(payrollEarn)}</TableCell>
                                 <TableCell className={`text-right tabular-nums ${diffCls}`}>
                                   {diff !== null ? (diff >= 0 ? '+' : '') + fmt(diff) : '—'}
                                 </TableCell>
@@ -2348,31 +2348,31 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       <TableRow className="border-t-2 border-border bg-muted/20 font-bold text-xs">
                         <TableCell className="sticky left-0 bg-muted/20 z-10 border-r border-border/50">Totals</TableCell>
                         <TableCell /><TableCell className="border-r border-border/50" />
-                        <TableCell className="text-right text-yellow-700">{fmtH(r2(totals.morningHours))}</TableCell>
-                        <TableCell className="text-right text-orange-700">{fmtH(r2(totals.afternoonHours))}</TableCell>
-                        <TableCell className="text-right text-indigo-700 border-r border-border/50">{fmtH(r2(totals.nightHours))}</TableCell>
-                        <TableCell className="text-right text-orange-600">{fmtH(r2(totals.weekdayOtUpto2))}</TableCell>
-                        <TableCell className="text-right text-orange-700 border-r border-border/50">{fmtH(r2(totals.weekdayOtAfter2))}</TableCell>
-                        <TableCell className="text-right text-cyan-700">{fmtH(r2(totals.saturdayHours))}</TableCell>
-                        <TableCell className="text-right text-cyan-600">{fmtH(r2(totals.saturdayOtUpto2))}</TableCell>
-                        <TableCell className="text-right text-cyan-600 border-r border-border/50">{fmtH(r2(totals.saturdayOtAfter2))}</TableCell>
-                        <TableCell className="text-right text-red-700">{fmtH(r2((totals.sundayHours||0)+(totals.sundayOtUpto2||0)+(totals.sundayOtAfter2||0)))}</TableCell>
-                        <TableCell className="text-right text-orange-600 border-r border-border/50">{fmtH(r2((totals.sundayOtUpto2||0)+(totals.sundayOtAfter2||0)))}</TableCell>
-                        <TableCell className="text-right text-blue-700">{fmtH(r2((totals.holidayHours||0)+(totals.holidayOtUpto2||0)+(totals.holidayOtAfter2||0)))}</TableCell>
-                        <TableCell className="text-right text-orange-600 border-r border-border/50">{fmtH(r2((totals.holidayOtUpto2||0)+(totals.holidayOtAfter2||0)))}</TableCell>
-                        <TableCell className="text-right text-teal-700 border-r border-border/50">{fmtH(r2(totals.nursingCareHours))}</TableCell>
-                        <TableCell className="text-right text-orange-600">{fmtH(r2(totals.totalOT))}</TableCell>
+                        <TableCell className="text-right text-warning">{fmtH(r2(totals.morningHours))}</TableCell>
+                        <TableCell className="text-right text-warning">{fmtH(r2(totals.afternoonHours))}</TableCell>
+                        <TableCell className="text-right text-chart-3 border-r border-border/50">{fmtH(r2(totals.nightHours))}</TableCell>
+                        <TableCell className="text-right text-warning">{fmtH(r2(totals.weekdayOtUpto2))}</TableCell>
+                        <TableCell className="text-right text-warning border-r border-border/50">{fmtH(r2(totals.weekdayOtAfter2))}</TableCell>
+                        <TableCell className="text-right text-chart-2">{fmtH(r2(totals.saturdayHours))}</TableCell>
+                        <TableCell className="text-right text-chart-2">{fmtH(r2(totals.saturdayOtUpto2))}</TableCell>
+                        <TableCell className="text-right text-chart-2 border-r border-border/50">{fmtH(r2(totals.saturdayOtAfter2))}</TableCell>
+                        <TableCell className="text-right text-destructive">{fmtH(r2((totals.sundayHours||0)+(totals.sundayOtUpto2||0)+(totals.sundayOtAfter2||0)))}</TableCell>
+                        <TableCell className="text-right text-warning border-r border-border/50">{fmtH(r2((totals.sundayOtUpto2||0)+(totals.sundayOtAfter2||0)))}</TableCell>
+                        <TableCell className="text-right text-primary">{fmtH(r2((totals.holidayHours||0)+(totals.holidayOtUpto2||0)+(totals.holidayOtAfter2||0)))}</TableCell>
+                        <TableCell className="text-right text-warning border-r border-border/50">{fmtH(r2((totals.holidayOtUpto2||0)+(totals.holidayOtAfter2||0)))}</TableCell>
+                        <TableCell className="text-right text-chart-4 border-r border-border/50">{fmtH(r2(totals.nursingCareHours))}</TableCell>
+                        <TableCell className="text-right text-warning">{fmtH(r2(totals.totalOT))}</TableCell>
                         <TableCell className="text-right border-r border-border/50">{totals.brokenShiftCount || '—'}</TableCell>
                         {/* OT>76 by day type totals */}
-                        <TableCell className="text-right text-rose-700">{totals.otAfter76Weekday > 0 ? fmtH(r2(totals.otAfter76Weekday)) : '—'}</TableCell>
-                        <TableCell className="text-right text-rose-600">{totals.otAfter76Saturday > 0 ? fmtH(r2(totals.otAfter76Saturday)) : '—'}</TableCell>
-                        <TableCell className="text-right text-rose-500">{totals.otAfter76Sunday > 0 ? fmtH(r2(totals.otAfter76Sunday)) : '—'}</TableCell>
-                        <TableCell className="text-right border-r border-border/50 text-rose-800">{totals.otAfter76Holiday > 0 ? fmtH(r2(totals.otAfter76Holiday)) : '—'}</TableCell>
-                        <TableCell className="text-right text-amber-700">{totals.brokenAllow > 0 ? fmt(r2(totals.brokenAllow)) : '—'}</TableCell>
-                        <TableCell className="text-right text-amber-600">{totals.mealAllow > 0 ? fmt(r2(totals.mealAllow)) : '—'}</TableCell>
-                        <TableCell className="text-right text-amber-800 border-r border-border/50">{(totals.additionalAllowanceSum || 0) > 0 ? fmt(r2(totals.additionalAllowanceSum)) : '—'}</TableCell>
-                        <TableCell className="text-right text-emerald-700">{totals.totalKm > 0 ? `${totals.totalKm} km` : '—'}</TableCell>
-                        <TableCell className="text-right text-emerald-600 border-r border-border/50">{totals.mileageAllow > 0 ? fmt(r2(totals.mileageAllow)) : '—'}</TableCell>
+                        <TableCell className="text-right text-destructive">{totals.otAfter76Weekday > 0 ? fmtH(r2(totals.otAfter76Weekday)) : '—'}</TableCell>
+                        <TableCell className="text-right text-destructive">{totals.otAfter76Saturday > 0 ? fmtH(r2(totals.otAfter76Saturday)) : '—'}</TableCell>
+                        <TableCell className="text-right text-destructive/80">{totals.otAfter76Sunday > 0 ? fmtH(r2(totals.otAfter76Sunday)) : '—'}</TableCell>
+                        <TableCell className="text-right border-r border-border/50 text-destructive">{totals.otAfter76Holiday > 0 ? fmtH(r2(totals.otAfter76Holiday)) : '—'}</TableCell>
+                        <TableCell className="text-right text-warning">{totals.brokenAllow > 0 ? fmt(r2(totals.brokenAllow)) : '—'}</TableCell>
+                        <TableCell className="text-right text-warning">{totals.mealAllow > 0 ? fmt(r2(totals.mealAllow)) : '—'}</TableCell>
+                        <TableCell className="text-right text-warning border-r border-border/50">{(totals.additionalAllowanceSum || 0) > 0 ? fmt(r2(totals.additionalAllowanceSum)) : '—'}</TableCell>
+                        <TableCell className="text-right text-success">{totals.totalKm > 0 ? `${totals.totalKm} km` : '—'}</TableCell>
+                        <TableCell className="text-right text-success border-r border-border/50">{totals.mileageAllow > 0 ? fmt(r2(totals.mileageAllow)) : '—'}</TableCell>
                         <TableCell className="text-right">
                           {totals.grossReady
                             ? fmt(r2(alignGrossToPayroll && payrollFooterStats ? payrollFooterStats.totalDisplayGross : totals.gross))
@@ -2380,11 +2380,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         </TableCell>
                         {payrollData && payrollFooterStats && (() => {
                           const { totalPayroll, totalDiff, matched } = payrollFooterStats;
-                          const diffCls = totalDiff === null ? '' : totalDiff > 0.5 ? 'text-rose-600' : totalDiff < -0.5 ? 'text-amber-600' : 'text-emerald-600';
+                          const diffCls = totalDiff === null ? '' : totalDiff > 0.5 ? 'text-destructive' : totalDiff < -0.5 ? 'text-warning' : 'text-success';
                           return (<>
-                            <TableCell className="text-right text-emerald-700 border-l border-border/50">
+                            <TableCell className="text-right text-success border-l border-border/50">
                               {fmt(totalPayroll)}
-                              <div className="text-[10px] font-normal text-muted-foreground">{matched}/{displayRows.length} matched</div>
+                              <div className="text-2xs font-normal text-muted-foreground">{matched}/{displayRows.length} matched</div>
                             </TableCell>
                             <TableCell className={`text-right ${diffCls}`}>
                               {totals.grossReady ? (totalDiff >= 0 ? '+' : '') + fmt(totalDiff) : '—'}
@@ -2406,7 +2406,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           {displayRows.length > 0 && (
             <div className="-mt-2 space-y-2">
               {overrideResetNotice && (
-                <div className="mx-auto max-w-3xl rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <div className="mx-auto max-w-3xl rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
                   <span>{overrideResetNotice}</span>
                   <button
                     onClick={() => setOverrideResetNotice('')}
@@ -2416,7 +2416,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                   </button>
                 </div>
               )}
-              <p className="text-[11px] text-muted-foreground/70 text-center">
+              <p className="text-2xs text-muted-foreground/70 text-center">
                 Right-click any hour cell or the <strong>Add’l $</strong> allowance column to override (saved to server). Expand a staff row to edit per-shift buckets. Overridden cells are highlighted in blue.
                 {Object.keys(overrides).length > 0 && (
                   <button
@@ -2435,7 +2435,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         toast.error(e?.response?.data?.error || 'Failed to clear overrides');
                       }
                     }}
-                    className="ml-2 underline text-blue-600 hover:text-blue-800"
+                    className="ml-2 underline text-primary hover:text-primary/80"
                   >
                     Clear all {Object.keys(overrides).length} overrides
                   </button>
@@ -2447,8 +2447,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           {/* Legend & Disclaimer */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="bg-muted/20 border border-border rounded p-3 text-xs space-y-1.5">
-              <p className="font-semibold text-[11px] uppercase tracking-wider">Pay Rate Multipliers</p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground text-[11px]">
+              <p className="font-semibold text-2xs uppercase tracking-wider">Pay Rate Multipliers</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground text-2xs">
                 <span>Weekday ordinary:</span><span className="font-medium text-foreground">1.0×</span>
                 <span>Evening (after 8pm local):</span><span className="font-medium text-foreground">1.125×</span>
                 <span>Night (before 6am):</span><span className="font-medium text-foreground">1.15×</span>
@@ -2463,25 +2463,25 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 <span>OT &gt; 76h — Sunday:</span><span className="font-medium text-foreground">2.0× flat</span>
                 <span>OT &gt; 76h — PH:</span><span className="font-medium text-foreground">2.5× flat</span>
               </div>
-              <div className="border-t border-border mt-2 pt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground text-[11px]">
+              <div className="border-t border-border mt-2 pt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground text-2xs">
                 <span>Broken shift (1 break):</span><span className="font-medium text-foreground">${BROKEN_ALLOWANCE_1.toFixed(2)}</span>
                 <span>Broken shift (2 breaks):</span><span className="font-medium text-foreground">${BROKEN_ALLOWANCE_2.toFixed(2)}</span>
                 <span>Meal allowance (OT &gt;1h/shift):</span><span className="font-medium text-foreground">${MEAL_ALLOWANCE.toFixed(2)} × 1</span>
                 <span>Meal allowance (OT &gt;4h/shift):</span><span className="font-medium text-foreground">${MEAL_ALLOWANCE.toFixed(2)} × 2</span>
                 <span>Vehicle allowance:</span><span className="font-medium text-foreground">${VEHICLE_RATE}/km (from rates file)</span>
               </div>
-              <p className="text-muted-foreground/70 text-[10px] pt-1">★ Sunday &amp; Holiday OT = same rate as ordinary (2.0× / 2.5×). Meal allowance counted per-shift by backend. Casual: effective rate = (Base÷1.25 × Multiplier) + Loading.</p>
+              <p className="text-muted-foreground/70 text-2xs pt-1">★ Sunday &amp; Holiday OT = same rate as ordinary (2.0× / 2.5×). Meal allowance counted per-shift by backend. Casual: effective rate = (Base÷1.25 × Multiplier) + Loading.</p>
             </div>
-            <div className="bg-amber-50 border border-amber-300 rounded p-3 text-xs text-amber-800 space-y-1">
+            <div className="bg-warning/10 border border-warning/30 rounded p-3 text-xs text-warning space-y-1">
               <p className="font-semibold">⚠ SCHADS Award Rules Applied</p>
-              <ul className="list-disc list-inside space-y-0.5 text-[11px] leading-relaxed">
+              <ul className="list-disc list-inside space-y-0.5 text-2xs leading-relaxed">
                 <li><strong>OT triggers:</strong> &gt;76h/fortnight; &gt;10h active hours/shift (daily OT) — same hour paid once, not double-counted</li>
                 <li><strong>OT &gt; 76h rates:</strong> Weekday + Saturday share one 1.5× band (first 2h total), then 2×; Sun 2.0×; PH 2.5×</li>
                 <li><strong>Sunday/PH OT:</strong> Same rate as ordinary day (2.0× / 2.5×) — no separate OT brackets</li>
                 <li><strong>Broken shifts:</strong> $20.82 per shift (1 break), $27.56 for 2 breaks (cap not tracked per-shift)</li>
                 <li><strong>Meal allowance:</strong> $16.62 per shift where OT &gt;1h; +$16.62 on same shift where OT &gt;4h (counted per-shift by backend)</li>
               </ul>
-              <p className="text-amber-700 pt-1">Always verify against the <a href="https://www.fairwork.gov.au" target="_blank" rel="noopener noreferrer" className="underline">Fair Work pay guide</a>.</p>
+              <p className="text-warning pt-1">Always verify against the <a href="https://www.fairwork.gov.au" target="_blank" rel="noopener noreferrer" className="underline">Fair Work pay guide</a>.</p>
             </div>
           </div>
         </>
@@ -2554,41 +2554,41 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           <>
             {/* Summary cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-              <Card className="border-orange-200">
+              <Card className="border-warning/30">
                 <CardContent className="pt-4">
-                  <div className="text-2xl font-bold text-orange-600">{visible.length}</div>
+                  <div className="text-2xl font-bold text-warning">{visible.length}</div>
                   <p className="text-xs text-muted-foreground">Staff with exceptions</p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                  <p className="text-2xs text-muted-foreground/70 mt-0.5">
                     {displayRows.length} visible · {staffRows.length} in list
                   </p>
                 </CardContent>
               </Card>
-              <Card className="border-orange-200">
+              <Card className="border-warning/30">
                 <CardContent className="pt-4">
-                  <div className="text-2xl font-bold text-orange-600">{fmtH(totOT)}</div>
+                  <div className="text-2xl font-bold text-warning">{fmtH(totOT)}</div>
                   <p className="text-xs text-muted-foreground">Total overtime hours</p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">WD + Sat + Sun + PH</p>
+                  <p className="text-2xs text-muted-foreground/70 mt-0.5">WD + Sat + Sun + PH</p>
                 </CardContent>
               </Card>
-              <Card className="border-rose-200">
+              <Card className="border-destructive/30">
                 <CardContent className="pt-4">
-                  <div className="text-2xl font-bold text-rose-600">{fmtH(totOt76)}</div>
+                  <div className="text-2xl font-bold text-destructive">{fmtH(totOt76)}</div>
                   <p className="text-xs text-muted-foreground">Total OT&nbsp;&gt;&nbsp;76h</p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">Fortnight cap overflow</p>
+                  <p className="text-2xs text-muted-foreground/70 mt-0.5">Fortnight cap overflow</p>
                 </CardContent>
               </Card>
-              <Card className="border-amber-200">
+              <Card className="border-warning/30">
                 <CardContent className="pt-4">
-                  <div className="text-2xl font-bold text-amber-700">{totBroken} shifts</div>
+                  <div className="text-2xl font-bold text-warning">{totBroken} shifts</div>
                   <p className="text-xs text-muted-foreground">Broken shifts</p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">{r2(visible.reduce((s,r)=>s+(r.m.totalKm||0),0))} km total</p>
+                  <p className="text-2xs text-muted-foreground/70 mt-0.5">{r2(visible.reduce((s,r)=>s+(r.m.totalKm||0),0))} km total</p>
                 </CardContent>
               </Card>
-              <Card className="border-amber-300 lg:col-span-1 col-span-2">
+              <Card className="border-warning/30 lg:col-span-1 col-span-2">
                 <CardContent className="pt-4">
-                  <div className="text-2xl font-bold text-amber-900">{totMinEng}</div>
+                  <div className="text-2xl font-bold text-warning">{totMinEng}</div>
                   <p className="text-xs text-muted-foreground">Short PC shifts (&lt;2h)</p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">Minimum engagement — review / manual hours</p>
+                  <p className="text-2xs text-muted-foreground/70 mt-0.5">Minimum engagement — review / manual hours</p>
                 </CardContent>
               </Card>
             </div>
@@ -2596,7 +2596,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
             {visible.length === 0 ? (
               <Card>
                 <CardContent className="py-10 text-center">
-                  <p className="text-lg font-medium text-green-600">✓ No exceptions</p>
+                  <p className="text-lg font-medium text-success">✓ No exceptions</p>
                   <p className="text-sm text-muted-foreground mt-1">No staff have overtime, OT&nbsp;&gt;&nbsp;76h, broken shifts, or short personal-care shifts this period.</p>
                 </CardContent>
               </Card>
@@ -2604,15 +2604,15 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
               <>
                 {/* ── Minimum engagement (short PC) ── */}
                 {totMinEng > 0 && (
-                  <Card className="border-amber-300">
+                  <Card className="border-warning/30">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center gap-2">
-                        <span className="text-amber-700">⚠</span> Minimum engagement — short personal care
+                        <span className="text-warning">⚠</span> Minimum engagement — short personal care
                         <span className="text-xs font-normal text-muted-foreground">
                           ({visible.filter((r) => r.minEng > 0).length} staff · {totMinEng} shift{totMinEng === 1 ? '' : 's'})
                         </span>
                       </CardTitle>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <p className="text-2xs text-muted-foreground mt-0.5">
                         Shifts under 2 hours are paid at actual hours in the calculator; flag them here for payroll review or manual adjustment.
                       </p>
                     </CardHeader>
@@ -2620,7 +2620,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
-                            <TableRow className="bg-amber-50/60 text-[11px]">
+                            <TableRow className="bg-warning/10 text-2xs">
                               <TableHead className="min-w-[180px]">Staff</TableHead>
                               <TableHead className="whitespace-nowrap">Pay period</TableHead>
                               <TableHead className="text-right whitespace-nowrap">Short PC shifts</TableHead>
@@ -2640,7 +2640,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                     </div>
                                   </TableCell>
                                   <TableCell className="text-muted-foreground">{fmtPayPeriod(row)}</TableCell>
-                                  <TableCell className="text-right font-medium text-amber-900">{minEng}</TableCell>
+                                  <TableCell className="text-right font-medium text-warning">{minEng}</TableCell>
                                 </TableRow>
                                 <ShiftBreakdownExpandRow
                                   expanded={!!expandedBreakdown[row.staffName]}
@@ -2667,7 +2667,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <span className="text-orange-500">⚠</span> Overtime &amp; Broken Shifts
+                      <span className="text-warning">⚠</span> Overtime &amp; Broken Shifts
                       <span className="text-xs font-normal text-muted-foreground">({visible.filter(r => r.ot > 0 || r.broken > 0).length} staff)</span>
                     </CardTitle>
                   </CardHeader>
@@ -2675,19 +2675,19 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-muted/40 text-[11px]">
+                          <TableRow className="bg-muted/40 text-2xs">
                             <TableHead className="min-w-[160px]">Staff</TableHead>
                             <TableHead className="min-w-[140px] whitespace-nowrap">Pay period</TableHead>
-                            <TableHead className="text-right text-orange-600 whitespace-nowrap">Total OT<br/><span className="font-normal opacity-70">all days</span></TableHead>
-                            <TableHead className="text-right text-orange-600 whitespace-nowrap">WD OT ≤2h<br/><span className="font-normal opacity-70">1.5×</span></TableHead>
-                            <TableHead className="text-right text-orange-700 whitespace-nowrap">WD OT &gt;2h<br/><span className="font-normal opacity-70">2×</span></TableHead>
-                            <TableHead className="text-right text-cyan-600 whitespace-nowrap">Sat OT ≤2h</TableHead>
-                            <TableHead className="text-right text-cyan-700 whitespace-nowrap">Sat OT &gt;2h</TableHead>
-                            <TableHead className="text-right text-red-600 whitespace-nowrap">Sun OT hrs<br/><span className="font-normal opacity-70">2×</span></TableHead>
-                            <TableHead className="text-right text-blue-600 whitespace-nowrap">Hol OT hrs<br/><span className="font-normal opacity-70">2.5×</span></TableHead>
-                            <TableHead className="text-right text-orange-700 whitespace-nowrap">Broken#</TableHead>
-                            <TableHead className="text-right text-emerald-600 whitespace-nowrap">KMs</TableHead>
-                            <TableHead className="text-right text-emerald-700 whitespace-nowrap">Mileage Allow</TableHead>
+                            <TableHead className="text-right text-warning whitespace-nowrap">Total OT<br/><span className="font-normal opacity-70">all days</span></TableHead>
+                            <TableHead className="text-right text-warning whitespace-nowrap">WD OT ≤2h<br/><span className="font-normal opacity-70">1.5×</span></TableHead>
+                            <TableHead className="text-right text-warning whitespace-nowrap">WD OT &gt;2h<br/><span className="font-normal opacity-70">2×</span></TableHead>
+                            <TableHead className="text-right text-chart-2 whitespace-nowrap">Sat OT ≤2h</TableHead>
+                            <TableHead className="text-right text-chart-2 whitespace-nowrap">Sat OT &gt;2h</TableHead>
+                            <TableHead className="text-right text-destructive whitespace-nowrap">Sun OT hrs<br/><span className="font-normal opacity-70">2×</span></TableHead>
+                            <TableHead className="text-right text-primary whitespace-nowrap">Hol OT hrs<br/><span className="font-normal opacity-70">2.5×</span></TableHead>
+                            <TableHead className="text-right text-warning whitespace-nowrap">Broken#</TableHead>
+                            <TableHead className="text-right text-success whitespace-nowrap">KMs</TableHead>
+                            <TableHead className="text-right text-success whitespace-nowrap">Mileage Allow</TableHead>
                             <TableHead className="text-right whitespace-nowrap">OT + broken pay<br/><span className="font-normal opacity-70 text-muted-foreground">excl. meal / km</span></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -2708,30 +2708,30 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                     <span className="font-medium truncate">{row.staffName}</span>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-muted-foreground text-[11px] whitespace-nowrap">{fmtPayPeriod(row)}</TableCell>
-                                <TableCell className="text-right">{d(ot, 'text-orange-600')}</TableCell>
-                                <TableCell className="text-right">{d(m.weekdayOtUpto2 || 0, 'text-orange-500')}</TableCell>
-                                <TableCell className="text-right">{d(m.weekdayOtAfter2 || 0, 'text-orange-700')}</TableCell>
-                                <TableCell className="text-right">{d(m.saturdayOtUpto2 || 0, 'text-cyan-600')}</TableCell>
-                                <TableCell className="text-right">{d(m.saturdayOtAfter2 || 0, 'text-cyan-700')}</TableCell>
-                                <TableCell className="text-right">{d(r2((m.sundayOtUpto2||0)+(m.sundayOtAfter2||0)), 'text-red-600')}</TableCell>
-                                <TableCell className="text-right">{d(r2((m.holidayOtUpto2||0)+(m.holidayOtAfter2||0)), 'text-blue-600')}</TableCell>
+                                <TableCell className="text-muted-foreground text-2xs whitespace-nowrap">{fmtPayPeriod(row)}</TableCell>
+                                <TableCell className="text-right">{d(ot, 'text-warning')}</TableCell>
+                                <TableCell className="text-right">{d(m.weekdayOtUpto2 || 0, 'text-warning')}</TableCell>
+                                <TableCell className="text-right">{d(m.weekdayOtAfter2 || 0, 'text-warning')}</TableCell>
+                                <TableCell className="text-right">{d(m.saturdayOtUpto2 || 0, 'text-chart-2')}</TableCell>
+                                <TableCell className="text-right">{d(m.saturdayOtAfter2 || 0, 'text-chart-2')}</TableCell>
+                                <TableCell className="text-right">{d(r2((m.sundayOtUpto2||0)+(m.sundayOtAfter2||0)), 'text-destructive')}</TableCell>
+                                <TableCell className="text-right">{d(r2((m.holidayOtUpto2||0)+(m.holidayOtAfter2||0)), 'text-primary')}</TableCell>
                                 <TableCell className="text-right">
                                   {broken > 0 ? (
-                                    <span className="inline-flex items-center gap-1 font-medium text-orange-700">
+                                    <span className="inline-flex items-center gap-1 font-medium text-warning">
                                       {broken}
-                                      <span className="text-[10px] bg-orange-100 text-orange-700 px-1 rounded">broken</span>
+                                      <span className="text-2xs bg-warning/15 text-warning px-1 rounded">broken</span>
                                     </span>
                                   ) : <span className="text-muted-foreground/30">—</span>}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {(m.totalKm || 0) > 0
-                                    ? <span className="font-medium text-emerald-700">{m.totalKm} km</span>
+                                    ? <span className="font-medium text-success">{m.totalKm} km</span>
                                     : <span className="text-muted-foreground/30">—</span>}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {(allow.mileageAllow || 0) > 0
-                                    ? <span className="font-medium text-emerald-600">{fmt(allow.mileageAllow)}</span>
+                                    ? <span className="font-medium text-success">{fmt(allow.mileageAllow)}</span>
                                     : <span className="text-muted-foreground/30">—</span>}
                                 </TableCell>
                                 <TableCell className="text-right font-mono font-semibold">
@@ -2759,16 +2759,16 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                           <TableRow className="border-t-2 font-bold text-xs bg-muted/20">
                             <TableCell>Totals</TableCell>
                             <TableCell className="text-muted-foreground font-normal">—</TableCell>
-                            <TableCell className="text-right text-orange-600">{fmtH(totOT)}</TableCell>
+                            <TableCell className="text-right text-warning">{fmtH(totOT)}</TableCell>
                             <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+(r.m.weekdayOtUpto2||0),0)))}</TableCell>
                             <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+(r.m.weekdayOtAfter2||0),0)))}</TableCell>
                             <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+(r.m.saturdayOtUpto2||0),0)))}</TableCell>
                             <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+(r.m.saturdayOtAfter2||0),0)))}</TableCell>
                             <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+r2((r.m.sundayOtUpto2||0)+(r.m.sundayOtAfter2||0)),0)))}</TableCell>
                             <TableCell className="text-right">{fmtH(r2(visible.reduce((s,r)=>s+r2((r.m.holidayOtUpto2||0)+(r.m.holidayOtAfter2||0)),0)))}</TableCell>
-                            <TableCell className="text-right text-orange-700">{totBroken || '—'}</TableCell>
-                            <TableCell className="text-right text-emerald-700">{r2(visible.reduce((s,r)=>s+(r.m.totalKm||0),0)) || '—'} km</TableCell>
-                            <TableCell className="text-right text-emerald-600">{r2(visible.reduce((s,r)=>s+(r.allow.mileageAllow||0),0)) > 0 ? fmt(r2(visible.reduce((s,r)=>s+(r.allow.mileageAllow||0),0))) : '—'}</TableCell>
+                            <TableCell className="text-right text-warning">{totBroken || '—'}</TableCell>
+                            <TableCell className="text-right text-success">{r2(visible.reduce((s,r)=>s+(r.m.totalKm||0),0)) || '—'} km</TableCell>
+                            <TableCell className="text-right text-success">{r2(visible.reduce((s,r)=>s+(r.allow.mileageAllow||0),0)) > 0 ? fmt(r2(visible.reduce((s,r)=>s+(r.allow.mileageAllow||0),0))) : '—'}</TableCell>
                             <TableCell className="text-right font-mono">{totOtBroken$ != null ? fmt(totOtBroken$) : '—'}</TableCell>
                           </TableRow>
                         </TableBody>
@@ -2782,10 +2782,10 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm flex items-center gap-2">
-                        <span className="text-rose-600">⏱</span> OT &gt; 76h — Fortnight Cap Overflow
+                        <span className="text-destructive">⏱</span> OT &gt; 76h — Fortnight Cap Overflow
                         <span className="text-xs font-normal text-muted-foreground">({visible.filter(r => r.ot76tot > 0).length} staff)</span>
                       </CardTitle>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                      <p className="text-2xs text-muted-foreground mt-0.5">
                         Hours that exceed the 76h fortnightly cap. Weekday &amp; Saturday share one 1.5× band (first 2h combined), then 2×. Sunday: 2.0×. Public Holiday: 2.5×. Same hour is not double-counted with daily OT.
                       </p>
                     </CardHeader>
@@ -2793,14 +2793,14 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
-                            <TableRow className="bg-rose-50/60 text-[11px]">
+                            <TableRow className="bg-destructive/10 text-2xs">
                               <TableHead className="min-w-[160px]">Staff</TableHead>
                               <TableHead className="min-w-[140px] whitespace-nowrap">Pay period</TableHead>
-                              <TableHead className="text-right text-rose-700 whitespace-nowrap">Total OT&gt;76<br/><span className="font-normal opacity-70">all days</span></TableHead>
-                              <TableHead className="text-right text-rose-700 whitespace-nowrap">Weekday<br/><span className="font-normal opacity-70">global 1.5×/2×</span></TableHead>
-                              <TableHead className="text-right text-rose-600 whitespace-nowrap">Saturday<br/><span className="font-normal opacity-70">2× after WD tier</span></TableHead>
-                              <TableHead className="text-right text-rose-500 whitespace-nowrap">Sunday<br/><span className="font-normal opacity-70">2.0× flat</span></TableHead>
-                              <TableHead className="text-right text-rose-800 whitespace-nowrap">Holiday<br/><span className="font-normal opacity-70">2.5× flat</span></TableHead>
+                              <TableHead className="text-right text-destructive whitespace-nowrap">Total OT&gt;76<br/><span className="font-normal opacity-70">all days</span></TableHead>
+                              <TableHead className="text-right text-destructive whitespace-nowrap">Weekday<br/><span className="font-normal opacity-70">global 1.5×/2×</span></TableHead>
+                              <TableHead className="text-right text-destructive whitespace-nowrap">Saturday<br/><span className="font-normal opacity-70">2× after WD tier</span></TableHead>
+                              <TableHead className="text-right text-destructive/80 whitespace-nowrap">Sunday<br/><span className="font-normal opacity-70">2.0× flat</span></TableHead>
+                              <TableHead className="text-right text-destructive whitespace-nowrap">Holiday<br/><span className="font-normal opacity-70">2.5× flat</span></TableHead>
                               <TableHead className="text-right whitespace-nowrap">WD tier 1<br/><span className="font-normal opacity-70 text-muted-foreground">≤2h @ 1.5×</span></TableHead>
                               <TableHead className="text-right whitespace-nowrap">WD tier 2<br/><span className="font-normal opacity-70 text-muted-foreground">&gt;2h @ 2×</span></TableHead>
                               <TableHead className="text-right whitespace-nowrap">Sat tier 1<br/><span className="font-normal opacity-70 text-muted-foreground">≤2h @ 1.5×</span></TableHead>
@@ -2814,12 +2814,12 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               const wdT2 = r2(Math.max(0, ot76wd - 2));
                               const sT1  = r2(Math.min(ot76sat, 2));
                               const sT2  = r2(Math.max(0, ot76sat - 2));
-                              const cell = (v, cls = 'text-rose-700') => v > 0
+                              const cell = (v, cls = 'text-destructive') => v > 0
                                 ? <span className={`font-medium ${cls}`}>{fmtH(v)}</span>
                                 : <span className="text-muted-foreground/30">—</span>;
                               return (
                                 <React.Fragment key={row.staffName}>
-                                <TableRow className="text-xs hover:bg-rose-50/30">
+                                <TableRow className="text-xs hover:bg-destructive/10">
                                   <TableCell>
                                     <div className="flex items-center gap-1.5 min-w-0">
                                       <ExpandChevronButton
@@ -2829,16 +2829,16 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                       <span className="font-medium truncate">{row.staffName}</span>
                                     </div>
                                   </TableCell>
-                                  <TableCell className="text-muted-foreground text-[11px] whitespace-nowrap">{fmtPayPeriod(row)}</TableCell>
+                                  <TableCell className="text-muted-foreground text-2xs whitespace-nowrap">{fmtPayPeriod(row)}</TableCell>
                                   <TableCell className="text-right">{cell(ot76tot)}</TableCell>
                                   <TableCell className="text-right">{cell(ot76wd)}</TableCell>
-                                  <TableCell className="text-right">{cell(ot76sat, 'text-rose-600')}</TableCell>
-                                  <TableCell className="text-right">{cell(ot76sun, 'text-rose-500')}</TableCell>
-                                  <TableCell className="text-right">{cell(ot76hol, 'text-rose-800')}</TableCell>
-                                  <TableCell className="text-right text-muted-foreground">{cell(wdT1, 'text-orange-500')}</TableCell>
-                                  <TableCell className="text-right text-muted-foreground">{cell(wdT2, 'text-orange-700')}</TableCell>
-                                  <TableCell className="text-right text-muted-foreground">{cell(sT1,  'text-cyan-500')}</TableCell>
-                                  <TableCell className="text-right text-muted-foreground">{cell(sT2,  'text-cyan-700')}</TableCell>
+                                  <TableCell className="text-right">{cell(ot76sat, 'text-destructive')}</TableCell>
+                                  <TableCell className="text-right">{cell(ot76sun, 'text-destructive/80')}</TableCell>
+                                  <TableCell className="text-right">{cell(ot76hol, 'text-destructive')}</TableCell>
+                                  <TableCell className="text-right text-muted-foreground">{cell(wdT1, 'text-warning')}</TableCell>
+                                  <TableCell className="text-right text-muted-foreground">{cell(wdT2, 'text-warning')}</TableCell>
+                                  <TableCell className="text-right text-muted-foreground">{cell(sT1,  'text-chart-2/80')}</TableCell>
+                                  <TableCell className="text-right text-muted-foreground">{cell(sT2,  'text-chart-2')}</TableCell>
                                   <TableCell className="text-right font-mono font-semibold">
                                     {ot76Monetary != null
                                       ? <span>{fmt(ot76Monetary)}</span>
@@ -2861,10 +2861,10 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               );
                             })}
                             {/* Totals */}
-                            <TableRow className="border-t-2 font-bold text-xs bg-rose-50/20">
+                            <TableRow className="border-t-2 font-bold text-xs bg-destructive/10">
                               <TableCell>Totals</TableCell>
                               <TableCell className="text-muted-foreground font-normal">—</TableCell>
-                              <TableCell className="text-right text-rose-700">{fmtH(totOt76)}</TableCell>
+                              <TableCell className="text-right text-destructive">{fmtH(totOt76)}</TableCell>
                               <TableCell className="text-right">{totOt76wd  > 0 ? fmtH(totOt76wd)  : '—'}</TableCell>
                               <TableCell className="text-right">{totOt76sat > 0 ? fmtH(totOt76sat) : '—'}</TableCell>
                               <TableCell className="text-right">{totOt76sun > 0 ? fmtH(totOt76sun) : '—'}</TableCell>
@@ -2886,7 +2886,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <span className="text-amber-600">$</span> Allowances
+                      <span className="text-warning">$</span> Allowances
                       <span className="text-xs font-normal text-muted-foreground">({visible.filter(r => r.allow.total > 0).length} staff with allowances)</span>
                     </CardTitle>
                   </CardHeader>
@@ -2894,11 +2894,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-amber-50/60 text-[11px]">
+                          <TableRow className="bg-warning/10 text-2xs">
                             <TableHead className="min-w-[160px]">Staff</TableHead>
-                            <TableHead className="text-right text-orange-700 whitespace-nowrap">Broken#</TableHead>
-                            <TableHead className="text-right text-amber-700 whitespace-nowrap">Broken allow.<br/><span className="font-normal opacity-70">${BROKEN_ALLOWANCE_1}/shift</span></TableHead>
-                            <TableHead className="text-right text-amber-600 whitespace-nowrap">Meal allow.~<br/><span className="font-normal opacity-70">${MEAL_ALLOWANCE}/OT event</span></TableHead>
+                            <TableHead className="text-right text-warning whitespace-nowrap">Broken#</TableHead>
+                            <TableHead className="text-right text-warning whitespace-nowrap">Broken allow.<br/><span className="font-normal opacity-70">${BROKEN_ALLOWANCE_1}/shift</span></TableHead>
+                            <TableHead className="text-right text-warning whitespace-nowrap">Meal allow.~<br/><span className="font-normal opacity-70">${MEAL_ALLOWANCE}/OT event</span></TableHead>
                             <TableHead className="text-right font-semibold whitespace-nowrap">Total allow.</TableHead>
                             <TableHead className="text-right whitespace-nowrap">Gross pay<br/><span className="font-normal opacity-70">incl. allowances</span></TableHead>
                           </TableRow>
@@ -2906,7 +2906,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         <TableBody>
                           {visible.map(({ row, m, broken, allow, gross }) => (
                             <React.Fragment key={row.staffName}>
-                            <TableRow className="text-xs hover:bg-amber-50/20">
+                            <TableRow className="text-xs hover:bg-warning/10">
                               <TableCell>
                                 <div className="flex items-center gap-1.5 min-w-0">
                                   <ExpandChevronButton
@@ -2918,17 +2918,17 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               </TableCell>
                               <TableCell className="text-right">
                                 {broken > 0
-                                  ? <span className="font-medium text-orange-700">{broken}</span>
+                                  ? <span className="font-medium text-warning">{broken}</span>
                                   : <span className="text-muted-foreground/30">—</span>}
                               </TableCell>
                               <TableCell className="text-right">
                                 {allow.brokenAllow > 0
-                                  ? <span className="font-medium text-amber-700">{fmt(allow.brokenAllow)}</span>
+                                  ? <span className="font-medium text-warning">{fmt(allow.brokenAllow)}</span>
                                   : <span className="text-muted-foreground/30">—</span>}
                               </TableCell>
                               <TableCell className="text-right">
                                 {allow.mealAllow > 0
-                                  ? <span className="font-medium text-amber-600">{fmt(allow.mealAllow)}</span>
+                                  ? <span className="font-medium text-warning">{fmt(allow.mealAllow)}</span>
                                   : <span className="text-muted-foreground/30">—</span>}
                               </TableCell>
                               <TableCell className="text-right font-semibold">
@@ -2936,7 +2936,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                               </TableCell>
                               <TableCell className="text-right font-bold">
                                 {gross !== null
-                                  ? <span className={getEmpType(row.staffName) === 'casual' ? 'text-blue-700' : ''}>{fmt(gross)}</span>
+                                  ? <span className={getEmpType(row.staffName) === 'casual' ? 'text-primary' : ''}>{fmt(gross)}</span>
                                   : <span className="text-muted-foreground text-xs font-normal">enter rate</span>}
                               </TableCell>
                             </TableRow>
@@ -2955,11 +2955,11 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                             </React.Fragment>
                           ))}
                           {/* Totals */}
-                          <TableRow className="border-t-2 font-bold text-xs bg-amber-50/20">
+                          <TableRow className="border-t-2 font-bold text-xs bg-warning/10">
                             <TableCell>Totals</TableCell>
-                            <TableCell className="text-right text-orange-700">{totBroken || '—'}</TableCell>
-                            <TableCell className="text-right text-amber-700">{totBrokAllow > 0 ? fmt(totBrokAllow) : '—'}</TableCell>
-                            <TableCell className="text-right text-amber-600">{totMealAllow > 0 ? fmt(totMealAllow) : '—'}</TableCell>
+                            <TableCell className="text-right text-warning">{totBroken || '—'}</TableCell>
+                            <TableCell className="text-right text-warning">{totBrokAllow > 0 ? fmt(totBrokAllow) : '—'}</TableCell>
+                            <TableCell className="text-right text-warning">{totMealAllow > 0 ? fmt(totMealAllow) : '—'}</TableCell>
                             <TableCell className="text-right">{totAllow > 0 ? fmt(totAllow) : '—'}</TableCell>
                             <TableCell className="text-right">{totGross !== null ? fmt(totGross) : <span className="text-muted-foreground font-normal text-xs">enter rates</span>}</TableCell>
                           </TableRow>
@@ -2970,7 +2970,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 </Card>
 
                 {/* Rules reminder */}
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-[11px] text-orange-800 space-y-1">
+                <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 text-2xs text-warning space-y-1">
                   <p className="font-semibold text-xs">SCHADS Award — Exception Rules (MA000100)</p>
                   <ul className="list-disc list-inside space-y-0.5 leading-relaxed">
                     <li><strong>Daily OT trigger:</strong> &gt;10h active hours in a single day — same hour not double-counted with 76h cap OT</li>
@@ -3013,7 +3013,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                   }}
                 />
                 <Button type="button" size="sm" variant="outline" className="gap-1" onClick={() => ratesFileRef.current?.click()}>
-                  <FileSpreadsheet className="h-4 w-4 text-blue-600" />
+                  <FileSpreadsheet className="h-4 w-4 text-primary" />
                   {ratesFileName ? 'Replace rates workbook' : 'Upload rates workbook'}
                 </Button>
                 {ratesFileName && (
@@ -3079,13 +3079,13 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted/50 text-[10px]">
+                      <TableRow className="bg-muted/50 text-2xs">
                         <TableHead className="sticky left-0 bg-muted/50 z-10 min-w-[140px] border-r">Staff</TableHead>
                         <TableHead className="text-center whitespace-nowrap min-w-[88px] border-r" title="Apply one $/h to all hourly columns">
                           Flat base
                         </TableHead>
                         {STAFF_RATES_TABLE_FIELDS.map(([id, label]) => (
-                          <TableHead key={id} className="text-right whitespace-nowrap min-w-[72px] text-[10px]">
+                          <TableHead key={id} className="text-right whitespace-nowrap min-w-[72px] text-2xs">
                             {label}
                           </TableHead>
                         ))}
@@ -3159,7 +3159,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                     </TableBody>
                   </Table>
                 </div>
-                <p className="text-[10px] text-muted-foreground px-4 py-2 border-t">
+                <p className="text-2xs text-muted-foreground px-4 py-2 border-t">
                   Empty cells until you type: row is created from default base rate or zero. <strong>Flat base</strong> + Enter applies one rate to Day through PH; edit columns for fine control. Trash removes only the custom rate row (summary then uses default base rate).
                 </p>
               </CardContent>
@@ -3218,7 +3218,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                   <div key={di} className={`border rounded-sm ${validSegs.length ? 'border-border' : 'border-border/50'}`}>
                     <div className="flex items-center gap-3 px-4 py-2.5 cursor-pointer select-none" onClick={() => toggleManualDay(di)}>
                       <span className={`text-xs font-bold px-2 py-0.5 border rounded-sm min-w-[40px] text-center ${pillCls(dc.type, day.isPH)}`}>{dc.short}</span>
-                      <span className={`text-sm font-semibold flex-1 ${dc.type === 'saturday' ? 'text-purple-700' : dc.type === 'sunday' ? 'text-red-600' : day.isPH ? 'text-blue-700' : ''}`}>{dc.name}</span>
+                      <span className={`text-sm font-semibold flex-1 ${dc.type === 'saturday' ? 'text-chart-2' : dc.type === 'sunday' ? 'text-destructive' : day.isPH ? 'text-primary' : ''}`}>{dc.name}</span>
                       <span className="text-sm text-muted-foreground ml-auto">{totalH > 0 ? <span className="text-foreground font-medium">{totalH.toFixed(1)}h{day.isPH ? ' · PH' : ''}</span> : 'Day off'}</span>
                       <button className="w-6 h-6 border border-border flex items-center justify-center text-muted-foreground hover:border-foreground rounded-sm">{day.open ? '−' : '+'}</button>
                     </div>
@@ -3230,7 +3230,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                             <div key={seg.id} className="grid grid-cols-[1fr_1fr_auto_auto] gap-2 items-end">
                               <div className="space-y-1"><label className="text-xs text-muted-foreground">Start</label><Input type="time" value={seg.start} onChange={e => updateManualSeg(di, seg.id, 'start', e.target.value)} className="h-9" /></div>
                               <div className="space-y-1"><label className="text-xs text-muted-foreground">End</label><Input type="time" value={seg.end} onChange={e => updateManualSeg(di, seg.id, 'end', e.target.value)} className="h-9" /></div>
-                              <div className="pb-1 text-sm">{seg.start && seg.end ? h !== null ? <span className="text-green-700 font-medium">{fmtMins(toMins(seg.end) - toMins(seg.start))}</span> : <span className="text-destructive text-xs">end before start</span> : <span className="text-muted-foreground">—</span>}</div>
+                              <div className="pb-1 text-sm">{seg.start && seg.end ? h !== null ? <span className="text-success font-medium">{fmtMins(toMins(seg.end) - toMins(seg.start))}</span> : <span className="text-destructive text-xs">end before start</span> : <span className="text-muted-foreground">—</span>}</div>
                               <button onClick={() => removeManualSeg(di, seg.id)} className="h-9 w-9 border border-border flex items-center justify-center text-muted-foreground hover:border-destructive hover:text-destructive rounded-sm"><X className="h-4 w-4" /></button>
                             </div>
                           );
@@ -3238,7 +3238,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         {overlap && <p className="text-xs text-destructive bg-destructive/10 border border-destructive/30 px-3 py-2 flex items-center gap-1.5"><AlertCircle className="h-3 w-3" /> Shift times overlap.</p>}
                         <button onClick={() => addManualSeg(di)} className="w-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-foreground hover:text-foreground flex items-center gap-2 rounded-sm"><Plus className="h-4 w-4" /> Add segment</button>
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input type="checkbox" checked={day.isPH} onChange={e => updateManualDay(di, { isPH: e.target.checked })} className="w-4 h-4 accent-blue-600" />
+                          <input type="checkbox" checked={day.isPH} onChange={e => updateManualDay(di, { isPH: e.target.checked })} className="w-4 h-4 accent-primary" />
                           <span className="text-xs text-muted-foreground">Public Holiday (→ 2.5×)</span>
                         </label>
                       </div>
@@ -3315,7 +3315,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                 <div className="bg-foreground text-background p-5 flex items-end justify-between flex-wrap gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-widest opacity-60 mb-1">Gross Weekly Pay</p>
-                    <p className="text-4xl font-bold">$<span className="text-yellow-300">{manualResults.gross.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span></p>
+                    <p className="text-4xl font-bold">$<span className="text-warning">{manualResults.gross.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span></p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs uppercase tracking-widest opacity-60 mb-1">Total Hours</p>
@@ -3375,9 +3375,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                     </Table>
                   </div>
                 </div>
-                <div className="bg-amber-50 border border-amber-400 p-3 text-xs text-amber-800 leading-relaxed rounded-sm">
+                <div className="bg-warning/10 border border-warning/40 p-3 text-xs text-warning leading-relaxed rounded-sm">
                   ⚠ <strong>Estimates only.</strong> Based on SCHADS Award MA000100 (effective 01/07/2024). Always verify against the{' '}
-                  <a href="https://www.fairwork.gov.au" target="_blank" rel="noopener noreferrer" className="underline text-amber-700">official Fair Work pay guide</a>.
+                  <a href="https://www.fairwork.gov.au" target="_blank" rel="noopener noreferrer" className="underline text-warning">official Fair Work pay guide</a>.
                 </div>
               </CardContent>
             </Card>

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '../../api/users';
+import { UserPlus, Pencil } from 'lucide-react';
+import { useUsers, useCreateUser, useUpdateUser } from '../../api/users';
 import { useRoles } from '../../api/roles';
 import { getErrorMessage } from '../../utils/api';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Card, CardContent, CardHeader } from '../../ui/card';
 import {
   Table,
   TableBody,
@@ -14,6 +15,15 @@ import {
 } from '../../ui/table';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
+import { Badge } from '../../ui/badge';
+import { Switch } from '../../ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
+import { LoadingScreen } from '../../ui/LoadingSpinner';
+import { QueryErrorState } from '../../components/QueryErrorState';
+import { FieldLabel } from '../../components/InfoHint';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 
 export const UsersPanel = () => {
   const [showForm, setShowForm] = useState(false);
@@ -24,7 +34,6 @@ export const UsersPanel = () => {
   const { data: rolesData } = useRoles();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
-  const deleteUser = useDeleteUser();
 
   const users = data?.users || [];
   const roles = (rolesData?.roles || []).filter((r) => r.isActive !== false);
@@ -122,132 +131,54 @@ export const UsersPanel = () => {
     setShowForm(true);
   };
 
-  const handleDeactivate = async (id) => {
+  const handleToggleActive = async (user, next) => {
     try {
-      await deleteUser.mutateAsync(id);
-      toast.success('User deactivated');
+      await updateUser.mutateAsync({ id: user._id, isActive: next });
+      toast.success(next ? 'User activated' : 'User deactivated');
     } catch (err) {
-      toast.error(getErrorMessage(err) || 'Failed to deactivate user');
+      toast.error(getErrorMessage(err) || 'Failed to update user');
     }
   };
 
+  const openCreate = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const selectedRole = roles.find((r) => r.slug === form.role);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold">Users</h3>
-        <Button onClick={() => { resetForm(); setShowForm(true); }}>Add User</Button>
-      </div>
-
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingId ? 'Edit User' : 'Create User'}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={editingId ? handleUpdate : handleCreate}
-              className="flex flex-col gap-4"
-            >
-              <div>
-                <label className="text-sm font-medium">Name</label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Full name"
-                  required
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Email</label>
-                <Input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  placeholder="email@example.com"
-                  required
-                  disabled={!!editingId}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">
-                  Password {editingId && '(leave blank to keep current)'}
-                </label>
-                <Input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                  placeholder="••••••••"
-                  required={!editingId}
-                  minLength={editingId ? undefined : 6}
-                  className="mt-1"
-                />
-                <p className="mt-1 text-xs text-muted-foreground">At least 6 characters</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Role</label>
-                <select
-                  value={form.role}
-                  onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  required
-                  disabled={roles.length === 0}
-                >
-                  {roles.length === 0 ? (
-                    <option value="">No roles available</option>
-                  ) : (
-                    roles.map((r) => (
-                      <option key={r.slug} value={r.slug}>
-                        {r.name}
-                      </option>
-                    ))
-                  )}
-                </select>
-                {(() => {
-                  const selected = roles.find((r) => r.slug === form.role);
-                  if (!selected?.description) return null;
-                  return (
-                    <p className="mt-1.5 text-xs text-muted-foreground">{selected.description}</p>
-                  );
-                })()}
-              </div>
-              {editingId && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    checked={form.isActive}
-                    onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
-                  />
-                  <label htmlFor="isActive" className="text-sm font-medium">
-                    Active
-                  </label>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Button type="submit" disabled={createUser.isPending || updateUser.isPending}>
-                  {editingId ? 'Update' : 'Create'}
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
+    <>
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0 border-b py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">Users</span>
+            {!isLoading && (
+              <Badge variant="default">{users.length}</Badge>
+            )}
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button type="button" size="icon" variant="outline" onClick={openCreate} aria-label="Add user">
+                <UserPlus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Add user</TooltipContent>
+          </Tooltip>
+        </CardHeader>
+        <CardContent className="p-0 pb-4">
           {isLoading ? (
-            <div className="py-8 text-center">Loading users...</div>
+            <div className="px-4 py-8">
+              <LoadingScreen message="Loading users…" />
+            </div>
           ) : error ? (
-            <div className="py-8 text-center text-destructive">
-              Error: {getErrorMessage(error)}
+            <div className="px-4 py-4">
+              <QueryErrorState error={error} title="Failed to load users" className="border-0 shadow-none" />
             </div>
           ) : users.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">No users yet.</div>
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              No users yet.
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -256,34 +187,43 @@ export const UsersPanel = () => {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-[52px] text-right">Edit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user._id}>
-                    <TableCell>{user.name}</TableCell>
+                    <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{roleLabel(user.role)}</TableCell>
-                    <TableCell>{user.isActive !== false ? 'Active' : 'Inactive'}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={user.isActive !== false}
+                          onCheckedChange={(next) => handleToggleActive(user, next)}
+                          disabled={updateUser.isPending}
+                          aria-label={`${user.name} ${user.isActive !== false ? 'active' : 'inactive'}`}
+                        />
+                        <span className="text-2xs text-muted-foreground">
+                          {user.isActive !== false ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mr-2"
-                        onClick={() => handleEdit(user)}
-                      >
-                        Edit
-                      </Button>
-                      {user.isActive !== false && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeactivate(user._id)}
-                        >
-                          Deactivate
-                        </Button>
-                      )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleEdit(user)}
+                            aria-label={`Edit ${user.name}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit</TooltipContent>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -292,6 +232,101 @@ export const UsersPanel = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+
+      <Dialog open={showForm} onOpenChange={(open) => { if (!open) resetForm(); else setShowForm(true); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Edit user' : 'Create user'}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={editingId ? handleUpdate : handleCreate}
+            className="space-y-3"
+          >
+            <div className="space-y-1.5">
+              <Label className="text-2xs uppercase text-muted-foreground">Name</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Full name"
+                required
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-2xs uppercase text-muted-foreground">Email</Label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="email@example.com"
+                required
+                disabled={!!editingId}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <FieldLabel
+                hint="At least 6 characters. Leave blank when editing to keep the current password."
+                hintLabel="About password"
+              >
+                Password
+              </FieldLabel>
+              <Input
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                placeholder="••••••••"
+                required={!editingId}
+                minLength={editingId ? undefined : 6}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-2xs uppercase text-muted-foreground">Role</Label>
+              <Select
+                value={form.role}
+                onValueChange={(v) => setForm((f) => ({ ...f, role: v }))}
+                disabled={roles.length === 0}
+                required
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="No roles available" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((r) => (
+                    <SelectItem key={r.slug} value={r.slug}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedRole?.description && (
+                <p className="text-2xs text-muted-foreground">{selectedRole.description}</p>
+              )}
+            </div>
+            {editingId && (
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="user-active"
+                  checked={form.isActive}
+                  onCheckedChange={(next) => setForm((f) => ({ ...f, isActive: next }))}
+                />
+                <Label htmlFor="user-active" className="text-sm font-normal">
+                  Active
+                </Label>
+              </div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <Button type="submit" size="sm" disabled={createUser.isPending || updateUser.isPending}>
+                {editingId ? 'Save' : 'Create'}
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={resetForm}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

@@ -20,11 +20,24 @@ function readLegacyPrefs() {
 
 const legacyPrefs = typeof window !== 'undefined' ? readLegacyPrefs() : null;
 
+export function resolveTheme(theme) {
+  if (theme === 'system') {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'dark';
+  }
+  return theme === 'light' ? 'light' : 'dark';
+}
+
 export const useUiPreferencesStore = create(
   persist(
     (set) => ({
+      theme: 'dark',
       sidebarCollapsed: legacyPrefs?.sidebarCollapsed ?? false,
       sidebarOpenGroups: legacyPrefs?.sidebarOpenGroups ?? [],
+
+      setTheme: (theme) => set({ theme }),
 
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
 
@@ -51,6 +64,7 @@ export const useUiPreferencesStore = create(
     {
       name: 'ui-preferences',
       partialize: (state) => ({
+        theme: state.theme,
         sidebarCollapsed: state.sidebarCollapsed,
         sidebarOpenGroups: state.sidebarOpenGroups,
       }),

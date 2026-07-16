@@ -1,7 +1,21 @@
-import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
+import { useState, useCallback, useMemo, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
+import {
+  Search,
+  Plus,
+  Upload,
+  Trash2,
+  LayoutGrid,
+  Table2,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  UserSearch,
+  Play,
+  CheckCircle2,
+} from 'lucide-react';
 import {
   useShiftDashboard,
   useCreateVacantShift,
@@ -14,6 +28,23 @@ import {
 } from '../../api/rosterCoverage';
 import { TABULAR_ACCEPT, validateTabularFile } from '../../config/upload';
 import { getErrorMessage } from '../../utils/api';
+import { cn } from '../../lib/utils';
+import { Card, CardContent } from '../../ui/card';
+import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
+import { Badge } from '../../ui/badge';
+import { StatCard } from '../../ui/stat-card';
+import { InfoHint } from '../../components/InfoHint';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { LoadingScreen } from '../../ui/LoadingSpinner';
+import { QueryErrorState } from '../../components/QueryErrorState';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../../ui/dialog';
 import {
   Table,
   TableBody,
@@ -21,16 +52,59 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableScrollArea,
 } from '../../ui/table';
 
 const VIEW_STORAGE_KEY = 'roster-shift-log-view';
+
+const REASON_CFG = {
+  sick_call: { label: 'Sick call', dotClass: 'bg-rose-500' },
+  vacancy: { label: 'Vacant shift', dotClass: 'bg-warning' },
+  other: { label: 'Other', dotClass: 'bg-violet-500' },
+};
+
+const STATUS_CFG = {
+  open: { label: 'Open', variant: 'destructive' },
+  in_progress: { label: 'In progress', variant: 'warning' },
+  filled: { label: 'Filled', variant: 'success' },
+  cancelled: { label: 'Cancelled', variant: 'default' },
+};
+
+const PRI_CFG = {
+  critical: { label: 'Critical', dotClass: 'bg-destructive' },
+  high: { label: 'High', dotClass: 'bg-warning' },
+  medium: { label: 'Medium', dotClass: 'bg-warning/60' },
+  low: { label: 'Low', dotClass: 'bg-muted-foreground' },
+};
+
+const STATUS_FILTERS = [
+  { key: 'all', label: 'All statuses' },
+  { key: 'open', label: 'Open' },
+  { key: 'in_progress', label: 'In progress' },
+  { key: 'filled', label: 'Filled' },
+  { key: 'cancelled', label: 'Cancelled' },
+];
+
+const PRIORITY_FILTERS = [
+  { key: 'all', label: 'All priority' },
+  { key: 'critical', label: 'Critical' },
+  { key: 'high', label: 'High' },
+  { key: 'medium', label: 'Medium' },
+  { key: 'low', label: 'Low' },
+];
+
+const KANBAN_COLUMNS = [
+  { key: 'open', label: 'Open' },
+  { key: 'in_progress', label: 'In progress' },
+  { key: 'filled', label: 'Filled' },
+  { key: 'cancelled', label: 'Cancelled' },
+];
 
 function shiftToFindCoverSearchParams(shift) {
   const start = new Date(shift.startDatetime);
   const end = new Date(shift.endDatetime);
   const pad = (n) => String(n).padStart(2, '0');
-  const participantId =
-    shift.rosterParticipantId?._id ?? shift.rosterParticipantId ?? '';
+  const participantId = shift.rosterParticipantId?._id ?? shift.rosterParticipantId ?? '';
   return new URLSearchParams({
     participant: participantId,
     date: `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`,
@@ -42,52 +116,61 @@ function shiftToFindCoverSearchParams(shift) {
   });
 }
 
-const C = {
-  bg: '#F9F8F6',
-  surface: '#FFFFFF',
-  border: '#EBEBEB',
-  borderHover: '#D4D4D4',
-  text: '#1A1A1A',
-  muted: '#8A8A8A',
-  faint: '#F2F1EF',
-  accent: '#2563EB',
-  accentBg: '#EFF4FF',
-};
+function shiftLocation(shift) {
+  const label = shift.rosterParticipantId?.locationLabel;
+  if (label) return label;
+  const notes = shift.notes || '';
+  const m = notes.match(/Address:\s*(.+)/);
+  return m ? m[1].trim() : '';
+}
 
-const REASON_CFG = {
-  sick_call:  { dot: '#F43F5E', bg: '#FFF1F3', label: 'Sick Call' },
-  vacancy:    { dot: '#EAB308', bg: '#FEFCE8', label: 'Vacant Shift' },
-  other:      { dot: '#8B5CF6', bg: '#F5F3FF', label: 'Other' },
-};
-
-const STATUS_CFG = {
-  open:        { color: '#F43F5E', bg: '#FFF1F3', label: 'Open' },
-  in_progress: { color: '#F97316', bg: '#FFF7ED', label: 'In Progress' },
-  filled:      { color: '#22C55E', bg: '#F0FDF4', label: 'Filled' },
-  cancelled:   { color: '#94A3B8', bg: '#F8FAFC', label: 'Cancelled' },
-};
-
-const PRI_CFG = {
-  critical: { color: '#F43F5E', label: 'Critical' },
-  high:     { color: '#F97316', label: 'High' },
-  medium:   { color: '#EAB308', label: 'Medium' },
-  low:      { color: '#94A3B8', label: 'Low' },
-};
-
-function LiveClock() {
-  const [t, setT] = useState(new Date());
-  useEffect(() => {
-    const id = setInterval(() => setT(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
+function StatusBadge({ status, className }) {
+  const cfg = STATUS_CFG[status] ?? STATUS_CFG.open;
   return (
-    <span style={{ fontSize: 12, color: C.muted, fontFamily: "'DM Mono',monospace" }}>
-      {t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+    <Badge variant={cfg.variant} className={className}>
+      {cfg.label}
+    </Badge>
+  );
+}
+
+function PriorityIndicator({ priority }) {
+  const cfg = PRI_CFG[priority] ?? PRI_CFG.medium;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span className={cn('h-2 w-2 rounded-full', cfg.dotClass)} />
+      {cfg.label}
     </span>
   );
 }
 
-function NoteThread({ notes = [], shiftId, onAdd }) {
+function ViewToggle({ mode, onChange }) {
+  return (
+    <div className="inline-flex rounded-md border border-border p-0.5">
+      <Button
+        type="button"
+        size="sm"
+        variant={mode === 'cards' ? 'default' : 'ghost'}
+        className="h-8 gap-1.5"
+        onClick={() => onChange('cards')}
+      >
+        <LayoutGrid className="h-3.5 w-3.5" />
+        Board
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={mode === 'table' ? 'default' : 'ghost'}
+        className="h-8 gap-1.5"
+        onClick={() => onChange('table')}
+      >
+        <Table2 className="h-3.5 w-3.5" />
+        Table
+      </Button>
+    </div>
+  );
+}
+
+function ShiftNoteThread({ notes = [], shiftId, onAdd, compact = false }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [author, setAuthor] = useState('');
@@ -99,65 +182,59 @@ function NoteThread({ notes = [], shiftId, onAdd }) {
   }
 
   return (
-    <div style={{ marginTop: 12 }}>
+    <div className={compact ? 'pt-1' : 'border-t border-border/60 pt-3'}>
       <button
-        onClick={() => setOpen((o) => !o)}
-        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: C.muted, fontSize: 12 }}
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center gap-1 text-left text-2xs text-muted-foreground hover:text-foreground"
       >
-        <span style={{ fontSize: 10, display: 'inline-block', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }}>▶</span>
-        <span style={{ fontWeight: 500 }}>{notes.length} update{notes.length !== 1 ? 's' : ''}</span>
-        {!open && notes.length > 0 && (
-          <span style={{ color: '#C4C4C4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200, fontSize: 11 }}>
-            — {notes[notes.length - 1].text.slice(0, 50)}{notes[notes.length - 1].text.length > 50 ? '…' : ''}
-          </span>
-        )}
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        <span>
+          {notes.length} update{notes.length !== 1 ? 's' : ''}
+        </span>
       </button>
 
       {open && (
-        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {notes.map((n) => (
-            <div key={n._id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: C.faint, border: `1.5px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: C.muted, flexShrink: 0, fontFamily: "'DM Mono',monospace" }}>
-                {(n.authorName || 'S').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()}
+        <div className="mt-2 space-y-2">
+          {notes.map((note) => (
+            <div key={note._id} className="rounded border border-border/60 bg-muted/30 px-2 py-1.5">
+              <div className="mb-0.5 text-2xs text-muted-foreground">
+                <span className="font-medium text-foreground">{note.authorName || 'Staff'}</span>
+                <span className="mx-1">·</span>
+                <span>
+                  {new Date(note.createdAt).toLocaleString([], {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                  })}
+                </span>
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>
-                  <span style={{ fontWeight: 600, color: '#555' }}>{n.authorName || 'Staff'}</span>
-                  <span style={{ margin: '0 5px', color: C.border }}>·</span>
-                  <span>{new Date(n.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                </div>
-                <div style={{ fontSize: 13, color: '#3A3A3A', lineHeight: 1.55, background: C.faint, borderRadius: 8, padding: '8px 11px' }}>
-                  {n.text}
-                </div>
-              </div>
+              <p className="text-xs leading-snug">{note.text}</p>
             </div>
           ))}
 
-          <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 38 }}>
-            <input
+          <div className="space-y-1.5">
+            <Input
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
-              placeholder="Your name…"
-              style={{ background: C.surface, border: `1.5px solid ${C.border}`, color: C.text, borderRadius: 7, padding: '5px 8px', fontSize: 11, fontFamily: 'inherit', outline: 'none', width: 160 }}
+              placeholder="Your name (optional)"
+              className="h-7 text-xs"
             />
-            <div style={{ display: 'flex', gap: 6 }}>
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                rows={2}
-                placeholder="Post a shift update…"
-                onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) post(); }}
-                style={{ flex: 1, background: C.surface, border: `1.5px solid ${C.border}`, color: C.text, borderRadius: 8, padding: '8px 10px', fontSize: 12, resize: 'none', fontFamily: 'inherit', outline: 'none' }}
-                onFocus={(e) => (e.target.style.borderColor = C.accent)}
-                onBlur={(e) => (e.target.style.borderColor = C.border)}
-              />
-              <button
-                onClick={post}
-                style={{ alignSelf: 'flex-end', background: C.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-              >
-                Post
-              </button>
-            </div>
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              rows={2}
+              placeholder="Post a shift update…"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault();
+                  post();
+                }
+              }}
+              className="w-full resize-y rounded-md border border-input bg-background px-2 py-1.5 text-xs leading-snug focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <Button type="button" size="sm" className="h-7 text-xs" onClick={post} disabled={!draft.trim()}>
+              Post update
+            </Button>
           </div>
         </div>
       )}
@@ -165,182 +242,101 @@ function NoteThread({ notes = [], shiftId, onAdd }) {
   );
 }
 
-function ShiftCard({ shift, idx, onStatus, onNote, onFindCover, onDelete }) {
-  const rc = REASON_CFG[shift.reason] ?? { dot: '#94A3B8', bg: C.faint, label: shift.reason };
-  const sc = STATUS_CFG[shift.status] ?? STATUS_CFG.open;
-  const pc = PRI_CFG[shift.priority] ?? PRI_CFG.medium;
-  const [hover, setHover] = useState(false);
-
-  const participantName = shift.rosterParticipantId?.name ?? 'Unknown Participant';
+function ShiftCard({ shift, onStatus, onNote, onFindCover, onDelete }) {
+  const participantName = shift.rosterParticipantId?.name ?? 'Unknown participant';
   const location = shift.rosterParticipantId?.locationLabel ?? '';
-  const startStr = new Date(shift.startDatetime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
-  const endStr = new Date(shift.endDatetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const start = new Date(shift.startDatetime);
+  const end = new Date(shift.endDatetime);
+  const dateStr = start.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+  const timeStr = `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   const filledBy = shift.filledByStaffId?.fullName;
-
-  const nextStatus = shift.status === 'open' ? 'in_progress' : shift.status === 'in_progress' ? 'filled' : null;
-  const nextLabel = shift.status === 'open' ? 'Start →' : shift.status === 'in_progress' ? '✓ Filled' : null;
+  const nextStatus =
+    shift.status === 'open' ? 'in_progress' : shift.status === 'in_progress' ? 'filled' : null;
+  const nextLabel = shift.status === 'open' ? 'Start' : shift.status === 'in_progress' ? 'Mark filled' : null;
   const showFindCover = shift.status === 'open' || shift.status === 'in_progress';
+  const reasonCfg = REASON_CFG[shift.reason] ?? { label: shift.reason, dotClass: 'bg-muted-foreground' };
+  const priCfg = PRI_CFG[shift.priority] ?? PRI_CFG.medium;
 
   return (
-    <div
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        background: C.surface,
-        border: `1.5px solid ${hover ? C.borderHover : C.border}`,
-        borderRadius: 14,
-        padding: '16px 18px',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'border-color .15s, box-shadow .15s',
-        boxShadow: hover ? '0 4px 24px rgba(0,0,0,.06)' : '0 1px 4px rgba(0,0,0,.03)',
-        animation: 'rise .35s ease both',
-        animationDelay: `${Math.min(idx * 0.04, 0.6)}s`,
-      }}
-    >
-      {/* top row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: rc.dot, flexShrink: 0, marginTop: 1 }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{rc.label}</span>
-          <span style={{ fontSize: 11, color: C.muted, fontFamily: "'DM Mono',monospace" }}>#{shift._id?.slice(-6)}</span>
-        </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: pc.color, display: 'inline-block' }} title={pc.label} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: sc.color, background: sc.bg, padding: '2px 9px', borderRadius: 20 }}>
-            {sc.label}
-          </span>
-        </div>
-      </div>
-
-      {/* participant + shift times */}
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 2 }}>{participantName}</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 0 }}>
-          {[location, `${startStr} – ${endStr}`].filter(Boolean).map((v, i, arr) => (
-            <span key={i} style={{ fontSize: 11, color: C.muted }}>
-              {v}{i < arr.length - 1 && <span style={{ margin: '0 6px', color: C.border }}>·</span>}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* filled by / actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        {filledBy ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <div style={{ width: 22, height: 22, borderRadius: '50%', background: C.accentBg, border: `1.5px solid ${C.accent}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: C.accent }}>
-              {filledBy.split(' ').map((w) => w[0]).join('').slice(0, 2)}
-            </div>
-            <span style={{ fontSize: 12, color: C.accent, fontWeight: 600 }}>{filledBy}</span>
+    <div className="rounded-md border border-border/70 bg-card px-2.5 py-2 shadow-sm">
+      <div className="flex items-start justify-between gap-1.5">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', reasonCfg.dotClass)} />
+            <span className="truncate text-xs font-semibold leading-tight">{participantName}</span>
           </div>
-        ) : (
-          <span style={{ fontSize: 11, color: C.muted, fontStyle: 'italic' }}>Unassigned</span>
-        )}
-
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-          {showFindCover && (
-            <button
-              type="button"
-              onClick={() => onFindCover(shift)}
-              style={{
-                background: C.accentBg,
-                color: C.accent,
-                border: `1.5px solid ${C.accent}44`,
-                borderRadius: 8,
-                padding: '5px 13px',
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all .15s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = C.accent;
-                e.currentTarget.style.color = '#fff';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = C.accentBg;
-                e.currentTarget.style.color = C.accent;
-              }}
-            >
-              Find Cover
-            </button>
-          )}
-          {nextStatus && (
-          <button
-            type="button"
-            onClick={() => onStatus({ id: shift._id, status: nextStatus })}
-            style={{ background: C.faint, color: '#555', border: `1.5px solid ${C.border}`, borderRadius: 8, padding: '5px 13px', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = nextStatus === 'in_progress' ? '#FFF7ED' : '#F0FDF4'; e.currentTarget.style.borderColor = nextStatus === 'in_progress' ? '#F97316' : '#22C55E'; e.currentTarget.style.color = nextStatus === 'in_progress' ? '#F97316' : '#22C55E'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = C.faint; e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = '#555'; }}
-          >
-            {nextLabel}
-          </button>
-          )}
-          <button
-            type="button"
-            title="Delete shift"
-            onClick={() => onDelete(shift)}
-            style={{ background: 'transparent', color: C.muted, border: `1.5px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#FFF1F3'; e.currentTarget.style.borderColor = '#F43F5E'; e.currentTarget.style.color = '#F43F5E'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}
-          >
-            Delete
-          </button>
+          <p className="mt-0.5 truncate text-2xs text-muted-foreground">
+            {[reasonCfg.label, location, `${dateStr} ${timeStr}`].filter(Boolean).join(' · ')}
+          </p>
+          <p className="mt-0.5 truncate text-2xs">
+            {filledBy ? (
+              <span className="font-medium text-primary">{filledBy}</span>
+            ) : (
+              <span className="text-muted-foreground">Unassigned</span>
+            )}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-0.5">
+          <span className="inline-flex items-center gap-1 text-2xs text-muted-foreground">
+            <span className={cn('h-1.5 w-1.5 rounded-full', priCfg.dotClass)} />
+            {priCfg.label}
+          </span>
+          <StatusBadge status={shift.status} className="h-5 px-1.5 text-2xs" />
         </div>
       </div>
 
-      <NoteThread notes={shift.updateLogs ?? []} shiftId={shift._id} onAdd={onNote} />
+      <div className="mt-1.5 flex items-center gap-0.5">
+        {showFindCover && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-6 px-1.5 text-2xs"
+            title="Find cover"
+            onClick={() => onFindCover(shift)}
+          >
+            <UserSearch className="h-3 w-3" />
+            <span className="sr-only">Find cover</span>
+          </Button>
+        )}
+        {nextStatus && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-6 px-1.5 text-2xs"
+            title={nextLabel}
+            onClick={() => onStatus({ id: shift._id, status: nextStatus })}
+          >
+            {shift.status === 'open' ? (
+              <Play className="h-3 w-3" />
+            ) : (
+              <CheckCircle2 className="h-3 w-3" />
+            )}
+            <span className="sr-only">{nextLabel}</span>
+          </Button>
+        )}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-6 px-1.5 text-destructive hover:text-destructive"
+          title="Delete"
+          onClick={() => onDelete(shift)}
+        >
+          <Trash2 className="h-3 w-3" />
+          <span className="sr-only">Delete</span>
+        </Button>
+      </div>
+
+      <ShiftNoteThread
+        notes={shift.updateLogs ?? []}
+        shiftId={shift._id}
+        onAdd={onNote}
+        compact
+      />
     </div>
   );
-}
-
-function ViewToggle({ mode, onChange }) {
-  const btn = (key, label) => {
-    const active = mode === key;
-    return (
-      <button
-        type="button"
-        onClick={() => onChange(key)}
-        style={{
-          background: active ? C.accent : 'transparent',
-          color: active ? '#fff' : C.muted,
-          border: 'none',
-          borderRadius: 7,
-          padding: '6px 14px',
-          fontSize: 12,
-          fontWeight: active ? 600 : 400,
-          cursor: 'pointer',
-          fontFamily: 'inherit',
-        }}
-      >
-        {label}
-      </button>
-    );
-  };
-  return (
-    <div
-      style={{
-        display: 'flex',
-        background: C.faint,
-        border: `1.5px solid ${C.border}`,
-        borderRadius: 9,
-        padding: 3,
-        gap: 2,
-      }}
-    >
-      {btn('cards', 'Cards')}
-      {btn('table', 'Table')}
-    </div>
-  );
-}
-
-function shiftLocation(shift) {
-  const label = shift.rosterParticipantId?.locationLabel;
-  if (label) return label;
-  const notes = shift.notes || '';
-  const m = notes.match(/Address:\s*(.+)/);
-  return m ? m[1].trim() : '';
 }
 
 function ShiftLogTable({ shifts, onStatus, onNote, onFindCover, onDelete }) {
@@ -351,191 +347,136 @@ function ShiftLogTable({ shifts, onStatus, onNote, onFindCover, onDelete }) {
   );
 
   return (
-    <div
-      style={{
-        background: C.surface,
-        border: `1.5px solid ${C.border}`,
-        borderRadius: 14,
-        overflow: 'hidden',
-      }}
-    >
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-xs">Status</TableHead>
-            <TableHead className="text-xs">Priority</TableHead>
-            <TableHead className="text-xs">Participant</TableHead>
-            <TableHead className="text-xs whitespace-nowrap">Start</TableHead>
-            <TableHead className="text-xs whitespace-nowrap">End</TableHead>
-            <TableHead className="text-xs">Reason</TableHead>
-            <TableHead className="text-xs">Location</TableHead>
-            <TableHead className="text-xs">Filled by</TableHead>
-            <TableHead className="text-xs">Updates</TableHead>
-            <TableHead className="text-xs text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sorted.map((shift) => {
-            const sc = STATUS_CFG[shift.status] ?? STATUS_CFG.open;
-            const rc = REASON_CFG[shift.reason] ?? { label: shift.reason };
-            const pc = PRI_CFG[shift.priority] ?? PRI_CFG.medium;
-            const participantName = shift.rosterParticipantId?.name ?? 'Unknown';
-            const startStr = new Date(shift.startDatetime).toLocaleString([], {
-              dateStyle: 'short',
-              timeStyle: 'short',
-            });
-            const endStr = new Date(shift.endDatetime).toLocaleString([], {
-              dateStyle: 'short',
-              timeStyle: 'short',
-            });
-            const filledBy = shift.filledByStaffId?.fullName;
-            const nextStatus =
-              shift.status === 'open'
-                ? 'in_progress'
-                : shift.status === 'in_progress'
-                  ? 'filled'
-                  : null;
-            const nextLabel =
-              shift.status === 'open' ? 'Start →' : shift.status === 'in_progress' ? '✓ Filled' : null;
-            const showFindCover = shift.status === 'open' || shift.status === 'in_progress';
-            const updateCount = (shift.updateLogs ?? []).length;
-            const expanded = expandedId === shift._id;
+    <Card>
+      <CardContent className="p-0 pb-4">
+        <TableScrollArea>
+          <Table scrollable={false}>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Status</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Participant</TableHead>
+                <TableHead className="whitespace-nowrap">Start</TableHead>
+                <TableHead className="whitespace-nowrap">End</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Filled by</TableHead>
+                <TableHead>Updates</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sorted.map((shift) => {
+                const rc = REASON_CFG[shift.reason] ?? { label: shift.reason };
+                const participantName = shift.rosterParticipantId?.name ?? 'Unknown';
+                const startStr = new Date(shift.startDatetime).toLocaleString([], {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                });
+                const endStr = new Date(shift.endDatetime).toLocaleString([], {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                });
+                const filledBy = shift.filledByStaffId?.fullName;
+                const nextStatus =
+                  shift.status === 'open'
+                    ? 'in_progress'
+                    : shift.status === 'in_progress'
+                      ? 'filled'
+                      : null;
+                const nextLabel =
+                  shift.status === 'open' ? 'Start' : shift.status === 'in_progress' ? 'Mark filled' : null;
+                const showFindCover = shift.status === 'open' || shift.status === 'in_progress';
+                const updateCount = (shift.updateLogs ?? []).length;
+                const expanded = expandedId === shift._id;
 
-            return (
-              <Fragment key={shift._id}>
-                <TableRow>
-                  <TableCell className="text-xs">
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: sc.color,
-                        background: sc.bg,
-                        padding: '2px 9px',
-                        borderRadius: 20,
-                      }}
-                    >
-                      {sc.label}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          background: pc.color,
-                          display: 'inline-block',
-                        }}
-                      />
-                      {pc.label}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-xs font-medium">{participantName}</TableCell>
-                  <TableCell className="text-xs whitespace-nowrap">{startStr}</TableCell>
-                  <TableCell className="text-xs whitespace-nowrap">{endStr}</TableCell>
-                  <TableCell className="text-xs">{rc.label}</TableCell>
-                  <TableCell className="text-xs max-w-[180px] truncate" title={shiftLocation(shift)}>
-                    {shiftLocation(shift) || '—'}
-                  </TableCell>
-                  <TableCell className="text-xs">{filledBy || 'Unassigned'}</TableCell>
-                  <TableCell className="text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedId(expanded ? null : shift._id)}
-                      style={{
-                        background: C.faint,
-                        border: `1px solid ${C.border}`,
-                        borderRadius: 6,
-                        padding: '2px 8px',
-                        fontSize: 11,
-                        cursor: 'pointer',
-                        color: C.muted,
-                      }}
-                    >
-                      {updateCount} update{updateCount !== 1 ? 's' : ''}
-                    </button>
-                  </TableCell>
-                  <TableCell className="text-xs text-right">
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                      {showFindCover && (
-                        <button
+                return (
+                  <Fragment key={shift._id}>
+                    <TableRow>
+                      <TableCell>
+                        <StatusBadge status={shift.status} />
+                      </TableCell>
+                      <TableCell>
+                        <PriorityIndicator priority={shift.priority} />
+                      </TableCell>
+                      <TableCell className="font-medium">{participantName}</TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">{startStr}</TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">{endStr}</TableCell>
+                      <TableCell>{rc.label}</TableCell>
+                      <TableCell className="max-w-[180px] truncate" title={shiftLocation(shift)}>
+                        {shiftLocation(shift) || '—'}
+                      </TableCell>
+                      <TableCell>{filledBy || 'Unassigned'}</TableCell>
+                      <TableCell>
+                        <Button
                           type="button"
-                          onClick={() => onFindCover(shift)}
-                          style={{
-                            background: C.accentBg,
-                            color: C.accent,
-                            border: `1px solid ${C.accent}44`,
-                            borderRadius: 6,
-                            padding: '4px 10px',
-                            fontSize: 11,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => setExpandedId(expanded ? null : shift._id)}
                         >
-                          Find Cover
-                        </button>
-                      )}
-                      {nextStatus && (
-                        <button
-                          type="button"
-                          onClick={() => onStatus({ id: shift._id, status: nextStatus })}
-                          style={{
-                            background: C.faint,
-                            color: '#555',
-                            border: `1px solid ${C.border}`,
-                            borderRadius: 6,
-                            padding: '4px 10px',
-                            fontSize: 11,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {nextLabel}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        title="Delete shift"
-                        onClick={() => onDelete(shift)}
-                        style={{
-                          background: 'transparent',
-                          color: '#F43F5E',
-                          border: `1px solid #F43F5E44`,
-                          borderRadius: 6,
-                          padding: '4px 10px',
-                          fontSize: 11,
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-                {expanded && (
-                  <TableRow>
-                    <TableCell colSpan={10} style={{ background: C.faint, padding: '12px 16px' }}>
-                      <NoteThread
-                        notes={shift.updateLogs ?? []}
-                        shiftId={shift._id}
-                        onAdd={onNote}
-                      />
-                    </TableCell>
-                  </TableRow>
-                )}
-              </Fragment>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+                          {updateCount} update{updateCount !== 1 ? 's' : ''}
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-wrap justify-end gap-1.5">
+                          {showFindCover && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              onClick={() => onFindCover(shift)}
+                            >
+                              Find cover
+                            </Button>
+                          )}
+                          {nextStatus && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              className="h-7 text-xs"
+                              onClick={() => onStatus({ id: shift._id, status: nextStatus })}
+                            >
+                              {nextLabel}
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs text-destructive hover:text-destructive"
+                            onClick={() => onDelete(shift)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {expanded && (
+                      <TableRow>
+                        <TableCell colSpan={10} className="bg-muted/30 px-4 py-3">
+                          <ShiftNoteThread
+                            notes={shift.updateLogs ?? []}
+                            shiftId={shift._id}
+                            onAdd={onNote}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableScrollArea>
+      </CardContent>
+    </Card>
   );
 }
 
-function ImportVacantShiftsModal({ onClose }) {
+function ImportVacantShiftsModal({ open, onClose }) {
   const upload = useUploadVacantShifts();
 
   const onDrop = useCallback(
@@ -571,69 +512,36 @@ function ImportVacantShiftsModal({ onClose }) {
   });
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,.35)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 500,
-        backdropFilter: 'blur(6px)',
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          background: C.surface,
-          borderRadius: 18,
-          padding: 28,
-          width: 480,
-          maxWidth: '95vw',
-          boxShadow: '0 32px 80px rgba(0,0,0,.18)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.text }}>Import Vacant Shifts</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', color: C.muted, fontSize: 20, cursor: 'pointer' }}
-          >
-            ✕
-          </button>
-        </div>
-        <p style={{ fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.5 }}>
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Import vacant shifts</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
           Upload a ShiftCare Vacant Shifts Report (.csv or .xlsx). Rows are upserted by Shift ID.
         </p>
         <div
           {...getRootProps()}
-          style={{
-            cursor: upload.isPending ? 'wait' : 'pointer',
-            border: `2px dashed ${isDragActive ? C.accent : C.border}`,
-            borderRadius: 12,
-            padding: 32,
-            textAlign: 'center',
-            background: isDragActive ? C.accentBg : C.faint,
-            fontSize: 13,
-            color: C.muted,
-          }}
+          className={cn(
+            'cursor-pointer rounded-lg border-2 border-dashed p-8 text-center text-sm text-muted-foreground transition-colors',
+            isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40',
+            upload.isPending && 'cursor-wait opacity-60'
+          )}
         >
           <input {...getInputProps()} />
+          <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
           {upload.isPending
             ? 'Importing…'
             : isDragActive
               ? 'Drop file here'
-              : 'Drag & drop a file, or click to browse'}
+              : 'Drag and drop a file, or click to browse'}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function LogShiftModal({ onClose, onSubmit, participants = [] }) {
+function LogShiftModal({ open, onClose, onSubmit, participants = [] }) {
   const now = new Date();
   const toLocal = (d) => new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
@@ -645,7 +553,8 @@ function LogShiftModal({ onClose, onSubmit, participants = [] }) {
     priority: 'high',
     notes: '',
   });
-  const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  const set = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   function submit() {
     if (!form.rosterParticipantId) return;
@@ -656,99 +565,102 @@ function LogShiftModal({ onClose, onSubmit, participants = [] }) {
     });
   }
 
-  const fieldStyle = {
-    width: '100%',
-    background: C.faint,
-    border: `1.5px solid ${C.border}`,
-    color: C.text,
-    padding: '10px 12px',
-    borderRadius: 9,
-    fontSize: 13,
-    fontFamily: 'inherit',
-    outline: 'none',
-    boxSizing: 'border-box',
-  };
-  const labelStyle = {
-    display: 'block',
-    fontSize: 11,
-    fontWeight: 600,
-    color: C.muted,
-    marginBottom: 5,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  };
-
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 500, backdropFilter: 'blur(6px)' }}
-      onClick={onClose}
-    >
-      <div
-        style={{ background: C.surface, borderRadius: 18, padding: 28, width: 480, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 32px 80px rgba(0,0,0,.18)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.text, letterSpacing: -0.5 }}>Log Vacant Shift</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
-        </div>
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Log vacant shift</DialogTitle>
+        </DialogHeader>
 
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Participant</label>
-          <select value={form.rosterParticipantId} onChange={(e) => set('rosterParticipantId', e.target.value)} style={{ ...fieldStyle, cursor: 'pointer' }}>
-            {participants.map((p) => <option key={p._id} value={p._id}>{p.name}{p.locationLabel ? ` — ${p.locationLabel}` : ''}</option>)}
-          </select>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-          <div>
-            <label style={labelStyle}>Start</label>
-            <input type="datetime-local" value={form.startDatetime} onChange={(e) => set('startDatetime', e.target.value)} style={fieldStyle} onFocus={(e) => (e.target.style.borderColor = C.accent)} onBlur={(e) => (e.target.style.borderColor = C.border)} />
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Participant</Label>
+            <Select value={form.rosterParticipantId} onValueChange={(value) => set('rosterParticipantId', value)}>
+              <SelectTrigger className="h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {participants.map((p) => (
+                  <SelectItem key={p._id} value={p._id}>
+                    {p.name}
+                    {p.locationLabel ? ` — ${p.locationLabel}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div>
-            <label style={labelStyle}>End</label>
-            <input type="datetime-local" value={form.endDatetime} onChange={(e) => set('endDatetime', e.target.value)} style={fieldStyle} onFocus={(e) => (e.target.style.borderColor = C.accent)} onBlur={(e) => (e.target.style.borderColor = C.border)} />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Start</Label>
+              <Input
+                type="datetime-local"
+                value={form.startDatetime}
+                onChange={(e) => set('startDatetime', e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>End</Label>
+              <Input
+                type="datetime-local"
+                value={form.endDatetime}
+                onChange={(e) => set('endDatetime', e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Reason</Label>
+              <Select value={form.reason} onValueChange={(value) => set('reason', value)}>
+                <SelectTrigger className="h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vacancy">Vacant shift</SelectItem>
+                  <SelectItem value="sick_call">Sick call</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Priority</Label>
+              <Select value={form.priority} onValueChange={(value) => set('priority', value)}>
+                <SelectTrigger className="h-10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Initial note</Label>
+            <textarea
+              value={form.notes}
+              onChange={(e) => set('notes', e.target.value)}
+              rows={3}
+              placeholder="Context, actions taken, coverage status…"
+              className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={submit}>
+              Log shift
+            </Button>
           </div>
         </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-          <div>
-            <label style={labelStyle}>Reason</label>
-            <select value={form.reason} onChange={(e) => set('reason', e.target.value)} style={{ ...fieldStyle, cursor: 'pointer' }}>
-              <option value="vacancy">Vacant Shift</option>
-              <option value="sick_call">Sick Call</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Priority</label>
-            <select value={form.priority} onChange={(e) => set('priority', e.target.value)} style={{ ...fieldStyle, cursor: 'pointer' }}>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={{ marginBottom: 24 }}>
-          <label style={labelStyle}>Initial Note</label>
-          <textarea
-            value={form.notes}
-            onChange={(e) => set('notes', e.target.value)}
-            rows={3}
-            placeholder="Context, actions taken, coverage status…"
-            style={{ ...fieldStyle, resize: 'vertical', lineHeight: 1.55 }}
-            onFocus={(e) => (e.target.style.borderColor = C.accent)}
-            onBlur={(e) => (e.target.style.borderColor = C.border)}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ background: C.faint, color: C.muted, border: 'none', borderRadius: 9, padding: '10px 20px', fontWeight: 600, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>Cancel</button>
-          <button onClick={submit} style={{ background: C.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 24px', fontWeight: 700, cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>Log Shift</button>
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -787,34 +699,52 @@ export function RosterShiftLog() {
   const counts = data?.counts ?? { open: 0, in_progress: 0, filled: 0, critical: 0 };
   const participants = participantData?.participants ?? [];
 
-  const lastRefresh = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+  const lastRefresh = dataUpdatedAt
+    ? new Date(dataUpdatedAt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    : '—';
 
-  const visible = shifts.filter((s) => {
-    if (statusF === 'all' && s.status === 'filled') return false;
-    if (statusF !== 'all' && s.status !== statusF) return false;
-    if (priF !== 'all' && s.priority !== priF) return false;
+  const visible = shifts.filter((shift) => {
+    if (statusF !== 'all' && shift.status !== statusF) return false;
+    if (priF !== 'all' && shift.priority !== priF) return false;
     if (search) {
       const q = search.toLowerCase();
       const hay = [
-        s.rosterParticipantId?.name,
-        s.rosterParticipantId?.locationLabel,
-        s.reason,
-        s.status,
-        s.priority,
-        s.notes,
-        ...(s.updateLogs ?? []).map((u) => `${u.authorName} ${u.text}`),
-      ].filter(Boolean).join(' ').toLowerCase();
+        shift.rosterParticipantId?.name,
+        shift.rosterParticipantId?.locationLabel,
+        shift.reason,
+        shift.status,
+        shift.priority,
+        shift.notes,
+        ...(shift.updateLogs ?? []).map((u) => `${u.authorName} ${u.text}`),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
   });
 
-  const sortedVisible = [...visible].sort(
-    (a, b) => new Date(a.startDatetime) - new Date(b.startDatetime)
-  );
+  const kanbanColumns = useMemo(() => {
+    const activeStatuses =
+      statusF === 'all'
+        ? STATUS_FILTERS.filter(({ key }) => key !== 'all').map(({ key }) => key)
+        : [statusF];
 
-  const cols = [[], [], []];
-  sortedVisible.forEach((s, i) => cols[i % 3].push(s));
+    return activeStatuses.map((key) => {
+      const column = KANBAN_COLUMNS.find((c) => c.key === key) ?? { key, label: key };
+      return {
+        ...column,
+        shifts: visible
+          .filter((shift) => shift.status === key)
+          .sort((a, b) => new Date(a.startDatetime) - new Date(b.startDatetime)),
+      };
+    });
+  }, [visible, statusF]);
 
   function handleCreate(form) {
     createShift.mutate(form, { onSuccess: () => setShowModal(false) });
@@ -843,241 +773,174 @@ export function RosterShiftLog() {
 
   function handleClearAll() {
     if (shifts.length === 0) return;
-    if (
-      !window.confirm(
-        `Delete ALL ${shifts.length} shift(s) in the log? This cannot be undone.`
-      )
-    )
-      return;
+    if (!window.confirm(`Delete ALL ${shifts.length} shift(s) in the log? This cannot be undone.`)) return;
     clearShifts.mutate(undefined, {
       onSuccess: (res) => toast.success(`Cleared ${res?.deleted ?? 0} shift(s)`),
       onError: (e) => toast.error(getErrorMessage(e)),
     });
   }
 
-  const filterBtn = (active, onClick, label, color) => (
-    <button
-      key={label}
-      onClick={onClick}
-      style={{
-        background: active ? (color ?? C.text) : 'transparent',
-        color: active ? '#fff' : C.muted,
-        border: `1.5px solid ${active ? (color ?? C.text) : C.border}`,
-        borderRadius: 7,
-        padding: '5px 12px',
-        fontSize: 12,
-        fontWeight: active ? 600 : 400,
-        cursor: 'pointer',
-        fontFamily: 'inherit',
-        transition: 'all .15s',
-      }}
-    >
-      {label}
-    </button>
-  );
-
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Outfit',sans-serif", color: C.text }}>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-
-      {/* HEADER */}
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 0, zIndex: 200 }}>
-        <div style={{ maxWidth: 1520, margin: '0 auto', padding: '0 28px', display: 'flex', alignItems: 'center', gap: 0, height: 60 }}>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 36 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,#2563EB,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>📋</div>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: -0.5, color: C.text, lineHeight: 1.1 }}>Shift Log</div>
-              <div style={{ fontSize: 10, color: C.muted, fontFamily: "'DM Mono',monospace" }}>live · updated {lastRefresh}</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 6, flex: 1 }}>
-            {[
-              { label: 'Open', val: counts.open, color: '#F43F5E', bg: '#FFF1F3' },
-              { label: 'In Progress', val: counts.in_progress, color: '#F97316', bg: '#FFF7ED' },
-              { label: 'Filled', val: counts.filled, color: '#22C55E', bg: '#F0FDF4' },
-              { label: 'Critical', val: counts.critical, color: '#F43F5E', bg: '#FFF1F3' },
-            ].map((s) => (
-              <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 5, background: s.bg, border: `1px solid ${s.color}22`, borderRadius: 20, padding: '4px 12px' }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: s.color }}>{s.val}</span>
-                <span style={{ fontSize: 11, color: s.color, fontWeight: 500, opacity: 0.8 }}>{s.label}</span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <ViewToggle mode={viewMode} onChange={setViewModePersisted} />
-            <LiveClock />
-            <button
-              type="button"
-              onClick={handleClearAll}
-              disabled={shifts.length === 0 || clearShifts.isPending}
-              style={{
-                background: C.surface,
-                color: shifts.length === 0 ? C.muted : '#F43F5E',
-                border: `1.5px solid ${shifts.length === 0 ? C.border : '#F43F5E44'}`,
-                borderRadius: 9,
-                padding: '8px 18px',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: shifts.length === 0 ? 'not-allowed' : 'pointer',
-                fontFamily: 'inherit',
-                opacity: clearShifts.isPending ? 0.6 : 1,
-              }}
-            >
-              {clearShifts.isPending ? 'Clearing…' : 'Clear All'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowImport(true)}
-              style={{
-                background: C.surface,
-                color: C.text,
-                border: `1.5px solid ${C.border}`,
-                borderRadius: 9,
-                padding: '8px 18px',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              Import
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowModal(true)}
-              style={{ background: C.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              + Log Vacant Shift
-            </button>
-          </div>
-        </div>
+    <div className="page-stack-dense">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ViewToggle mode={viewMode} onChange={setViewModePersisted} />
+        <span className="inline-flex items-center gap-1.5 text-2xs text-muted-foreground tabular-nums">
+          <Clock className="h-3.5 w-3.5" />
+          Updated {lastRefresh}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleClearAll}
+          disabled={shifts.length === 0 || clearShifts.isPending}
+          className="text-destructive hover:text-destructive"
+        >
+          {clearShifts.isPending ? 'Clearing…' : 'Clear all'}
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setShowImport(true)}>
+          <Upload className="mr-1.5 h-3.5 w-3.5" />
+          Import
+        </Button>
+        <Button type="button" size="sm" onClick={() => setShowModal(true)}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          Log vacant shift
+        </Button>
       </div>
 
-      {/* FILTER BAR */}
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 60, zIndex: 190 }}>
-        <div style={{ maxWidth: 1520, margin: '0 auto', padding: '10px 28px', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-
-          <div style={{ position: 'relative', flex: '0 0 auto' }}>
-            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted, fontSize: 13, pointerEvents: 'none' }}>🔍</span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search participant, notes…"
-              style={{ background: C.faint, border: `1.5px solid ${C.border}`, color: C.text, padding: '7px 12px 7px 30px', borderRadius: 9, fontSize: 12, width: 220, outline: 'none', fontFamily: 'inherit' }}
-              onFocus={(e) => (e.target.style.borderColor = C.accent)}
-              onBlur={(e) => (e.target.style.borderColor = C.border)}
-            />
-          </div>
-
-          <div style={{ width: 1, height: 20, background: C.border, margin: '0 2px' }} />
-
-          {[
-            { key: 'all', label: 'All' },
-            { key: 'open', label: 'Open', color: '#F43F5E' },
-            { key: 'in_progress', label: 'In Progress', color: '#F97316' },
-            { key: 'filled', label: 'Filled', color: '#22C55E' },
-            { key: 'cancelled', label: 'Cancelled', color: '#94A3B8' },
-          ].map(({ key, label, color }) =>
-            filterBtn(statusF === key, () => setStatusF(key), label, color)
-          )}
-
-          <div style={{ width: 1, height: 20, background: C.border, margin: '0 2px' }} />
-
-          {[
-            { key: 'all', label: 'All Priority' },
-            { key: 'critical', label: 'Critical', color: '#F43F5E' },
-            { key: 'high', label: 'High', color: '#F97316' },
-            { key: 'medium', label: 'Medium', color: '#EAB308' },
-            { key: 'low', label: 'Low', color: '#94A3B8' },
-          ].map(({ key, label, color }) =>
-            filterBtn(priF === key, () => setPriF(key), label, color)
-          )}
-
-          <span style={{ marginLeft: 'auto', fontSize: 12, color: C.muted }}>{visible.length} shift{visible.length !== 1 ? 's' : ''}</span>
-        </div>
+      <div className="grid gap-2 sm:grid-cols-4">
+        <StatCard label="Open" value={counts.open} tone="destructive" className="px-3 py-2" />
+        <StatCard label="In progress" value={counts.in_progress} tone="warning" className="px-3 py-2" />
+        <StatCard label="Filled" value={counts.filled} tone="success" className="px-3 py-2" />
+        <StatCard label="Critical" value={counts.critical} tone="destructive" className="px-3 py-2" />
       </div>
 
-      {/* GRID */}
-      <main style={{ maxWidth: 1520, margin: '0 auto', padding: '24px 28px' }}>
-        {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: C.muted }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
-            <div style={{ fontSize: 14 }}>Loading shift log…</div>
-          </div>
-        ) : isError ? (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: '#F43F5E' }}>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Failed to load shift log</div>
-            <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>{getErrorMessage(error)}</div>
-            <button
-              type="button"
-              onClick={() => refetch()}
-              style={{ background: C.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              Retry
-            </button>
-          </div>
-        ) : visible.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: C.muted }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-            <div style={{ fontSize: 15, fontWeight: 500 }}>No vacant shifts match your filters.</div>
-            <button
-              onClick={() => setShowModal(true)}
-              style={{ marginTop: 16, background: C.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              + Log first shift
-            </button>
-          </div>
-        ) : viewMode === 'table' ? (
-          <ShiftLogTable
-            shifts={visible}
-            onStatus={handleStatus}
-            onNote={handleNote}
-            onFindCover={handleFindCover}
-            onDelete={handleDelete}
+      <div className="filter-toolbar">
+        <div className="relative min-w-[160px] flex-1 sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search…"
+            className="filter-control pl-7"
           />
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, alignItems: 'start' }}>
-            {cols.map((col, ci) => (
-              <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {col.map((shift, idx) => (
-                  <ShiftCard
-                    key={shift._id}
-                    shift={shift}
-                    idx={idx + ci * 9}
-                    onStatus={handleStatus}
-                    onNote={handleNote}
-                    onFindCover={handleFindCover}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
+        </div>
 
-      {showModal && (
-        <LogShiftModal
-          onClose={() => setShowModal(false)}
-          onSubmit={handleCreate}
-          participants={participants}
+        <Select value={statusF} onValueChange={setStatusF}>
+          <SelectTrigger className="filter-control w-[128px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_FILTERS.map(({ key, label }) => (
+              <SelectItem key={key} value={key} className="text-xs">
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={priF} onValueChange={setPriF}>
+          <SelectTrigger className="filter-control w-[128px]">
+            <SelectValue placeholder="Priority" />
+          </SelectTrigger>
+          <SelectContent>
+            {PRIORITY_FILTERS.map(({ key, label }) => (
+              <SelectItem key={key} value={key} className="text-xs">
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <span className="ml-auto text-2xs tabular-nums text-muted-foreground">
+          {visible.length} shift{visible.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {isLoading ? (
+        <LoadingScreen message="Loading shift log…" />
+      ) : isError ? (
+        <QueryErrorState
+          error={error}
+          title="Failed to load shift log"
+          onRetry={refetch}
         />
+      ) : visible.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-sm font-medium">No vacant shifts match your filters.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Log a shift or adjust filters to see results.
+            </p>
+            <Button type="button" className="mt-4" size="sm" onClick={() => setShowModal(true)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Log first shift
+            </Button>
+          </CardContent>
+        </Card>
+      ) : viewMode === 'table' ? (
+        <ShiftLogTable
+          shifts={visible}
+          onStatus={handleStatus}
+          onNote={handleNote}
+          onFindCover={handleFindCover}
+          onDelete={handleDelete}
+        />
+      ) : (
+        <div
+          className={cn(
+            'grid min-h-0 gap-2',
+            kanbanColumns.length === 1
+              ? 'grid-cols-1'
+              : kanbanColumns.length === 2
+                ? 'md:grid-cols-2'
+                : kanbanColumns.length === 3
+                  ? 'md:grid-cols-2 xl:grid-cols-3'
+                  : 'md:grid-cols-2 xl:grid-cols-4'
+          )}
+        >
+          {kanbanColumns.map((column) => (
+            <div key={column.key} className="flex min-h-0 flex-col">
+              <div className="mb-1.5 flex shrink-0 items-center justify-between gap-2 rounded border border-border/60 bg-muted/30 px-2 py-1">
+                <h3 className="truncate text-xs font-semibold">{column.label}</h3>
+                <Badge variant={STATUS_CFG[column.key]?.variant ?? 'default'} className="shrink-0 px-1.5 text-2xs">
+                  {column.shifts.length}
+                </Badge>
+              </div>
+              <div
+                className="scroll-pane min-h-0 space-y-1.5 pr-0.5"
+                style={{ '--scroll-offset': '15.5rem' }}
+              >
+                {column.shifts.length === 0 ? (
+                  <p className="rounded border border-dashed border-border/60 px-2 py-4 text-center text-2xs text-muted-foreground">
+                    No shifts
+                  </p>
+                ) : (
+                  column.shifts.map((shift) => (
+                    <ShiftCard
+                      key={shift._id}
+                      shift={shift}
+                      onStatus={handleStatus}
+                      onNote={handleNote}
+                      onFindCover={handleFindCover}
+                      onDelete={handleDelete}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
-      {showImport && <ImportVacantShiftsModal onClose={() => setShowImport(false)} />}
+      <LogShiftModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleCreate}
+        participants={participants}
+      />
 
-      <style>{`
-        @keyframes rise { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
-        *{box-sizing:border-box;}
-        select,input,textarea{outline:none;}
-        button{font-family:inherit;}
-        ::-webkit-scrollbar{width:5px;height:5px;}
-        ::-webkit-scrollbar-track{background:transparent;}
-        ::-webkit-scrollbar-thumb{background:#E0E0E0;border-radius:3px;}
-      `}</style>
+      <ImportVacantShiftsModal open={showImport} onClose={() => setShowImport(false)} />
     </div>
   );
 }

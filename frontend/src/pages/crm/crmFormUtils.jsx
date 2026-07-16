@@ -1,3 +1,7 @@
+import { Label } from '../../ui/label';
+import { nativeSelectClass } from '../../ui/select';
+import { cn } from '../../lib/utils';
+
 export function toDateInput(value) {
   if (!value) return '';
   const d = new Date(value);
@@ -45,9 +49,9 @@ export function formatLinkedIds(ids) {
 export function SelectField({ label, value, onChange, options, className = '' }) {
   return (
     <div className={className}>
-      <label className="text-sm font-medium">{label}</label>
+      <Label>{label}</Label>
       <select
-        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+        className={cn('mt-1 w-full', nativeSelectClass)}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >

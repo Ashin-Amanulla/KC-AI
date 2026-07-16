@@ -14,9 +14,10 @@ import {
 import { usePermissions } from '../../hooks/usePermissions';
 import { PERMISSIONS } from '../../config/permissions';
 import { TABULAR_ACCEPT, validateTabularFile } from '../../config/upload';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
+import { InfoHint } from '../../components/InfoHint';
 import { getErrorMessage } from '../../utils/api';
+import { cn } from '../../lib/utils';
 import { CrmSpreadsheet } from '../crm/CrmSpreadsheet';
 import { CIR_ENTITY_CONFIG } from './cirColumnDefs';
 
@@ -76,53 +77,56 @@ export function CirPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Continuous Improvement Register</h2>
-        <p className="text-sm text-muted-foreground">
-          Live register for tracking issues, actions, and outcomes across Kangaroo Care Services.
-        </p>
+    <div className="page-stack-tight">
+      <div className="flex items-center gap-2">
+        <InfoHint
+          content="Track issues, actions, and outcomes across Kangaroo Care Services."
+          label="About continuous improvement"
+          variant="help"
+        />
+        <span className="text-2xs text-muted-foreground">Growth · CIR register</span>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Import workbook</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Upload a CIR Excel file (.xlsx). Records are upserted by CIR ID.
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="rounded-lg border border-border/60 bg-card p-3 shadow-card dark:shadow-none">
+          <div className="mb-2 flex items-center gap-1.5">
+            <span className="text-sm font-semibold">Import</span>
+            <InfoHint
+              content="Upload a CIR Excel file (.xlsx). Records upsert by CIR ID."
+              label="About CIR import"
+            />
+          </div>
+          {canManage ? (
+            <div
+              {...getRootProps()}
+              className={cn(
+                'cursor-pointer rounded-md border border-dashed px-3 py-4 text-center text-2sm transition-colors',
+                isDragActive ? 'border-primary bg-primary/5' : 'border-border/60 text-muted-foreground hover:bg-muted/30'
+              )}
+            >
+              <input {...getInputProps()} />
+              {importM.isPending
+                ? 'Importing…'
+                : isDragActive
+                  ? 'Drop file here'
+                  : 'Drag & drop or click to browse'}
+            </div>
+          ) : (
+            <p className="flex items-center gap-1.5 text-2xs text-muted-foreground">
+              View only
+              <InfoHint content="Manage permission required to import CIR records." label="Import permission" />
             </p>
-            {canManage ? (
-              <div
-                {...getRootProps()}
-                className={`cursor-pointer rounded-lg border-2 border-dashed p-6 text-center text-sm transition-colors ${
-                  isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
-                }`}
-              >
-                <input {...getInputProps()} />
-                {importM.isPending
-                  ? 'Importing…'
-                  : isDragActive
-                    ? 'Drop file here'
-                    : 'Drag & drop an Excel file, or click to browse'}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">You need manage permission to import.</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Export workbook</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">Download all CIR records as Excel.</p>
-            <Button type="button" onClick={handleExport}>
-              Download Excel
-            </Button>
-          </CardContent>
-        </Card>
+          )}
+        </div>
+        <div className="rounded-lg border border-border/60 bg-card p-3 shadow-card dark:shadow-none">
+          <div className="mb-2 flex items-center gap-1.5">
+            <span className="text-sm font-semibold">Export</span>
+            <InfoHint content="Download all CIR records as Excel." label="About CIR export" />
+          </div>
+          <Button type="button" size="sm" onClick={handleExport}>
+            Download Excel
+          </Button>
+        </div>
       </div>
 
       <CrmSpreadsheet

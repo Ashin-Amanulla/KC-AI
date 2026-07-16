@@ -5,6 +5,7 @@ import { Upload, Download, ChevronRight, Plus, Trash2, AlertCircle, Calculator, 
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { CardTitleHint } from '../components/InfoHint';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../ui/table';
@@ -95,25 +96,25 @@ const ShiftDetail = ({ payHoursId }) => {
                 <span className="text-xs capitalize">{shift.shiftType?.replace('_', ' ')}</span>
               </TableCell>
               <TableCell className="text-right font-semibold text-xs">{h(shift.totalHours)}</TableCell>
-              <TableCell className="text-right text-xs text-yellow-700">{h(shift.morningHours)}</TableCell>
-              <TableCell className="text-right text-xs text-orange-700">{h(shift.afternoonHours)}</TableCell>
-              <TableCell className="text-right text-xs text-indigo-700">{h(shift.nightHours)}</TableCell>
-              <TableCell className="text-right text-xs text-cyan-700">{h(shift.saturdayHours)}</TableCell>
-              <TableCell className="text-right text-xs text-teal-700">{h(shift.sundayHours)}</TableCell>
-              <TableCell className="text-right text-xs text-red-700">{h(shift.holidayHours)}</TableCell>
-              <TableCell className="text-right text-xs text-blue-700">{h(shift.nursingCareHours)}</TableCell>
-              <TableCell className="text-right text-xs text-emerald-700">
+              <TableCell className="text-right text-xs text-warning">{h(shift.morningHours)}</TableCell>
+              <TableCell className="text-right text-xs text-warning">{h(shift.afternoonHours)}</TableCell>
+              <TableCell className="text-right text-xs text-chart-3">{h(shift.nightHours)}</TableCell>
+              <TableCell className="text-right text-xs text-chart-2">{h(shift.saturdayHours)}</TableCell>
+              <TableCell className="text-right text-xs text-destructive">{h(shift.sundayHours)}</TableCell>
+              <TableCell className="text-right text-xs text-primary">{h(shift.holidayHours)}</TableCell>
+              <TableCell className="text-right text-xs text-chart-4">{h(shift.nursingCareHours)}</TableCell>
+              <TableCell className="text-right text-xs text-success">
                 {shift.mileage != null ? `${shift.mileage} km` : '-'}
               </TableCell>
-              <TableCell className="text-right text-xs text-emerald-600">
+              <TableCell className="text-right text-xs text-success">
                 {shift.mileage != null && shift.mileage > 0
                   ? `$${(shift.mileage * VEHICLE_RATE).toFixed(2)}`
                   : '-'}
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">
-                  {shift.isBrokenShift && <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-orange-100 text-orange-800">Broken</span>}
-                  {shift.isSleepover && <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-purple-100 text-purple-800">Sleepover</span>}
+                  {shift.isBrokenShift && <span className="inline-block px-1.5 py-0.5 rounded text-2xs bg-warning/15 text-warning">Broken</span>}
+                  {shift.isSleepover && <span className="inline-block px-1.5 py-0.5 rounded text-2xs bg-chart-2/15 text-chart-2">Sleepover</span>}
                 </div>
               </TableCell>
             </TableRow>
@@ -126,7 +127,7 @@ const ShiftDetail = ({ payHoursId }) => {
 
 // ─── Holiday Manager ──────────────────────────────────────────────────────────
 
-export const HolidayManager = ({ locationId, locations }) => {
+export const HolidayManager = ({ locationId, locations, compact = false }) => {
   const y = new Date().getFullYear();
   const [newDate, setNewDate] = useState('');
   const [newName, setNewName] = useState('');
@@ -184,6 +185,16 @@ export const HolidayManager = ({ locationId, locations }) => {
   };
 
   if (!locationId) {
+    if (compact) {
+      return (
+        <div className="rounded-lg border border-dashed bg-muted/20 p-3 flex items-center gap-2">
+          <CardTitleHint titleClassName="text-2sm shrink-0" hint="Public holidays for pay-hour calculations. Select a site first.">
+            Holidays
+          </CardTitleHint>
+          <p className="text-2xs text-muted-foreground">Select a location to manage holidays.</p>
+        </div>
+      );
+    }
     return (
       <Card>
         <CardHeader className="pb-2">
@@ -193,6 +204,91 @@ export const HolidayManager = ({ locationId, locations }) => {
           <p className="text-sm text-muted-foreground">Select a location above to manage its public holidays.</p>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="rounded-lg border bg-card overflow-hidden">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors"
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          <CardTitleHint
+            titleClassName="text-2sm"
+            hint="Recurring public holidays used when computing pay hours for this site."
+          >
+            Holidays — {location?.name}
+          </CardTitleHint>
+          <span className="flex items-center gap-1.5 shrink-0 text-2xs text-muted-foreground">
+            {holidays.length}
+            <ChevronRight className={`h-3.5 w-3.5 transition-transform ${collapsed ? '' : 'rotate-90'}`} />
+          </span>
+        </button>
+        {!collapsed && (
+          <div className="border-t px-3 pb-3 pt-2 space-y-3">
+            <div className="flex gap-2 items-center flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-2xs"
+                onClick={handleLoadFixture}
+                disabled={loadFixtureMutation.isPending}
+              >
+                {loadFixtureMutation.isPending ? 'Loading…' : `Load ${location?.code ?? ''} holidays`}
+              </Button>
+            </div>
+            <div className="flex gap-2 flex-wrap items-end">
+              <select
+                value={newRule}
+                onChange={e => setNewRule(e.target.value)}
+                className="h-8 rounded-md border border-input bg-background px-2 text-2sm min-w-[10rem]"
+              >
+                <option value="">— Fixed day —</option>
+                {ruleOptions.map((r) => (
+                  <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+              <Input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="h-8 w-36 text-2sm" disabled={Boolean(newRule)} />
+              <Input placeholder="Holiday name" value={newName} onChange={(e) => setNewName(e.target.value)} className="h-8 w-40 text-2sm" />
+              <Button onClick={handleAdd} disabled={(!newRule && !newDate) || !newName.trim() || createMutation.isPending} size="sm" className="h-8">
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add
+              </Button>
+            </div>
+            {holidays.length > 0 ? (
+              <div className="rounded-md border overflow-hidden max-h-48 overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="text-2xs py-1.5">Recurrence</TableHead>
+                      <TableHead className="text-2xs py-1.5">{y}</TableHead>
+                      <TableHead className="text-2xs py-1.5">Name</TableHead>
+                      <TableHead className="w-10"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {holidays.map((h) => (
+                      <TableRow key={h._id}>
+                        <TableCell className="text-2xs py-1.5">{h.displaySchedule || '—'}</TableCell>
+                        <TableCell className="text-2xs py-1.5 tabular-nums">{h.sampleYmd || '—'}</TableCell>
+                        <TableCell className="text-2sm py-1.5">{h.name}</TableCell>
+                        <TableCell className="py-1.5">
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(h._id)} className="h-7 w-7 p-0 text-destructive hover:text-destructive">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-2xs text-muted-foreground">No holidays yet — load from fixture or add manually.</p>
+            )}
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -453,12 +549,11 @@ export const PayHours = ({
           className="border-0 shadow-none"
         />
       ) : payHours.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Calculator className="mx-auto h-12 w-12 mb-3 opacity-30" />
-          <p className="text-lg">No pay hours yet</p>
-          <p className="text-sm mt-1 max-w-sm mx-auto">
-            Upload a ShiftCare CSV above. Shifts are imported and pay hours compute automatically — or click{' '}
-            <span className="font-medium text-foreground">Compute pay hours</span> to re-run.
+        <div className="text-center py-6 text-muted-foreground">
+          <Calculator className="mx-auto h-8 w-8 mb-2 opacity-30" />
+          <p className="text-2sm">No pay hours yet</p>
+          <p className="text-2xs mt-0.5 max-w-sm mx-auto">
+            Upload a ShiftCare CSV above — pay hours compute automatically.
           </p>
         </div>
       ) : (
@@ -468,21 +563,21 @@ export const PayHours = ({
               <TableRow className="bg-muted/50">
                 <TableHead className="w-8"></TableHead>
                 <TableHead className="min-w-[160px]">Staff</TableHead>
-                <TableHead className="text-right bg-yellow-50/50 text-yellow-800" title="≤8pm local ordinary">Day</TableHead>
-                <TableHead className="text-right bg-orange-50/50 text-orange-800" title=">8pm local">Eve</TableHead>
-                <TableHead className="text-right bg-indigo-50/50 text-indigo-800">Night</TableHead>
-                <TableHead className="text-right bg-gray-50">WD OT≤2</TableHead>
-                <TableHead className="text-right bg-gray-50">WD OT&gt;2</TableHead>
-                <TableHead className="text-right bg-cyan-50/50 text-cyan-800">Sat</TableHead>
-                <TableHead className="text-right bg-cyan-50/50">Sat OT≤2</TableHead>
-                <TableHead className="text-right bg-cyan-50/50">Sat OT&gt;2</TableHead>
-                <TableHead className="text-right bg-teal-50/50 text-teal-800">Sun</TableHead>
-                <TableHead className="text-right bg-teal-50/50">Sun OT≤2</TableHead>
-                <TableHead className="text-right bg-teal-50/50">Sun OT&gt;2</TableHead>
-                <TableHead className="text-right bg-red-50/50 text-red-800">Hol</TableHead>
-                <TableHead className="text-right bg-red-50/50">Hol OT≤2</TableHead>
-                <TableHead className="text-right bg-red-50/50">Hol OT&gt;2</TableHead>
-                <TableHead className="text-right bg-blue-50/50 text-blue-800">Nursing</TableHead>
+                <TableHead className="text-right bg-warning/10 text-warning" title="≤8pm local ordinary">Day</TableHead>
+                <TableHead className="text-right bg-warning/10 text-warning" title=">8pm local">Eve</TableHead>
+                <TableHead className="text-right bg-chart-3/10 text-chart-3">Night</TableHead>
+                <TableHead className="text-right bg-muted/50">WD OT≤2</TableHead>
+                <TableHead className="text-right bg-muted/50">WD OT&gt;2</TableHead>
+                <TableHead className="text-right bg-chart-2/10 text-chart-2">Sat</TableHead>
+                <TableHead className="text-right bg-chart-2/10">Sat OT≤2</TableHead>
+                <TableHead className="text-right bg-chart-2/10">Sat OT&gt;2</TableHead>
+                <TableHead className="text-right bg-destructive/10 text-destructive">Sun</TableHead>
+                <TableHead className="text-right bg-destructive/10">Sun OT≤2</TableHead>
+                <TableHead className="text-right bg-destructive/10">Sun OT&gt;2</TableHead>
+                <TableHead className="text-right bg-primary/10 text-primary">Hol</TableHead>
+                <TableHead className="text-right bg-primary/10">Hol OT≤2</TableHead>
+                <TableHead className="text-right bg-primary/10">Hol OT&gt;2</TableHead>
+                <TableHead className="text-right bg-chart-4/10 text-chart-4">Nursing</TableHead>
                 <TableHead className="text-right">Broken#</TableHead>
                 <TableHead className="text-right">Sleep#</TableHead>
                 <TableHead className="text-right">OT&gt;76</TableHead>
@@ -536,139 +631,132 @@ export const PayHours = ({
 
   if (embedWorkforce) {
     return (
-      <div id="workforce-roster" className="scroll-mt-4">
-        <Card className="shadow-sm border-dashed">
-          <CardHeader className="pb-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <CardTitle className="text-lg">Shifts &amp; pay hours</CardTitle>
-                <p className="text-sm text-muted-foreground font-normal mt-1.5 leading-relaxed">
-                  One place for your roster: upload a <strong className="text-foreground font-medium">Scheduler timesheet CSV</strong>{' '}
-                  (<span className="font-mono text-xs">Scheduler_Timesheet_Export_*.csv</span> with Staff, Start/End Date Time, Shift Type).
-                  Not the Timesheet &quot;all hours&quot; summary or billing export.
-                </p>
-              </div>
-              {payHours.length > 0 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="shrink-0 gap-2"
-                  onClick={handleExportPayHours}
-                >
-                  <Download className="h-4 w-4" />
-                  Export pay hours CSV
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <div id="workforce-roster" className="scroll-mt-4 rounded-lg border bg-card">
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+          <CardTitleHint
+            titleClassName="text-2sm"
+            hint="Upload Scheduler_Timesheet_Export_*.csv (Staff, Start/End Date Time, Shift Type). Not the Timesheet all-hours summary."
+          >
+            Shifts &amp; pay hours
+          </CardTitleHint>
+          {payHours.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 shrink-0 gap-1.5 text-2xs"
+              onClick={handleExportPayHours}
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </Button>
+          )}
+        </div>
+
+        <div className="space-y-2.5 p-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div
               {...getRootProps()}
-              className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${
+              className={`flex flex-1 items-center gap-2.5 rounded-md border border-dashed px-3 py-2 cursor-pointer transition-colors ${
                 isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
               }`}
             >
               <input {...getInputProps()} />
-              <Upload className="mb-2 h-6 w-6 text-muted-foreground" />
+              <Upload className="h-4 w-4 shrink-0 text-muted-foreground" />
               {selectedFile ? (
-                <p className="text-sm font-medium">{selectedFile.name}</p>
+                <span className="text-2sm font-medium truncate">{selectedFile.name}</span>
               ) : (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    Drop <span className="font-mono text-xs">Scheduler_Timesheet_Export_*.csv</span> or click to browse
-                  </p>
-                  <p className="text-xs text-muted-foreground/80 mt-1 max-w-md">
-                    Not Timesheet &quot;all hours&quot; (Name/Total columns) — use the Scheduler export with shift start/end times.
-                  </p>
-                </>
+                <span className="text-2sm text-muted-foreground truncate">
+                  Drop <span className="font-mono text-2xs">Scheduler_Timesheet_Export_*.csv</span> or click to browse
+                </span>
               )}
             </div>
-
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-2 shrink-0">
               {selectedFile && (
-                <Button onClick={handleUpload} disabled={uploadMutation.isPending || computeMutation.isPending}>
-                  {uploadMutation.isPending ? 'Uploading…' : 'Upload & compute pay hours'}
+                <Button size="sm" className="h-8 text-2sm" onClick={handleUpload} disabled={uploadMutation.isPending || computeMutation.isPending}>
+                  {uploadMutation.isPending ? 'Uploading…' : 'Upload & compute'}
                 </Button>
               )}
               <Button
+                size="sm"
+                className="h-8 text-2sm"
                 onClick={handleCompute}
                 disabled={computeMutation.isPending || isJobActive}
-                variant="default"
               >
-                <Calculator className="h-4 w-4 mr-2" />
-                {computeMutation.isPending || isJobActive ? 'Computing…' : 'Compute pay hours'}
+                <Calculator className="h-3.5 w-3.5 mr-1.5" />
+                {computeMutation.isPending || isJobActive ? 'Computing…' : 'Compute'}
               </Button>
             </div>
+          </div>
 
-            {uploadResult && (
-              <div className={`rounded-md p-3 text-sm ${uploadResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-                <p>Shifts uploaded: {uploadResult.shiftsCreated} | Skipped: {uploadResult.shiftsSkipped}</p>
-                {uploadResult.errors?.slice(0, 3).map((e, i) => (
-                  <p key={i} className="flex gap-1 mt-1">
-                    <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
-                    {e}
-                  </p>
-                ))}
+          {uploadResult && (
+            <div className={`rounded-md px-2.5 py-1.5 text-2xs ${uploadResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+              <p>Uploaded: {uploadResult.shiftsCreated} · Skipped: {uploadResult.shiftsSkipped}</p>
+              {uploadResult.errors?.slice(0, 3).map((e, i) => (
+                <p key={i} className="flex gap-1 mt-0.5">
+                  <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                  {e}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {activeJobId && jobStatus && (
+            <div className="rounded-md border bg-muted/30 px-2.5 py-2 space-y-1.5">
+              <div className="flex justify-between text-2sm">
+                <span>
+                  {jobStatus.status === 'completed'
+                    ? '✓ Complete'
+                    : jobStatus.status === 'failed'
+                      ? '✗ Failed'
+                      : `Computing… (${jobStatus.staffProcessed || 0} staff)`}
+                </span>
+                <span className="font-medium">{jobStatus.progress || 0}%</span>
               </div>
-            )}
-
-            {activeJobId && jobStatus && (
-              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>
-                    {jobStatus.status === 'completed'
-                      ? '✓ Computation complete'
-                      : jobStatus.status === 'failed'
-                        ? '✗ Computation failed'
-                        : `Computing pay hours… (${jobStatus.staffProcessed || 0} staff processed)`}
-                  </span>
-                  <span className="font-medium">{jobStatus.progress || 0}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${jobStatus.status === 'failed' ? 'bg-destructive' : 'bg-primary'}`}
-                    style={{ width: `${jobStatus.progress || 0}%` }}
-                  />
-                </div>
-                {jobStatus.status === 'completed' && (
-                  <p className="text-xs text-green-600">
-                    {jobStatus.payHoursCreated} pay hours records created
-                    {periodStart && ` for period ${formatDate(jobStatus.periodStart)} – ${formatDate(jobStatus.periodEnd)}`}
-                  </p>
-                )}
-                {jobStatus.errors?.length > 0 && (
-                  <p className="text-xs text-destructive">{jobStatus.errors.length} errors encountered</p>
-                )}
-              </div>
-            )}
-
-            <div className="border-t pt-4 space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Staff totals</p>
-                  {periodStart && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Period: {formatDate(periodStart)} — {formatDate(periodEnd)}
-                    </p>
-                  )}
-                </div>
-                <Input
-                  placeholder="Filter by staff name…"
-                  value={staffFilter}
-                  onChange={(e) => setStaffFilter(e.target.value)}
-                  className="w-full sm:w-56"
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${jobStatus.status === 'failed' ? 'bg-destructive' : 'bg-primary'}`}
+                  style={{ width: `${jobStatus.progress || 0}%` }}
                 />
               </div>
-              {payHoursTableBody}
+              {jobStatus.status === 'completed' && (
+                <p className="text-2xs text-green-600">
+                  {jobStatus.payHoursCreated} records
+                  {periodStart && ` · ${formatDate(jobStatus.periodStart)} – ${formatDate(jobStatus.periodEnd)}`}
+                </p>
+              )}
+              {jobStatus.errors?.length > 0 && (
+                <p className="text-2xs text-destructive">{jobStatus.errors.length} errors</p>
+              )}
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          <div className="border-t pt-2.5 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-2sm font-medium text-foreground">Staff totals</p>
+                {periodStart && (
+                  <p className="text-2xs text-muted-foreground">
+                    {formatDate(periodStart)} — {formatDate(periodEnd)}
+                  </p>
+                )}
+              </div>
+              <Input
+                placeholder="Filter staff…"
+                value={staffFilter}
+                onChange={(e) => setStaffFilter(e.target.value)}
+                className="h-8 w-full sm:w-44 text-2sm"
+              />
+            </div>
+            {payHoursTableBody}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {!embedWorkforce && (
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">Pay Hours</h2>
@@ -756,32 +844,26 @@ export const PayHours = ({
 
       {/* Upload + Compute Section */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Upload Shifts & Compute Pay Hours</CardTitle>
-          <p className="text-sm text-muted-foreground font-normal pt-1">
-            After a successful CSV upload, pay hours start automatically. Use Compute Pay Hours to re-run on the same file without re-uploading.
-          </p>
+        <CardHeader className="pb-2">
+          <CardTitleHint hint="Upload Scheduler_Timesheet_Export CSV — pay hours compute automatically. Re-run with Compute without re-uploading.">
+            Upload &amp; compute
+          </CardTitleHint>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <div
             {...getRootProps()}
-            className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${
+            className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-5 text-center cursor-pointer transition-colors ${
               isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
             }`}
           >
             <input {...getInputProps()} />
-            <Upload className="mb-2 h-6 w-6 text-muted-foreground" />
+            <Upload className="mb-1.5 h-5 w-5 text-muted-foreground" />
             {selectedFile ? (
               <p className="text-sm font-medium">{selectedFile.name}</p>
             ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Drop <span className="font-mono text-xs">Scheduler_Timesheet_Export_*.csv</span> or click to browse
-                </p>
-                <p className="text-xs text-muted-foreground/80 mt-1 max-w-md">
-                  Not Timesheet &quot;all hours&quot; (Name/Total columns) — use the Scheduler export with shift start/end times.
-                </p>
-              </>
+              <p className="text-2sm text-muted-foreground">
+                Drop <span className="font-mono text-2xs">Scheduler_Timesheet_Export_*.csv</span> or click
+              </p>
             )}
           </div>
 

@@ -5,6 +5,7 @@
 
 import { TableCell, TableHead } from '../ui/table';
 import { cn } from '../lib/utils';
+import { Badge } from '../ui/badge';
 import { formatUtcDate, formatUtcDateTime, formatUtcTime, normalizeRatio } from '../utils/normalizeRatio';
 
 /** Main variance table columns (both Forecast vs Actuals and Standard vs Forecast). */
@@ -173,12 +174,12 @@ export function fmtNum(v) {
  */
 export function makeVarianceRowClass(blueSource) {
   return function varianceRowClass(r) {
-    if (r.recordType === 'deleted') return 'bg-red-50 hover:bg-red-100';
-    if (r.recordType === 'additional') return 'bg-sky-50 hover:bg-sky-100';
+    if (r.recordType === 'deleted') return 'bg-destructive/10 hover:bg-destructive/15';
+    if (r.recordType === 'additional') return 'bg-primary/10 hover:bg-primary/15';
     if (r.recordType === 'variance') {
       return r.source === blueSource
-        ? 'bg-blue-50 hover:bg-blue-100'
-        : 'bg-green-50 hover:bg-green-100';
+        ? 'bg-primary/10 hover:bg-primary/15'
+        : 'bg-success/10 hover:bg-success/15';
     }
     return 'hover:bg-muted/30';
   };
@@ -195,33 +196,18 @@ export function makeDiffCell(diffSource, diffKeys) {
   return function diffCell(r, fieldKey) {
     if (r.source !== diffSource) return '';
     const diffName = diffKeys[fieldKey];
-    return Array.isArray(r.diffFields) && r.diffFields.includes(diffName) ? 'bg-yellow-200' : '';
+    return Array.isArray(r.diffFields) && r.diffFields.includes(diffName) ? 'bg-warning/25' : '';
   };
 }
 
 export function diffPanelCell(diffFields, key) {
-  return Array.isArray(diffFields) && diffFields.includes(key) ? 'bg-yellow-100' : '';
+  return Array.isArray(diffFields) && diffFields.includes(key) ? 'bg-warning/15' : '';
 }
 
 export function TypePill({ recordType }) {
-  if (recordType === 'deleted')
-    return (
-      <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-        Deleted
-      </span>
-    );
-  if (recordType === 'additional')
-    return (
-      <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700">
-        Additional
-      </span>
-    );
-  if (recordType === 'variance')
-    return (
-      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-        Variance
-      </span>
-    );
+  if (recordType === 'deleted') return <Badge variant="destructive">Deleted</Badge>;
+  if (recordType === 'additional') return <Badge variant="primary">Additional</Badge>;
+  if (recordType === 'variance') return <Badge variant="warning">Variance</Badge>;
   return null;
 }
 

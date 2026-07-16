@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { config } from '../../config/index.js';
 import { getShiftCareCredentials } from '../../middlewares/auth.middleware.js';
+import { getOrSet } from '../../utils/cache.js';
+
+const SHIFTCARE_LIST_CACHE_TTL = 300;
 
 /**
  * Create axios instance with basic auth for ShiftCare API
@@ -34,6 +37,46 @@ const createShiftCareClient = (credentials) => {
   });
 };
 
+function serializeCacheParams(params) {
+  return Object.keys(params)
+    .sort()
+    .map((key) => `${key}=${params[key]}`)
+    .join('&');
+}
+
+async function fetchFromShiftCare(credentials, endpoint, params) {
+  const client = createShiftCareClient(credentials);
+  const response = await client.get(endpoint, { params });
+
+  if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE')) {
+    const err = new Error('Invalid response from ShiftCare API. Please check API credentials and URL.');
+    err.isShiftcareHtml = true;
+    throw err;
+  }
+
+  return response.data;
+}
+
+function sendShiftcareError(res, error) {
+  if (error.isShiftcareHtml) {
+    console.error('ShiftCare API returned HTML instead of JSON - check URL and credentials');
+    return res.status(502).json({
+      error: error.message,
+    });
+  }
+
+  const shiftcareStatus = error.response?.status;
+  const shiftcareError = error.response?.data?.error || error.message || 'Failed to fetch data from ShiftCare API';
+
+  console.error('ShiftCare API Error:', shiftcareStatus, shiftcareError);
+
+  return res.status(502).json({
+    error: shiftcareError,
+    shiftcareApiError: true,
+    originalStatus: shiftcareStatus,
+  });
+}
+
 /**
  * Proxy request to ShiftCare API
  */
@@ -47,33 +90,33 @@ const proxyRequest = async (req, res, endpoint, params = {}) => {
       });
     }
 
-    const client = createShiftCareClient(credentials);
-    const fullUrl = `${config.shiftcare.baseUrl}${endpoint}`;
+    const data = await fetchFromShiftCare(credentials, endpoint, params);
+    res.json(data);
+  } catch (error) {
+    sendShiftcareError(res, error);
+  }
+};
 
-    const response = await client.get(endpoint, { params });
+/**
+ * Cached proxy for list endpoints (staff, clients) — tenant-scoped Redis TTL.
+ */
+const cachedProxyRequest = async (req, res, endpoint, params, resourceType) => {
+  try {
+    const credentials = getShiftCareCredentials(req);
 
-    // Check if response is HTML (indicates wrong URL or auth issue)
-    if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE')) {
-      console.error('ShiftCare API returned HTML instead of JSON - check URL and credentials');
-      return res.status(502).json({
-        error: 'Invalid response from ShiftCare API. Please check API credentials and URL.',
+    if (!credentials) {
+      return res.status(401).json({
+        error: 'ShiftCare API credentials not configured',
       });
     }
 
-    res.json(response.data);
+    const cacheKey = `shiftcare:${resourceType}:${credentials.accountId}:${serializeCacheParams(params)}`;
+    const data = await getOrSet(cacheKey, SHIFTCARE_LIST_CACHE_TTL, () =>
+      fetchFromShiftCare(credentials, endpoint, params)
+    );
+    res.json(data);
   } catch (error) {
-    const shiftcareStatus = error.response?.status;
-    const shiftcareError = error.response?.data?.error || error.message || 'Failed to fetch data from ShiftCare API';
-
-    console.error('ShiftCare API Error:', shiftcareStatus, shiftcareError);
-
-    // Return 502 Bad Gateway for ShiftCare API errors to prevent frontend from clearing JWT token
-    // Include original status in response for debugging
-    res.status(502).json({
-      error: shiftcareError,
-      shiftcareApiError: true,
-      originalStatus: shiftcareStatus,
-    });
+    sendShiftcareError(res, error);
   }
 };
 
@@ -144,7 +187,7 @@ export const getStaff = async (req, res) => {
     ...(per_page && { per_page }),
   };
 
-  await proxyRequest(req, res, '/v3/staff', params);
+  await cachedProxyRequest(req, res, '/v3/staff', params, 'staff');
 };
 
 export const getClients = async (req, res) => {
@@ -168,7 +211,7 @@ export const getClients = async (req, res) => {
     ...(per_page && { per_page }),
   };
 
-  await proxyRequest(req, res, '/v3/clients', params);
+  await cachedProxyRequest(req, res, '/v3/clients', params, 'clients');
 };
 
 export const getTimesheets = async (req, res) => {

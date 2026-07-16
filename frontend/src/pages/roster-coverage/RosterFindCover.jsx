@@ -9,9 +9,12 @@ import {
   downloadIneligibilityXlsx,
   usePatchContactStatus,
 } from '../../api/rosterCoverage';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { Label } from '../../ui/label';
+import { InfoHint } from '../../components/InfoHint';
+import { CardTitleHint, FieldLabel } from '../../components/InfoHint';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { getErrorMessage } from '../../utils/api';
 import { getRosterTimesheetWindow } from '../../utils/rosterCoveragePayPeriod';
 import {
@@ -280,24 +283,24 @@ export function RosterFindCover() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Vacant shift</CardTitle>
-          <CardDescription>
-            Eligible tables match the Team page: <strong className="text-foreground">Worked</strong>,{' '}
-            <strong className="text-foreground">Cap</strong> (contracted hours), and{' '}
-            <strong className="text-foreground">Cap headroom</strong>. If a timesheet window is set from Timesheet upload,
-            worked and headroom use the <strong className="text-foreground">full span of that file’s shifts</strong>;
-            otherwise the fortnight containing this vacant shift’s start is used.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="relative sm:col-span-2 lg:col-span-3" ref={participantPickerRef}>
-              <label className="text-sm font-medium" id="participant-combobox-label">
-                Participant
-              </label>
+    <div className="page-stack-dense">
+      <section className="rounded-lg border bg-card p-3 space-y-2.5">
+        <CardTitleHint
+          titleClassName="text-2sm"
+          hintLabel="About worked totals and cap"
+          hint={
+            <>
+              Eligible tables match the Team page: Worked, Cap, and Cap headroom. If a timesheet window is set from
+              Timesheet upload, worked uses the full span of that file’s shifts; otherwise the fortnight containing this
+              shift’s start is used.
+            </>
+          }
+        >
+          Vacant shift
+        </CardTitleHint>
+        <form onSubmit={handleSubmit} className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="relative sm:col-span-2 lg:col-span-4" ref={participantPickerRef}>
+              <FieldLabel htmlFor="participant-combobox-trigger">Participant</FieldLabel>
               <div className="mt-1 flex gap-1">
                 <button
                   type="button"
@@ -309,7 +312,7 @@ export function RosterFindCover() {
                     setParticipantPickerOpen((o) => !o);
                     if (!participantPickerOpen) setParticipantSearch('');
                   }}
-                  className="flex h-10 min-w-0 flex-1 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-left text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-8 min-w-0 flex-1 items-center justify-between gap-2 rounded-md border border-input bg-background px-2.5 text-left text-2sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span className={selectedParticipant ? 'truncate text-foreground' : 'text-muted-foreground'}>
                     {selectedParticipant
@@ -330,7 +333,7 @@ export function RosterFindCover() {
                       setParticipantSearch('');
                       setParticipantPickerOpen(false);
                     }}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-input bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
                     aria-label="Clear participant"
                   >
                     <X className="h-4 w-4" />
@@ -339,26 +342,26 @@ export function RosterFindCover() {
               </div>
               {participantPickerOpen && (
                 <div
-                  className="absolute left-0 right-0 z-50 mt-1 rounded-md border border-input bg-background shadow-md"
+                  className="absolute left-0 right-0 z-50 mt-1 rounded-md border border-input bg-background shadow-popover dark:shadow-none"
                   role="listbox"
                   aria-labelledby="participant-combobox-label"
                 >
-                  <div className="border-b border-input p-2">
+                  <div className="border-b border-input p-1.5">
                     <Input
                       type="search"
                       autoComplete="off"
                       placeholder="Search by name or location…"
                       value={participantSearch}
                       onChange={(e) => setParticipantSearch(e.target.value)}
-                      className="h-9"
+                      className="h-8 border-0 bg-transparent text-2sm shadow-none"
                       aria-label="Filter participants"
                     />
                   </div>
-                  <div className="max-h-60 overflow-y-auto py-1">
+                  <div className="max-h-48 overflow-y-auto py-0.5">
                     {participants.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">No participants</div>
+                      <div className="px-2.5 py-1.5 text-2sm text-muted-foreground">No participants</div>
                     ) : filteredParticipants.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">No matches</div>
+                      <div className="px-2.5 py-1.5 text-2sm text-muted-foreground">No matches</div>
                     ) : (
                       filteredParticipants.map((p) => (
                         <button
@@ -366,7 +369,7 @@ export function RosterFindCover() {
                           type="button"
                           role="option"
                           aria-selected={p._id === participantId}
-                          className={`flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-accent ${p._id === participantId ? 'bg-accent/60' : ''}`}
+                          className={`flex w-full flex-col items-start px-2.5 py-1.5 text-left text-2sm hover:bg-accent ${p._id === participantId ? 'bg-accent/60' : ''}`}
                           onClick={() => {
                             setParticipantId(p._id);
                             setParticipantPickerOpen(false);
@@ -375,7 +378,7 @@ export function RosterFindCover() {
                         >
                           <span className="font-medium">{p.name}</span>
                           {(p.locationLabel || (p.location && p.location.name)) && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-2xs text-muted-foreground">
                               {[p.locationLabel, p.location && p.location.name].filter(Boolean).join(' · ')}
                             </span>
                           )}
@@ -386,51 +389,54 @@ export function RosterFindCover() {
                 </div>
               )}
             </div>
-            <div>
-              <label className="text-sm font-medium">Date</label>
-              <Input type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)} className="mt-1" />
+            <div className="space-y-1">
+              <FieldLabel htmlFor="find-cover-date">Date</FieldLabel>
+              <Input id="find-cover-date" type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)} className="h-8 filter-control-date w-full" />
             </div>
-            <div>
-              <label className="text-sm font-medium">Start</label>
-              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="mt-1" />
+            <div className="space-y-1">
+              <FieldLabel htmlFor="find-cover-start">Start</FieldLabel>
+              <Input id="find-cover-start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="h-8 text-2sm" />
             </div>
-            <div>
-              <label className="text-sm font-medium">End</label>
-              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="mt-1" />
+            <div className="space-y-1">
+              <FieldLabel htmlFor="find-cover-end">End</FieldLabel>
+              <Input id="find-cover-end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-8 text-2sm" />
             </div>
-            <div className="flex items-center gap-2 sm:col-span-2">
+            <div className="flex items-center gap-2">
               <input
                 id="so"
                 type="checkbox"
                 checked={sleepover}
                 onChange={(e) => setSleepover(e.target.checked)}
+                className="h-3.5 w-3.5"
               />
-              <label htmlFor="so" className="text-sm">
+              <Label htmlFor="so" className="text-2sm font-normal">
                 Sleepover
-              </label>
+              </Label>
             </div>
             {sleepover && (
-              <div>
-                <label className="text-sm font-medium">Sleepover starts (local)</label>
+              <div className="space-y-1">
+                <FieldLabel htmlFor="find-cover-sleepover">Sleepover start</FieldLabel>
                 <Input
+                  id="find-cover-sleepover"
                   type="time"
                   value={sleepoverStart}
                   onChange={(e) => setSleepoverStart(e.target.value)}
-                  className="mt-1"
+                  className="h-8 text-2sm"
                 />
               </div>
             )}
-            <div>
-              <label className="text-sm font-medium">Reason</label>
-              <select
-                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              >
-                <option value="sick_call">Sick call</option>
-                <option value="vacancy">Vacancy</option>
-                <option value="other">Other</option>
-              </select>
+            <div className="space-y-1">
+              <FieldLabel>Reason</FieldLabel>
+              <Select value={reason} onValueChange={setReason}>
+                <SelectTrigger className="h-8 text-2sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sick_call">Sick call</SelectItem>
+                  <SelectItem value="vacancy">Vacancy</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-2 sm:col-span-2">
               <input
@@ -438,19 +444,19 @@ export function RosterFindCover() {
                 type="checkbox"
                 checked={persistVacant}
                 onChange={(e) => setPersistVacant(e.target.checked)}
+                className="h-3.5 w-3.5"
               />
-              <label htmlFor="pv" className="text-sm">
-                Save as open vacancy on dashboard
-              </label>
+              <Label htmlFor="pv" className="text-2sm font-normal">
+                Save as open vacancy
+              </Label>
             </div>
-            <div className="sm:col-span-2 lg:col-span-3">
-              <Button type="submit" disabled={findCover.isPending}>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <Button type="submit" size="sm" disabled={findCover.isPending}>
                 {findCover.isPending ? 'Searching…' : 'Find cover'}
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
+      </section>
 
       {result && (
         <>
@@ -463,81 +469,83 @@ export function RosterFindCover() {
             </Button>
           </div>
           {result.fortnight && (
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Date range for worked totals:</span>{' '}
-              {new Date(result.fortnight.start).toLocaleString()} — {new Date(result.fortnight.end).toLocaleString()} ·{' '}
-              {result.fortnight.timezone}
-              {result.payPeriodAnchor ? (
-                <span className="mt-1 block">
-                  Midpoint reference: {new Date(result.payPeriodAnchor).toLocaleString()}
-                  {result.usedTimesheetWindow || result.usedUploadedPayReference
-                    ? ' (totals window = imported timesheet date span — same as Team page).'
-                    : ' (from vacant shift start — clear timesheet window on Timesheet upload to use this default).'}
-                </span>
-              ) : null}
-              <span className="mt-1 block">
-                <strong className="font-medium text-foreground">Worked</strong> sums{' '}
-                <em>every</em> non-cancelled shift we have for that worker (roster timesheet imports and workforce
-                imports), counting only the portion of each shift that overlaps the range above. Shifts entirely outside
-                that range do not add to this search.{' '}
-                <strong className="font-medium text-foreground">Cap</strong> is contracted hours per fortnight from the
-                roster. <strong className="font-medium text-foreground">Cap headroom (fn)</strong> is cap minus worked
-                (same range).
+            <div className="muted-strip flex flex-wrap items-center gap-1.5 py-1.5">
+              <span className="font-medium text-foreground">Worked totals range:</span>
+              <span>
+                {new Date(result.fortnight.start).toLocaleString()} —{' '}
+                {new Date(result.fortnight.end).toLocaleString()} · {result.fortnight.timezone}
               </span>
-            </p>
+              <InfoHint
+                label="How worked totals are calculated"
+                side="bottom"
+                content={
+                  <>
+                    {result.payPeriodAnchor ? (
+                      <p className="mb-2">
+                        Midpoint reference: {new Date(result.payPeriodAnchor).toLocaleString()}
+                        {result.usedTimesheetWindow || result.usedUploadedPayReference
+                          ? ' (totals window = imported timesheet date span — same as Team page).'
+                          : ' (from vacant shift start — clear timesheet window on Timesheet upload to use this default).'}
+                      </p>
+                    ) : null}
+                    <p>
+                      Worked sums every non-cancelled shift overlapping the range above. Cap is contracted hours per
+                      fortnight. Cap headroom is cap minus worked.
+                    </p>
+                  </>
+                }
+              />
+            </div>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Eligible staff</CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
+          <section className="overflow-hidden rounded-lg border bg-card">
+            <div className="border-b border-border/60 px-3 py-1.5">
+              <h3 className="section-label">Eligible staff</h3>
+            </div>
+            <div className="overflow-x-auto">
               <EligibleStaffTable
                 rows={result.eligibleTeam}
                 vacantId={vacantId}
                 emptyLabel="No eligible staff on this participant’s approved team."
                 contactMut={contactMut}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Ineligible team members</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {result.ineligibleTeam?.length === 0 && (
-                <p className="text-sm text-muted-foreground">No ineligible team members.</p>
-              )}
-              {result.ineligibleTeam?.map((row) => (
-                <div key={row.staff._id} className="rounded-md border p-3 text-sm">
-                  <div className="font-medium">{row.staff.fullName}</div>
-                  <ul className="mt-2 list-disc pl-5 text-muted-foreground">
-                    {row.reasons.map((r) => (
-                      <li key={r}>{r}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <section className="rounded-lg border bg-card p-3 space-y-2">
+            <h3 className="section-label">Ineligible team</h3>
+            {result.ineligibleTeam?.length === 0 && (
+              <p className="text-2sm text-muted-foreground">No ineligible team members.</p>
+            )}
+            {result.ineligibleTeam?.map((row) => (
+              <div key={row.staff._id} className="rounded-md border p-2 text-2sm">
+                <div className="font-medium">{row.staff.fullName}</div>
+                <ul className="mt-1 list-disc pl-4 text-2xs text-muted-foreground">
+                  {row.reasons.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Open pool staff</CardTitle>
-              <CardDescription>
-                Not on this participant’s approved team, but available on hours, overlap, and rest rules.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
+          <section className="overflow-hidden rounded-lg border bg-card">
+            <div className="flex items-center gap-1.5 border-b border-border/60 px-3 py-1.5">
+              <h3 className="section-label">Open pool</h3>
+              <InfoHint
+                label="About open pool staff"
+                content="Not on this participant’s approved team, but available on hours, overlap, and rest rules."
+              />
+            </div>
+            <div className="overflow-x-auto">
               <EligibleStaffTable
                 rows={result.openPoolEligible}
                 vacantId={vacantId}
                 emptyLabel="No open-pool staff pass logistics for this shift."
                 contactMut={contactMut}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </section>
         </>
       )}
     </div>

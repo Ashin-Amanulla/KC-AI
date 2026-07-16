@@ -7,6 +7,7 @@ import {
 } from '../../api/hrRequirements';
 import { usePermissions } from '../../hooks/usePermissions';
 import { PERMISSIONS } from '../../config/permissions';
+import { InfoHint } from '../../components/InfoHint';
 import { CrmSpreadsheet } from '../crm/CrmSpreadsheet';
 import { HR_REQUIREMENTS_CONFIG } from './hrRequirementsColumnDefs';
 
@@ -29,12 +30,14 @@ export function HrRequirementsPage() {
   const deleteM = useDeleteHrRequirement();
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight md:text-3xl">HR requirements</h2>
-        <p className="text-sm text-muted-foreground">
-          Staffing requirements — participant coverage, dates, and completion status.
-        </p>
+    <div className="page-stack-tight">
+      <div className="flex items-center gap-2">
+        <InfoHint
+          content="Staffing requirements — participant coverage, dates, and completion status."
+          label="About HR requirements"
+          variant="help"
+        />
+        <span className="text-2xs text-muted-foreground">Growth · staffing tracker</span>
       </div>
       <CrmSpreadsheet
         title="HR requirements"

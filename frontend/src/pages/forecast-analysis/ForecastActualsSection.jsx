@@ -19,6 +19,8 @@ import { validateTabularFile, TABULAR_ACCEPT } from '../../config/upload';
 import { TabularExportButtons } from '../../components/TabularExportButtons';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
+import { Badge } from '../../ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '../../ui/tabs';
 import {
   Table,
   TableBody,
@@ -28,7 +30,6 @@ import {
   TableRow,
 } from '../../ui/table';
 import { LoadingScreen } from '../../ui/LoadingSpinner';
-import { cn } from '../../lib/utils';
 import { FileSpreadsheet } from 'lucide-react';
 import { ForecastActualsRowPanel } from '../ForecastActualsRowPanel';
 import {
@@ -167,22 +168,21 @@ export function ForecastActualsSection({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 border-b pb-2">
-        {SECTIONS.map((s) => (
-          <Button
-            key={s.id}
-            type="button"
-            variant={section === s.id ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => {
-              onSectionChange(s.id);
-              onPageChange(1);
-            }}
-          >
-            {s.label}
-          </Button>
-        ))}
-      </div>
+      <Tabs
+        value={section}
+        onValueChange={(v) => {
+          onSectionChange(v);
+          onPageChange(1);
+        }}
+      >
+        <TabsList>
+          {SECTIONS.map((s) => (
+            <TabsTrigger key={s.id} value={s.id}>
+              {s.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
           {section === 'forecast' && (
             <Card>
@@ -272,21 +272,22 @@ export function ForecastActualsSection({
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0 pb-4">
                 {summaryQ.isLoading ? (
-                  <LoadingScreen message="Loading summary…" />
+                  <div className="px-4 py-8">
+                    <LoadingScreen message="Loading summary…" />
+                  </div>
                 ) : summaryQ.error ? (
-                  <p className="text-destructive">{getErrorMessage(summaryQ.error)}</p>
+                  <p className="px-4 py-8 text-destructive">{getErrorMessage(summaryQ.error)}</p>
                 ) : (
                   <>
-                    <p className="mb-2 text-xs text-muted-foreground">
+                    <p className="px-4 pt-4 text-xs text-muted-foreground">
                       Forecast: {formatDate(summaryQ.data?.forecastDateRangeStart)} –{' '}
                       {formatDate(summaryQ.data?.forecastDateRangeEnd)} · Actuals:{' '}
                       {formatDate(summaryQ.data?.actualsDateRangeStart)} –{' '}
                       {formatDate(summaryQ.data?.actualsDateRangeEnd)}
                     </p>
-                    <div className="rounded-md border overflow-x-auto">
-                      <Table>
+                    <Table containerClassName="overflow-x-auto">
                         <TableHeader>
                           <TableRow>
                             <TableHead>Client</TableHead>
@@ -302,12 +303,12 @@ export function ForecastActualsSection({
                           {(summaryQ.data?.records || []).map((r, ri) => (
                             <TableRow key={r.clientId ?? r.clientName ?? `summary-${ri}`}>
                               <TableCell>{r.clientName}</TableCell>
-                              <TableCell className="text-right">{r.forecastBudget?.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">{r.netActuals?.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">{r.mileage?.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">{r.grossActuals?.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">{r.variance?.toFixed(2)}</TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right tabular-nums">{r.forecastBudget?.toFixed(2)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{r.netActuals?.toFixed(2)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{r.mileage?.toFixed(2)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{r.grossActuals?.toFixed(2)}</TableCell>
+                              <TableCell className="text-right tabular-nums">{r.variance?.toFixed(2)}</TableCell>
+                              <TableCell className="text-right tabular-nums">
                                 {r.variancePercentage != null ? `${r.variancePercentage.toFixed(2)}%` : '—'}
                               </TableCell>
                             </TableRow>
@@ -315,22 +316,22 @@ export function ForecastActualsSection({
                           {summaryQ.data?.totals && (
                             <TableRow key="summary-totals" className="bg-muted/50 font-medium">
                               <TableCell>{summaryQ.data.totals.clientName}</TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right tabular-nums">
                                 {summaryQ.data.totals.forecastBudget?.toFixed(2)}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right tabular-nums">
                                 {summaryQ.data.totals.netActuals?.toFixed(2)}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right tabular-nums">
                                 {summaryQ.data.totals.mileage?.toFixed(2)}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right tabular-nums">
                                 {summaryQ.data.totals.grossActuals?.toFixed(2)}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right tabular-nums">
                                 {summaryQ.data.totals.variance?.toFixed(2)}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right tabular-nums">
                                 {summaryQ.data.totals.variancePercentage != null
                                   ? `${summaryQ.data.totals.variancePercentage.toFixed(2)}%`
                                   : '—'}
@@ -338,8 +339,7 @@ export function ForecastActualsSection({
                             </TableRow>
                           )}
                         </TableBody>
-                      </Table>
-                    </div>
+                    </Table>
                   </>
                 )}
               </CardContent>
@@ -361,59 +361,51 @@ export function ForecastActualsSection({
                   }
                 />
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border-b border-border">
-                  <nav className="-mb-px flex flex-wrap gap-x-6">
-                    {VARIANCE_TABS.map((t) => {
-                      const active = varianceTab === t.id;
-                      const count = varianceQ.data?.[t.countKey];
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => {
-                            onVarianceTabChange(t.id);
-                            onPageChange(1);
-                          }}
-                          className={cn(
-                            'border-b-2 py-2 px-1 text-sm font-medium transition-colors',
-                            active
-                              ? 'border-primary text-primary'
-                              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                          )}
-                        >
-                          {t.label}
-                          {count != null && (
-                            <span
-                              className={cn(
-                                'ml-2 rounded-full px-2 py-0.5 text-xs',
-                                active
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-muted text-muted-foreground'
-                              )}
-                            >
-                              {count}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </nav>
+              <CardContent className="space-y-4 p-0 pb-4">
+                <div className="px-4 pt-4">
+                  <Tabs
+                    value={varianceTab}
+                    onValueChange={(v) => {
+                      onVarianceTabChange(v);
+                      onPageChange(1);
+                    }}
+                  >
+                    <TabsList>
+                      {VARIANCE_TABS.map((t) => {
+                        const count = varianceQ.data?.[t.countKey];
+                        return (
+                          <TabsTrigger key={t.id} value={t.id}>
+                            {t.label}
+                            {count != null && (
+                              <Badge
+                                variant={varianceTab === t.id ? 'primary' : 'default'}
+                                className="ml-2"
+                              >
+                                {count}
+                              </Badge>
+                            )}
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
+                  </Tabs>
                 </div>
                 {varianceQ.isLoading ? (
-                  <LoadingScreen message="Loading variance…" />
+                  <div className="px-4 py-8">
+                    <LoadingScreen message="Loading variance…" />
+                  </div>
                 ) : varianceQ.error ? (
-                  <p className="text-destructive">{getErrorMessage(varianceQ.error)}</p>
+                  <p className="px-4 text-destructive">{getErrorMessage(varianceQ.error)}</p>
                 ) : (
                   <>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="px-4 text-xs text-muted-foreground">
                       Forecast: {formatDate(varianceQ.data?.forecastDateRangeStart)} –{' '}
                       {formatDate(varianceQ.data?.forecastDateRangeEnd)} · Actuals:{' '}
                       {formatDate(varianceQ.data?.actualsDateRangeStart)} –{' '}
                       {formatDate(varianceQ.data?.actualsDateRangeEnd)}
                     </p>
                     {(varianceTab === 'all' || varianceTab === 'variance') && (
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2 px-4 text-sm">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="text-muted-foreground">Legend:</span>
                           {varianceTab === 'all' && (
@@ -429,7 +421,7 @@ export function ForecastActualsSection({
                             </>
                           )}
                           <span className="inline-flex items-center gap-1.5">
-                            <span className="inline-block h-3.5 w-3.5 rounded border border-blue-200 bg-blue-50" />
+                            <span className="inline-block h-3.5 w-3.5 rounded border border-primary/30 bg-primary/10" />
                             Forecast
                           </span>
                           <span className="inline-flex items-center gap-1.5">
@@ -437,14 +429,13 @@ export function ForecastActualsSection({
                             Actuals
                           </span>
                           <span className="inline-flex items-center gap-1.5">
-                            <span className="inline-block h-3.5 w-3.5 rounded border border-yellow-300 bg-yellow-200" />
+                            <span className="inline-block h-3.5 w-3.5 rounded border border-warning/40 bg-warning/30" />
                             Difference
                           </span>
                         </div>
                       </div>
                     )}
-                    <div className="rounded-md border overflow-x-auto">
-                      <Table>
+                    <Table containerClassName="overflow-x-auto">
                         <TableHeader>
                           <TableRow>
                             <VarianceColumnHeaders showType={varianceTab === 'all'} />
@@ -484,8 +475,7 @@ export function ForecastActualsSection({
                             ))
                           )}
                         </TableBody>
-                      </Table>
-                    </div>
+                    </Table>
                     <div className="flex items-center justify-between text-sm">
                       <span>
                         {varianceQ.data?.startIndex != null && varianceQ.data?.endIndex != null

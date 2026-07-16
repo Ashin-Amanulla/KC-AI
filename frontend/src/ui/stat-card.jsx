@@ -4,17 +4,17 @@ import { cn } from '../lib/utils';
 const TONE_VALUE = {
   default: 'text-foreground',
   primary: 'text-primary',
-  warning: 'text-amber-600 dark:text-amber-400',
+  warning: 'text-warning',
   destructive: 'text-destructive',
-  success: 'text-emerald-600 dark:text-emerald-400',
+  success: 'text-success',
 };
 
 const TONE_ICON = {
   default: 'bg-muted text-muted-foreground',
   primary: 'bg-primary/12 text-primary',
-  warning: 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+  warning: 'bg-warning/15 text-warning',
   destructive: 'bg-destructive/12 text-destructive',
-  success: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+  success: 'bg-success/15 text-success',
 };
 
 /**
@@ -32,7 +32,7 @@ export function StatCard({ label, value, sub, icon: Icon, tone = 'default', clas
       <div className="min-w-0">
         <div className="truncate text-xs font-medium text-muted-foreground">{label}</div>
         <div className={cn('text-xl font-bold leading-tight tabular-nums', TONE_VALUE[tone])}>{value}</div>
-        {sub && <div className="truncate text-[11px] text-muted-foreground">{sub}</div>}
+        {sub && <div className="truncate text-2xs text-muted-foreground">{sub}</div>}
       </div>
     </Card>
   );

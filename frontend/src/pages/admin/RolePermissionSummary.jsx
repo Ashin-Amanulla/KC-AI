@@ -9,9 +9,9 @@ export function RolePermissionSummary({ permissionKeys = [], catalog = [] }) {
   }
 
   return (
-    <div className="flex max-w-md flex-col gap-1.5">
+    <div className="flex max-w-md flex-col gap-1">
       {categories.map((cat) => (
-        <div key={cat} className="text-xs">
+        <div key={cat} className="text-2xs leading-snug">
           <span className="font-medium text-foreground">{cat}: </span>
           <span className="text-muted-foreground">{groups[cat].join(', ')}</span>
         </div>

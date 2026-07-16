@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Card, CardContent, CardHeader } from '../../ui/card';
 import { Button } from '../../ui/button';
+import { CardTitleHint } from '../../components/InfoHint';
+import { StatCard } from '../../ui/stat-card';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
 import { cn } from '../../lib/utils';
 import { useTestRuns, useTestRun, useExecuteTestRun } from '../../api/ruleEngine';
@@ -13,28 +15,26 @@ function formatDuration(ms) {
 
 function RunSummaryBar({ run }) {
   const passRate = run.totals?.total ? Math.round((run.totals.pass / run.totals.total) * 100) : 0;
+  const failCount = run.totals?.fail ?? 0;
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-      <span
-        className={cn(
-          'rounded-full px-3 py-1 font-semibold',
-          run.ok
-            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
-            : 'bg-destructive/15 text-destructive'
-        )}
-      >
-        {run.ok ? 'ALL PASSING' : `${run.totals?.fail ?? '?'} FAILING`}
-      </span>
-      <span>
-        <strong className="tabular-nums">{run.totals?.pass ?? 0}</strong>
-        <span className="text-muted-foreground"> / {run.totals?.total ?? 0} tests · {passRate}%</span>
-      </span>
-      <span className="text-muted-foreground">
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Status" value={run.ok ? 'Passing' : 'Failing'} tone={run.ok ? 'success' : 'destructive'} />
+        <StatCard
+          label="Pass rate"
+          value={`${passRate}%`}
+          sub={`${run.totals?.pass ?? 0} / ${run.totals?.total ?? 0} tests`}
+          tone={passRate === 100 ? 'success' : failCount > 0 ? 'destructive' : 'default'}
+        />
+        <StatCard label="Tests passed" value={run.totals?.pass ?? 0} tone="success" />
+        <StatCard label="Tests failed" value={failCount} tone={failCount > 0 ? 'destructive' : 'default'} />
+      </div>
+      <p className="text-sm text-muted-foreground">
         {new Date(run.ranAt).toLocaleString()} · {formatDuration(run.durationMs)}
         {run.gitSha ? ` · ${run.gitSha}` : ''}
         {run.awardRateSetLabel ? ` · rates ${run.awardRateSetLabel}` : ''}
         {run.ranBy ? ` · by ${run.ranBy}` : ''}
-      </span>
+      </p>
     </div>
   );
 }
@@ -72,7 +72,7 @@ function ResultsByFile({ results }) {
             >
               <span className="truncate font-mono text-xs">{file || '(unknown file)'}</span>
               <span className="flex shrink-0 items-center gap-2 text-xs">
-                <span className="text-emerald-600 dark:text-emerald-400 tabular-nums">
+                <span className="text-success tabular-nums">
                   ✓ {fileResults.length - fails.length}
                 </span>
                 {fails.length > 0 && <span className="text-destructive tabular-nums">✗ {fails.length}</span>}
@@ -85,7 +85,7 @@ function ResultsByFile({ results }) {
                   {fileResults.map((result) => (
                     <li key={result.testName} className="px-4 py-2 text-sm">
                       <div className="flex items-start gap-2">
-                        <span className={result.status === 'pass' ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}>
+                        <span className={result.status === 'pass' ? 'text-success' : 'text-destructive'}>
                           {result.status === 'pass' ? '✓' : '✗'}
                         </span>
                         <div className="min-w-0">
@@ -94,7 +94,7 @@ function ResultsByFile({ results }) {
                           {result.ruleIds?.length > 0 && (
                             <span className="ml-2 space-x-1">
                               {result.ruleIds.map((id) => (
-                                <span key={id} className="rounded bg-muted px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
+                                <span key={id} className="rounded bg-muted px-1 py-0.5 font-mono text-2xs text-muted-foreground">
                                   {id}
                                 </span>
                               ))}
@@ -142,11 +142,11 @@ export function TestMonitor() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Runs every engine test (rule tags, regression guards, and golden blessed fixtures) against
-          the current code. Run this after any engine or rates change — a failing golden fixture
-          means a pay calculation changed.
-        </p>
+        <CardTitleHint
+          hint="Runs every engine test (rule tags, regression guards, golden fixtures) against current code. Failing golden fixtures mean pay calculation changed."
+        >
+          Engine tests
+        </CardTitleHint>
         <Button onClick={handleRun} disabled={executeRun.isPending}>
           {executeRun.isPending ? 'Running…' : 'Run engine tests'}
         </Button>
@@ -165,7 +165,7 @@ export function TestMonitor() {
       {runDetail?.run && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Latest selected run</CardTitle>
+            <CardTitleHint>Latest selected run</CardTitleHint>
           </CardHeader>
           <CardContent className="space-y-4">
             <RunSummaryBar run={runDetail.run} />
@@ -177,7 +177,7 @@ export function TestMonitor() {
       {runs.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Run history</CardTitle>
+            <CardTitleHint>Past runs</CardTitleHint>
           </CardHeader>
           <CardContent className="p-0">
             <ul className="divide-y">
@@ -191,7 +191,7 @@ export function TestMonitor() {
                       activeRunId === run._id && 'bg-accent/60'
                     )}
                   >
-                    <span className={cn('h-2.5 w-2.5 rounded-full', run.ok ? 'bg-emerald-500' : 'bg-destructive')} />
+                    <span className={cn('h-2.5 w-2.5 rounded-full', run.ok ? 'bg-success' : 'bg-destructive')} />
                     <span className="tabular-nums">
                       {run.totals?.pass ?? 0}/{run.totals?.total ?? 0}
                     </span>

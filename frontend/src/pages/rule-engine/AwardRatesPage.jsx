@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
+import { Badge } from '../../ui/badge';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
-import { cn } from '../../lib/utils';
+import { CardTitleHint, InfoHint } from '../../components/InfoHint';
 import { useAuthStore } from '../../store/auth';
 import { PERMISSIONS, hasPermission } from '../../config/permissions';
 import { useAwardRateSets, useUpdateAwardRateSet } from '../../api/ruleEngine';
@@ -25,10 +26,10 @@ const CONSTANT_LABELS = [
   ['otTier2Mult', 'OT tier 2', '×'],
 ];
 
-const STATUS_CLS = {
-  active: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
-  draft: 'bg-muted text-muted-foreground',
-  'needs-verification': 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+const STATUS_VARIANT = {
+  active: 'success',
+  draft: 'default',
+  'needs-verification': 'warning',
 };
 
 function RateSetCard({ set, canManage, onSave, saving }) {
@@ -55,9 +56,7 @@ function RateSetCard({ set, canManage, onSave, saving }) {
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
         <div className="flex items-center gap-3">
           <CardTitle className="text-base">{set.label}</CardTitle>
-          <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', STATUS_CLS[set.status])}>
-            {set.status}
-          </span>
+          <Badge variant={STATUS_VARIANT[set.status]}>{set.status}</Badge>
           <span className="text-xs text-muted-foreground">
             effective {new Date(set.effectiveFrom).toLocaleDateString()}
             {set.effectiveTo ? ` → ${new Date(set.effectiveTo).toLocaleDateString()}` : ' → ongoing'}
@@ -81,7 +80,7 @@ function RateSetCard({ set, canManage, onSave, saving }) {
       </CardHeader>
       <CardContent>
         {set.status === 'needs-verification' && (
-          <p className="mb-3 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+          <p className="mb-3 rounded-md bg-warning/15 px-3 py-2 text-xs text-warning">
             ⚠️ Placeholder values copied from the previous financial year. Confirm each amount against
             the FWC determination / current SCHADS pay guide, then save as active.
             {set.source ? ` Source: ${set.source}` : ''}
@@ -136,12 +135,19 @@ export function AwardRatesPage() {
 
   return (
     <div className="space-y-4">
-      <p className="max-w-3xl text-sm text-muted-foreground">
-        SCHADS allowances and multipliers are effective-dated per financial year (FWC indexes the
-        dollar amounts every 1 July). Pay runs are stamped with the set that applied at their period
-        start, so recomputing an old fortnight reproduces the old dollars.
-        {sets.length === 0 && ' No sets exist yet — run `npm run seed:award-rates` in backend/.'}
-      </p>
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm font-semibold">Financial-year rate sets</span>
+        <InfoHint
+          content={
+            <>
+              SCHADS allowances and multipliers are effective-dated per financial year (FWC indexes
+              dollar amounts every 1 July). Pay runs are stamped with the set at period start.
+              {sets.length === 0 && ' No sets yet — run seed:award-rates in backend/.'}
+            </>
+          }
+          label="About award rate sets"
+        />
+      </div>
       {sets.map((set) => (
         <RateSetCard
           key={set._id}

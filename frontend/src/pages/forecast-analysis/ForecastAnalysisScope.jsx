@@ -1,5 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Card, CardContent, CardHeader } from '../../ui/card';
 import { LoadingScreen } from '../../ui/LoadingSpinner';
+import { CardTitleHint, FieldLabel } from '../../components/InfoHint';
+import { nativeSelectClass } from '../../ui/select';
 
 export function ForecastAnalysisScope({
   locations,
@@ -23,18 +25,23 @@ export function ForecastAnalysisScope({
   const clientOptions = directory?.clients || [{ value: 'all', label: 'All Clients' }];
 
   return (
-    <Card className="sticky top-0 z-10 shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Scope</CardTitle>
+    <Card className="sticky top-0 z-10 shadow-xs dark:shadow-none">
+      <CardHeader className="border-b py-2.5">
+        <CardTitleHint
+          titleClassName="text-sm"
+          hint="Filters apply to all tabs below. Pick a location first — staff and client lists load from that site."
+        >
+          Scope
+        </CardTitleHint>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-end">
+      <CardContent className="flex flex-col gap-3 py-3 md:flex-row md:flex-wrap md:items-end">
         <div className="space-y-1">
-          <label className="text-sm font-medium">Location</label>
+          <FieldLabel hint="All analysis is location-scoped.">Location</FieldLabel>
           {locLoading ? (
             <LoadingScreen message="Loading locations…" />
           ) : (
             <select
-              className="flex h-10 w-full md:w-64 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className={`${nativeSelectClass} md:w-56`}
               value={locationId}
               onChange={(e) => onLocationChange(e.target.value)}
             >
@@ -49,9 +56,9 @@ export function ForecastAnalysisScope({
         </div>
         {showStaff && (
           <div className="space-y-1">
-            <label className="text-sm font-medium">Staff</label>
+            <FieldLabel>Staff</FieldLabel>
             <select
-              className="flex h-10 w-full md:w-56 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className={`${nativeSelectClass} md:w-48`}
               value={staff}
               onChange={(e) => onStaffChange(e.target.value)}
               disabled={!locationId || dirLoading}
@@ -65,9 +72,9 @@ export function ForecastAnalysisScope({
           </div>
         )}
         <div className="space-y-1">
-          <label className="text-sm font-medium">Client</label>
+          <FieldLabel>Client</FieldLabel>
           <select
-            className="flex h-10 w-full md:w-56 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className={`${nativeSelectClass} md:w-48`}
             value={client}
             onChange={(e) => onClientChange(e.target.value)}
             disabled={!locationId || dirLoading}
@@ -82,24 +89,23 @@ export function ForecastAnalysisScope({
         {showDateFilter && (
           <>
             <div className="space-y-1">
-              <label className="text-sm font-medium">From date</label>
+              <FieldLabel>From</FieldLabel>
               <input
                 type="date"
-                className="flex h-10 w-full md:w-40 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className={nativeSelectClass}
                 value={dateFrom}
                 onChange={(e) => onDateFromChange(e.target.value)}
                 disabled={!locationId}
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">To date</label>
+              <FieldLabel>To</FieldLabel>
               <input
                 type="date"
-                className="flex h-10 w-full md:w-40 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className={nativeSelectClass}
                 value={dateTo}
                 onChange={(e) => onDateToChange(e.target.value)}
                 disabled={!locationId}
-                min={dateFrom || undefined}
               />
             </div>
           </>

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { nativeSelectClass } from '../ui/select';
 import {
   Table,
   TableBody,
@@ -274,9 +276,9 @@ export function ForecastActualsRowPanel({
           <p className="text-sm font-medium">{editingId ? `Edit ${title} row` : `Add ${title} row`}</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-1">
-              <label className="text-sm font-medium">Client</label>
+              <Label>Client</Label>
               <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className={cn(nativeSelectClass, 'w-full')}
                 value={rowForm.clientDirectoryId}
                 onChange={(e) => updateField('clientDirectoryId', e.target.value)}
                 required
@@ -290,9 +292,9 @@ export function ForecastActualsRowPanel({
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Staff</label>
+              <Label>Staff</Label>
               <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className={cn(nativeSelectClass, 'w-full')}
                 value={rowForm.staffDirectoryId}
                 onChange={(e) => updateField('staffDirectoryId', e.target.value)}
               >
@@ -305,7 +307,7 @@ export function ForecastActualsRowPanel({
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Date</label>
+              <Label>Date</Label>
               <Input
                 type="date"
                 value={rowForm.shiftDate}
@@ -314,7 +316,7 @@ export function ForecastActualsRowPanel({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Start</label>
+              <Label>Start</Label>
               <Input
                 type="datetime-local"
                 value={rowForm.startDatetime}
@@ -323,7 +325,7 @@ export function ForecastActualsRowPanel({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">End</label>
+              <Label>End</Label>
               <Input
                 type="datetime-local"
                 value={rowForm.endDatetime}
@@ -332,7 +334,7 @@ export function ForecastActualsRowPanel({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Duration</label>
+              <Label>Duration</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -342,7 +344,7 @@ export function ForecastActualsRowPanel({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Cost</label>
+              <Label>Cost</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -352,7 +354,7 @@ export function ForecastActualsRowPanel({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Total cost</label>
+              <Label>Total cost</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -362,18 +364,18 @@ export function ForecastActualsRowPanel({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Shift id</label>
+              <Label>Shift id</Label>
               <Input value={rowForm.shiftcareId} onChange={(e) => updateField('shiftcareId', e.target.value)} />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Shift description</label>
+              <Label>Shift description</Label>
               <Input
                 value={rowForm.shiftDescription}
                 onChange={(e) => updateField('shiftDescription', e.target.value)}
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Ratio</label>
+              <Label>Ratio</Label>
               <Input
                 placeholder="1:2"
                 value={rowForm.ratio}
@@ -382,11 +384,11 @@ export function ForecastActualsRowPanel({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Rate groups</label>
+              <Label>Rate groups</Label>
               <Input value={rowForm.rateGroups} onChange={(e) => updateField('rateGroups', e.target.value)} />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Shift type</label>
+              <Label>Shift type</Label>
               <Input value={rowForm.shiftType} onChange={(e) => updateField('shiftType', e.target.value)} />
             </div>
           </div>

@@ -102,9 +102,16 @@ export const createRole = async ({ name, description, permissions }) => {
   return role.toObject();
 };
 
-export const updateRole = async (id, { name, description, permissions }) => {
+export const updateRole = async (id, { name, description, permissions, isActive }) => {
   const role = await Role.findById(id);
   if (!role) throw new Error('Role not found');
+
+  if (isActive === false) {
+    return deactivateRole(id);
+  }
+  if (isActive === true) {
+    role.isActive = true;
+  }
 
   if (name !== undefined) role.name = name.trim();
   if (description !== undefined) role.description = description.trim();

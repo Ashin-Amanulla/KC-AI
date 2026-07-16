@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { Upload } from 'lucide-react';
 import { useUploadRosterTimesheet, useRosterPayPeriodTag } from '../../api/rosterCoverage';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { CardTitleHint } from '../../components/InfoHint';
 import { getErrorMessage } from '../../utils/api';
 import { setRosterTimesheetWindow } from '../../utils/rosterCoveragePayPeriod';
 
@@ -65,93 +66,73 @@ export function RosterTimesheetUpload() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Fortnightly timesheet</CardTitle>
-          <CardDescription>
-            After a successful import, Team, staff profiles, and Find cover (when you run a search) total worked hours
-            over the <strong className="text-foreground">full date span of every shift in that file</strong> (earliest
-            start through latest end). The contracted cap column is still the per-fortnight cap from each person’s
-            roster record.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm text-muted-foreground">
-          <p>
-            Upload the same <strong className="text-foreground">ShiftCare export CSV</strong> used on{' '}
-            <strong className="text-foreground">Workforce</strong> (staff name, start time, end time, shift type,
-            client name / Name column).
-          </p>
-          <ul className="list-disc pl-5">
-            <li>Staff and participant names must match roster records (same spelling as in Roster coverage).</li>
-            <li>Sleepover shifts are taken from the Shift type column.</li>
-            <li>Cancelled / absent rows follow the same rules as the workforce importer.</li>
-          </ul>
-        </CardContent>
-      </Card>
+    <div className="page-stack-dense">
+      <section className="rounded-lg border bg-card p-3 space-y-2.5">
+        <CardTitleHint
+          titleClassName="text-2sm"
+          hintLabel="About timesheet import"
+          hint={
+            <>
+              After import, Team and Find cover use the full date span of shifts in the file. Upload the same ShiftCare
+              export CSV as Workforce. Staff and participant names must match roster records.
+            </>
+          }
+        >
+          Upload
+        </CardTitleHint>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Upload</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4 max-w-xl">
-            {activeWindow ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-input bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                <span>
-                  Active totals window:{' '}
-                  <span className="font-medium text-foreground">
-                    {formatUploadInstant(activeWindow.start)} — {formatUploadInstant(activeWindow.end)}
-                  </span>
+        <form onSubmit={onSubmit} className="space-y-2.5">
+          {activeWindow ? (
+            <div className="muted-strip flex flex-wrap items-center justify-between gap-2 py-1.5">
+              <span>
+                Active window:{' '}
+                <span className="font-medium text-foreground">
+                  {formatUploadInstant(activeWindow.start)} — {formatUploadInstant(activeWindow.end)}
                 </span>
-                <Button type="button" variant="outline" size="sm" onClick={clearTimesheetWindow}>
-                  Clear window
-                </Button>
-              </div>
-            ) : null}
-            <div>
-              <label className="text-sm font-medium">File</label>
-              <Input
-                type="file"
-                accept=".csv"
-                className="mt-1"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
+              </span>
+              <Button type="button" variant="outline" size="sm" onClick={clearTimesheetWindow}>
+                Clear
+              </Button>
             </div>
-            <Button type="submit" disabled={upload.isPending}>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="file"
+              accept=".csv"
+              className="h-8 max-w-xs text-2sm file:text-2sm"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+            <Button type="submit" size="sm" disabled={upload.isPending || !file}>
+              <Upload className="mr-1.5 h-3.5 w-3.5" />
               {upload.isPending ? 'Uploading…' : 'Upload'}
             </Button>
-            {lastUpload && (
-              <div className="rounded-md border border-input bg-muted/30 p-3 text-sm">
-                <p className="font-medium text-foreground">Last upload</p>
-                {lastUpload.shiftsCreated > 0 ? (
-                  <ul className="mt-2 space-y-1 text-muted-foreground">
-                    {lastUpload.timesheetSpan ? (
-                      <li>
-                        <span className="text-foreground">Date range (imported shifts): </span>
-                        {formatUploadInstant(lastUpload.timesheetSpan.start)} —{' '}
-                        {formatUploadInstant(lastUpload.timesheetSpan.end)}
-                      </li>
-                    ) : null}
+          </div>
+
+          {lastUpload && (
+            <div className="detail-panel space-y-1 p-3 text-2sm">
+              <p className="font-medium text-foreground">Last upload</p>
+              {lastUpload.shiftsCreated > 0 ? (
+                <ul className="space-y-0.5 text-muted-foreground">
+                  {lastUpload.timesheetSpan ? (
                     <li>
-                      <span className="text-foreground">Total shift hours: </span>
-                      {Number(lastUpload.totalHoursImported).toFixed(1)} h
+                      Range: {formatUploadInstant(lastUpload.timesheetSpan.start)} —{' '}
+                      {formatUploadInstant(lastUpload.timesheetSpan.end)}
                     </li>
-                    <li className="text-xs">
-                      {lastUpload.shiftsCreated} shift{lastUpload.shiftsCreated === 1 ? '' : 's'} ·{' '}
-                      {lastUpload.rowsProcessed} CSV row{lastUpload.rowsProcessed === 1 ? '' : 's'}
-                    </li>
-                  </ul>
-                ) : (
-                  <p className="mt-2 text-muted-foreground">
-                    No shifts were imported, so there is no duration to show. Fix row errors and try again.
-                  </p>
-                )}
-              </div>
-            )}
-          </form>
-        </CardContent>
-      </Card>
+                  ) : null}
+                  <li>Total hours: {Number(lastUpload.totalHoursImported).toFixed(1)} h</li>
+                  <li className="text-2xs">
+                    {lastUpload.shiftsCreated} shift{lastUpload.shiftsCreated === 1 ? '' : 's'} ·{' '}
+                    {lastUpload.rowsProcessed} row{lastUpload.rowsProcessed === 1 ? '' : 's'}
+                  </li>
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">No shifts imported — fix row errors and try again.</p>
+              )}
+            </div>
+          )}
+        </form>
+      </section>
     </div>
   );
 }

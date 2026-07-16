@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { RULES_CATALOG, RULE_CATEGORIES, getRulesByCategory } from './rulesCatalog.js';
+import { getScenarioForRule } from './ruleScenarios.js';
 import { renderRulesDoc } from './renderRulesDoc.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -34,6 +35,19 @@ test('rules catalog: every category has at least one rule', () => {
 test('[R055] catalog reflects split-loading (post-sleepover PC NOT forced to night band)', () => {
   const r055 = RULES_CATALOG.find((rule) => rule.id === 'R055');
   assert.match(r055.description, /NOT.*forced/i, 'R055 must state the band is not forced (code wins over old doc)');
+});
+
+test('rules catalog: every rule has a real-life scenario', () => {
+  for (const rule of RULES_CATALOG) {
+    const scenario = getScenarioForRule(rule);
+    assert.ok(scenario.title, `${rule.id}: scenario missing title`);
+    assert.ok(scenario.outcome, `${rule.id}: scenario missing outcome`);
+    assert.ok(scenario.worker?.name, `${rule.id}: scenario missing worker`);
+    assert.ok(scenario.participant?.name, `${rule.id}: scenario missing participant`);
+    assert.ok(Array.isArray(scenario.timeline) && scenario.timeline.length > 0, `${rule.id}: scenario missing timeline`);
+    assert.ok(scenario.payCalc?.steps?.length, `${rule.id}: scenario missing pay calc steps`);
+    assert.ok(scenario.visual?.flow?.length, `${rule.id}: scenario missing visual flow`);
+  }
 });
 
 test('docs/schads-rules-implemented.md matches the rules catalog (run `npm run docs:rules` after editing the catalog)', () => {

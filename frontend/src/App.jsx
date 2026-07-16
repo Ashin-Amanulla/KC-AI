@@ -40,6 +40,7 @@ import { CirPage } from './pages/cir/CirPage';
 import { HrRequirementsPage } from './pages/hr-requirements/HrRequirementsPage';
 import { canAccessPath, getDefaultLanding } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
+import { useUiPreferencesStore, resolveTheme } from './store/uiPreferences';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -89,10 +90,22 @@ const ProtectedRoute = ({ children }) => {
   );
 };
 
+function ThemeAwareToaster() {
+  const theme = useUiPreferencesStore((s) => s.theme);
+  return (
+    <Toaster
+      position="top-right"
+      richColors
+      closeButton
+      theme={resolveTheme(theme)}
+    />
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster position="top-right" richColors closeButton />
+      <ThemeAwareToaster />
       <BrowserRouter>
         <Routes>
           <Route

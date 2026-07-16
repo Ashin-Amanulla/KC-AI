@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Search, Trash2, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Card, CardContent, CardHeader } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { SkeletonTable } from '../../ui/Skeleton';
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableScrollArea } from '../../ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
 import { getErrorMessage } from '../../utils/api';
 import { cn } from '../../lib/utils';
@@ -21,9 +21,26 @@ import {
   validateDraft,
 } from './crmColumnDefs';
 import { formatBooleanDisplay } from './crmFormUtils.jsx';
+import { nativeSelectClass } from '../../ui/select';
 import { useSpreadsheetCollaboration } from '../../hooks/useSpreadsheetCollaboration';
 
 const ROW_NUM_WIDTH = 40;
+
+function stickyFrozenCellClass({ rowIndex, isDraft, isHeader, isIdColumn }) {
+  if (isHeader) {
+    return cn(
+      'bg-card',
+      isIdColumn && 'shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_8px_-4px_rgba(0,0,0,0.35)]'
+    );
+  }
+  return cn(
+    'bg-card',
+    rowIndex % 2 === 1 && 'bg-muted',
+    isDraft && 'bg-warning/20',
+    'group-hover:bg-accent',
+    isIdColumn && 'shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_8px_-4px_rgba(0,0,0,0.35)]'
+  );
+}
 
 function sortStorageKey(title) {
   return `crm-sort:${title}`;
@@ -96,7 +113,7 @@ function SelectCellEditor({ col, value, onChange, onCommit, onCancel, inputRef }
     <div className="flex min-w-[140px] flex-col gap-1">
       <select
         ref={inputRef}
-        className="h-7 w-full min-w-0 rounded border border-input bg-background px-1 text-xs"
+        className={cn('h-7 w-full min-w-0 px-1 text-xs', nativeSelectClass)}
         value={selectVal}
         onChange={(e) => {
           const next = e.target.value;
@@ -262,7 +279,7 @@ function DisplayCell({ row, col, onExpand, livePreview, multiline }) {
       >
         {text || '—'}
         {count > 0 && (
-          <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+          <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-2xs font-medium text-muted-foreground">
             {count}
           </span>
         )}
@@ -786,20 +803,20 @@ export function CrmSpreadsheet({
         </DialogContent>
       </Dialog>
 
-      <CardHeader className="space-y-3 pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-base">{title}</CardTitle>
-          <div className="flex flex-wrap items-center gap-2">
+      <CardHeader className="space-y-0 border-b py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm font-semibold">{title}</span>
+          <div className="filter-toolbar py-1">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={searchValue}
                 onChange={(e) => onSearchChange?.(e.target.value)}
                 placeholder="Search…"
-                className="h-8 w-48 pl-8 text-xs"
+                className="filter-control h-8 w-44 pl-7"
               />
             </div>
-            <span className="text-xs text-muted-foreground tabular-nums">
+            <span className="text-2xs text-muted-foreground tabular-nums">
               {allRows.length} record{allRows.length === 1 ? '' : 's'}
             </span>
             {canManage && (
@@ -807,6 +824,7 @@ export function CrmSpreadsheet({
                 type="button"
                 size="sm"
                 variant="outline"
+                className="h-8"
                 onClick={addRow}
                 disabled={isSaving || savingCell || addingRow}
               >
@@ -817,15 +835,15 @@ export function CrmSpreadsheet({
           </div>
         </div>
         {collaborationRoom && (
-          <div className="flex flex-wrap items-center gap-2 text-xs">
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-2xs">
             <span
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5',
-                connected ? 'bg-emerald-100 text-emerald-800' : 'bg-muted text-muted-foreground'
+                connected ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground'
               )}
             >
               <span
-                className={cn('h-1.5 w-1.5 rounded-full', connected ? 'bg-emerald-500' : 'bg-muted-foreground')}
+                className={cn('h-1.5 w-1.5 rounded-full', connected ? 'bg-success' : 'bg-muted-foreground')}
               />
               {connected ? 'Live' : 'Reconnecting…'}
             </span>
@@ -853,12 +871,15 @@ export function CrmSpreadsheet({
             <SkeletonTable rows={8} cols={Math.min(columns.length, 6)} />
           </div>
         ) : (
-          <div className="max-h-[calc(100vh-12rem)] overflow-auto border-t">
-            <table className="w-full border-collapse text-xs">
-              <TableHeader className="sticky top-0 z-20 bg-muted shadow-sm">
-                <TableRow className="hover:bg-muted">
+          <TableScrollArea>
+            <Table scrollable={false}>
+              <TableHeader className="sticky top-0 z-20 bg-card shadow-[0_1px_0_0_var(--border)]">
+                <TableRow>
                   <TableHead
-                    className="sticky left-0 top-0 z-30 h-8 border border-border/60 bg-muted px-2 py-1 text-center font-semibold"
+                    className={cn(
+                      'sticky left-0 top-0 z-40 text-center',
+                      stickyFrozenCellClass({ isHeader: true })
+                    )}
                     style={{ width: ROW_NUM_WIDTH, minWidth: ROW_NUM_WIDTH }}
                   >
                     #
@@ -867,8 +888,12 @@ export function CrmSpreadsheet({
                     <TableHead
                       key={col.key}
                       className={cn(
-                        'sticky top-0 h-8 border border-border/60 bg-muted px-2 py-1 font-semibold whitespace-nowrap select-none',
-                        col.isId && 'sticky z-30 border-r-2 border-r-border',
+                        'sticky top-0 select-none bg-card',
+                        col.isId && cn(
+                          'sticky z-40 border-r-2 border-r-border',
+                          stickyFrozenCellClass({ isHeader: true, isIdColumn: true })
+                        ),
+                        !col.isId && 'z-30',
                         'cursor-pointer hover:bg-muted/80'
                       )}
                       style={{
@@ -885,16 +910,16 @@ export function CrmSpreadsheet({
                     </TableHead>
                   ))}
                   {canManage && (
-                    <TableHead className="sticky top-0 h-8 w-10 border border-border/60 bg-muted px-1 py-1" />
+                    <TableHead className="sticky top-0 z-30 bg-card w-10 px-1" />
                   )}
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody striped={false}>
                 {allRows.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={columns.length + (canManage ? 2 : 1)}
-                      className="border border-border/60 px-4 py-8 text-center text-muted-foreground"
+                      className="px-4 py-8 text-center text-muted-foreground"
                     >
                       No records found
                     </TableCell>
@@ -907,13 +932,17 @@ export function CrmSpreadsheet({
                       <TableRow
                         key={row._id}
                         className={cn(
+                          'group',
                           'hover:bg-muted/30',
                           rowIndex % 2 === 1 && 'bg-muted/10',
-                          isDraft && 'bg-amber-50/50 dark:bg-amber-950/20'
+                          isDraft && 'bg-warning/10'
                         )}
                       >
                         <TableCell
-                          className="sticky left-0 z-10 border border-border/60 bg-background px-2 py-1 text-center text-muted-foreground tabular-nums"
+                          className={cn(
+                            'sticky left-0 z-20 text-center text-muted-foreground tabular-nums',
+                            stickyFrozenCellClass({ rowIndex, isDraft })
+                          )}
                           style={{ width: ROW_NUM_WIDTH, minWidth: ROW_NUM_WIDTH }}
                         >
                           {rowIndex + 1}
@@ -929,11 +958,14 @@ export function CrmSpreadsheet({
                             <TableCell
                               key={col.key}
                               className={cn(
-                                'border border-border/60 px-2 py-1 relative',
+                                'relative',
                                 !readOnly && 'cursor-cell',
-                                isEditing && 'ring-2 ring-inset ring-primary bg-background',
+                                isEditing && 'bg-background ring-2 ring-inset ring-primary',
                                 peerFocus && !isEditing && 'bg-background',
-                                col.isId && 'sticky z-10 bg-background border-r-2 border-r-border font-medium'
+                                col.isId && cn(
+                                  'sticky z-20 border-r-2 border-r-border font-medium',
+                                  stickyFrozenCellClass({ rowIndex, isDraft, isIdColumn: true })
+                                )
                               )}
                               style={{
                                 minWidth: col.minWidth || 100,
@@ -989,7 +1021,7 @@ export function CrmSpreadsheet({
                           );
                         })}
                         {canManage && (
-                          <TableCell className="border border-border/60 px-1 py-1 text-center">
+                          <TableCell className="text-center">
                             <Button
                               type="button"
                               variant="ghost"
@@ -1008,8 +1040,8 @@ export function CrmSpreadsheet({
                   })
                 )}
               </TableBody>
-            </table>
-          </div>
+            </Table>
+          </TableScrollArea>
         )}
       </CardContent>
     </Card>

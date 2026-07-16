@@ -11,8 +11,8 @@ import {
 import { StandardTemplatesSection } from './forecast-analysis/StandardTemplatesSection';
 import { StandardVsForecastSection } from './forecast-analysis/StandardVsForecastSection';
 import { ForecastActualsSection } from './forecast-analysis/ForecastActualsSection';
-import { Button } from '../ui/button';
-import { cn } from '../lib/utils';
+import { PageHeader } from '../components/PageHeader';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 
 const INITIAL_SVF_UI = {
   section: 'summary',
@@ -96,13 +96,11 @@ export function ForecastAnalysis() {
   const showStaff = primaryTab === 'forecast-vs-actuals';
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold">Forecast analysis</h2>
-        <p className="text-sm text-muted-foreground">
-          Manage standard templates, compare standard to forecast, and forecast to actuals.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="Forecast analysis"
+        hint="Standard templates, standard vs forecast comparison, and forecast vs actuals variance."
+      />
 
       <ForecastAnalysisScope
         locations={locations}
@@ -124,21 +122,17 @@ export function ForecastAnalysis() {
       />
 
       <div className="space-y-2">
-        <div className="flex flex-wrap gap-2 border-b pb-2">
-          {PRIMARY_TABS.map((t) => (
-            <Button
-              key={t.id}
-              type="button"
-              variant={primaryTab === t.id ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setPrimaryTab(t.id)}
-            >
-              {t.label}
-            </Button>
-          ))}
-        </div>
+        <Tabs value={primaryTab} onValueChange={setPrimaryTab}>
+          <TabsList>
+            {PRIMARY_TABS.map((t) => (
+              <TabsTrigger key={t.id} value={t.id}>
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
         {activeTabMeta && (
-          <p className={cn('text-sm text-muted-foreground')}>{activeTabMeta.description}</p>
+          <p className="text-sm text-muted-foreground">{activeTabMeta.description}</p>
         )}
       </div>
 

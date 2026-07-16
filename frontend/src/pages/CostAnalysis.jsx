@@ -14,6 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { PageHeader } from '../components/PageHeader';
 import { toast } from 'sonner';
 import { downloadClientRevenueVsWagesXlsx } from '../lib/clientRevenueExport';
 import {
@@ -517,20 +519,20 @@ function analyzeRows(rows) {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function KpiCard({ icon: Icon, label, value, sub, color = 'blue', danger }) {
   const colors = {
-    blue:   'text-blue-600 bg-blue-50',
-    red:    'text-red-600 bg-red-50',
-    amber:  'text-amber-600 bg-amber-50',
-    green:  'text-green-600 bg-green-50',
-    purple: 'text-purple-600 bg-purple-50',
+    blue:   'text-primary bg-primary/10',
+    red:    'text-destructive bg-destructive/10',
+    amber:  'text-warning bg-warning/10',
+    green:  'text-success bg-success/10',
+    purple: 'text-primary bg-primary/10',
   };
   return (
-    <Card className={danger ? 'border-red-200' : ''}>
+    <Card className={danger ? 'border-destructive/30' : ''}>
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm text-gray-500">{label}</p>
-            <p className={`text-2xl font-bold mt-1 ${danger ? 'text-red-600' : 'text-gray-900'}`}>{value}</p>
-            {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className={`text-2xl font-bold mt-1 ${danger ? 'text-destructive' : 'text-foreground'}`}>{value}</p>
+            {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
           </div>
           <div className={`p-2 rounded-lg ${colors[color]}`}>
             <Icon className="w-5 h-5" />
@@ -541,34 +543,34 @@ function KpiCard({ icon: Icon, label, value, sub, color = 'blue', danger }) {
   );
 }
 
-function BarRow({ label, value, maxValue, rate, color = 'bg-blue-500' }) {
+function BarRow({ label, value, maxValue, rate, color = 'bg-primary' }) {
   const pctWidth = maxValue > 0 ? Math.min(100, (value / maxValue) * 100) : 0;
   return (
     <div className="flex items-center gap-3 py-1.5">
-      <span className="text-xs text-gray-600 w-28 shrink-0 truncate">{label}</span>
-      <div className="flex-1 bg-gray-100 rounded-full h-2.5">
+      <span className="text-xs text-muted-foreground w-28 shrink-0 truncate">{label}</span>
+      <div className="flex-1 bg-muted rounded-full h-2.5">
         <div className={`${color} h-2.5 rounded-full transition-all`} style={{ width: pctWidth + '%' }} />
       </div>
-      <span className="text-sm font-medium text-gray-800 w-20 text-right shrink-0">{fmt(value)}</span>
-      {rate !== undefined && <span className="text-xs text-gray-400 w-16 text-right shrink-0">${rate}/hr</span>}
+      <span className="text-sm font-medium text-foreground w-20 text-right shrink-0">{fmt(value)}</span>
+      {rate !== undefined && <span className="text-xs text-muted-foreground w-16 text-right shrink-0">${rate}/hr</span>}
     </div>
   );
 }
 
-function SectionToggle({ title, icon: Icon, children, defaultOpen = false, badge, badgeColor = 'bg-red-100 text-red-700' }) {
+function SectionToggle({ title, icon: Icon, children, defaultOpen = false, badge, badgeColor = 'bg-destructive/12 text-destructive' }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <Card>
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors rounded-lg"
+        className="w-full flex items-center justify-between p-4 hover:bg-muted transition-colors rounded-lg"
       >
         <div className="flex items-center gap-2">
-          {Icon && <Icon className="w-4 h-4 text-gray-500" />}
-          <span className="font-semibold text-gray-800">{title}</span>
+          {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
+          <span className="font-semibold text-foreground">{title}</span>
           {badge && <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badgeColor}`}>{badge}</span>}
         </div>
-        {open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+        {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
       </button>
       {open && <CardContent className="pt-0 pb-4">{children}</CardContent>}
     </Card>
@@ -576,7 +578,7 @@ function SectionToggle({ title, icon: Icon, children, defaultOpen = false, badge
 }
 
 function InefficientTag({ label }) {
-  return <span className="text-xs bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded">{label}</span>;
+  return <span className="text-xs bg-destructive/10 text-destructive border border-destructive/30 px-1.5 py-0.5 rounded">{label}</span>;
 }
 
 // ─── Staff Profitability Section ──────────────────────────────────────────────
@@ -630,35 +632,35 @@ function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
 
   return (
     <tr>
-      <td colSpan={11} className="p-0 bg-slate-50 border-b border-slate-200">
+      <td colSpan={11} className="p-0 bg-muted border-b border-border">
         <div className="px-4 py-4 space-y-4">
 
           {/* Billing line by line */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Billing Lines ({s.billingRows.length} rows)
-              <span className="font-normal normal-case text-gray-400 ml-2">Shift time and SCHADS bands shown when pay hours match</span>
+              <span className="font-normal normal-case text-muted-foreground ml-2">Shift time and SCHADS bands shown when pay hours match</span>
             </p>
-            <div className="rounded-lg border border-gray-200 overflow-x-auto">
+            <div className="rounded-lg border border-border overflow-x-auto">
               <table className="w-full text-xs min-w-[1280px]">
-                <thead className="bg-gray-100">
+                <thead className="bg-muted">
                   <tr>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Date</th>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Client</th>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600 whitespace-nowrap">Shift Time</th>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Rate Group</th>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Billing Type</th>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600 min-w-[200px]">Wage Calculation</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Hrs</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Billed shift cost from export (before km/add-ons)">Billed Cost</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Km</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Total</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Staff Paid</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line hours ÷ staff total hours">Hrs %</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line revenue ÷ staff total revenue">Rev %</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line staff cost ÷ staff total employer cost">Wage %</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="(Revenue − staff cost) ÷ revenue">Margin %</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">$/hr</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Date</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Client</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground whitespace-nowrap">Shift Time</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Rate Group</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Billing Type</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground min-w-[200px]">Wage Calculation</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Hrs</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground" title="Billed shift cost from export (before km/add-ons)">Billed Cost</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Km</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Total</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Staff Paid</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground" title="Line hours ÷ staff total hours">Hrs %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground" title="Line revenue ÷ staff total revenue">Rev %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground" title="Line staff cost ÷ staff total employer cost">Wage %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground" title="(Revenue − staff cost) ÷ revenue">Margin %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">$/hr</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -669,39 +671,39 @@ function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
                         const staffPaid = allocStaffPaid(r);
                         const calcMeta = lineShiftCalcMap?.get(r);
                         return (
-                          <tr key={`${r.shiftId}-${i}`} className="border-t border-gray-100 hover:bg-white">
+                          <tr key={`${r.shiftId}-${i}`} className="border-t border hover:bg-muted/40">
                             {i === 0 && (
-                              <td rowSpan={byDate[date].length} className="px-3 py-1.5 font-medium text-gray-700 align-top whitespace-nowrap border-r border-gray-100">
-                                {date} <span className="text-gray-400">{getDow(date)}</span>
+                              <td rowSpan={byDate[date].length} className="px-3 py-1.5 font-medium text-foreground align-top whitespace-nowrap border-r border">
+                                {date} <span className="text-muted-foreground">{getDow(date)}</span>
                               </td>
                             )}
-                            <td className="px-3 py-1.5 text-gray-700 max-w-[140px] truncate">{r.client}</td>
-                            <td className="px-3 py-1.5 text-gray-600 whitespace-nowrap">{calcMeta?.shiftTime || '—'}</td>
-                            <td className="px-3 py-1.5 text-gray-500 max-w-[180px] truncate" title={r.rateGroup}>{rateGroupShort(r.rateGroup)}</td>
-                            <td className="px-3 py-1.5 text-gray-500">{r.shiftType || '—'}</td>
-                            <td className="px-3 py-1.5 text-gray-600 max-w-[280px]" title={calcMeta?.calcType || ''}>{calcMeta?.calcType || '—'}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground max-w-[140px] truncate">{r.client}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{calcMeta?.shiftTime || '—'}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground max-w-[180px] truncate" title={r.rateGroup}>{rateGroupShort(r.rateGroup)}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground">{r.shiftType || '—'}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground max-w-[280px]" title={calcMeta?.calcType || ''}>{calcMeta?.calcType || '—'}</td>
                             <td className="px-3 py-1.5 text-right font-medium">{r.duration}h</td>
-                            <td className="px-3 py-1.5 text-right text-gray-600">{fmt(r.cost)}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-400">{r.kms > 0 ? r.kms + 'km' : '—'}</td>
-                            <td className="px-3 py-1.5 text-right font-semibold text-gray-800">{fmt(r.totalCost)}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-600">{staffPaid !== null ? fmt(staffPaid) : '—'}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(r.duration, s.hours)}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(r.totalCost, s.revenue)}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(staffPaid, s.employerCost)}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-500">{lineMarginPct(r.totalCost, staffPaid)}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-500">{fmt(effectiveRate)}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{fmt(r.cost)}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{r.kms > 0 ? r.kms + 'km' : '—'}</td>
+                            <td className="px-3 py-1.5 text-right font-semibold text-foreground">{fmt(r.totalCost)}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{staffPaid !== null ? fmt(staffPaid) : '—'}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{ratioPct(r.duration, s.hours)}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{ratioPct(r.totalCost, s.revenue)}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{ratioPct(staffPaid, s.employerCost)}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{lineMarginPct(r.totalCost, staffPaid)}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{fmt(effectiveRate)}</td>
                           </tr>
                         );
                       })}
                       {/* Day subtotal if multiple rows */}
                       {byDate[date].length > 1 && (
-                        <tr className="bg-blue-50 border-t border-blue-100">
-                          <td className="px-3 py-1 text-gray-400 text-right" colSpan={6}>{date} subtotal</td>
+                        <tr className="bg-primary/10 border-t border-primary/20">
+                          <td className="px-3 py-1 text-muted-foreground text-right" colSpan={6}>{date} subtotal</td>
                           <td className="px-3 py-1 text-right font-medium">{r2(byDate[date].reduce((s, r) => s + r.duration, 0))}h</td>
                           <td className="px-3 py-1" />
                           <td className="px-3 py-1" />
-                          <td className="px-3 py-1 text-right font-semibold text-blue-800">{fmt(r2(byDate[date].reduce((s, r) => s + r.totalCost, 0)))}</td>
-                          <td className="px-3 py-1 text-right font-semibold text-blue-800">
+                          <td className="px-3 py-1 text-right font-semibold text-primary">{fmt(r2(byDate[date].reduce((s, r) => s + r.totalCost, 0)))}</td>
+                          <td className="px-3 py-1 text-right font-semibold text-primary">
                             {s.employerCost !== null
                               ? fmt(r2(byDate[date].reduce((sum, r) => sum + (allocStaffPaid(r) || 0), 0)))
                               : '—'}
@@ -713,18 +715,18 @@ function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
                     </React.Fragment>
                   ))}
                   {/* Grand total row */}
-                  <tr className="bg-gray-100 border-t-2 border-gray-300 font-semibold">
-                    <td className="px-3 py-2 text-gray-700" colSpan={6}>REVENUE TOTAL</td>
+                  <tr className="bg-muted border-t-2 border-border font-semibold">
+                    <td className="px-3 py-2 text-muted-foreground" colSpan={6}>REVENUE TOTAL</td>
                     <td className="px-3 py-2 text-right">{s.hours}h</td>
                     <td className="px-3 py-2" />
                     <td className="px-3 py-2" />
-                    <td className="px-3 py-2 text-right text-gray-900">{fmt(s.revenue)}</td>
-                    <td className="px-3 py-2 text-right text-gray-900">{s.employerCost !== null ? fmt(s.employerCost) : '—'}</td>
-                    <td className="px-3 py-2 text-right text-gray-500">100%</td>
-                    <td className="px-3 py-2 text-right text-gray-500">100%</td>
-                    <td className="px-3 py-2 text-right text-gray-500">{s.employerCost !== null ? '100%' : '—'}</td>
-                    <td className="px-3 py-2 text-right text-gray-500">{s.marginPct != null ? `${s.marginPct}%` : '—'}</td>
-                    <td className="px-3 py-2 text-right text-gray-600">{fmt(s.revenuePerHour)}</td>
+                    <td className="px-3 py-2 text-right text-foreground">{fmt(s.revenue)}</td>
+                    <td className="px-3 py-2 text-right text-foreground">{s.employerCost !== null ? fmt(s.employerCost) : '—'}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">100%</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">100%</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{s.employerCost !== null ? '100%' : '—'}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{s.marginPct != null ? `${s.marginPct}%` : '—'}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{fmt(s.revenuePerHour)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -734,13 +736,13 @@ function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
           {/* Revenue by client */}
           <div className="flex gap-6 flex-wrap">
             <div className="flex-1 min-w-[200px]">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Revenue by Client</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Revenue by Client</p>
               <div className="space-y-1">
                 {Object.entries(byClient).sort((a, b) => b[1].cost - a[1].cost).map(([client, d]) => (
                   <div key={client} className="flex items-center gap-2 text-xs">
-                    <span className="text-gray-700 flex-1 truncate">{client}</span>
-                    <span className="text-gray-500 shrink-0">{d.hours}h</span>
-                    <span className="font-medium text-gray-800 w-20 text-right shrink-0">{fmt(d.cost)}</span>
+                    <span className="text-muted-foreground flex-1 truncate">{client}</span>
+                    <span className="text-muted-foreground shrink-0">{d.hours}h</span>
+                    <span className="font-medium text-foreground w-20 text-right shrink-0">{fmt(d.cost)}</span>
                   </div>
                 ))}
               </div>
@@ -749,34 +751,34 @@ function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
             {/* Wage calculation breakdown */}
             {s.wages !== null && (
               <div className="flex-1 min-w-[220px]">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Wage Calculation</p>
-                <div className="bg-white rounded-lg border border-gray-200 p-3 space-y-1.5 text-xs">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Wage Calculation</p>
+                <div className="bg-card rounded-lg border p-3 space-y-1.5 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Gross wages</span>
-                    <span className="font-medium text-gray-800">{fmt(s.wages)}</span>
+                    <span className="text-muted-foreground">Gross wages</span>
+                    <span className="font-medium text-foreground">{fmt(s.wages)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Superannuation (11.5%)</span>
-                    <span className="font-medium text-gray-800">{fmt(s.superAmt)}</span>
+                    <span className="text-muted-foreground">Superannuation (11.5%)</span>
+                    <span className="font-medium text-foreground">{fmt(s.superAmt)}</span>
                   </div>
-                  <div className="flex justify-between border-t border-gray-100 pt-1.5">
-                    <span className="text-gray-600 font-medium">Total employer cost</span>
-                    <span className="font-semibold text-gray-900">{fmt(s.employerCost)}</span>
+                  <div className="flex justify-between border-t border pt-1.5">
+                    <span className="text-muted-foreground font-medium">Total employer cost</span>
+                    <span className="font-semibold text-foreground">{fmt(s.employerCost)}</span>
                   </div>
-                  <div className="flex justify-between text-gray-400 text-xs">
+                  <div className="flex justify-between text-muted-foreground text-xs">
                     <span>Cost per hour worked</span>
                     <span>{s.costPerHour !== null ? fmt(s.costPerHour) + '/hr' : '—'}</span>
                   </div>
-                  <div className={`flex justify-between border-t-2 pt-2 ${s.margin >= 0 ? 'border-green-200' : 'border-red-200'}`}>
-                    <span className={`font-semibold ${s.margin >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                  <div className={`flex justify-between border-t-2 pt-2 ${s.margin >= 0 ? 'border-success/30' : 'border-destructive/30'}`}>
+                    <span className={`font-semibold ${s.margin >= 0 ? 'text-success' : 'text-destructive'}`}>
                       {s.margin >= 0 ? 'Gross surplus' : 'Gross deficit'}
                     </span>
-                    <span className={`font-bold text-sm ${s.margin >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                    <span className={`font-bold text-sm ${s.margin >= 0 ? 'text-success' : 'text-destructive'}`}>
                       {s.margin >= 0 ? '+' : ''}{fmt(s.margin)}
                       <span className="text-xs ml-1">({s.marginPct}%)</span>
                     </span>
                   </div>
-                  <div className="pt-1 text-gray-400">
+                  <div className="pt-1 text-muted-foreground">
                     <div className="flex justify-between">
                       <span>Revenue generated</span>
                       <span>{fmt(s.revenue)}</span>
@@ -785,7 +787,7 @@ function StaffDetailRows({ s, lineStaffPaidMap, lineShiftCalcMap }) {
                       <span>Employer cost</span>
                       <span>− {fmt(s.employerCost)}</span>
                     </div>
-                    <div className={`flex justify-between font-medium pt-1 border-t border-gray-100 ${s.margin >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                    <div className={`flex justify-between font-medium pt-1 border-t border ${s.margin >= 0 ? 'text-success' : 'text-destructive'}`}>
                       <span>= Margin</span>
                       <span>{s.margin >= 0 ? '+' : ''}{fmt(s.margin)}</span>
                     </div>
@@ -819,35 +821,35 @@ function ClientDetailRows({ c, lineStaffPaidMap, lineShiftCalcMap }) {
 
   return (
     <tr>
-      <td colSpan={10} className="p-0 bg-slate-50 border-b border-slate-200">
+      <td colSpan={10} className="p-0 bg-muted border-b border-border">
         <div className="px-4 py-4 space-y-4">
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Allocated Staff Cost</p>
-            <div className="rounded-lg border border-gray-200 overflow-hidden">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Allocated Staff Cost</p>
+            <div className="rounded-lg border border-border overflow-hidden">
               <table className="w-full text-xs">
-                <thead className="bg-gray-100">
+                <thead className="bg-muted">
                   <tr>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Staff</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Hrs</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Revenue</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Wages</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Super</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Employer Cost</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Margin</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Staff</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Hrs</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Revenue</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Wages</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Super</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Employer Cost</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Margin</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(c.staffAllocRows || []).map((s) => {
                     const margin = r2(s.revenue - s.employerCost);
                     return (
-                      <tr key={s.staffName} className="border-t border-gray-100">
-                        <td className="px-3 py-1.5 text-gray-700">{s.staffName}</td>
+                      <tr key={s.staffName} className="border-t border">
+                        <td className="px-3 py-1.5 text-muted-foreground">{s.staffName}</td>
                         <td className="px-3 py-1.5 text-right">{s.hours}h</td>
                         <td className="px-3 py-1.5 text-right">{fmt(s.revenue)}</td>
-                        <td className="px-3 py-1.5 text-right text-gray-600">{fmt(s.wages)}</td>
-                        <td className="px-3 py-1.5 text-right text-gray-500">{fmt(s.superAmt)}</td>
+                        <td className="px-3 py-1.5 text-right text-muted-foreground">{fmt(s.wages)}</td>
+                        <td className="px-3 py-1.5 text-right text-muted-foreground">{fmt(s.superAmt)}</td>
                         <td className="px-3 py-1.5 text-right">{fmt(s.employerCost)}</td>
-                        <td className={`px-3 py-1.5 text-right font-medium ${margin >= 0 ? 'text-green-700' : 'text-red-600'}`}>{margin >= 0 ? '+' : ''}{fmt(margin)}</td>
+                        <td className={`px-3 py-1.5 text-right font-medium ${margin >= 0 ? 'text-success' : 'text-destructive'}`}>{margin >= 0 ? '+' : ''}{fmt(margin)}</td>
                       </tr>
                     );
                   })}
@@ -856,24 +858,24 @@ function ClientDetailRows({ c, lineStaffPaidMap, lineShiftCalcMap }) {
             </div>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Billing Lines ({(c.billingRows || []).length})</p>
-            <div className="rounded-lg border border-gray-200 overflow-x-auto">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Billing Lines ({(c.billingRows || []).length})</p>
+            <div className="rounded-lg border border-border overflow-x-auto">
               <table className="w-full text-xs min-w-[1100px]">
-                <thead className="bg-gray-100">
+                <thead className="bg-muted">
                   <tr>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Date</th>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Staff</th>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600 whitespace-nowrap">Shift Time</th>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Rate Group</th>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600">Billing Type</th>
-                    <th className="text-left px-3 py-1.5 font-medium text-gray-600 min-w-[180px]">Wage Calculation</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Hrs</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Total</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600">Staff Paid</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line hours ÷ client total hours">Hrs %</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line revenue ÷ client total revenue">Rev %</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="Line staff cost ÷ client allocated cost">Wage %</th>
-                    <th className="text-right px-3 py-1.5 font-medium text-gray-600" title="(Revenue − staff cost) ÷ revenue">Margin %</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Date</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Staff</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground whitespace-nowrap">Shift Time</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Rate Group</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Billing Type</th>
+                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground min-w-[180px]">Wage Calculation</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Hrs</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Total</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Staff Paid</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground" title="Line hours ÷ client total hours">Hrs %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground" title="Line revenue ÷ client total revenue">Rev %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground" title="Line staff cost ÷ client allocated cost">Wage %</th>
+                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground" title="(Revenue − staff cost) ÷ revenue">Margin %</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -883,20 +885,20 @@ function ClientDetailRows({ c, lineStaffPaidMap, lineShiftCalcMap }) {
                         const staffPaid = allocStaffPaid(r);
                         const calcMeta = lineShiftCalcMap?.get(r);
                         return (
-                          <tr key={`${r.shiftId}-${idx}`} className="border-t border-gray-100">
-                            {idx === 0 && <td rowSpan={byDate[date].length} className="px-3 py-1.5 align-top border-r border-gray-100 text-gray-700">{date}</td>}
-                            <td className="px-3 py-1.5 text-gray-700">{r.staff || '—'}</td>
-                            <td className="px-3 py-1.5 text-gray-600 whitespace-nowrap">{calcMeta?.shiftTime || '—'}</td>
-                            <td className="px-3 py-1.5 text-gray-500 max-w-[160px] truncate" title={r.rateGroup}>{rateGroupShort(r.rateGroup)}</td>
-                            <td className="px-3 py-1.5 text-gray-500">{r.shiftType || '—'}</td>
-                            <td className="px-3 py-1.5 text-gray-600 max-w-[240px]" title={calcMeta?.calcType || ''}>{calcMeta?.calcType || '—'}</td>
+                          <tr key={`${r.shiftId}-${idx}`} className="border-t border">
+                            {idx === 0 && <td rowSpan={byDate[date].length} className="px-3 py-1.5 align-top border-r border text-muted-foreground">{date}</td>}
+                            <td className="px-3 py-1.5 text-muted-foreground">{r.staff || '—'}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{calcMeta?.shiftTime || '—'}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground max-w-[160px] truncate" title={r.rateGroup}>{rateGroupShort(r.rateGroup)}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground">{r.shiftType || '—'}</td>
+                            <td className="px-3 py-1.5 text-muted-foreground max-w-[240px]" title={calcMeta?.calcType || ''}>{calcMeta?.calcType || '—'}</td>
                             <td className="px-3 py-1.5 text-right">{r.duration}h</td>
                             <td className="px-3 py-1.5 text-right font-medium">{fmt(r.totalCost)}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-600">{staffPaid !== null ? fmt(staffPaid) : '—'}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(r.duration, c.hours)}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(r.totalCost, c.revenue)}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-500">{ratioPct(staffPaid, c.allocEmployerCost)}</td>
-                            <td className="px-3 py-1.5 text-right text-gray-500">{lineMarginPct(r.totalCost, staffPaid)}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{staffPaid !== null ? fmt(staffPaid) : '—'}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{ratioPct(r.duration, c.hours)}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{ratioPct(r.totalCost, c.revenue)}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{ratioPct(staffPaid, c.allocEmployerCost)}</td>
+                            <td className="px-3 py-1.5 text-right text-muted-foreground">{lineMarginPct(r.totalCost, staffPaid)}</td>
                           </tr>
                         );
                       })}
@@ -994,7 +996,7 @@ function StaffProfitabilitySection({
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Users className="w-4 h-4 text-gray-500" />
+          <Users className="w-4 h-4 text-muted-foreground" />
           Staff Revenue vs Wages
         </CardTitle>
       </CardHeader>
@@ -1026,65 +1028,65 @@ function StaffProfitabilitySection({
                 <div
                   {...payrollDz.getRootProps()}
                   className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                    payrollDz.isDragActive ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-green-300 hover:bg-green-50'
+                    payrollDz.isDragActive ? 'border-success/40 bg-success/10' : 'border-border hover:border-success/30 hover:bg-success/10'
                   }`}
                 >
                   <input {...payrollDz.getInputProps()} />
-                  <FileSpreadsheet className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <FileSpreadsheet className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                   {payrollLoading ? (
-                    <p className="text-sm text-gray-500">Parsing payroll file...</p>
+                    <p className="text-sm text-muted-foreground">Parsing payroll file...</p>
                   ) : (
                     <>
-                      <p className="font-medium text-gray-700 text-sm">
+                      <p className="font-medium text-foreground text-sm">
                         {payrollDz.isDragActive ? 'Drop payroll summary here' : 'Upload Payroll Employee Summary'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         ShiftCare payroll export (Employee / Earnings columns)
                       </p>
                     </>
                   )}
                 </div>
                 {payrollError && (
-                  <div className="mt-2 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-2 text-sm">
+                  <div className="mt-2 flex items-center gap-2 text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-2 text-sm">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     {payrollError}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                <FileSpreadsheet className="w-4 h-4 text-green-600 shrink-0" />
-                <span className="text-sm text-green-800 font-medium truncate">{payrollName}</span>
-                <span className="text-xs text-green-600 shrink-0">· {payrollMap.size} staff</span>
-                <button type="button" onClick={onRemovePayroll} className="ml-auto text-xs text-gray-400 hover:text-gray-600 shrink-0">Remove</button>
+              <div className="flex items-center gap-3 bg-success/10 border border-success/30 rounded-lg px-3 py-2">
+                <FileSpreadsheet className="w-4 h-4 text-success shrink-0" />
+                <span className="text-sm text-success font-medium truncate">{payrollName}</span>
+                <span className="text-xs text-success shrink-0">· {payrollMap.size} staff</span>
+                <button type="button" onClick={onRemovePayroll} className="ml-auto text-xs text-muted-foreground hover:text-muted-foreground shrink-0">Remove</button>
               </div>
             )}
           </>
         )}
 
         {wageSource === 'award' && (
-          <div className="space-y-3 rounded-lg border border-gray-200 p-4 bg-gray-50/50">
-            <p className="text-xs text-gray-600">
+          <div className="space-y-3 rounded-lg border border-border p-4 bg-muted/50">
+            <p className="text-xs text-muted-foreground">
               Uses pay hours from the app (same SCHADS logic as the award calculator). Gross pay × super % = employer cost, allocated to clients by shift SCHADS bands (not average hourly rate).
               {payHoursPeriodText ? (
-                <span className="block mt-1 font-medium text-gray-800">Pay period in app: {payHoursPeriodText}</span>
+                <span className="block mt-1 font-medium text-foreground">Pay period in app: {payHoursPeriodText}</span>
               ) : null}
             </p>
             {sa?.unmatchedBillingLines > 0 && (
-              <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex gap-2">
+              <div className="text-sm text-warning bg-warning/10 border border-warning/30 rounded-md px-3 py-2 flex gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 {sa.unmatchedBillingLines} billing line{sa.unmatchedBillingLines === 1 ? '' : 's'} could not be matched to pay-hours shifts — those lines use hour-proportional fallback.
               </div>
             )}
             {payHoursCount === 0 && (
-              <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex gap-2">
+              <div className="text-sm text-warning bg-warning/10 border border-warning/30 rounded-md px-3 py-2 flex gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 No pay hours in the database for this location. Upload shifts and run <strong>Compute pay hours</strong> first.
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
-                <label className="text-xs text-gray-500 block mb-1">Super % of gross (estimate)</label>
+                <label className="text-xs text-muted-foreground block mb-1">Super % of gross (estimate)</label>
                 <Input
                   type="number"
                   step="0.1"
@@ -1095,7 +1097,7 @@ function StaffProfitabilitySection({
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-1">Default base rate ($/h)</label>
+                <label className="text-xs text-muted-foreground block mb-1">Default base rate ($/h)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -1107,22 +1109,23 @@ function StaffProfitabilitySection({
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-1">Default employment</label>
-                <select
-                  value={awardEmpType}
-                  onChange={(e) => onAwardEmpTypeChange(e.target.value)}
-                  className="h-9 w-full rounded-md border border-gray-200 bg-white px-2 text-sm"
-                >
-                  <option value="casual">Casual</option>
-                  <option value="permanent">Permanent</option>
-                </select>
+                <label className="text-xs text-muted-foreground block mb-1">Default employment</label>
+                <Select value={awardEmpType} onValueChange={onAwardEmpTypeChange}>
+                  <SelectTrigger className="h-9 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="casual">Casual</SelectItem>
+                    <SelectItem value="permanent">Permanent</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="flex items-end text-xs text-gray-500">
-                Pay hours rows: <strong className="ml-1 text-gray-800">{payHoursCount}</strong>
+              <div className="flex items-end text-xs text-muted-foreground">
+                Pay hours rows: <strong className="ml-1 text-foreground">{payHoursCount}</strong>
               </div>
             </div>
             {usingHubRates && (
-              <div className="text-xs text-green-800 bg-green-50 border border-green-200 rounded-md px-3 py-2">
+              <div className="text-xs text-success bg-success/10 border border-success/30 rounded-md px-3 py-2">
                 Using rates workbook from the Award calculator step. Upload below only if you want to override.
               </div>
             )}
@@ -1131,41 +1134,41 @@ function StaffProfitabilitySection({
                 <div
                   {...awardRatesDz.getRootProps()}
                   className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-                    awardRatesDz.isDragActive ? 'border-violet-400 bg-violet-50' : 'border-gray-200 hover:border-violet-300 hover:bg-violet-50/50'
+                    awardRatesDz.isDragActive ? 'border-primary/40 bg-primary/10' : 'border-border hover:border-primary/30 hover:bg-primary/10'
                   }`}
                 >
                   <input {...awardRatesDz.getInputProps()} />
-                  <FileSpreadsheet className="w-7 h-7 text-gray-300 mx-auto mb-2" />
+                  <FileSpreadsheet className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
                   {awardRatesLoading ? (
-                    <p className="text-sm text-gray-500">Parsing rates file...</p>
+                    <p className="text-sm text-muted-foreground">Parsing rates file...</p>
                   ) : (
                     <>
-                      <p className="font-medium text-gray-700 text-sm">
+                      <p className="font-medium text-foreground text-sm">
                         {awardRatesDz.isDragActive ? 'Drop rates file' : 'Upload per-staff rates XLSX (optional)'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">Same format as the award calculator rates export</p>
+                      <p className="text-xs text-muted-foreground mt-1">Same format as the award calculator rates export</p>
                     </>
                   )}
                 </div>
                 {awardRatesError && (
-                  <div className="mt-2 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-2 text-sm">
+                  <div className="mt-2 flex items-center gap-2 text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-2 text-sm">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     {awardRatesError}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-3 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2">
-                <FileSpreadsheet className="w-4 h-4 text-violet-600 shrink-0" />
-                <span className="text-sm text-violet-900 font-medium truncate">{awardRatesName}</span>
-                <button type="button" onClick={onRemoveAwardRates} className="ml-auto text-xs text-gray-400 hover:text-gray-600 shrink-0">Remove</button>
+              <div className="flex items-center gap-3 bg-primary/10 border border-primary/25 rounded-lg px-3 py-2">
+                <FileSpreadsheet className="w-4 h-4 text-primary shrink-0" />
+                <span className="text-sm text-primary font-medium truncate">{awardRatesName}</span>
+                <button type="button" onClick={onRemoveAwardRates} className="ml-auto text-xs text-muted-foreground hover:text-muted-foreground shrink-0">Remove</button>
               </div>
             )}
             {costBasisReady && (
-              <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm text-green-900">
+              <div className="flex items-center gap-3 bg-success/10 border border-success/30 rounded-lg px-3 py-2 text-sm text-success">
                 <TrendingUp className="w-4 h-4 shrink-0" />
                 <span className="font-medium truncate">{payrollName}</span>
-                <span className="text-xs text-green-700 shrink-0">· {payrollMap.size} staff with cost basis</span>
+                <span className="text-xs text-success shrink-0">· {payrollMap.size} staff with cost basis</span>
               </div>
             )}
           </div>
@@ -1175,7 +1178,7 @@ function StaffProfitabilitySection({
         {sa && (
           <>
             {/* Scope note */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700 flex items-start gap-2">
+            <div className="bg-primary/10 border border-primary/25 rounded-lg px-3 py-2 text-xs text-primary flex items-start gap-2">
               <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
                 Margin calculated for <strong>{sa.matchedCount} matched staff</strong> (found in billing and {wageSource === 'award' ? 'award cost' : 'payroll'} data).
@@ -1187,27 +1190,27 @@ function StaffProfitabilitySection({
 
             {/* KPIs */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-green-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Revenue (matched staff)</p>
-                <p className="text-lg font-bold text-gray-900">{fmtK(sa.matchedRevenue)}</p>
-                <p className="text-xs text-gray-400">{sa.matchedCount} of {sa.staffRows.length} staff matched</p>
+              <div className="bg-success/10 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">Revenue (matched staff)</p>
+                <p className="text-lg font-bold text-foreground">{fmtK(sa.matchedRevenue)}</p>
+                <p className="text-xs text-muted-foreground">{sa.matchedCount} of {sa.staffRows.length} staff matched</p>
               </div>
-              <div className="bg-blue-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Wages + Super</p>
-                <p className="text-lg font-bold text-gray-900">{fmtK(sa.matchedEmployerCost)}</p>
-                <p className="text-xs text-gray-400">{fmt(sa.matchedWages)} wages + {fmt(sa.matchedSuper)} super</p>
+              <div className="bg-primary/10 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">Wages + Super</p>
+                <p className="text-lg font-bold text-foreground">{fmtK(sa.matchedEmployerCost)}</p>
+                <p className="text-xs text-muted-foreground">{fmt(sa.matchedWages)} wages + {fmt(sa.matchedSuper)} super</p>
               </div>
-              <div className={`rounded-lg p-3 ${sa.matchedMargin >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                <p className="text-xs text-gray-500">Gross Margin</p>
-                <p className={`text-lg font-bold ${sa.matchedMargin >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+              <div className={`rounded-lg p-3 ${sa.matchedMargin >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+                <p className="text-xs text-muted-foreground">Gross Margin</p>
+                <p className={`text-lg font-bold ${sa.matchedMargin >= 0 ? 'text-success' : 'text-destructive'}`}>
                   {sa.matchedMargin >= 0 ? '+' : ''}{fmtK(sa.matchedMargin)}
                 </p>
-                <p className="text-xs text-gray-400">{sa.matchedMarginPct}% · {sa.matchedMargin >= 0 ? 'surplus' : 'deficit'}</p>
+                <p className="text-xs text-muted-foreground">{sa.matchedMarginPct}% · {sa.matchedMargin >= 0 ? 'surplus' : 'deficit'}</p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Staff Matched</p>
-                <p className="text-lg font-bold text-gray-900">{sa.matchedCount} / {sa.staffRows.length}</p>
-                <p className="text-xs text-gray-400">{sa.paidNotBilled.length} paid, not in billing</p>
+              <div className="bg-muted rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">Staff Matched</p>
+                <p className="text-lg font-bold text-foreground">{sa.matchedCount} / {sa.staffRows.length}</p>
+                <p className="text-xs text-muted-foreground">{sa.paidNotBilled.length} paid, not in billing</p>
               </div>
             </div>
 
@@ -1216,16 +1219,16 @@ function StaffProfitabilitySection({
               <button
                 type="button"
                 onClick={() => setStaffTableOpen(v => !v)}
-                className="w-full flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50"
+                className="w-full flex items-center justify-between rounded-lg border border-border px-3 py-2 hover:bg-muted"
               >
-                <p className="text-sm font-semibold text-gray-800">Staff Revenue vs Wages Table</p>
-                {staffTableOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                <p className="text-sm font-semibold text-foreground">Staff Revenue vs Wages Table</p>
+                {staffTableOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
               </button>
               {staffTableOpen && (
-                <div className="overflow-x-auto rounded-lg border border-gray-100">
+                <div className="overflow-x-auto rounded-lg border border">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50">
+                      <TableRow className="bg-muted">
                         <TableHead>Staff Member</TableHead>
                         <TableHead className="text-right">Revenue</TableHead>
                         <TableHead className="text-right">Wages</TableHead>
@@ -1248,57 +1251,57 @@ function StaffProfitabilitySection({
                         return (
                           <React.Fragment key={s.name}>
                             <TableRow
-                              className={`cursor-pointer hover:bg-slate-50 transition-colors ${isLoss ? 'bg-red-50 hover:bg-red-100' : ''}`}
+                              className={`cursor-pointer hover:bg-muted transition-colors ${isLoss ? 'bg-destructive/10 hover:bg-destructive/12' : ''}`}
                               onClick={() => toggleExpand(s.name)}
                             >
                               <TableCell className="font-medium text-sm">
                                 <span className="flex items-center gap-1.5">
                                   {isOpen
-                                    ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                                    : <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
+                                    ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                    : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                                   {s.name}
                                 </span>
                               </TableCell>
                               <TableCell className="text-right font-medium">{fmt(s.revenue)}</TableCell>
-                              <TableCell className="text-right text-gray-600">{hasPayroll ? fmt(s.wages) : <span className="text-gray-300">—</span>}</TableCell>
-                              <TableCell className="text-right text-gray-500 text-xs">{hasPayroll ? fmt(s.superAmt) : <span className="text-gray-300">—</span>}</TableCell>
-                              <TableCell className="text-right text-gray-600">{hasPayroll ? fmt(s.employerCost) : <span className="text-gray-300">—</span>}</TableCell>
+                              <TableCell className="text-right text-muted-foreground">{hasPayroll ? fmt(s.wages) : <span className="text-muted-foreground">—</span>}</TableCell>
+                              <TableCell className="text-right text-muted-foreground text-xs">{hasPayroll ? fmt(s.superAmt) : <span className="text-muted-foreground">—</span>}</TableCell>
+                              <TableCell className="text-right text-muted-foreground">{hasPayroll ? fmt(s.employerCost) : <span className="text-muted-foreground">—</span>}</TableCell>
                               <TableCell className="text-right">
                                 {s.margin !== null ? (
-                                  <span className={`font-semibold ${isLoss ? 'text-red-600' : isLowMargin ? 'text-amber-600' : 'text-green-700'}`}>
+                                  <span className={`font-semibold ${isLoss ? 'text-destructive' : isLowMargin ? 'text-warning' : 'text-success'}`}>
                                     {s.margin >= 0 ? '+' : ''}{fmt(s.margin)}
                                   </span>
-                                ) : <span className="text-gray-300">—</span>}
+                                ) : <span className="text-muted-foreground">—</span>}
                               </TableCell>
                               <TableCell className="text-right">
                                 {s.marginPct !== null ? (
-                                  <span className={`text-sm font-medium ${isLoss ? 'text-red-500' : isLowMargin ? 'text-amber-500' : 'text-green-600'}`}>
+                                  <span className={`text-sm font-medium ${isLoss ? 'text-destructive' : isLowMargin ? 'text-warning' : 'text-success'}`}>
                                     {s.marginPct}%
                                   </span>
-                                ) : <span className="text-gray-300">—</span>}
+                                ) : <span className="text-muted-foreground">—</span>}
                               </TableCell>
-                              <TableCell className="text-right text-gray-600 text-sm">{fmt(s.revenuePerHour)}</TableCell>
-                              <TableCell className="text-right text-gray-500 text-sm">{s.costPerHour !== null ? fmt(s.costPerHour) : <span className="text-gray-300">—</span>}</TableCell>
-                              <TableCell className="text-right text-gray-500 text-sm">{s.hours}h</TableCell>
-                              <TableCell className="text-right text-gray-500 text-sm">{s.clients}</TableCell>
+                              <TableCell className="text-right text-muted-foreground text-sm">{fmt(s.revenuePerHour)}</TableCell>
+                              <TableCell className="text-right text-muted-foreground text-sm">{s.costPerHour !== null ? fmt(s.costPerHour) : <span className="text-muted-foreground">—</span>}</TableCell>
+                              <TableCell className="text-right text-muted-foreground text-sm">{s.hours}h</TableCell>
+                              <TableCell className="text-right text-muted-foreground text-sm">{s.clients}</TableCell>
                             </TableRow>
                             {isOpen && <StaffDetailRows s={s} lineStaffPaidMap={lineStaffPaidMap} lineShiftCalcMap={lineShiftCalcMap} />}
                           </React.Fragment>
                         );
                       })}
-                      <TableRow className="bg-gray-50 font-semibold border-t-2">
-                        <TableCell className="text-xs text-gray-500">MATCHED TOTAL ({sa.matchedCount})</TableCell>
+                      <TableRow className="bg-muted font-semibold border-t-2">
+                        <TableCell className="text-xs text-muted-foreground">MATCHED TOTAL ({sa.matchedCount})</TableCell>
                         <TableCell className="text-right">{fmt(sa.matchedRevenue)}</TableCell>
                         <TableCell className="text-right">{fmt(sa.matchedWages)}</TableCell>
                         <TableCell className="text-right text-sm">{fmt(sa.matchedSuper)}</TableCell>
                         <TableCell className="text-right">{fmt(sa.matchedEmployerCost)}</TableCell>
                         <TableCell className="text-right">
-                          <span className={sa.matchedMargin >= 0 ? 'text-green-700' : 'text-red-600'}>
+                          <span className={sa.matchedMargin >= 0 ? 'text-success' : 'text-destructive'}>
                             {sa.matchedMargin >= 0 ? '+' : ''}{fmt(sa.matchedMargin)}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className={sa.matchedMarginPct >= 0 ? 'text-green-700' : 'text-red-600'}>
+                          <span className={sa.matchedMarginPct >= 0 ? 'text-success' : 'text-destructive'}>
                             {sa.matchedMarginPct}%
                           </span>
                         </TableCell>
@@ -1314,17 +1317,17 @@ function StaffProfitabilitySection({
               <button
                 type="button"
                 onClick={() => setClientTableOpen(v => !v)}
-                className="w-full flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50"
+                className="w-full flex items-center justify-between rounded-lg border border-border px-3 py-2 hover:bg-muted"
               >
-                <p className="text-sm font-semibold text-gray-800">Client Revenue vs Staff Wages Table</p>
-                {clientTableOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                <p className="text-sm font-semibold text-foreground">Client Revenue vs Staff Wages Table</p>
+                {clientTableOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
               </button>
               {clientTableOpen && (
                 <>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">Client Revenue vs Staff Wages</p>
-                  <p className="text-xs text-gray-500">Staff cost allocated by worked hours per client</p>
+                  <p className="text-sm font-semibold text-foreground">Client Revenue vs Staff Wages</p>
+                  <p className="text-xs text-muted-foreground">Staff cost allocated by worked hours per client</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -1360,23 +1363,23 @@ function StaffProfitabilitySection({
                   <button
                     type="button"
                     onClick={() => setExpandedClients(new Set(sa.clientRows.map(c => c.name)))}
-                    className="text-xs px-2.5 py-1 rounded border border-gray-200 text-gray-600 hover:text-gray-800 hover:border-gray-300"
+                    className="text-xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground hover:border-border"
                   >
                     Expand all
                   </button>
                   <button
                     type="button"
                     onClick={() => setExpandedClients(new Set())}
-                    className="text-xs px-2.5 py-1 rounded border border-gray-200 text-gray-600 hover:text-gray-800 hover:border-gray-300"
+                    className="text-xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground hover:border-border"
                   >
                     Collapse all
                   </button>
                 </div>
               </div>
-              <div className="overflow-x-auto rounded-lg border border-gray-100">
+              <div className="overflow-x-auto rounded-lg border border">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50">
+                    <TableRow className="bg-muted">
                       <TableHead>Client</TableHead>
                       <TableHead className="text-right">Client Paid</TableHead>
                       <TableHead className="text-right">Staff Wages</TableHead>
@@ -1394,36 +1397,36 @@ function StaffProfitabilitySection({
                       const isOpen = expandedClients.has(c.name);
                       return (
                         <React.Fragment key={c.name}>
-                          <TableRow className="cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => toggleClientExpand(c.name)}>
+                          <TableRow className="cursor-pointer hover:bg-muted transition-colors" onClick={() => toggleClientExpand(c.name)}>
                             <TableCell className="font-medium text-sm">
                               <span className="flex items-center gap-1.5">
                                 {isOpen
-                                  ? <ChevronUp className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                                  : <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
+                                  ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                  : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                                 {c.name}
                               </span>
                             </TableCell>
                             <TableCell className="text-right font-medium">{fmt(c.revenue)}</TableCell>
-                            <TableCell className="text-right text-gray-600">{fmt(c.allocWages)}</TableCell>
-                            <TableCell className="text-right text-gray-500 text-xs">{fmt(c.allocSuper)}</TableCell>
-                            <TableCell className="text-right text-gray-600">{fmt(c.allocEmployerCost)}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{fmt(c.allocWages)}</TableCell>
+                            <TableCell className="text-right text-muted-foreground text-xs">{fmt(c.allocSuper)}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{fmt(c.allocEmployerCost)}</TableCell>
                             <TableCell className="text-right">
-                              <span className={`font-semibold ${c.margin >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                              <span className={`font-semibold ${c.margin >= 0 ? 'text-success' : 'text-destructive'}`}>
                                 {c.margin >= 0 ? '+' : ''}{fmt(c.margin)}
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
-                              <span className={c.marginPct >= 0 ? 'text-green-700' : 'text-red-600'}>
+                              <span className={c.marginPct >= 0 ? 'text-success' : 'text-destructive'}>
                                 {c.marginPct}%
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
-                              <span className={c.payrollCoveragePct >= 90 ? 'text-green-700' : c.payrollCoveragePct >= 60 ? 'text-amber-600' : 'text-red-600'}>
+                              <span className={c.payrollCoveragePct >= 90 ? 'text-success' : c.payrollCoveragePct >= 60 ? 'text-warning' : 'text-destructive'}>
                                 {c.payrollCoveragePct}%
                               </span>
                             </TableCell>
-                            <TableCell className="text-right text-gray-500 text-sm">{c.hours}h</TableCell>
-                            <TableCell className="text-right text-gray-500 text-sm">{c.staffCount}</TableCell>
+                            <TableCell className="text-right text-muted-foreground text-sm">{c.hours}h</TableCell>
+                            <TableCell className="text-right text-muted-foreground text-sm">{c.staffCount}</TableCell>
                           </TableRow>
                           {isOpen && <ClientDetailRows c={c} lineStaffPaidMap={lineStaffPaidMap} lineShiftCalcMap={lineShiftCalcMap} />}
                         </React.Fragment>
@@ -1437,17 +1440,17 @@ function StaffProfitabilitySection({
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 text-xs text-gray-400">
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-red-200 inline-block" /> Loss</span>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-amber-200 inline-block" /> Low margin (0–20%)</span>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-green-200 inline-block" /> Healthy (&gt;20%)</span>
-              <span className="flex items-center gap-1 ml-2"><span className="text-gray-300 font-bold">—</span> No wage match</span>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-destructive/20 inline-block" /> Loss</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-warning/20 inline-block" /> Low margin (0–20%)</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-success/20 inline-block" /> Healthy (&gt;20%)</span>
+              <span className="flex items-center gap-1 ml-2"><span className="text-muted-foreground font-bold">—</span> No wage match</span>
             </div>
 
             {/* Paid not billed */}
             {!staffOnly && sa.paidNotBilled.length > 0 && (
-              <details className="border border-amber-200 rounded-lg">
-                <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-amber-800 bg-amber-50 rounded-lg flex items-center justify-between">
+              <details className="border border-warning/30 rounded-lg">
+                <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-warning bg-warning/10 rounded-lg flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <UserX className="w-4 h-4" />
                     {sa.paidNotBilled.length} staff paid but no billing this period
@@ -1455,7 +1458,7 @@ function StaffProfitabilitySection({
                   </span>
                 </summary>
                 <div className="p-4">
-                  <p className="text-xs text-gray-500 mb-3">These staff received wages but don't appear in the billing export. May be admin, training, leave, or name mismatch.</p>
+                  <p className="text-xs text-muted-foreground mb-3">These staff received wages but don't appear in the billing export. May be admin, training, leave, or name mismatch.</p>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1470,8 +1473,8 @@ function StaffProfitabilitySection({
                         <TableRow key={p.name}>
                           <TableCell className="font-medium">{p.name}</TableCell>
                           <TableCell className="text-right">{fmt(p.wages)}</TableCell>
-                          <TableCell className="text-right text-gray-500 text-sm">{fmt(p.superAmt)}</TableCell>
-                          <TableCell className="text-right font-medium text-amber-700">{fmt(p.employerCost)}</TableCell>
+                          <TableCell className="text-right text-muted-foreground text-sm">{fmt(p.superAmt)}</TableCell>
+                          <TableCell className="text-right font-medium text-warning">{fmt(p.employerCost)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -1722,15 +1725,15 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
         <div className="mb-8">
           {embedded ? (
             <>
-              <h2 className="text-lg font-semibold text-gray-900">Staff Revenue vs Wages</h2>
-              <p className="text-gray-500 mt-1 text-sm">
+              <h2 className="text-lg font-semibold text-foreground">Staff Revenue vs Wages</h2>
+              <p className="text-muted-foreground mt-1 text-sm">
                 Upload a ShiftCare billing export. Wages default to award calculation from pay hours and rates.
               </p>
             </>
           ) : (
             <>
-              <h1 className="text-2xl font-bold text-gray-900">Cost Analysis</h1>
-              <p className="text-gray-500 mt-1">Upload a ShiftCare billing export to identify inefficiencies and rostering improvements.</p>
+              <h1 className="text-2xl font-bold text-foreground">Cost Analysis</h1>
+              <p className="text-muted-foreground mt-1">Upload a ShiftCare billing export to identify inefficiencies and rostering improvements.</p>
             </>
           )}
         </div>
@@ -1738,31 +1741,31 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors ${
-            isDragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+            isDragActive ? 'border-primary/40 bg-primary/10' : 'border-border hover:border-border hover:bg-muted'
           }`}
         >
           <input {...getInputProps()} />
           {loading ? (
-            <div className="text-gray-500">Parsing...</div>
+            <div className="text-muted-foreground">Parsing...</div>
           ) : (
             <>
-              <Upload className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="font-medium text-gray-700">{isDragActive ? 'Drop the file' : 'Drop ShiftCare billing CSV here'}</p>
-              <p className="text-sm text-gray-400 mt-1">or click to browse — Cost_Breakdown_Raw_Export_*.csv</p>
+              <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="font-medium text-foreground">{isDragActive ? 'Drop the file' : 'Drop ShiftCare billing CSV here'}</p>
+              <p className="text-sm text-muted-foreground mt-1">or click to browse — Cost_Breakdown_Raw_Export_*.csv</p>
             </>
           )}
         </div>
 
         {error && (
-          <div className="mt-4 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+          <div className="mt-4 flex items-center gap-2 text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span className="text-sm">{error}</span>
           </div>
         )}
 
         {!embedded && (
-        <div className="mt-6 bg-gray-50 rounded-lg p-4 text-sm text-gray-500">
-          <p className="font-medium text-gray-700 mb-2">What this analyzes:</p>
+        <div className="mt-6 bg-muted rounded-lg p-4 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground mb-2">What this analyzes:</p>
           <ul className="space-y-1 list-disc list-inside">
             <li>Weekend vs weekday cost premium</li>
             <li>Short shift rate inefficiency</li>
@@ -1782,7 +1785,7 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
     return (
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">{rows.length} billing lines</p>
+          <p className="text-sm text-muted-foreground">{rows.length} billing lines</p>
           <Button variant="outline" size="sm" onClick={resetBillingFile}>
             <Upload className="w-4 h-4 mr-1" /> New File
           </Button>
@@ -1795,13 +1798,13 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
   const a = analysis;
 
   return (
-    <div className={embedded ? 'p-4 space-y-6' : 'p-6 space-y-6'}>
+    <div className={embedded ? 'space-y-4' : 'p-6 space-y-4'}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          {!embedded && <h1 className="text-2xl font-bold text-gray-900">Cost Analysis</h1>}
-          {embedded && <h2 className="text-lg font-semibold text-gray-900">Billing & cost outcomes</h2>}
-          <p className="text-gray-500 text-sm mt-0.5">
+          {!embedded && <h1 className="text-2xl font-bold text-foreground">Cost Analysis</h1>}
+          {embedded && <h2 className="text-lg font-semibold text-foreground">Billing & cost outcomes</h2>}
+          <p className="text-muted-foreground text-sm mt-0.5">
             {rows.length} billing lines · {a.uniqueClients} clients · {a.uniqueStaff} staff
           </p>
         </div>
@@ -1820,31 +1823,31 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
       </div>
 
       {/* Savings Summary Banner */}
-      <Card className="border-orange-200 bg-orange-50">
+      <Card className="border-warning/30 bg-warning/10">
         <CardContent className="pt-4 pb-4">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+            <AlertTriangle className="w-5 h-5 text-warning mt-0.5 shrink-0" />
             <div className="flex-1">
-              <p className="font-semibold text-orange-900">Rostering Inefficiency Summary</p>
+              <p className="font-semibold text-warning">Rostering Inefficiency Summary</p>
               <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-lg p-3 border border-orange-100">
-                  <p className="text-xs text-gray-500">Weekend Rate Premium</p>
-                  <p className="text-xl font-bold text-red-600">{fmt(a.weekendPremium)}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                <div className="bg-card rounded-lg p-3 border border-warning/20">
+                  <p className="text-xs text-muted-foreground">Weekend Rate Premium</p>
+                  <p className="text-xl font-bold text-destructive">{fmt(a.weekendPremium)}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {a.weekendHours}h at {fmt(a.weekendAvgRate)}/hr vs {fmt(a.weekdayRate)}/hr weekday
                   </p>
                 </div>
-                <div className="bg-white rounded-lg p-3 border border-orange-100">
-                  <p className="text-xs text-gray-500">Short Shift Premium (≤2h)</p>
-                  <p className="text-xl font-bold text-amber-600">{fmt(Math.max(0, a.shortPremium))}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                <div className="bg-card rounded-lg p-3 border border-warning/20">
+                  <p className="text-xs text-muted-foreground">Short Shift Premium (≤2h)</p>
+                  <p className="text-xl font-bold text-warning">{fmt(Math.max(0, a.shortPremium))}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {a.shortShifts} shifts · {a.shortHours}h at {fmt(a.shortRate)}/hr vs {fmt(a.longRate)}/hr
                   </p>
                 </div>
-                <div className="bg-white rounded-lg p-3 border border-orange-100">
-                  <p className="text-xs text-gray-500">Unfilled Shift Exposure</p>
-                  <p className="text-xl font-bold text-orange-600">{fmt(a.pendingCost)}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                <div className="bg-card rounded-lg p-3 border border-warning/20">
+                  <p className="text-xs text-muted-foreground">Unfilled Shift Exposure</p>
+                  <p className="text-xl font-bold text-warning">{fmt(a.pendingCost)}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {a.pending} shifts unbooked · {a.pendingHours}h undelivered
                   </p>
                 </div>
@@ -1855,28 +1858,28 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
       </Card>
 
       {/* Weekend Analysis */}
-      <SectionToggle title="Weekend vs Weekday Cost" icon={Calendar} defaultOpen badge={fmt(a.weekendPremium) + ' premium'} badgeColor="bg-red-100 text-red-700">
+      <SectionToggle title="Weekend vs Weekday Cost" icon={Calendar} defaultOpen badge={fmt(a.weekendPremium) + ' premium'} badgeColor="bg-destructive/12 text-destructive">
         <div className="mt-2 space-y-2">
           <div className="grid grid-cols-3 gap-4 mb-4">
             {[
-              { label: 'Weekday', ...a.dayBuckets.weekday, color: 'bg-blue-500' },
-              { label: 'Saturday', ...a.dayBuckets.saturday, color: 'bg-amber-500' },
-              { label: 'Sunday', ...a.dayBuckets.sunday, color: 'bg-red-500' },
+              { label: 'Weekday', ...a.dayBuckets.weekday, color: 'bg-primary' },
+              { label: 'Saturday', ...a.dayBuckets.saturday, color: 'bg-warning' },
+              { label: 'Sunday', ...a.dayBuckets.sunday, color: 'bg-destructive' },
             ].map(d => (
-              <div key={d.label} className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">{d.label}</p>
-                <p className="text-lg font-bold text-gray-900">{fmt(d.cost)}</p>
-                <p className="text-xs text-gray-400">{d.h}h · {d.h > 0 ? fmt(r2(d.cost / d.h)) + '/hr' : '—'}</p>
-                <div className="mt-2 bg-gray-200 rounded-full h-1.5">
+              <div key={d.label} className="bg-muted rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">{d.label}</p>
+                <p className="text-lg font-bold text-foreground">{fmt(d.cost)}</p>
+                <p className="text-xs text-muted-foreground">{d.h}h · {d.h > 0 ? fmt(r2(d.cost / d.h)) + '/hr' : '—'}</p>
+                <div className="mt-2 bg-muted rounded-full h-1.5">
                   <div className={`${d.color} h-1.5 rounded-full`} style={{ width: pct(d.h, a.totalHours) }} />
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">{pct(d.h, a.totalHours)} of hours</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{pct(d.h, a.totalHours)} of hours</p>
               </div>
             ))}
           </div>
-          <div className="bg-blue-50 rounded-lg p-3 text-sm">
-            <p className="font-medium text-blue-900">Rostering Recommendation</p>
-            <p className="text-blue-700 mt-1">
+          <div className="bg-primary/10 rounded-lg p-3 text-sm">
+            <p className="font-medium text-primary">Rostering Recommendation</p>
+            <p className="text-primary mt-1">
               Weekend shifts cost <strong>{fmt(r2(a.weekendAvgRate - a.weekdayRate))}/hr more</strong> on average.
               Where care needs allow flexibility, shifting activities to weekdays saves the most.
               For SIL clients with 24/7 care obligations, explore whether any community activities or
@@ -1891,24 +1894,24 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
         title="Short Shift Efficiency (≤2h)"
         icon={Clock}
         badge={`${a.shortShifts} shifts · ${fmt(Math.max(0, a.shortPremium))} premium`}
-        badgeColor="bg-amber-100 text-amber-700"
+        badgeColor="bg-warning/15 text-warning"
       >
         <div className="mt-2 space-y-3">
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-amber-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500">Short shifts (≤2h)</p>
+            <div className="bg-warning/10 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Short shifts (≤2h)</p>
               <p className="text-lg font-bold">{a.shortShifts} shifts</p>
-              <p className="text-xs text-gray-400">{a.shortHours}h · {fmt(a.shortRate)}/hr avg · {fmt(a.shortCost)} total</p>
+              <p className="text-xs text-muted-foreground">{a.shortHours}h · {fmt(a.shortRate)}/hr avg · {fmt(a.shortCost)} total</p>
             </div>
-            <div className="bg-green-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500">Long shifts (≥4h) avg rate</p>
+            <div className="bg-success/10 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Long shifts (≥4h) avg rate</p>
               <p className="text-lg font-bold">{fmt(a.longRate)}/hr</p>
-              <p className="text-xs text-gray-400">Consolidating short shifts = {fmt(Math.max(0, a.shortPremium))} saved</p>
+              <p className="text-xs text-muted-foreground">Consolidating short shifts = {fmt(Math.max(0, a.shortPremium))} saved</p>
             </div>
           </div>
-          <div className="bg-blue-50 rounded-lg p-3 text-sm">
-            <p className="font-medium text-blue-900">Rostering Recommendation</p>
-            <p className="text-blue-700 mt-1">
+          <div className="bg-primary/10 rounded-lg p-3 text-sm">
+            <p className="font-medium text-primary">Rostering Recommendation</p>
+            <p className="text-primary mt-1">
               Short standalone shifts attract a higher effective rate due to minimum engagement rules.
               Where two clients are in the same area, <strong>combine visits into 3–4h blocks</strong> or
               link with community access shifts. Aim for minimum 3h shifts for non-SIL clients.
@@ -1922,14 +1925,14 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
         title="High Intensity vs Standard Rate Mix"
         icon={BarChart2}
         badge={`$${a.hiRate}/hr vs $${a.stdRate}/hr`}
-        badgeColor="bg-purple-100 text-purple-700"
+        badgeColor="bg-primary/12 text-primary"
       >
         <div className="mt-2 space-y-2">
-          <BarRow label="High Intensity" value={a.hiCost} maxValue={a.totalCost} rate={a.hiRate} color="bg-purple-500" />
-          <BarRow label="Standard" value={a.stdCost} maxValue={a.totalCost} rate={a.stdRate} color="bg-blue-400" />
-          <div className="mt-3 bg-blue-50 rounded-lg p-3 text-sm">
-            <p className="font-medium text-blue-900">Insight</p>
-            <p className="text-blue-700 mt-1">
+          <BarRow label="High Intensity" value={a.hiCost} maxValue={a.totalCost} rate={a.hiRate} color="bg-primary" />
+          <BarRow label="Standard" value={a.stdCost} maxValue={a.totalCost} rate={a.stdRate} color="bg-primary" />
+          <div className="mt-3 bg-primary/10 rounded-lg p-3 text-sm">
+            <p className="font-medium text-primary">Insight</p>
+            <p className="text-primary mt-1">
               High-intensity supports ({a.hiH}h) cost <strong>{fmt(a.hiRate)}/hr vs {fmt(a.stdRate)}/hr</strong> for standard.
               Ensure all high-intensity claims are clinically justified. If a participant's support needs have reduced,
               review whether reclassification to standard rate is appropriate — this is the largest per-hour lever.
@@ -1943,10 +1946,10 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
         title="Staff Fragmentation per Client"
         icon={Users}
         badge={`${a.highFragClients.length} clients with 5+ workers`}
-        badgeColor="bg-amber-100 text-amber-700"
+        badgeColor="bg-warning/15 text-warning"
       >
         <div className="mt-2">
-          <p className="text-sm text-gray-500 mb-3">
+          <p className="text-sm text-muted-foreground mb-3">
             High staff rotation increases handover time, inconsistent care quality, and travel overhead.
             Target: ≤4 regular workers per SIL client, ≤2 for community access clients.
           </p>
@@ -1966,7 +1969,7 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
                 <TableRow key={c.name}>
                   <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell className="text-right">
-                    <span className={`font-bold ${c.staffCount >= 10 ? 'text-red-600' : c.staffCount >= 7 ? 'text-amber-600' : 'text-gray-800'}`}>
+                    <span className={`font-bold ${c.staffCount >= 10 ? 'text-destructive' : c.staffCount >= 7 ? 'text-warning' : 'text-foreground'}`}>
                       {c.staffCount}
                     </span>
                   </TableCell>
@@ -1974,7 +1977,7 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
                   <TableCell className="text-right">{c.hours}h</TableCell>
                   <TableCell className="text-right">{fmt(c.avgRate)}/hr</TableCell>
                   <TableCell className="text-right">
-                    <span className={c.weekendPct > 40 ? 'text-red-600 font-medium' : 'text-gray-600'}>
+                    <span className={c.weekendPct > 40 ? 'text-destructive font-medium' : 'text-muted-foreground'}>
                       {c.weekendPct}%
                     </span>
                   </TableCell>
@@ -1989,11 +1992,11 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
       <SectionToggle title="Cost by Time Period" icon={Clock} defaultOpen={false}>
         <div className="mt-2 space-y-2">
           {[
-            { label: 'AM (06:00–14:00)', ...a.timeBuckets.am, color: 'bg-sky-400' },
-            { label: 'PM (14:00–22:00)', ...a.timeBuckets.pm, color: 'bg-indigo-400' },
-            { label: 'Night (22:00–06:00)', ...a.timeBuckets.night, color: 'bg-slate-600' },
-            { label: 'Sleepover', ...a.timeBuckets.sleepover, color: 'bg-slate-400' },
-            { label: 'Other', ...a.timeBuckets.other, color: 'bg-gray-300' },
+            { label: 'AM (06:00–14:00)', ...a.timeBuckets.am, color: 'bg-chart-1' },
+            { label: 'PM (14:00–22:00)', ...a.timeBuckets.pm, color: 'bg-chart-2' },
+            { label: 'Night (22:00–06:00)', ...a.timeBuckets.night, color: 'bg-chart-3' },
+            { label: 'Sleepover', ...a.timeBuckets.sleepover, color: 'bg-chart-4' },
+            { label: 'Other', ...a.timeBuckets.other, color: 'bg-chart-5' },
           ].filter(b => b.cost > 0).map(b => (
             <BarRow
               key={b.label}
@@ -2004,9 +2007,9 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
               color={b.color}
             />
           ))}
-          <div className="mt-3 bg-blue-50 rounded-lg p-3 text-sm">
-            <p className="font-medium text-blue-900">Rostering Recommendation</p>
-            <p className="text-blue-700 mt-1">
+          <div className="mt-3 bg-primary/10 rounded-lg p-3 text-sm">
+            <p className="font-medium text-primary">Rostering Recommendation</p>
+            <p className="text-primary mt-1">
               Night and PM rates attract loading. Where a participant's routine allows flexibility,
               scheduling supports in AM blocks reduces the per-hour bill rate. Sleepover rate (fixed per night)
               is most cost-effective for overnight coverage — ensure sleepover is used where clinically appropriate
@@ -2041,15 +2044,15 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
                   <TableRow key={c.name}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-right font-medium">{fmt(c.cost)}</TableCell>
-                    <TableCell className="text-right text-gray-600">{c.hours}h</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{c.hours}h</TableCell>
                     <TableCell className="text-right">
-                      <span className={c.avgRate > 80 ? 'text-red-600 font-medium' : 'text-gray-800'}>
+                      <span className={c.avgRate > 80 ? 'text-destructive font-medium' : 'text-foreground'}>
                         {fmt(c.avgRate)}/hr
                       </span>
                     </TableCell>
-                    <TableCell className="text-right text-gray-600">{c.staffCount}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{c.staffCount}</TableCell>
                     <TableCell className="text-right">
-                      <span className={c.weekendPct > 40 ? 'text-amber-600' : 'text-gray-500'}>
+                      <span className={c.weekendPct > 40 ? 'text-warning' : 'text-muted-foreground'}>
                         {c.weekendPct}%
                       </span>
                     </TableCell>
@@ -2076,7 +2079,7 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
               value={rg.cost}
               maxValue={a.rateGroupRows[0]?.cost || 1}
               rate={rg.rate}
-              color="bg-blue-400"
+              color="bg-primary"
             />
           ))}
         </div>
@@ -2089,7 +2092,7 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Info className="w-4 h-4 text-blue-500" />
+            <Info className="w-4 h-4 text-primary" />
             Rostering Improvement Recommendations
           </CardTitle>
         </CardHeader>
@@ -2103,9 +2106,9 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
                 detail: `${a.weekendHours}h of weekend shifts cost ${fmt(r2(a.weekendAvgRate - a.weekdayRate))}/hr more.
                   Community access, therapy, and social activities should default to weekdays.
                   Only necessary care and SIL obligations should fall on weekends.`,
-                color: 'border-red-300 bg-red-50',
+                color: 'border-destructive/30 bg-destructive/10',
                 label: 'HIGH IMPACT',
-                labelColor: 'text-red-600 bg-red-100',
+                labelColor: 'text-destructive bg-destructive/12',
               },
               {
                 rank: 2,
@@ -2114,9 +2117,9 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
                 detail: `${a.shortShifts} shifts of ≤2h are billed at ${fmt(a.shortRate)}/hr vs ${fmt(a.longRate)}/hr for longer shifts.
                   Group nearby clients on the same route into 3–4h back-to-back shifts.
                   Use the same worker for sequential clients to eliminate minimum engagement cost.`,
-                color: 'border-amber-300 bg-amber-50',
+                color: 'border-warning/30 bg-warning/10',
                 label: 'MEDIUM IMPACT',
-                labelColor: 'text-amber-600 bg-amber-100',
+                labelColor: 'text-warning bg-warning/15',
               },
               {
                 rank: 3,
@@ -2125,9 +2128,9 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
                 detail: `${a.pending} shifts worth ${fmt(a.pendingCost)} are unbooked.
                   Unfilled shifts create last-minute casual callouts (higher rates), participant dissatisfaction,
                   and potential compliance issues. Build a per-client on-call pool of 2–3 regular backups.`,
-                color: 'border-orange-300 bg-orange-50',
+                color: 'border-warning/30 bg-warning/10',
                 label: 'URGENT',
-                labelColor: 'text-orange-600 bg-orange-100',
+                labelColor: 'text-warning bg-warning/15',
               },
               {
                 rank: 4,
@@ -2137,9 +2140,9 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
                   Each handover adds unproductive overlap time and travel.
                   Assign 3–5 primary workers per SIL client with consistent shift patterns.
                   This also improves care quality and reduces incident risk.`,
-                color: 'border-blue-300 bg-blue-50',
+                color: 'border-primary/30 bg-primary/10',
                 label: 'QUALITY + COST',
-                labelColor: 'text-blue-600 bg-blue-100',
+                labelColor: 'text-primary bg-primary/12',
               },
               {
                 rank: 5,
@@ -2148,25 +2151,25 @@ export function CostAnalysis({ embedded = false, locationId = '', hubStaffRatesM
                 detail: `Sleepover rate (fixed allowance per night) is significantly cheaper than active night shifts for participants
                   who don't need regular overnight support. Review each night shift in the roster —
                   if the worker is primarily on standby, a sleepover classification may be appropriate and compliant.`,
-                color: 'border-slate-300 bg-slate-50',
+                color: 'border-border bg-muted',
                 label: 'REVIEW',
-                labelColor: 'text-slate-600 bg-slate-100',
+                labelColor: 'text-muted-foreground bg-muted',
               },
             ].map(rec => (
               <div key={rec.rank} className={`rounded-lg border p-4 ${rec.color}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold text-gray-400">#{rec.rank}</span>
+                      <span className="text-xs font-bold text-muted-foreground">#{rec.rank}</span>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded ${rec.labelColor}`}>{rec.label}</span>
-                      <p className="font-semibold text-gray-800">{rec.title}</p>
+                      <p className="font-semibold text-foreground">{rec.title}</p>
                     </div>
-                    <p className="text-sm text-gray-600">{rec.detail}</p>
+                    <p className="text-sm text-muted-foreground">{rec.detail}</p>
                   </div>
                   {rec.saving !== null && (
                     <div className="text-right shrink-0">
-                      <p className="text-xs text-gray-400">Est. saving</p>
-                      <p className="text-lg font-bold text-green-700">{fmt(rec.saving)}</p>
+                      <p className="text-xs text-muted-foreground">Est. saving</p>
+                      <p className="text-lg font-bold text-success">{fmt(rec.saving)}</p>
                     </div>
                   )}
                 </div>

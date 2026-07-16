@@ -8,9 +8,10 @@ import {
   useRosterStaffList,
 } from '../../api/rosterCoverage';
 import { useLocations } from '../../api/locations';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
+import { CardTitleHint, FieldLabel } from '../../components/InfoHint';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { getErrorMessage } from '../../utils/api';
 import {
   Table,
@@ -20,6 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from '../../ui/table';
+
+const NONE_LOCATION = '__none__';
 
 export function RosterParticipants() {
   const { data, isLoading } = useRosterParticipants();
@@ -106,75 +109,81 @@ export function RosterParticipants() {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{editingId ? 'Edit participant' : 'New participant'}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="space-y-3">
-            <div>
-              <label className="text-sm font-medium">Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" />
+    <div className="page-stack-dense">
+      <div className="grid gap-3 lg:grid-cols-2">
+        <section className="rounded-lg border bg-card p-3 space-y-2.5">
+          <CardTitleHint titleClassName="text-2sm">
+            {editingId ? 'Edit participant' : 'New participant'}
+          </CardTitleHint>
+          <form onSubmit={submit} className="space-y-2.5">
+            <div className="space-y-1">
+              <FieldLabel htmlFor="participant-name">Name</FieldLabel>
+              <Input id="participant-name" value={name} onChange={(e) => setName(e.target.value)} className="h-8 text-2sm" />
             </div>
-            <div>
-              <label className="text-sm font-medium">Location label</label>
+            <div className="space-y-1">
+              <FieldLabel htmlFor="participant-location-label">Location label</FieldLabel>
               <Input
+                id="participant-location-label"
                 value={locationLabel}
                 onChange={(e) => setLocationLabel(e.target.value)}
-                className="mt-1"
+                className="h-8 text-2sm"
                 placeholder="House / site"
               />
             </div>
-            <div>
-              <label className="text-sm font-medium">Link location (optional)</label>
-              <select
-                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={locationId}
-                onChange={(e) => setLocationId(e.target.value)}
+            <div className="space-y-1">
+              <FieldLabel>Link location</FieldLabel>
+              <Select
+                value={locationId || NONE_LOCATION}
+                onValueChange={(value) => setLocationId(value === NONE_LOCATION ? '' : value)}
               >
-                <option value="">None</option>
-                {locations.map((l) => (
-                  <option key={l._id} value={l._id}>
-                    {l.name} ({l.timezone})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-8 text-2sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_LOCATION}>None</SelectItem>
+                  {locations.map((l) => (
+                    <SelectItem key={l._id} value={l._id}>
+                      {l.name} ({l.timezone})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium">Timezone override (IANA)</label>
+            <div className="space-y-1">
+              <FieldLabel htmlFor="participant-timezone">Timezone override</FieldLabel>
               <Input
+                id="participant-timezone"
                 value={timezone}
                 onChange={(e) => setTimezone(e.target.value)}
-                className="mt-1"
+                className="h-8 text-2sm"
                 placeholder="Australia/Brisbane"
               />
             </div>
-            <div>
-              <label className="text-sm font-medium">Approved staff</label>
-              <div className="mt-2 overflow-hidden rounded-md border">
-                <div className="border-b border-input p-2">
+            <div className="space-y-1">
+              <FieldLabel>Approved staff</FieldLabel>
+              <div className="overflow-hidden rounded-md border">
+                <div className="border-b border-input p-1.5">
                   <Input
                     type="search"
                     autoComplete="off"
                     placeholder="Search by name…"
                     value={approvedStaffSearch}
                     onChange={(e) => setApprovedStaffSearch(e.target.value)}
-                    className="h-9"
+                    className="h-8 border-0 bg-transparent text-2sm shadow-none"
                     aria-label="Filter approved staff"
                   />
                 </div>
-                <div className="max-h-40 space-y-1 overflow-y-auto p-2">
+                <div className="max-h-36 space-y-0.5 overflow-y-auto p-1.5">
                   {staff.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No staff</p>
+                    <p className="text-2sm text-muted-foreground">No staff</p>
                   ) : filteredStaff.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No matches</p>
+                    <p className="text-2sm text-muted-foreground">No matches</p>
                   ) : (
                     filteredStaff.map((s) => {
                       const id = String(s._id);
                       const on = selectedStaff.includes(id);
                       return (
-                        <label key={id} className="flex items-center gap-2 text-sm">
+                        <label key={id} className="flex items-center gap-2 text-2sm">
                           <input
                             type="checkbox"
                             checked={on}
@@ -192,56 +201,54 @@ export function RosterParticipants() {
                 </div>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={createP.isPending || patchP.isPending}>
+            <div className="flex flex-wrap gap-2 pt-0.5">
+              <Button type="submit" size="sm" disabled={createP.isPending || patchP.isPending}>
                 {editingId ? 'Save' : 'Create'}
               </Button>
               {editingId && (
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" size="sm" onClick={resetForm}>
                   Cancel
                 </Button>
               )}
             </div>
           </form>
-        </CardContent>
-      </Card>
+        </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">All participants</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Approved #</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {participants.map((p) => (
-                  <TableRow key={p._id}>
-                    <TableCell>{p.name}</TableCell>
-                    <TableCell>{p.approvedStaffIds?.length ?? 0}</TableCell>
-                    <TableCell className="space-x-2 text-right">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(p)}>
-                        Edit
-                      </Button>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => remove(p._id)}>
-                        Delete
-                      </Button>
-                    </TableCell>
+        <section className="rounded-lg border bg-card p-3 space-y-2.5">
+          <CardTitleHint titleClassName="text-2sm">All participants</CardTitleHint>
+          <div className="overflow-x-auto">
+            {isLoading ? (
+              <p className="text-2sm text-muted-foreground">Loading…</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Approved #</TableHead>
+                    <TableHead />
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {participants.map((p) => (
+                    <TableRow key={p._id}>
+                      <TableCell>{p.name}</TableCell>
+                      <TableCell>{p.approvedStaffIds?.length ?? 0}</TableCell>
+                      <TableCell className="space-x-2 text-right">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(p)}>
+                          Edit
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => remove(p._id)}>
+                          Delete
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

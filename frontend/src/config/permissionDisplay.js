@@ -10,9 +10,9 @@ export const CATEGORY_ORDER = [
 ];
 
 export const ACCESS_LEVEL_LABELS = {
-  view: { label: 'View only', className: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200' },
-  edit: { label: 'Can edit', className: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200' },
-  admin: { label: 'Admin', className: 'bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-200' },
+  view: { label: 'View only', className: 'bg-primary/12 text-primary' },
+  edit: { label: 'Can edit', className: 'bg-warning/15 text-warning' },
+  admin: { label: 'Admin', className: 'bg-chart-2/15 text-chart-2' },
 };
 
 /** Dedupe catalog entries by permission key (API may send one row per nav path). */

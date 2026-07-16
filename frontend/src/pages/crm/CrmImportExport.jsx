@@ -6,9 +6,10 @@ import { useCrmBdm } from './CrmBdmContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { PERMISSIONS } from '../../config/permissions';
 import { TABULAR_ACCEPT, validateTabularFile } from '../../config/upload';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
+import { InfoHint } from '../../components/InfoHint';
 import { getErrorMessage } from '../../utils/api';
+import { cn } from '../../lib/utils';
 
 export function CrmImportExport() {
   const { hasPermission } = usePermissions();
@@ -55,51 +56,46 @@ export function CrmImportExport() {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Import workbook</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Upload a BDM Master Tracker Excel file (.xlsx). All four data sheets will be imported
-            (Support Coordinators, Potential Leads, Marketing Activities, Staffing Requirements).
+    <div className="grid gap-2 sm:grid-cols-2">
+      <div className="rounded-lg border border-border/60 bg-card p-3 shadow-card dark:shadow-none">
+        <div className="mb-2 flex items-center gap-1.5">
+          <span className="text-sm font-semibold">Import</span>
+          <InfoHint
+            content="BDM Master Tracker .xlsx — imports Support Coordinators, Leads, Marketing Activities, and Staffing Requirements sheets."
+            label="About CRM import"
+          />
+        </div>
+        {canManage ? (
+          <div
+            {...getRootProps()}
+            className={cn(
+              'cursor-pointer rounded-md border border-dashed px-3 py-4 text-center text-2sm transition-colors',
+              isDragActive ? 'border-primary bg-primary/5' : 'border-border/60 text-muted-foreground hover:bg-muted/30'
+            )}
+          >
+            <input {...getInputProps()} />
+            {importM.isPending
+              ? 'Importing…'
+              : isDragActive
+                ? 'Drop file here'
+                : 'Drag & drop or click to browse'}
+          </div>
+        ) : (
+          <p className="flex items-center gap-1.5 text-2xs text-muted-foreground">
+            View only
+            <InfoHint content="Manage permission required to import CRM data." label="Import permission" />
           </p>
-          {canManage ? (
-            <div
-              {...getRootProps()}
-              className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
-                isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
-              }`}
-            >
-              <input {...getInputProps()} />
-              <p className="text-sm">
-                {importM.isPending
-                  ? 'Importing…'
-                  : isDragActive
-                    ? 'Drop file here'
-                    : 'Drag & drop an Excel file, or click to browse'}
-              </p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">You need CRM manage permission to import.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Export workbook</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Download all CRM data as an Excel workbook matching the BDM Master Tracker format.
-          </p>
-          <Button type="button" onClick={handleExport}>
-            Download Excel
-          </Button>
-        </CardContent>
-      </Card>
+        )}
+      </div>
+      <div className="rounded-lg border border-border/60 bg-card p-3 shadow-card dark:shadow-none">
+        <div className="mb-2 flex items-center gap-1.5">
+          <span className="text-sm font-semibold">Export</span>
+          <InfoHint content="Download CRM data as Excel for the selected BDM filter." label="About CRM export" />
+        </div>
+        <Button type="button" size="sm" onClick={handleExport}>
+          Download Excel
+        </Button>
+      </div>
     </div>
   );
 }

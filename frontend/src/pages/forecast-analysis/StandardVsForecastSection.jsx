@@ -10,6 +10,8 @@ import {
 import { getErrorMessage } from '../../utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
+import { Badge } from '../../ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '../../ui/tabs';
 import {
   Table,
   TableBody,
@@ -21,7 +23,6 @@ import {
 import { LoadingScreen } from '../../ui/LoadingSpinner';
 import { FileSpreadsheet } from 'lucide-react';
 import { TabularExportButtons } from '../../components/TabularExportButtons';
-import { cn } from '../../lib/utils';
 import {
   formatDate,
   makeVarianceRowClass,
@@ -58,8 +59,8 @@ function formatMoney(v) {
 }
 
 function summaryVarianceClass(v) {
-  if (v > 0) return 'text-red-600';
-  if (v < 0) return 'text-green-600';
+  if (v > 0) return 'text-destructive';
+  if (v < 0) return 'text-success';
   return '';
 }
 
@@ -113,22 +114,21 @@ export function StandardVsForecastSection({
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">{periodLabel}</p>
 
-      <div className="flex flex-wrap gap-2 border-b pb-2">
-        {SECTIONS.map((s) => (
-          <Button
-            key={s.id}
-            type="button"
-            variant={section === s.id ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => {
-              onSectionChange(s.id);
-              onPageChange(1);
-            }}
-          >
-            {s.label}
-          </Button>
-        ))}
-      </div>
+      <Tabs
+        value={section}
+        onValueChange={(v) => {
+          onSectionChange(v);
+          onPageChange(1);
+        }}
+      >
+        <TabsList>
+          {SECTIONS.map((s) => (
+            <TabsTrigger key={s.id} value={s.id}>
+              {s.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
           {section === 'summary' && (
             <Card>
@@ -160,12 +160,13 @@ export function StandardVsForecastSection({
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0 pb-4">
                 {summaryQ.isLoading ? (
-                  <LoadingScreen message="Loading summary…" />
+                  <div className="px-4 py-8">
+                    <LoadingScreen message="Loading summary…" />
+                  </div>
                 ) : (
-                  <div className="rounded-md border">
-                    <Table>
+                  <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Client name</TableHead>
@@ -187,19 +188,19 @@ export function StandardVsForecastSection({
                             {summaryQ.data.records.map((r) => (
                               <TableRow key={r.clientId}>
                                 <TableCell className="font-medium">{r.clientName}</TableCell>
-                                <TableCell className="text-right font-mono text-xs">
+                                <TableCell className="text-right font-mono text-xs tabular-nums">
                                   {formatMoney(r.standardBudget)}
                                 </TableCell>
-                                <TableCell className="text-right font-mono text-xs">
+                                <TableCell className="text-right font-mono text-xs tabular-nums">
                                   {formatMoney(r.forecastBudget)}
                                 </TableCell>
                                 <TableCell
-                                  className={`text-right font-mono text-xs ${summaryVarianceClass(r.variance)}`}
+                                  className={`text-right font-mono text-xs tabular-nums ${summaryVarianceClass(r.variance)}`}
                                 >
                                   {formatMoney(r.variance)}
                                 </TableCell>
                                 <TableCell
-                                  className={`text-right font-mono text-xs ${summaryVarianceClass(r.variance)}`}
+                                  className={`text-right font-mono text-xs tabular-nums ${summaryVarianceClass(r.variance)}`}
                                 >
                                   {r.variancePercentage != null
                                     ? `${formatMoney(r.variancePercentage)}%`
@@ -210,19 +211,19 @@ export function StandardVsForecastSection({
                             {summaryQ.data?.totals && (
                               <TableRow className="bg-muted/50 font-semibold border-t-2">
                                 <TableCell>{summaryQ.data.totals.clientName}</TableCell>
-                                <TableCell className="text-right font-mono text-xs">
+                                <TableCell className="text-right font-mono text-xs tabular-nums">
                                   {formatMoney(summaryQ.data.totals.standardBudget)}
                                 </TableCell>
-                                <TableCell className="text-right font-mono text-xs">
+                                <TableCell className="text-right font-mono text-xs tabular-nums">
                                   {formatMoney(summaryQ.data.totals.forecastBudget)}
                                 </TableCell>
                                 <TableCell
-                                  className={`text-right font-mono text-xs ${summaryVarianceClass(summaryQ.data.totals.variance)}`}
+                                  className={`text-right font-mono text-xs tabular-nums ${summaryVarianceClass(summaryQ.data.totals.variance)}`}
                                 >
                                   {formatMoney(summaryQ.data.totals.variance)}
                                 </TableCell>
                                 <TableCell
-                                  className={`text-right font-mono text-xs ${summaryVarianceClass(summaryQ.data.totals.variance)}`}
+                                  className={`text-right font-mono text-xs tabular-nums ${summaryVarianceClass(summaryQ.data.totals.variance)}`}
                                 >
                                   {summaryQ.data.totals.variancePercentage != null
                                     ? `${formatMoney(summaryQ.data.totals.variancePercentage)}%`
@@ -233,11 +234,10 @@ export function StandardVsForecastSection({
                           </>
                         )}
                       </TableBody>
-                    </Table>
-                  </div>
+                  </Table>
                 )}
                 {summaryQ.data?.records?.length > 0 && (
-                  <p className="mt-4 text-sm text-muted-foreground">
+                  <p className="px-4 pt-4 text-sm text-muted-foreground">
                     Showing {summaryQ.data.records.length} client
                     {summaryQ.data.records.length !== 1 ? 's' : ''}
                   </p>
@@ -263,57 +263,49 @@ export function StandardVsForecastSection({
                   }
                 />
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border-b border-border">
-                  <nav className="-mb-px flex flex-wrap gap-x-6">
-                    {VARIANCE_TABS.map((t) => {
-                      const active = varianceTab === t.id;
-                      const count = varianceQ.data?.[t.countKey];
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => {
-                            onVarianceTabChange(t.id);
-                            onPageChange(1);
-                          }}
-                          className={cn(
-                            'border-b-2 py-2 px-1 text-sm font-medium transition-colors',
-                            active
-                              ? 'border-primary text-primary'
-                              : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                          )}
-                        >
-                          {t.label}
-                          {count != null && (
-                            <span
-                              className={cn(
-                                'ml-2 rounded-full px-2 py-0.5 text-xs',
-                                active
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-muted text-muted-foreground'
-                              )}
-                            >
-                              {count}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </nav>
+              <CardContent className="space-y-4 p-0 pb-4">
+                <div className="px-4 pt-4">
+                  <Tabs
+                    value={varianceTab}
+                    onValueChange={(v) => {
+                      onVarianceTabChange(v);
+                      onPageChange(1);
+                    }}
+                  >
+                    <TabsList>
+                      {VARIANCE_TABS.map((t) => {
+                        const count = varianceQ.data?.[t.countKey];
+                        return (
+                          <TabsTrigger key={t.id} value={t.id}>
+                            {t.label}
+                            {count != null && (
+                              <Badge
+                                variant={varianceTab === t.id ? 'primary' : 'default'}
+                                className="ml-2"
+                              >
+                                {count}
+                              </Badge>
+                            )}
+                          </TabsTrigger>
+                        );
+                      })}
+                    </TabsList>
+                  </Tabs>
                 </div>
                 {varianceQ.isLoading ? (
-                  <LoadingScreen message="Loading variance…" />
+                  <div className="px-4 py-8">
+                    <LoadingScreen message="Loading variance…" />
+                  </div>
                 ) : varianceQ.error ? (
-                  <p className="text-destructive">{getErrorMessage(varianceQ.error)}</p>
+                  <p className="px-4 text-destructive">{getErrorMessage(varianceQ.error)}</p>
                 ) : (
                   <>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="px-4 text-xs text-muted-foreground">
                       Forecast period: {formatDate(varianceQ.data?.forecastDateRangeStart)} –{' '}
                       {formatDate(varianceQ.data?.forecastDateRangeEnd)}
                     </p>
                     {(varianceTab === 'all' || varianceTab === 'variance') && (
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2 px-4 text-sm">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="text-muted-foreground">Legend:</span>
                           {varianceTab === 'all' && (
@@ -329,7 +321,7 @@ export function StandardVsForecastSection({
                             </>
                           )}
                           <span className="inline-flex items-center gap-1.5">
-                            <span className="inline-block h-3.5 w-3.5 rounded border border-blue-200 bg-blue-50" />
+                            <span className="inline-block h-3.5 w-3.5 rounded border border-primary/30 bg-primary/10" />
                             Standard
                           </span>
                           <span className="inline-flex items-center gap-1.5">
@@ -337,14 +329,13 @@ export function StandardVsForecastSection({
                             Forecast
                           </span>
                           <span className="inline-flex items-center gap-1.5">
-                            <span className="inline-block h-3.5 w-3.5 rounded border border-yellow-300 bg-yellow-200" />
+                            <span className="inline-block h-3.5 w-3.5 rounded border border-warning/40 bg-warning/30" />
                             Difference
                           </span>
                         </div>
                       </div>
                     )}
-                    <div className="rounded-md border overflow-x-auto">
-                      <Table>
+                    <Table containerClassName="overflow-x-auto">
                         <TableHeader>
                           <TableRow>
                             <VarianceColumnHeaders
@@ -395,8 +386,7 @@ export function StandardVsForecastSection({
                             ))
                           )}
                         </TableBody>
-                      </Table>
-                    </div>
+                    </Table>
                     <div className="flex items-center justify-between text-sm">
                       <span>
                         {varianceQ.data?.startIndex != null && varianceQ.data?.endIndex != null

@@ -1,10 +1,13 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
-import { MapPin, Plus, Trash2, ChevronRight, ArrowRight } from 'lucide-react';
+import { MapPin, Plus, Trash2, ChevronRight, ArrowRight, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { PageHeader } from '../components/PageHeader';
+import { CardTitleHint } from '../components/InfoHint';
 import { useLocations, useCreateLocation, useDeleteLocation } from '../api/locations';
 import { getErrorMessage } from '../utils/api';
 import { HolidayManager, PayHours } from './PayHours';
@@ -123,226 +126,182 @@ export function WorkforceHub() {
   }, [locationId, locations]);
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Workforce</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          {canViewWorkforceCost
-            ? 'One setup area for site, holidays, roster and pay hours — then calculator and cost.'
-            : 'One setup area for site, holidays, roster and pay hours — then the award calculator.'}
-        </p>
-      </div>
+    <div className="page-stack-tight">
+      <PageHeader
+        title="Workforce"
+        hint={
+          canViewWorkforceCost
+            ? 'Setup → award calculator → billing & cost. Pick a location before uploading shifts; use All locations only when data should span every site.'
+            : 'Setup → award calculator. Pick a location before uploading shifts; use All locations only when data should span every site.'
+        }
+      />
 
-      <div className="flex flex-wrap gap-2 p-1 rounded-lg bg-muted/50 border">
-        {visibleSteps.map((s, i) => (
-          <Button
-            key={s.id}
-            type="button"
-            size="sm"
-            variant={step === s.id ? 'default' : 'ghost'}
-            className="flex-1 min-w-[100px]"
-            onClick={() => setStep(s.id)}
-          >
-            <span className="hidden sm:inline">
-              {i + 1}. {s.short}
+      <Tabs value={step} onValueChange={setStep}>
+        <TabsList>
+          {visibleSteps.map((s, i) => (
+            <TabsTrigger key={s.id} value={s.id} className="text-2sm py-1">
+              <span className="hidden sm:inline">
+                {i + 1}. {s.short}
+              </span>
+              <span className="sm:hidden">{i + 1}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {step !== 'setup' && (
+          <div className="mt-2 flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-2sm text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              <strong className="text-foreground font-medium">{locationLabel}</strong>
+              <button type="button" className="ml-2 text-primary underline text-2xs" onClick={() => setStep('setup')}>
+                Change
+              </button>
             </span>
-            <span className="sm:hidden">{i + 1}</span>
-          </Button>
-        ))}
-      </div>
+          </div>
+        )}
 
-      {step !== 'setup' && (
-        <div className="rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground flex items-center gap-2">
-          <MapPin className="h-4 w-4 shrink-0" />
-          <span>
-            Active location: <strong className="text-foreground">{locationLabel}</strong>
-            <button type="button" className="ml-2 text-primary underline text-xs" onClick={() => setStep('setup')}>
-              Change in Setup
-            </button>
-          </span>
-        </div>
-      )}
-
-      {step === 'setup' && (
-        <div className="space-y-6">
+      <TabsContent value="setup" className="space-y-3 mt-3">
           {!locationId && (
-            <div
-              className="rounded-lg border border-amber-200/80 bg-amber-50/90 dark:bg-amber-950/25 dark:border-amber-800/50 px-4 py-3 text-sm text-amber-950 dark:text-amber-100/90"
-              role="status"
-            >
-              <span className="font-medium">Tip:</span>{' '}
-              Choose a <strong>location</strong> below so shifts and pay hours are tagged to the right site. Use{' '}
-              <strong>All locations</strong> only if you intentionally want data shared across every site.
-            </div>
+            <p className="flex items-center gap-1.5 text-2xs text-warning" role="status">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              Pick a location so shifts tag to the right site.
+            </p>
           )}
 
-          <Card id="workforce-setup" className="scroll-mt-6 shadow-sm overflow-hidden">
-            <CardHeader className="border-b bg-muted/30 pb-4">
-              <CardTitle className="text-xl">Workforce setup</CardTitle>
-              <p className="text-sm text-muted-foreground font-normal leading-relaxed mt-2">
-                Pick your <strong className="text-foreground font-medium">site</strong> and <strong className="text-foreground font-medium">public holidays</strong>, then use the{' '}
-                <strong className="text-foreground font-medium">Shifts &amp; pay hours</strong> block: one upload, one staff table (expand rows for individual shifts).
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-10 pt-6">
-              <div id="workforce-location" className="scroll-mt-4 space-y-4">
-                <h3 className="text-sm font-semibold text-foreground">Site &amp; holidays</h3>
-                <Card className="shadow-sm border-dashed">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Active site</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="text-sm font-medium">Location</span>
-                      <select
-                        value={locationId}
-                        onChange={(e) => setLocationId(e.target.value)}
-                        className="h-9 rounded-md border border-input bg-background px-3 text-sm min-w-[200px]"
-                      >
-                        <option value="">All locations</option>
-                        {locations.map((loc) => (
-                          <option key={loc._id} value={loc._id}>
-                            {loc.name} ({loc.code})
-                          </option>
-                        ))}
-                      </select>
-                      <Button size="sm" variant="outline" onClick={() => setShowNewLocation((v) => !v)}>
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Add location
-                      </Button>
-                      {locationId && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteLocation(locationId, locations.find((l) => l._id === locationId)?.name)}
-                          className="text-xs text-destructive hover:underline ml-auto"
-                        >
-                          <Trash2 className="h-3.5 w-3.5 inline mr-1" />
-                          Delete selected
-                        </button>
-                      )}
-                    </div>
-                    {showNewLocation && (
-                      <div className="flex flex-wrap items-end gap-2 pt-2 border-t">
-                        <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">Name</label>
-                          <Input
-                            placeholder="e.g. Brisbane Office"
-                            value={newLocName}
-                            onChange={(e) => setNewLocName(e.target.value)}
-                            className="h-8 w-44 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">Code</label>
-                          <Input
-                            placeholder="e.g. BRISBANE"
-                            value={newLocCode}
-                            onChange={(e) => setNewLocCode(e.target.value)}
-                            className="h-8 w-32 text-sm uppercase"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">Timezone</label>
-                          <select
-                            value={newLocTz}
-                            onChange={(e) => setNewLocTz(e.target.value)}
-                            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
-                          >
-                            <option value="Australia/Brisbane">Brisbane</option>
-                            <option value="Australia/Sydney">Sydney</option>
-                            <option value="Australia/Melbourne">Melbourne</option>
-                            <option value="Australia/Perth">Perth</option>
-                            <option value="Australia/Adelaide">Adelaide</option>
-                            <option value="Australia/Darwin">Darwin</option>
-                            <option value="Australia/Hobart">Hobart</option>
-                          </select>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={handleCreateLocation}
-                          disabled={createLocationMutation.isPending || !newLocName.trim() || !newLocCode.trim()}
-                        >
-                          {createLocationMutation.isPending ? 'Creating…' : 'Create'}
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setShowNewLocation(false)}>
-                          Cancel
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                <HolidayManager locationId={locationId} locations={locations} />
+          <div id="workforce-setup" className="grid gap-3 md:grid-cols-2 scroll-mt-4">
+            <div id="workforce-location" className="rounded-lg border bg-card p-3 space-y-2.5">
+              <CardTitleHint
+                titleClassName="text-2sm"
+                hint="Site used for shift uploads, pay hours, and public holidays."
+              >
+                Active site
+              </CardTitleHint>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={locationId || 'all'} onValueChange={(v) => setLocationId(v === 'all' ? '' : v)}>
+                  <SelectTrigger className="h-8 min-w-[180px] w-auto text-2sm">
+                    <MapPin className="h-3.5 w-3.5 mr-1.5 text-muted-foreground shrink-0" />
+                    <SelectValue placeholder="All locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All locations</SelectItem>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc._id} value={loc._id}>
+                        {loc.name} ({loc.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="outline" className="h-8 text-2sm" onClick={() => setShowNewLocation((v) => !v)}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                </Button>
+                {locationId && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteLocation(locationId, locations.find((l) => l._id === locationId)?.name)}
+                    className="text-2xs text-destructive hover:underline"
+                  >
+                    <Trash2 className="h-3 w-3 inline mr-0.5" />
+                    Delete
+                  </button>
+                )}
               </div>
-
-              <div className="border-t pt-8 space-y-4">
-                <PayHours
-                  embedWorkforce
-                  locationId={locationId}
-                  setLocationId={setLocationId}
-                  payHoursJobId={payHoursJobId}
-                  setPayHoursJobId={setPayHoursJobId}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
-            <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-              Done with pay hours? Continue to enter{' '}
-              <strong className="text-foreground font-medium">award rates</strong>
-              {canViewWorkforceCost ? (
-                <>
-                  {' '}
-                  and then <strong className="text-foreground font-medium">billing &amp; cost</strong>.
-                </>
-              ) : (
-                <> in the award calculator.</>
+              {showNewLocation && (
+                <div className="flex flex-wrap items-end gap-2 border-t pt-2">
+                  <Input
+                    placeholder="Name"
+                    value={newLocName}
+                    onChange={(e) => setNewLocName(e.target.value)}
+                    className="h-8 w-36 text-2sm"
+                  />
+                  <Input
+                    placeholder="Code"
+                    value={newLocCode}
+                    onChange={(e) => setNewLocCode(e.target.value)}
+                    className="h-8 w-28 text-2sm uppercase"
+                  />
+                  <Select value={newLocTz} onValueChange={setNewLocTz}>
+                    <SelectTrigger className="h-8 w-32 text-2sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Australia/Brisbane">Brisbane</SelectItem>
+                      <SelectItem value="Australia/Sydney">Sydney</SelectItem>
+                      <SelectItem value="Australia/Melbourne">Melbourne</SelectItem>
+                      <SelectItem value="Australia/Perth">Perth</SelectItem>
+                      <SelectItem value="Australia/Adelaide">Adelaide</SelectItem>
+                      <SelectItem value="Australia/Darwin">Darwin</SelectItem>
+                      <SelectItem value="Australia/Hobart">Hobart</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    onClick={handleCreateLocation}
+                    disabled={createLocationMutation.isPending || !newLocName.trim() || !newLocCode.trim()}
+                  >
+                    {createLocationMutation.isPending ? 'Creating…' : 'Create'}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-8" onClick={() => setShowNewLocation(false)}>
+                    Cancel
+                  </Button>
+                </div>
               )}
-            </p>
-            <Button type="button" size="lg" className="shrink-0 gap-2" onClick={() => setStep('calculator')}>
-              Next: Award calculator
-              <ArrowRight className="h-4 w-4" />
+            </div>
+
+            <HolidayManager locationId={locationId} locations={locations} compact />
+          </div>
+
+          <PayHours
+            embedWorkforce
+            locationId={locationId}
+            setLocationId={setLocationId}
+            payHoursJobId={payHoursJobId}
+            setPayHoursJobId={setPayHoursJobId}
+          />
+
+          <div className="flex justify-end pt-1">
+            <Button type="button" size="sm" className="gap-1.5" onClick={() => setStep('calculator')}>
+              Next: Calculator
+              <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </div>
-        </div>
-      )}
+      </TabsContent>
 
-      {step === 'calculator' && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Award calculator &amp; rates</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              {canViewWorkforceCost
-                ? 'Upload a per-staff rates workbook here; billing & cost can reuse it for staff revenue vs wages. Uses the same location as Setup.'
-                : 'Upload a per-staff rates workbook here. Uses the same location as Setup.'}
-            </CardContent>
-          </Card>
+      <TabsContent value="calculator" className="space-y-3 mt-3">
+          <CardTitleHint
+            hint={
+              canViewWorkforceCost
+                ? 'Upload per-staff rates; billing & cost reuses them. Same location as Setup.'
+                : 'Upload per-staff rates workbook. Same location as Setup.'
+            }
+            titleClassName="text-2sm"
+          >
+            Award calculator &amp; rates
+          </CardTitleHint>
           <SchadsCalculator locationId={locationId || undefined} onStaffRatesMapChange={setHubStaffRatesMap} />
-          <div className={`flex ${canViewWorkforceCost ? 'justify-between' : 'justify-start'}`}>
-            <Button type="button" variant="outline" onClick={() => setStep('setup')}>
+          <div className={`flex gap-2 ${canViewWorkforceCost ? 'justify-between' : 'justify-start'}`}>
+            <Button type="button" variant="outline" size="sm" onClick={() => setStep('setup')}>
               Back
             </Button>
             {canViewWorkforceCost && (
-              <Button type="button" onClick={() => setStep('cost')}>
-                Next: Cost analysis <ChevronRight className="h-4 w-4 ml-1" />
+              <Button type="button" size="sm" onClick={() => setStep('cost')}>
+                Next: Cost <ChevronRight className="h-3.5 w-3.5 ml-1" />
               </Button>
             )}
           </div>
-        </div>
-      )}
+      </TabsContent>
 
-      {step === 'cost' && canViewWorkforceCost && (
-        <div className="space-y-4">
+      {canViewWorkforceCost && (
+        <TabsContent value="cost" className="space-y-3 mt-3">
           <CostAnalysis embedded locationId={locationId || undefined} hubStaffRatesMap={hubStaffRatesMap} />
           <div className="flex justify-start">
-            <Button type="button" variant="outline" onClick={() => setStep('calculator')}>
+            <Button type="button" variant="outline" size="sm" onClick={() => setStep('calculator')}>
               Back
             </Button>
           </div>
-        </div>
+        </TabsContent>
       )}
+      </Tabs>
     </div>
   );
 }

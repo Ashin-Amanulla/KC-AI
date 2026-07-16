@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { RuleTestRun } from './ruleTestRun.model.js';
 import { runEngineTests } from './testRunner.service.js';
 import { RULES_CATALOG, RULE_CATEGORIES } from './rulesCatalog.js';
+import { getScenarioForRule } from './ruleScenarios.js';
 import { getConstantsEffectiveAt } from '../award-rates/awardRateResolver.js';
 import { PayHours } from '../pay-hours/payHours.model.js';
 import { Shift } from '../shifts/shift.model.js';
@@ -79,7 +80,7 @@ export const listRules = async (_req, res, next) => {
         : tests.some((t) => t.status === 'fail')
           ? 'fail'
           : 'pass';
-      return { ...rule, tests, lastStatus };
+      return { ...rule, tests, lastStatus, scenario: getScenarioForRule(rule) };
     });
 
     res.json({

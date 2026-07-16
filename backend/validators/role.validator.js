@@ -25,6 +25,7 @@ export const updateRoleSchema = {
     name: Joi.string().min(1).max(100),
     description: Joi.string().max(500).allow(''),
     permissions: permissionsSchema,
+    isActive: Joi.boolean(),
   }).min(1),
 };
 

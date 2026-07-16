@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Card, CardContent } from '../../ui/card';
+import { Badge } from '../../ui/badge';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
+import { CardTitleHint } from '../../components/InfoHint';
 import { cn } from '../../lib/utils';
 import { useAnomalies } from '../../api/ruleEngine';
 
@@ -30,20 +32,20 @@ export function DataQuality() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Scans imported shifts and computed pay for the data problems that cause wrong pay:
-          overlapping rostered time, zero/implausible durations, negative pay buckets, and effective
-          hourly rates outside sane SCHADS bounds.
-        </p>
+        <CardTitleHint
+          hint="Scans imported shifts and computed pay for overlapping time, zero/implausible durations, negative buckets, and out-of-bounds effective rates."
+        >
+          Data quality scan
+        </CardTitleHint>
         <div className="flex gap-4 text-sm">
           <span>
-            <strong className={cn('tabular-nums', data.totals.error > 0 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400')}>
+            <strong className={cn('tabular-nums', data.totals.error > 0 ? 'text-destructive' : 'text-success')}>
               {data.totals.error ?? 0}
             </strong>{' '}
             <span className="text-muted-foreground">errors</span>
           </span>
           <span>
-            <strong className="tabular-nums text-amber-600 dark:text-amber-400">{data.totals.warning ?? 0}</strong>{' '}
+            <strong className="tabular-nums text-warning">{data.totals.warning ?? 0}</strong>{' '}
             <span className="text-muted-foreground">warnings</span>
           </span>
           <span className="text-muted-foreground">
@@ -89,16 +91,9 @@ export function DataQuality() {
           <CardContent className="divide-y p-0">
             {anomalies.map((a, i) => (
               <div key={i} className="flex items-start gap-3 px-4 py-2 text-sm">
-                <span
-                  className={cn(
-                    'mt-0.5 rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap',
-                    a.severity === 'error'
-                      ? 'bg-destructive/15 text-destructive'
-                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-                  )}
-                >
+                <Badge variant={a.severity === 'error' ? 'destructive' : 'warning'} className="mt-0.5 shrink-0">
                   {TYPE_LABELS[a.type] ?? a.type}
-                </span>
+                </Badge>
                 <div className="min-w-0">
                   <span className="font-medium">{a.staffName}</span>
                   <span className="ml-2 break-words text-muted-foreground">{a.detail}</span>
