@@ -14,7 +14,7 @@ import {
 
 export const LoginForm = () => {
   const [email, setEmail] = useState("admin@kc-ai.com");
-  const [password, setPassword] = useState("admin123");
+  const [password, setPassword] = useState("NNM3ekGBKQPDaEN7r0o7nFMv");
   const { login, isLoading, error } = useAuthStore();
   const navigate = useNavigate();
 
