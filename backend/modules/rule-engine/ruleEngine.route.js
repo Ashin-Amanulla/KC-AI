@@ -5,6 +5,7 @@ import {
   listTestRuns,
   getTestRun,
   listRules,
+  listSopGuide,
   goldenDiff,
   rateCardCoverage,
   scanAnomalies,
@@ -17,6 +18,7 @@ const router = express.Router();
 const readPerms = [PERMISSIONS.RULE_ENGINE_VIEW, PERMISSIONS.PAY_HOURS_TESTS_VIEW];
 
 router.get('/rule-engine/rules', authenticateJWT, authorizePermission(...readPerms), listRules);
+router.get('/rule-engine/sop', authenticateJWT, authorizePermission(...readPerms), listSopGuide);
 router.get('/rule-engine/test-runs', authenticateJWT, authorizePermission(...readPerms), listTestRuns);
 router.get('/rule-engine/test-runs/:id', authenticateJWT, authorizePermission(...readPerms), getTestRun);
 router.post(

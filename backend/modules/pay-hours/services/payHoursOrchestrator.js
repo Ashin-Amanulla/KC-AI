@@ -264,6 +264,7 @@ export async function computeAllPayHours(jobId, locationId = null) {
             isSleepover: bd.isSleepover,
             minimumEngagementException: bd.minimumEngagementException,
             minimum4hEngagementReview: bd.minimum4hEngagementReview || false,
+            preSleepoverInsufficientBreak: bd.preSleepoverInsufficientBreak || false,
             mileage: bd.mileage ?? null,
             ...preservedShift,
           });

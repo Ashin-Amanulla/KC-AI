@@ -33,6 +33,24 @@ export const NAV_GROUPS = [
         hideIfHas: PERMISSIONS.ROSTER_VIEW,
       },
       {
+        path: '/progress-notes',
+        label: 'Progress notes',
+        icon: 'FileText',
+        permission: PERMISSIONS.SHIFT_ANALYSIS_VIEW,
+      },
+      {
+        path: '/client-funds',
+        label: 'Client funds',
+        icon: 'Wallet',
+        permission: PERMISSIONS.CLIENTS_VIEW,
+      },
+      {
+        path: '/compliance',
+        label: 'Compliance',
+        icon: 'ShieldAlert',
+        permission: PERMISSIONS.STAFF_VIEW,
+      },
+      {
         path: '/shift-analysis',
         label: 'Shift Analysis',
         icon: 'FileBarChart',
@@ -71,6 +89,12 @@ export const NAV_GROUPS = [
         icon: 'TrendingDown',
         permission: PERMISSIONS.FORECAST_ANALYSIS_VIEW,
       },
+      {
+        path: '/shiftcare-invoices',
+        label: 'Invoices',
+        icon: 'Receipt',
+        permission: PERMISSIONS.FORECAST_ANALYSIS_VIEW,
+      },
     ],
   },
   {
@@ -101,6 +125,12 @@ export const NAV_GROUPS = [
         label: 'Access management',
         icon: 'Shield',
         anyOf: [PERMISSIONS.USERS_MANAGE, PERMISSIONS.ROLES_MANAGE],
+      },
+      {
+        path: '/admin/webhooks',
+        label: 'Webhooks',
+        icon: 'Webhook',
+        permission: PERMISSIONS.USERS_MANAGE,
       },
     ],
   },

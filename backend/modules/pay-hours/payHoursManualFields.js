@@ -130,6 +130,7 @@ export function serializeShiftPayHoursRecord(doc) {
     isSleepover: plain.isSleepover,
     minimumEngagementException: plain.minimumEngagementException,
     minimum4hEngagementReview: plain.minimum4hEngagementReview || false,
+    preSleepoverInsufficientBreak: plain.preSleepoverInsufficientBreak || false,
     mileage: plain.mileage,
     isManuallyAdjusted: plain.isManuallyAdjusted || Object.keys(manualFields).length > 0,
     manualFields,

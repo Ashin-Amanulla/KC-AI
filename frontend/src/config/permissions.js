@@ -77,6 +77,11 @@ export const canAccessPath = (permissions, path) => {
     ]);
   }
   if (path === '/shift-analysis') return hasPermission(permissions, PERMISSIONS.SHIFT_ANALYSIS_VIEW);
+  if (path === '/progress-notes') return hasPermission(permissions, PERMISSIONS.SHIFT_ANALYSIS_VIEW);
+  if (path === '/client-funds') return hasPermission(permissions, PERMISSIONS.CLIENTS_VIEW);
+  if (path === '/compliance') return hasPermission(permissions, PERMISSIONS.STAFF_VIEW);
+  if (path === '/shiftcare-invoices') return hasPermission(permissions, PERMISSIONS.FORECAST_ANALYSIS_VIEW);
+  if (path === '/admin/webhooks') return hasPermission(permissions, PERMISSIONS.USERS_MANAGE);
   if (path.startsWith('/crm')) return hasPermission(permissions, PERMISSIONS.CRM_VIEW);
   if (path.startsWith('/hr-requirements')) return hasPermission(permissions, PERMISSIONS.CRM_VIEW);
   if (path.startsWith('/continuous-improvement')) return hasPermission(permissions, PERMISSIONS.CIR_VIEW);
@@ -88,7 +93,7 @@ export const getDefaultLanding = (permissions = []) => {
   if (hasPermission(permissions, PERMISSIONS.DASHBOARD_VIEW)) return '/';
   if (hasPermission(permissions, PERMISSIONS.TIMESHEETS_VIEW)) return '/timesheets';
   if (hasPermission(permissions, PERMISSIONS.ROSTER_SHIFT_LOG_VIEW)) return '/roster-coverage/shift-log';
-  if (hasPermission(permissions, PERMISSIONS.ROSTER_VIEW)) return '/roster-coverage';
+  if (hasPermission(permissions, PERMISSIONS.ROSTER_VIEW)) return '/roster-coverage/shift-log';
   if (hasPermission(permissions, PERMISSIONS.WORKFORCE_VIEW)) return '/workforce';
   return '/';
 };

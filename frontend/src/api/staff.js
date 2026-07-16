@@ -9,7 +9,7 @@ async function fetchAllStaffPages() {
   const all = [];
   let page = 1;
   for (;;) {
-    const { data } = await api.get('/api/staff', {
+    const { data } = await api.get('/api/shiftcare/staff', {
       params: {
         include_metadata: true,
         per_page: FETCH_ALL_PER_PAGE,
@@ -45,7 +45,7 @@ export const useStaff = (params = {}) => {
   return useQuery({
     queryKey: [STAFF_QUERY_KEY, params],
     queryFn: async () => {
-      const response = await api.get('/api/staff', { params });
+      const response = await api.get('/api/shiftcare/staff', { params });
       return response.data;
     },
     refetchInterval: REFETCH_INTERVAL,

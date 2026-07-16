@@ -4,7 +4,6 @@ import { TabNav, TabNavLink } from '../../ui/tabs';
 import { useAuthStore } from '../../store/auth';
 
 const ALL_LINKS = [
-  { to: '/roster-coverage', end: true, label: 'Home', short: 'Home' },
   { to: '/roster-coverage/shift-log', label: 'Shift Log', short: 'Shifts' },
   { to: '/roster-coverage/find-cover', label: 'Find cover', short: 'Cover' },
   { to: '/roster-coverage/participants', label: 'Participants', short: 'Participants' },

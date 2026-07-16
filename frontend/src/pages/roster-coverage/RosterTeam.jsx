@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useRosterStaffList,
@@ -21,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../ui/table';
+import { Badge } from '../../ui/badge';
 
 const NONE_LOCATION = '__none__';
 
@@ -200,7 +202,7 @@ export function RosterTeam() {
         <section className="rounded-lg border bg-card p-3 space-y-2.5">
           <CardTitleHint
             titleClassName="text-2sm"
-            hint="Worked (fn) sums hours from the saved timesheet window (earliest to latest shift from your last upload). Cap is contracted hours per fortnight. Clear the window on Timesheet upload to fall back to today’s pay fortnight."
+            hint="Worked (fn) sums hours from the saved timesheet window (earliest to latest shift from your last upload). Cap is contracted hours per fortnight. A warning flag appears when worked meets or exceeds cap."
             hintLabel="About worked hours and cap"
           >
             Team
@@ -216,22 +218,34 @@ export function RosterTeam() {
                     <TableHead>SC ID</TableHead>
                     <TableHead className="text-right">Worked</TableHead>
                     <TableHead className="text-right">Cap</TableHead>
+                    <TableHead className="text-right">Headroom</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {staff.map((s) => (
-                    <TableRow key={s._id}>
+                    <TableRow key={s._id} className={s.capExceeded ? 'bg-warning/5' : undefined}>
                       <TableCell>
-                        <Link className="font-medium text-primary hover:underline" to={`/roster-coverage/team/${s._id}`}>
-                          {s.fullName}
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Link className="font-medium text-primary hover:underline" to={`/roster-coverage/team/${s._id}`}>
+                            {s.fullName}
+                          </Link>
+                          {s.capExceeded && (
+                            <Badge variant="warning" title="Worked hours have reached or exceeded the fortnightly cap">
+                              <AlertTriangle className="size-3" aria-hidden />
+                              Cap exceeded
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="font-mono text-2xs text-muted-foreground">{s.shiftcareStaffId || '—'}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className={`text-right tabular-nums ${s.capExceeded ? 'font-medium text-warning' : ''}`}>
                         {s.workedHoursThisFortnight != null ? Number(s.workedHoursThisFortnight).toFixed(1) : '—'}
                       </TableCell>
-                      <TableCell className="text-right text-muted-foreground">{s.contractedFortnightlyHours}</TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">{s.contractedFortnightlyHours}</TableCell>
+                      <TableCell className={`text-right tabular-nums ${s.hoursRemaining != null && s.hoursRemaining < 0 ? 'font-medium text-warning' : ''}`}>
+                        {s.hoursRemaining != null ? Number(s.hoursRemaining).toFixed(1) : '—'}
+                      </TableCell>
                       <TableCell className="space-x-2 text-right">
                         <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(s)}>
                           Edit

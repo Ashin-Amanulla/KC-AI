@@ -491,9 +491,9 @@ function ImportVacantShiftsModal({ open, onClose }) {
       try {
         const res = await upload.mutateAsync(file);
         toast.success(
-          `Import complete — ${res.created ?? 0} created, ${res.updated ?? 0} updated (${res.rowsProcessed ?? 0} rows)`
+          `Import complete — ${res.created ?? 0} created, ${res.kept ?? 0} kept (${res.rowsProcessed ?? 0} rows)`
         );
-        if (res.cancelled) toast.message(`${res.cancelled} stale shift(s) cancelled`);
+        if (res.deleted) toast.message(`${res.deleted} stale shift(s) removed`);
         if (res.skipped) toast.message(`${res.skipped} row(s) skipped`);
         if (res.errors?.length) toast.message(`${res.errors.length} row error(s) — see network response`);
         onClose();

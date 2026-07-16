@@ -640,8 +640,8 @@ describe('short turnaround thresholds', () => {
     assert.strictEqual(shiftBreakdowns.get('st05b')?.shortTurnaroundHours || 0, 0);
     assert.strictEqual(data.shortTurnaroundHours || 0, 0);
     assert.strictEqual(data.brokenShiftCount, 1);
-    // 2026-06-14 is Sunday (AU): broken double-time for the last shift lands in Sunday tier-2 OT.
-    assert.strictEqual(data.sundayOtAfter2 || 0, 5);
+    // Span 06:00–20:00 = 14h; mark at 18:00 → 2h after mark at 2× (not entire 5h last shift).
+    assert.strictEqual(data.sundayOtAfter2 || 0, 2);
     assert.strictEqual(data.weekdayOtAfter2 || 0, 0);
   });
 });
@@ -962,13 +962,13 @@ describe('76-hour ordinary cap', () => {
     const sharonSat = shiftBreakdowns.get('145463996');
     assert.ok(sharonSat, 'Sharon Kynaston Sat 13 Jun shift present');
     assert.strictEqual(sharonSat.totalHours, 7);
-    assert.strictEqual(sharonSat.saturdayHours, 1);
-    assert.strictEqual(sharonSat.otAfter76Saturday, 6);
+    assert.strictEqual(sharonSat.saturdayHours, 0);
+    assert.strictEqual(sharonSat.otAfter76Saturday, 7);
     assert.strictEqual(
       r2((sharonSat.saturdayHours || 0) + (sharonSat.otAfter76Saturday || 0)),
       7
     );
-    assert.strictEqual(data.otAfter76Saturday, 6);
+    assert.strictEqual(data.otAfter76Saturday, 7);
   });
 
   test('[R118][R119] 76h cap: global OT>76 tier — first 2h only once across weekday + Saturday', () => {
@@ -1130,7 +1130,7 @@ describe('hours normalization from timestamps', () => {
     assert.strictEqual(shiftBreakdowns.get('ross-pre')?.minimumEngagementException, false);
     assert.strictEqual(shiftBreakdowns.get('ross-post')?.minimumEngagementException, false);
     assert.strictEqual(shiftBreakdowns.get('ross-pre')?.minimum4hEngagementReview, true);
-    assert.strictEqual(shiftBreakdowns.get('ross-post')?.minimum4hEngagementReview, false);
+    assert.strictEqual(shiftBreakdowns.get('ross-post')?.minimum4hEngagementReview, true);
   });
 
   test('[R129][R131] minimum engagement: post-sleepover under 2h is allowed when pre-sleepover is >=4h', () => {
@@ -1276,11 +1276,11 @@ describe('regression scenarios formalized from root investigation scripts (2026 
       '2026-04-07', 21, 0, 23, 0
     );
     const { data } = computePayHoursForStaff([s1, s2], new Set());
-    // Span 08:00–23:00 = 15h (≥12h) → last shift fully reclassified to 2x OT;
-    // span ends after 20:00 → earlier weekday hours retroactively evening.
-    assert.strictEqual(data.afternoonHours, 4, 'first shift retro-loaded to evening');
-    assert.strictEqual(data.weekdayOtAfter2, 2, 'broken last shift fully at 2x');
-    assert.strictEqual(data.morningHours, 0);
+    // Span 08:00–23:00 = 15h; per-period banding keeps first shift morning;
+    // span-DT after 20:00 mark + daily OT overlap → last 2h at 2×.
+    assert.strictEqual(data.morningHours, 4, 'first shift keeps morning band (per-period rule)');
+    assert.strictEqual(data.weekdayOtAfter2, 2, 'span breach hours at 2x');
+    assert.strictEqual(data.afternoonHours, 0);
     assert.strictEqual(data.brokenShiftCount, 1);
     const bucketTotal = r2(
       data.morningHours + data.afternoonHours + data.nightHours +

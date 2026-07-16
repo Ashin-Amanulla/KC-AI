@@ -20,6 +20,7 @@ export const STAFF_RATES_TABLE_FIELDS = [
   ['sleepover', 'Sleep'],
   ['kmRate', '$/km'],
   ['allowance', 'Allowance'],
+  ['capRate', 'Cap Rate'],
 ];
 
 export const STAFF_RATES_NUMERIC_KEYS = STAFF_RATES_TABLE_FIELDS.map(([k]) => k);

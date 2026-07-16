@@ -94,7 +94,7 @@ app.use('/api', awardRatesRoutes);
 app.use('/api', ruleEngineRoutes);
 app.use('/api', dashboardRoutes);
 app.use('/api', csvAnalysisRoutes);
-app.use('/api', shiftcareRoutes);
+app.use('/api/shiftcare', shiftcareRoutes);
 app.use('/api', rosterCoverageRoutes);
 app.use('/api', crmRoutes);
 app.use('/api', cirRoutes);

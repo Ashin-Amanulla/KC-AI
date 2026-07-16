@@ -11,25 +11,22 @@ Endpoint: `POST /roster-coverage/vacant-shifts/upload` → `uploadVacantShifts` 
 
 ## Upsert
 - Match key is the ShiftCare `Shift ID` (`shiftcareShiftId`).
-- Match found → update schedule fields only (`rosterParticipantId`, `startDatetime`,
-  `endDatetime`, `sleepover`, `reason`, `priority`). Preserves `status`, `notes`,
-  `updateLogs`, `filledByStaffId`.
+- Match found → **SKIP entirely** (preserve `status`, schedule fields, `notes`,
+  `updateLogs`, `filledByStaffId`). Count as `kept`.
 - No match → create with `status: 'open'`.
 
-## Stale-shift cleanup (decided 2026-06-26)
+## Stale-shift cleanup (updated 2026-07-16)
 After a successful upload, any vacant shift that **has a `shiftcareShiftId`** but is
-**absent from the uploaded file** is marked `status: 'cancelled'`.
+**absent from the uploaded file** is **hard-deleted**.
 
 Decisions in effect:
-- **Action:** cancel (reversible), NOT hard delete. Keeps history/audit + note threads.
-- **Scope:** ALL imported shifts (any date) not present in this file — not limited to the
-  file's date range.
-- **Status:** cancels regardless of current status. Filled / in-progress shifts ARE
-  cancelled too.
+- **Action:** hard delete (not soft-cancel). Rows missing from the new doc are removed.
+- **Matching rows:** left completely untouched — even if schedule changed in ShiftCare,
+  local history (comments, status workflow) is preserved.
+- **Scope:** ALL imported shifts (any date) not present in this file.
 - Manually-logged shifts (no `shiftcareShiftId`) are NEVER cleaned up.
 
 ### How to change later
-The "cancel regardless of status" choice is the one most likely to need revisiting.
-To exempt already-actioned shifts, add `status: 'open'` to the `updateMany` filter in
-`uploadVacantShifts`. To scope cleanup to the file's date window, also constrain
-`startDatetime` to the min/max of the uploaded rows.
+To restore schedule updates on re-import while keeping comments, update the `existing`
+branch in `uploadVacantShifts` to `$set` schedule fields only. To revert to soft-cancel,
+replace `deleteMany` with `updateMany({ status: 'cancelled' })`.

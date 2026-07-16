@@ -90,6 +90,7 @@ function schadsFlatRatesRow(displayName, baseHourly) {
     sleepover: 90,
     kmRate: VEHICLE_RATE,
     allowance: 0,
+    capRate: 0,
   };
 }
 
@@ -584,6 +585,11 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
                     {shift.minimum4hEngagementReview && (
                       <span className="inline-block px-1 py-0.5 rounded text-2xs bg-warning/15 text-warning" title="Sleepover-flanked personal care — review 4h minimum active care (sleepover excluded)">
                         Min 4h review
+                      </span>
+                    )}
+                    {shift.preSleepoverInsufficientBreak && (
+                      <span className="inline-block px-1 py-0.5 rounded text-2xs bg-warning/15 text-warning" title="Break before sleepover under 8h — review compliance">
+                        Pre-SO break
                       </span>
                     )}
                     {(shift.shortTurnaroundHours || 0) > 0 && (
@@ -1748,7 +1754,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     setRatesAddBase('');
   }, [ratesAddName, ratesAddBase, defaultRate, normName, onStaffRatesMapChange, ratesFileName]);
 
-  const summaryColSpan = 28 + (payrollData ? 3 : 0);
+  const summaryColSpan = 30 + (payrollData ? 3 : 0);
 
   const handleExportEmployeeHours = useCallback(() => {
     if (!displayRows.length) {
@@ -2054,7 +2060,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                     <TableHeader>
                       {/* Group header row */}
                       <TableRow className="bg-muted/60 border-b-0 text-2xs uppercase tracking-wider">
-                        <TableHead colSpan={3} className="sticky left-0 bg-muted/60 z-10 border-r border-border/50" />
+                        <TableHead colSpan={5} className="sticky left-0 bg-muted/60 z-10 border-r border-border/50" />
                         <TableHead colSpan={3} className="text-center text-warning border-r border-border/50 py-1">Weekday Hrs</TableHead>
                         <TableHead colSpan={2} className="text-center text-warning border-r border-border/50 py-1">WD Overtime</TableHead>
                         <TableHead colSpan={3} className="text-center text-chart-2 border-r border-border/50 py-1">Saturday</TableHead>
@@ -2078,7 +2084,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       {/* Column header row */}
                       <TableRow className="bg-muted/30 text-2xs">
                         <TableHead className="min-w-[160px] sticky left-0 bg-muted/30 z-10 border-r border-border/50">Staff</TableHead>
+                        <TableHead className="min-w-[120px]">Alias</TableHead>
                         <TableHead className="min-w-[90px]">Rate ($)</TableHead>
+                        <TableHead className="min-w-[80px] text-right">Cap Rate</TableHead>
                         <TableHead className="min-w-[100px] border-r border-border/50">Type</TableHead>
                         <TableHead className="text-right text-warning whitespace-nowrap" title="Ordinary weekday hours up to 8pm local (1×). Not clock AM.">Day<br/><span className="text-2xs font-normal opacity-70">≤8pm</span></TableHead>
                         <TableHead className="text-right text-warning whitespace-nowrap" title="After 8pm local (1.125×). Not clock afternoon.">Eve<br/><span className="text-2xs font-normal opacity-70">1.125×</span></TableHead>
@@ -2192,6 +2200,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                 </button>
                               </div>
                             </TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[140px] truncate" title={staffRates?.aliases?.join(', ') || undefined}>
+                              {staffRates?.aliases?.length ? staffRates.aliases.join(', ') : '—'}
+                            </TableCell>
                             <TableCell
                               className="cursor-context-menu"
                               onContextMenu={(e) => {
@@ -2222,6 +2233,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                   />
                                 </div>
                               )}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-xs">
+                              {staffRates?.capRate > 0 ? `$${Number(staffRates.capRate).toFixed(2)}` : '—'}
                             </TableCell>
                             <TableCell className="border-r border-border/50">
                               <select
@@ -2347,7 +2361,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       {/* Totals */}
                       <TableRow className="border-t-2 border-border bg-muted/20 font-bold text-xs">
                         <TableCell className="sticky left-0 bg-muted/20 z-10 border-r border-border/50">Totals</TableCell>
-                        <TableCell /><TableCell className="border-r border-border/50" />
+                        <TableCell /><TableCell /><TableCell /><TableCell className="border-r border-border/50" />
                         <TableCell className="text-right text-warning">{fmtH(r2(totals.morningHours))}</TableCell>
                         <TableCell className="text-right text-warning">{fmtH(r2(totals.afternoonHours))}</TableCell>
                         <TableCell className="text-right text-chart-3 border-r border-border/50">{fmtH(r2(totals.nightHours))}</TableCell>
