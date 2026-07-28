@@ -10,12 +10,12 @@ import { renderRulesDoc } from './renderRulesDoc.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DOC_PATH = path.join(__dirname, '../../../docs/schads-rules-implemented.md');
 
-test('rules catalog: ids are unique, sequential R001..R198 and categories valid', () => {
+test('rules catalog: ids are unique, sequential R001..R199 and categories valid', () => {
   const ids = RULES_CATALOG.map((rule) => rule.id);
   assert.strictEqual(new Set(ids).size, ids.length, 'duplicate rule ids');
   assert.strictEqual(ids[0], 'R001');
-  assert.strictEqual(ids[ids.length - 1], 'R198');
-  assert.strictEqual(ids.length, 198);
+  assert.strictEqual(ids[ids.length - 1], 'R199');
+  assert.strictEqual(ids.length, 199);
 
   const validCategories = new Set(RULE_CATEGORIES.map((c) => c.slug));
   const validStatuses = new Set(['implemented', 'needs-verification', 'flagged', 'not-implemented']);

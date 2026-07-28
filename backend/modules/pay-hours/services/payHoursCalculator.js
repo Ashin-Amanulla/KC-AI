@@ -28,6 +28,8 @@ const SLEEPOVER_FOLLOWON_GAP_MS = 8 * 60 * 60 * 1000;
 const MIN_BREAK_BETWEEN_SHIFTS_MS = 10 * 60 * 60 * 1000;
 /** SCHADS 2026 exception: shifts that are sleepover-linked only require an 8h following break. */
 const MIN_BREAK_AFTER_SLEEPOVER_MS = 8 * 60 * 60 * 1000;
+/** Minimum break required before a sleepover when the prior shift is not contiguous. */
+const MIN_BREAK_BEFORE_SLEEPOVER_MS = 8 * 60 * 60 * 1000;
 const OT_TIER_1_MAX = 2;
 const TOTAL_HOURS_CAP = 76;
 const BROKEN_SHIFT_SHORT_SPAN = 12;
@@ -94,6 +96,35 @@ function trackBrokenShiftOtForShift(ctx, shiftId, dayType, hours, isTier1) {
   ctx.brokenShiftOtByShift[shiftId][dayType][key] = r2(
     ctx.brokenShiftOtByShift[shiftId][dayType][key] + hours
   );
+}
+
+/** Signed delta variant for idempotent broken-span OT reverse-and-rebook. */
+function trackBrokenShiftOtDeltaForShift(ctx, shiftId, dayType, tier1Delta, tier2Delta) {
+  if (!tier1Delta && !tier2Delta) return;
+  if (!ctx.brokenShiftOtByShift) ctx.brokenShiftOtByShift = {};
+  if (!ctx.brokenShiftOtByShift[shiftId]) ctx.brokenShiftOtByShift[shiftId] = {};
+  if (!ctx.brokenShiftOtByShift[shiftId][dayType]) {
+    ctx.brokenShiftOtByShift[shiftId][dayType] = { tier1: 0, tier2: 0 };
+  }
+  const bucket = ctx.brokenShiftOtByShift[shiftId][dayType];
+  bucket.tier1 = r2(Math.max(0, bucket.tier1 + tier1Delta));
+  bucket.tier2 = r2(Math.max(0, bucket.tier2 + tier2Delta));
+}
+
+function addBrokenShiftOtDeltaToCategory(data, dayType, tier1Delta, tier2Delta) {
+  if (dayType === 'holiday') {
+    if (tier1Delta) data.holidayOtUpto2 = r2(Math.max(0, data.holidayOtUpto2 + tier1Delta));
+    if (tier2Delta) data.holidayOtAfter2 = r2(Math.max(0, data.holidayOtAfter2 + tier2Delta));
+  } else if (dayType === 'sunday') {
+    if (tier1Delta) data.sundayOtUpto2 = r2(Math.max(0, data.sundayOtUpto2 + tier1Delta));
+    if (tier2Delta) data.sundayOtAfter2 = r2(Math.max(0, data.sundayOtAfter2 + tier2Delta));
+  } else if (dayType === 'saturday') {
+    if (tier1Delta) data.saturdayOtUpto2 = r2(Math.max(0, data.saturdayOtUpto2 + tier1Delta));
+    if (tier2Delta) data.saturdayOtAfter2 = r2(Math.max(0, data.saturdayOtAfter2 + tier2Delta));
+  } else if (dayType === 'weekday') {
+    if (tier1Delta) data.weekdayOtUpto2 = r2(Math.max(0, data.weekdayOtUpto2 + tier1Delta));
+    if (tier2Delta) data.weekdayOtAfter2 = r2(Math.max(0, data.weekdayOtAfter2 + tier2Delta));
+  }
 }
 
 function applyBrokenShiftOtToBreakdown(bd, dayType, tier1, tier2) {
@@ -660,12 +691,17 @@ function computeSleepoverAdjacentFlags(shifts) {
   const n = shifts.length;
   const isPreSleepover = new Array(n).fill(false);
   const isPostSleepover = new Array(n).fill(false);
+  const preSleepoverInsufficientBreak = new Array(n).fill(false);
 
   for (let i = 0; i < n; i++) {
     if (shifts[i].shiftType !== 'sleepover') continue;
     if (i > 0) {
       const gap = new Date(shifts[i].startDatetime) - new Date(shifts[i - 1].endDatetime);
-      if (Math.abs(gap) <= GAP_CONTIGUOUS_TOLERANCE_MS) isPreSleepover[i - 1] = true;
+      if (Math.abs(gap) <= GAP_CONTIGUOUS_TOLERANCE_MS) {
+        isPreSleepover[i - 1] = true;
+      } else if (gap > 0 && gap < MIN_BREAK_BEFORE_SLEEPOVER_MS) {
+        preSleepoverInsufficientBreak[i - 1] = true;
+      }
     }
     if (i < n - 1) {
       const gap = new Date(shifts[i + 1].startDatetime) - new Date(shifts[i].endDatetime);
@@ -673,7 +709,7 @@ function computeSleepoverAdjacentFlags(shifts) {
     }
   }
 
-  return { isPreSleepover, isPostSleepover };
+  return { isPreSleepover, isPostSleepover, preSleepoverInsufficientBreak };
 }
 
 /**
@@ -824,23 +860,50 @@ function removeNursingWeekdayOrdinary(data, ctx, shiftId, hours) {
  * instead), it does not stack on top. Deduct the reclassified hours from the
  * span's ordinary time, end-first (the OT is the last-worked time).
  */
+function isShiftOrdinaryAvailableForBrokenOt(ctx, shiftId) {
+  if (ctx.reclassifiedFullDoubleTimeShiftIds?.has(shiftId)) return false;
+  if ((ctx.shortTurnaroundByShift?.[shiftId] || 0) > 0) return false;
+  return true;
+}
+
 function deductBrokenOtFromSpanOrdinary(previousShifts, currentShift, hours, data, ctx) {
   let left = hours;
   const spanChronological = [...previousShifts, currentShift];
   for (let i = spanChronological.length - 1; i >= 0 && left > 0; i--) {
     const s = spanChronological[i];
     if (s.shiftType === 'sleepover') continue;
+    if (!isShiftOrdinaryAvailableForBrokenOt(ctx, s.shiftId)) continue;
     if (s.shiftType === 'nursing_support') {
-      left = r2(left - removeNursingWeekdayOrdinary(data, ctx, s.shiftId, left));
-      continue;
+      const removed = removeNursingWeekdayOrdinary(data, ctx, s.shiftId, left);
+      if (removed > 0) {
+        if (!ctx.brokenOtDeductedByShift) ctx.brokenOtDeductedByShift = new Map();
+        ctx.brokenOtDeductedByShift.set(
+          s.shiftId,
+          r2((ctx.brokenOtDeductedByShift.get(s.shiftId) || 0) + removed)
+        );
+      }
+      left = r2(left - removed);
     }
-    const segs = (s.segments || []).filter((seg) => seg && seg.hours > 0 && !seg.isSleepoverExcess);
+    const segs = (s.segments || []).filter((seg) => {
+      if (!seg || seg.hours <= 0 || seg.isSleepoverExcess) return false;
+      // Weekday nursing ordinary is tracked in nursingCareHours / ledger only.
+      if (s.shiftType === 'nursing_support' && seg.dayType === 'weekday') return false;
+      return true;
+    });
     for (let j = segs.length - 1; j >= 0 && left > 0; j--) {
       const take = Math.min(segs[j].hours, left);
       segs[j].hours = r2(segs[j].hours - take);
       left = r2(left - take);
+      if (take > 0) {
+        if (!ctx.brokenOtDeductedByShift) ctx.brokenOtDeductedByShift = new Map();
+        ctx.brokenOtDeductedByShift.set(
+          s.shiftId,
+          r2((ctx.brokenOtDeductedByShift.get(s.shiftId) || 0) + take)
+        );
+      }
     }
   }
+  return r2(hours - left);
 }
 
 function countBreaksInBrokenShiftSpan(previousShifts, currentShift) {
@@ -851,6 +914,70 @@ function countBreaksInBrokenShiftSpan(previousShifts, currentShift) {
     if (gapMs > 0) breaks += 1;
   }
   return breaks;
+}
+
+function sumSpanOrdinaryRemaining(spanShifts, ctx) {
+  return r2(
+    spanShifts.reduce((sum, s) => {
+      if (s.shiftType === 'sleepover') return sum;
+      if (!isShiftOrdinaryAvailableForBrokenOt(ctx, s.shiftId)) return sum;
+      if (s.shiftType === 'nursing_support') {
+        const nursingHours = r2(
+          (ctx.nursingWeekdayLedger || [])
+            .filter((e) => e.shiftId === s.shiftId && e.hours > 0)
+            .reduce((t, e) => t + e.hours, 0)
+        );
+        const otherHours = r2(
+          (s.segments || [])
+            .filter((seg) => seg && seg.hours > 0 && !seg.isSleepoverExcess && seg.dayType !== 'weekday')
+            .reduce((t, seg) => t + seg.hours, 0)
+        );
+        return sum + nursingHours + otherHours;
+      }
+      return (
+        sum +
+        r2(
+          (s.segments || [])
+            .filter((seg) => seg && seg.hours > 0 && !seg.isSleepoverExcess)
+            .reduce((t, seg) => t + seg.hours, 0)
+        )
+      );
+    }, 0)
+  );
+}
+
+function distributeBrokenShiftOtToShifts(
+  ctx,
+  spanShifts,
+  deductedBefore,
+  bookTier1,
+  bookTier2,
+  dayType,
+  fallbackShiftId
+) {
+  const perShift = [];
+  for (let i = spanShifts.length - 1; i >= 0; i--) {
+    const s = spanShifts[i];
+    const delta = r2(
+      (ctx.brokenOtDeductedByShift?.get(s.shiftId) || 0) - (deductedBefore.get(s.shiftId) || 0)
+    );
+    if (delta > 0) perShift.push({ shiftId: s.shiftId, hours: delta });
+  }
+
+  if (!perShift.length) {
+    trackBrokenShiftOtDeltaForShift(ctx, fallbackShiftId, dayType, bookTier1, bookTier2);
+    return;
+  }
+
+  let leftT2 = bookTier2;
+  let leftT1 = bookTier1;
+  for (const entry of perShift) {
+    const t2 = r2(Math.min(entry.hours, leftT2));
+    leftT2 = r2(leftT2 - t2);
+    const t1 = r2(Math.min(r2(entry.hours - t2), leftT1));
+    leftT1 = r2(leftT1 - t1);
+    trackBrokenShiftOtDeltaForShift(ctx, entry.shiftId, dayType, t1, t2);
+  }
 }
 
 function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
@@ -872,123 +999,127 @@ function processBrokenShiftOvertime(currentShift, previousShifts, data, ctx) {
 
   if (!previousShifts.length || !currentShift.segments.length) return;
 
-  const spanStart = previousShifts[0].startUtc;
-  const spanEnd = currentShift.endUtc;
-  const spanHours = r2((spanEnd - spanStart) / 3600000);
+  const spanShifts = [...previousShifts, currentShift];
+  const spanStart = +previousShifts[0].startUtc;
+  const markUtc = spanStart + BROKEN_SHIFT_SHORT_SPAN * 3600000;
+
+  let spanDtHours = 0;
+  for (const s of spanShifts) {
+    if (s.shiftType === 'sleepover') continue;
+    if (!isShiftOrdinaryAvailableForBrokenOt(ctx, s.shiftId)) continue;
+    const sStart = +s.startUtc;
+    const sEnd = +s.endUtc;
+    const workedAfterMark = r2(
+      Math.max(0, (sEnd - Math.max(sStart, markUtc)) / 3600000)
+    );
+    spanDtHours = r2(spanDtHours + workedAfterMark);
+  }
 
   const totalActive = r2(
-    previousShifts.reduce((sum, s) => sum + s.activeHours, 0) + currentShift.activeHours
+    spanShifts.reduce((sum, s) => {
+      if (!isShiftOrdinaryAvailableForBrokenOt(ctx, s.shiftId)) return sum;
+      return sum + s.activeHours;
+    }, 0)
   );
 
   const dayType = currentShift.segments[0].dayType;
+  const cap = dayType === 'weekday' ? MAX_REGULAR_HOURS_WEEKDAY : MAX_REGULAR_HOURS;
+  const dailyOtHours = r2(Math.max(0, totalActive - cap));
 
-  if (spanHours < BROKEN_SHIFT_SHORT_SPAN) {
-    // Span < 12h: OT at 1.5× for active hours beyond daily ordinary cap (10h all day types)
-    const cap = dayType === 'weekday' ? MAX_REGULAR_HOURS_WEEKDAY : MAX_REGULAR_HOURS;
-    if (totalActive > cap) {
-      const extraHours = r2(totalActive - cap);
-      addBrokenShiftOtToCategory(data, dayType, extraHours, true);
-      trackBrokenShiftOtForShift(ctx, currentShift.shiftId, dayType, extraHours, true);
-      // The OT hours are reclassified ordinary hours, not additional hours.
-      deductBrokenOtFromSpanOrdinary(previousShifts, currentShift, extraHours, data, ctx);
-      // Meal allowance per broken-shift OT event
-      if (extraHours > 1) data.mealAllowanceCount += 1;
-      if (extraHours > 4) data.mealAllowanceCount += 1;
-    }
-  } else {
-    // Span ≥ 12h: the ENTIRE last shift is reclassified to double time (2×).
-    // Rule: "Overrides all previous classifications for that shift."
-    // Span breach = full-shift penalty, regardless of when within the shift the mark falls.
-    const doubleTimeHours = currentShift.activeHours;
-    if (doubleTimeHours > 0) {
-      ctx.reclassifiedFullDoubleTimeShiftIds.add(currentShift.shiftId);
-      addBrokenShiftOtToCategory(data, dayType, doubleTimeHours, false); // false = tier 2 = 2×
-      trackBrokenShiftOtForShift(ctx, currentShift.shiftId, dayType, doubleTimeHours, false);
-      // PC segments are excluded from bucket building via the reclassified
-      // set, but nursing weekday hours were bucketed directly at processing
-      // time — remove them or the shift is paid at ordinary AND at 2×.
-      if (currentShift.shiftType === 'nursing_support') {
-        removeNursingWeekdayOrdinary(data, ctx, currentShift.shiftId, doubleTimeHours);
-      }
-      // Meal allowance per broken-shift OT event
-      if (doubleTimeHours > 1) data.mealAllowanceCount += 1;
-      if (doubleTimeHours > 4) data.mealAllowanceCount += 1;
+  const reclassTotal = r2(Math.max(spanDtHours, dailyOtHours));
+  const tier1 = r2(
+    Math.min(Math.min(dailyOtHours, OT_TIER_1_MAX), Math.max(0, dailyOtHours - spanDtHours))
+  );
+  const tier2 = r2(reclassTotal - tier1);
+
+  const spanKey = String(previousShifts[0].shiftId);
+  if (!ctx.brokenSpanOtState) ctx.brokenSpanOtState = new Map();
+  const prev = ctx.brokenSpanOtState.get(spanKey) || {
+    tier1: 0,
+    tier2: 0,
+    reclassTotal: 0,
+    meals: 0,
+  };
+
+  const alreadyBookedInSpan = r2(
+    spanShifts.reduce((sum, s) => sum + (ctx.brokenOtDeductedByShift?.get(s.shiftId) || 0), 0)
+  );
+  const incrementalTarget = r2(Math.max(0, reclassTotal - alreadyBookedInSpan));
+  const ordinaryRemaining = sumSpanOrdinaryRemaining(spanShifts, ctx);
+  const reclassDelta = r2(Math.min(incrementalTarget, ordinaryRemaining));
+  const deductedBefore = new Map(
+    spanShifts.map((s) => [s.shiftId, ctx.brokenOtDeductedByShift?.get(s.shiftId) || 0])
+  );
+  let deducted = 0;
+  if (reclassDelta > 0) {
+    deducted = deductBrokenOtFromSpanOrdinary(
+      previousShifts,
+      currentShift,
+      reclassDelta,
+      data,
+      ctx
+    );
+  }
+
+  let bookTier1 = 0;
+  let bookTier2 = 0;
+  if (incrementalTarget > 0 && deducted > 0) {
+    const incTier1 = Math.max(0, r2(tier1 - prev.tier1));
+    const incTier2 = Math.max(0, r2(tier2 - prev.tier2));
+    bookTier2 = r2(Math.min(deducted, incTier2));
+    bookTier1 = r2(Math.min(r2(deducted - bookTier2), incTier1));
+  } else if (incrementalTarget <= 0) {
+    const tier1Delta = r2(tier1 - prev.tier1);
+    const tier2Delta = r2(tier2 - prev.tier2);
+    // Pure tier rebalance only — never add net OT hours without a matching ordinary deduction.
+    if (r2(tier1Delta + tier2Delta) === 0) {
+      bookTier1 = tier1Delta;
+      bookTier2 = tier2Delta;
     }
   }
+
+  if (bookTier1 !== 0 || bookTier2 !== 0) {
+    addBrokenShiftOtDeltaToCategory(data, dayType, bookTier1, bookTier2);
+    distributeBrokenShiftOtToShifts(
+      ctx,
+      spanShifts,
+      deductedBefore,
+      bookTier1,
+      bookTier2,
+      dayType,
+      currentShift.shiftId
+    );
+  }
+
+  for (const s of spanShifts) {
+    if (s.shiftType === 'sleepover' || s.shiftType === 'nursing_support') continue;
+    const rem = r2(
+      (s.segments || [])
+        .filter((seg) => seg && !seg.isSleepoverExcess)
+        .reduce((t, seg) => t + Math.max(0, seg.hours || 0), 0)
+    );
+    if (rem <= 0) ctx.reclassifiedFullDoubleTimeShiftIds.add(s.shiftId);
+  }
+
+  const memoReclassTotal = r2(alreadyBookedInSpan + deducted);
+  const memoTier1 = r2(prev.tier1 + bookTier1);
+  const memoTier2 = r2(prev.tier2 + bookTier2);
+  const mealCount = (memoReclassTotal > 1 ? 1 : 0) + (memoReclassTotal > 4 ? 1 : 0);
+  const mealDelta = mealCount - prev.meals;
+  if (mealDelta > 0) data.mealAllowanceCount += mealDelta;
+
+  ctx.brokenSpanOtState.set(spanKey, {
+    tier1: memoTier1,
+    tier2: memoTier2,
+    reclassTotal: memoReclassTotal,
+    meals: mealCount,
+  });
 }
 
 function handleBrokenShift(shift, processedShift, processedShifts, data, ctx) {
-  // Broken-shift rules apply only when the current shift is explicitly broken.
   if (!shift.isBrokenShift) return;
 
-  const offsetStr = shift.timezoneOffset || '+10:00';
   const previousInSpan = collectBrokenShiftSpanPrevious(processedShift, processedShifts);
-  const shiftStartDateStr = localDateStr(processedShift.startUtc, offsetStr);
-
-  // Retroactive loading across broken-shift span:
-  // if final segment runs past evening boundary, apply the final penalty category
-  // (evening/night) to all weekday segments in that day's broken span.
-  if (shift.isBrokenShift && previousInSpan.length) {
-    const endDateStr = localDateStr(processedShift.endUtc, offsetStr);
-    const endHour = localHour(processedShift.endUtc, offsetStr);
-    const targetCategory =
-      endDateStr !== shiftStartDateStr ? 'night' : endHour > AFTERNOON_START ? 'afternoon' : null;
-    if (targetCategory) {
-      const spanShifts = [...previousInSpan, processedShift];
-      const targetField = targetCategory === 'night' ? 'nightHours' : 'afternoonHours';
-      const targetNursingField = targetCategory === 'night' ? 'nursingNightHours' : 'nursingAfternoonHours';
-      for (const s of spanShifts) {
-        // A shift already fully reclassified to double time (short turnaround
-        // or an earlier ≥12h broken span) has left the ordinary buckets —
-        // retro-loading it again would re-add hours that are being paid at 2×.
-        if (ctx.reclassifiedFullDoubleTimeShiftIds?.has(s.shiftId)) continue;
-        if (s.shiftType === 'nursing_support') {
-          // Move only the hours still sitting in the nursing ledger (broken-
-          // shift OT may have reclassified part of them already).
-          const nursingWeekdayHours = r2(
-            (ctx.nursingWeekdayLedger || [])
-              .filter((e) => e.shiftId === s.shiftId && e.hours > 0)
-              .reduce((sum, e) => sum + e.hours, 0)
-          );
-          if (nursingWeekdayHours > 0) {
-            // A nursing shift can sit inside two broken spans (e.g. broken
-            // shifts on consecutive days). Track where its hours currently
-            // live so a second retro pass MOVES them instead of adding them
-            // to a second bucket (double count at staff level).
-            if (!ctx.nursingRetroFieldByShift) ctx.nursingRetroFieldByShift = new Map();
-            const prevField = ctx.nursingRetroFieldByShift.get(s.shiftId) || 'nursingCareHours';
-            if (prevField !== targetField) {
-              if (prevField === 'nursingCareHours') {
-                data.nursingCareHours = r2(Math.max(0, data.nursingCareHours - nursingWeekdayHours));
-              } else {
-                const prevNursingField =
-                  prevField === 'nightHours' ? 'nursingNightHours' : 'nursingAfternoonHours';
-                data[prevField] = r2(Math.max(0, (data[prevField] || 0) - nursingWeekdayHours));
-                data[prevNursingField] = r2(
-                  Math.max(0, (data[prevNursingField] || 0) - nursingWeekdayHours)
-                );
-              }
-              data[targetField] = r2((data[targetField] || 0) + nursingWeekdayHours);
-              data[targetNursingField] = r2((data[targetNursingField] || 0) + nursingWeekdayHours);
-              ctx.nursingRetroFieldByShift.set(s.shiftId, targetField);
-              for (const e of ctx.nursingWeekdayLedger || []) {
-                if (e.shiftId === s.shiftId && e.fieldName === prevField) {
-                  e.fieldName = targetField;
-                }
-              }
-            }
-          }
-        }
-        for (const seg of s.segments || []) {
-          if (!seg || seg.hours <= 0) continue;
-          if (seg.dayType !== 'weekday') continue;
-          if (seg.isSleepoverExcess) continue;
-          seg.timeCategory = targetCategory;
-        }
-      }
-    }
-  }
-
   processBrokenShiftOvertime(processedShift, previousInSpan, data, ctx);
 }
 
@@ -1093,25 +1224,13 @@ function resolveMinimumEngagementChains(shifts, ctx) {
       post?.shiftType === 'personal_care' && isImmediatePost
         ? normalizeShiftHours(post, new Date(post.startDatetime), new Date(post.endDatetime))
         : 0;
-    const pcSum = r2(preHours + postHours);
-    const isFlanked =
-      pre?.shiftType === 'personal_care' &&
-      post?.shiftType === 'personal_care' &&
-      isImmediatePre &&
-      isImmediatePost;
 
-    if (isFlanked) {
-      if (preHours > 0 && preHours < 4) {
+    const sideSatisfies4h = Math.max(preHours, postHours) >= 4;
+    if (!sideSatisfies4h) {
+      if (pre?.shiftType === 'personal_care' && isImmediatePre && preHours > 0 && preHours < 4) {
         ctx.shiftMinimum4hEngagementReview.set(String(pre._id), true);
       }
-      if (postHours > 0 && postHours < 4 && pcSum < 4) {
-        ctx.shiftMinimum4hEngagementReview.set(String(post._id), true);
-      }
-    } else {
-      if (preHours > 0 && preHours < 4) {
-        ctx.shiftMinimum4hEngagementReview.set(String(pre._id), true);
-      }
-      if (postHours > 0 && postHours < 4) {
+      if (post?.shiftType === 'personal_care' && isImmediatePost && postHours > 0 && postHours < 4) {
         ctx.shiftMinimum4hEngagementReview.set(String(post._id), true);
       }
     }
@@ -1469,6 +1588,7 @@ function shiftEngagementFlags(ctx, sid) {
   return {
     minimumEngagementException: ctx.shiftMinimumEngagementException.get(sid) || false,
     minimum4hEngagementReview: ctx.shiftMinimum4hEngagementReview.get(sid) || false,
+    preSleepoverInsufficientBreak: ctx.shiftPreSleepoverInsufficientBreak?.get(sid) || false,
   };
 }
 
@@ -1558,23 +1678,25 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
     }
   }
 
-  // Handle nursing shifts — set nursingCareHours to the weekday portion only.
-  // Non-weekday segments were already processed above via pendingSegments, so
-  // saturdayHours/sundayHours/holidayHours are already in the breakdown.
+  // Handle nursing shifts — set nursingCareHours from the weekday ledger remainder.
+  // Non-weekday segments were already processed above via pendingSegments.
   for (const shift of shifts) {
     const sid = String(shift._id);
     if (shift.shiftType !== 'nursing_support') continue;
 
+    const weekdayNursingHours = r2(
+      (ctx.nursingWeekdayLedger || [])
+        .filter((e) => e.shiftId === sid)
+        .reduce((sum, e) => sum + (e.hours || 0), 0)
+    );
+    const fullyReclassified = ctx.reclassifiedFullDoubleTimeShiftIds?.has(sid) || false;
+    const nursingOrdinary = fullyReclassified ? 0 : weekdayNursingHours;
+
     if (!breakdowns.has(sid)) {
-      // Pure weekday nursing: no segments were added to pendingSegments, create entry now.
-      // A shift fully reclassified to double time (short turnaround / broken ≥12h span)
-      // gets its hours via that bucket instead — seeding nursingCareHours too would
-      // pay the same hours twice in the per-shift row.
-      const fullyReclassified = ctx.reclassifiedFullDoubleTimeShiftIds?.has(sid) || false;
       breakdowns.set(sid, {
         morningHours: 0, afternoonHours: 0, nightHours: 0,
         saturdayHours: 0, sundayHours: 0, holidayHours: 0,
-        nursingCareHours: fullyReclassified ? 0 : shift.hours,
+        nursingCareHours: nursingOrdinary,
         shortTurnaroundHours: 0,
         weekdayOtUpto2: 0, weekdayOtAfter2: 0,
         saturdayOtUpto2: 0, saturdayOtAfter2: 0,
@@ -1592,6 +1714,8 @@ function buildPerShiftBreakdowns(hourLedger, perShiftOt, perShiftOt76, ctx, shif
         shiftEnd: shift.endDatetime,
         shiftType: shift.shiftType,
       });
+    } else {
+      breakdowns.get(sid).nursingCareHours = nursingOrdinary;
     }
   }
 
@@ -1885,7 +2009,8 @@ export function computePayHoursForStaff(shifts, holidaySet, options = {}) {
   }
 
   const sleepovernAttachedNight = computeSleepovernAttachedNight(shifts);
-  const { isPreSleepover, isPostSleepover } = computeSleepoverAdjacentFlags(shifts);
+  const { isPreSleepover, isPostSleepover, preSleepoverInsufficientBreak } =
+    computeSleepoverAdjacentFlags(shifts);
 
   const ctx = {
     holidaySet,
@@ -1903,9 +2028,16 @@ export function computePayHoursForStaff(shifts, holidaySet, options = {}) {
     shiftIsBroken: new Map(),
     shiftMinimumEngagementException: new Map(),
     shiftMinimum4hEngagementReview: new Map(),
+    shiftPreSleepoverInsufficientBreak: new Map(
+      shifts
+        .map((s, i) => (preSleepoverInsufficientBreak[i] ? [String(s._id), true] : null))
+        .filter(Boolean)
+    ),
     reclassifiedFullDoubleTimeShiftIds: new Set(),
     shortTurnaroundByShift: {},
     brokenShiftOtByShift: {},
+    brokenSpanOtState: new Map(),
+    brokenOtDeductedByShift: new Map(),
   };
 
   for (let i = 0; i < shifts.length; i++) {

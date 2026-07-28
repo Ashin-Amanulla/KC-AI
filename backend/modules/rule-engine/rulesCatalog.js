@@ -61,7 +61,7 @@ export const RULES_CATALOG = [
   r(4, 'constants', 'Daily ordinary cap', 'Daily ordinary cap before daily OT: **10 hours** active (`MAX_REGULAR_HOURS` / `MAX_REGULAR_HOURS_WEEKDAY`).', { constants: ['MAX_REGULAR_HOURS'], awardRef: 'MA000100 cl. 25.1' }),
   r(5, 'constants', 'Daily OT tier 1 cap', 'Daily OT tier 1 cap: first **2 hours** at 1.5× (`OT_TIER_1_MAX = 2`).', { constants: ['OT_TIER_1_MAX'], awardRef: 'MA000100 cl. 28.1' }),
   r(6, 'constants', 'Fortnightly ordinary cap', 'Fortnightly ordinary-hours cap before OT>76: **76 hours** (`TOTAL_HOURS_CAP = 76`).', { constants: ['TOTAL_HOURS_CAP'], awardRef: 'MA000100 cl. 25.1' }),
-  r(7, 'constants', 'Broken-shift short span threshold', 'Broken-shift short span threshold: **12 hours** (`BROKEN_SHIFT_SHORT_SPAN`).', { constants: ['BROKEN_SHIFT_SHORT_SPAN'], awardRef: 'MA000100 cl. 25.6', status: 'needs-verification' }),
+  r(7, 'constants', 'Broken-shift short span threshold', 'Broken-shift span clock threshold: **> 12 hours** from span start (`BROKEN_SHIFT_SHORT_SPAN`). Hours worked after the mark at **2×**; overlap with daily OT upgrades to 2×.', { constants: ['BROKEN_SHIFT_SHORT_SPAN'], awardRef: 'MA000100 cl. 25.6', status: 'implemented' }),
   r(8, 'constants', 'Sleepover deduction', 'Sleepover non-billable deduction: **8 hours** (`SLEEPOVER_DEDUCTION = 8`).', { constants: ['SLEEPOVER_DEDUCTION'], awardRef: 'MA000100 cl. 25.7' }),
   r(9, 'constants', 'Minimum break between shifts', 'Standard minimum break between shifts (short-turnaround): **10 hours** (`MIN_BREAK_BETWEEN_SHIFTS_MS`).', { constants: ['MIN_BREAK_BETWEEN_SHIFTS_MS'], awardRef: 'MA000100 cl. 25.4' }),
   r(10, 'constants', 'Minimum break after sleepover', 'Minimum break after sleepover-linked shift: **8 hours** (`MIN_BREAK_AFTER_SLEEPOVER_MS`).', { constants: ['MIN_BREAK_AFTER_SLEEPOVER_MS'] }),
@@ -130,7 +130,7 @@ export const RULES_CATALOG = [
   r(63, 'nursing', 'Sunday nursing', 'Sunday nursing → `nursingSundayHours` + `sundayHours` ledger.'),
   r(64, 'nursing', 'PH nursing', 'Public holiday nursing → `nursingHolidayHours` + `holidayHours` ledger.'),
   r(65, 'nursing', 'Nursing evening/night ledger', 'Nursing evening/night on weekday tracked separately: `nursingAfternoonHours`, `nursingNightHours`.'),
-  r(66, 'nursing', 'Broken retro loading (nursing)', 'Broken-shift retroactive loading moves weekday nursing from `nursingCareHours` to evening/night nursing fields when applicable.'),
+  r(66, 'nursing', 'Per-period banding (nursing)', 'Broken-shift spans use **per-period** time bands — nursing weekday segments keep their own band (retro loading removed).'),
   r(67, 'nursing', 'Short-turnaround removes nursing ledger', 'Short-turnaround reclassification removes weekday nursing from `nursingCareHours` ledger.'),
 
   // ── Broken shift — detection (import) ───────────────────────────────────
@@ -155,13 +155,13 @@ export const RULES_CATALOG = [
   r(82, 'broken-allowances-ot', '2-break allowance', '**2+ unpaid breaks** in span → decrement one `brokenShiftCount`, `brokenShift2BreakCount` += 1 ($27.56).', { awardRef: 'MA000100 cl. 20.11' }),
   r(83, 'broken-allowances-ot', 'Minimum tier', 'Minimum allowance tier is 1 break when broken.'),
   r(84, 'broken-allowances-ot', 'No OT stacking on turnaround', 'Short-turnaround reclassified shift **excludes** broken-shift OT stacking on same hours.'),
-  r(85, 'broken-allowances-ot', 'Span < 12h OT', 'Span **< 12h** total: OT at **1.5×** for active hours beyond daily 10h cap.', { status: 'needs-verification' }),
-  r(86, 'broken-allowances-ot', 'Span ≥ 12h double time', 'Span **≥ 12h**: **entire last shift** reclassified to **2×** (tier 2 OT); overrides prior classification.', { status: 'needs-verification' }),
-  r(87, 'broken-allowances-ot', '12h breach whole-shift scope', 'Span ≥ 12h breach applies to full last shift regardless of where the 12h mark falls.', { status: 'needs-verification' }),
-  r(88, 'broken-allowances-ot', 'Broken OT meal allowance', 'Broken-shift OT meal: +1 allowance if OT extra **> 1h**; +1 more if **> 4h** (per OT event).'),
-  r(89, 'broken-allowances-ot', 'Retro evening loading', 'Retroactive evening/night loading: if broken span ends after 20:00 same day → all weekday segments in span → **evening**.'),
-  r(90, 'broken-allowances-ot', 'Retro night loading', 'Retroactive loading: if broken span ends on next calendar day → all weekday segments in span → **night**.'),
-  r(91, 'broken-allowances-ot', 'Retro loading (nursing)', 'Retroactive loading applies to nursing weekday segments (moves to `nursingAfternoonHours` / `nursingNightHours`).'),
+  r(85, 'broken-allowances-ot', 'Span daily OT tiering', 'Combined span active **> 10h**: standard daily OT tiering — first **2h at 1.5×**, remainder **2×** (`processBrokenShiftOvertime`).', { status: 'implemented' }),
+  r(86, 'broken-allowances-ot', 'Span-DT after 12h mark', 'Span clock **> 12h**: worked hours after span-start+12h reclassified to **2×** (tier 2 OT).', { status: 'implemented' }),
+  r(87, 'broken-allowances-ot', 'Span exactly 12h', 'Span clock exactly **12h** → no span-DT penalty; daily OT only if active > 10h.', { status: 'implemented' }),
+  r(88, 'broken-allowances-ot', 'Broken OT meal allowance', 'Broken-shift span OT: +1 meal if total span OT **> 1h**; +1 more if **> 4h** (delta-applied per span memo).'),
+  r(89, 'broken-allowances-ot', 'Per-period banding', 'Each broken-shift **work period** keeps its own time band from `getTimeCategory` — spans are **not** retro-loaded to the final band.'),
+  r(90, 'broken-allowances-ot', 'Per-period banding (cross-midnight)', 'Cross-midnight broken periods split at midnight; each portion keeps its band (no span-wide retro night loading).'),
+  r(91, 'broken-allowances-ot', 'Per-period banding (nursing)', 'Nursing broken-shift periods follow the same per-period banding — no retro move to `nursingAfternoonHours` / `nursingNightHours`.'),
 
   // ── Short turnaround ────────────────────────────────────────────────────
   r(92, 'short-turnaround', 'Applicability', 'Applies when gap **> 0** and **< required break** and shift is **not** `isBrokenShift`.', { awardRef: 'MA000100 cl. 25.4' }),
@@ -213,8 +213,8 @@ export const RULES_CATALOG = [
   r(128, 'minimum-engagement', 'Linked chain clears flag', 'Linked PC chain summing **≥ 2h** clears minimum-engagement exception on all PC shifts in chain.', { status: 'flagged' }),
   r(129, 'minimum-engagement', 'Sleepover-adjacent exemption', 'Sleepover-adjacent PC: per-segment 2h minimum does not apply (flag cleared).', { status: 'flagged' }),
   r(130, 'minimum-engagement', '4h sleepover-adjacent review', 'PC **< 4h** adjacent to sleepover → `minimum4hEngagementReview` flag.', { status: 'flagged' }),
-  r(131, 'minimum-engagement', 'Flanked 4h assessment', 'Flanked PC–sleepover–PC: **4h minimum** assessed across combined active PC hours.', { status: 'flagged' }),
-  r(132, 'minimum-engagement', 'No auto top-up', 'Flags are for exception reporting; hours are **not** auto-topped-up to minimum. NOTE: the award requires *payment* of the minimum engagement — a pay top-up (auditable `minimumEngagementTopUpHours`) is pending verification/decision.', { awardRef: 'MA000100 cl. 10.5 / 11.6', status: 'needs-verification' }),
+  r(131, 'minimum-engagement', 'Flanked 4h assessment', 'Flanked PC–sleepover–PC: **4h minimum** assessed per side. If **either** side reaches 4h, the other side has no minimum and is not flagged; only sides under 4h are flagged when neither side reaches 4h.', { status: 'flagged' }),
+  r(132, 'minimum-engagement', 'No auto top-up', 'Minimum engagement flags are for admin review; hours are **not** auto-topped-up — adjust manually in payroll.', { awardRef: 'MA000100 cl. 10.5 / 11.6', status: 'flagged' }),
 
   // ── Normalization ───────────────────────────────────────────────────────
   r(133, 'normalization', 'Hours from timestamps', 'Shift hours derived from timestamps when CSV `hours` missing, ≤ 0, or mismatches timestamps by **> 0.05h**.'),
@@ -237,7 +237,7 @@ export const RULES_CATALOG = [
   r(148, 'rate-card', 'Flat allowance', 'Flat per-fortnight `allowance` field added to gross.'),
 
   // ── Multiplier fallback wage calc ───────────────────────────────────────
-  r(149, 'multiplier-fallback', 'Casual effective rate', '**Casual** effective rate: `rate × (mult / 1.25 + 0.2)` (`casualEff`) — assumes the stored rate already includes the 25% casual loading. Verify the loading interaction with penalties and overtime against MA000100.', { awardRef: 'MA000100 cl. 10.4', status: 'needs-verification' }),
+  r(149, 'multiplier-fallback', 'Casual effective rate', '**Casual** effective rate: `rate × (mult / 1.25 + 0.2)` (`casualEff`) — reproduces client M-01..M-08 test cases.', { awardRef: 'MA000100 cl. 10.4', status: 'implemented' }),
   r(150, 'multiplier-fallback', 'Permanent loadings', '**Permanent** penalty loadings on base rate directly.'),
   r(151, 'multiplier-fallback', 'Weekday daytime 1.0×', 'Weekday daytime: **1.0×**.'),
   r(152, 'multiplier-fallback', 'Weekday evening 1.125×', 'Weekday evening: **1.125×**.', { awardRef: 'MA000100 cl. 29' }),
@@ -292,9 +292,10 @@ export const RULES_CATALOG = [
 
   // ── Out of scope ────────────────────────────────────────────────────────
   r(195, 'out-of-scope', 'Sleepover-attached night export disabled', '`computeSleepovernAttachedNight` currently returns **all false** — sleepover-attached night override via that export is disabled.', { status: 'not-implemented' }),
-  r(196, 'out-of-scope', 'No minimum-engagement top-up', 'Minimum engagement hours are **flagged** only; no automatic pay top-up to 2h or 4h.', { awardRef: 'MA000100 cl. 10.5 / 11.6', status: 'not-implemented' }),
+  r(196, 'out-of-scope', 'No minimum-engagement top-up', 'Minimum engagement (2h / 4h sleepover-adjacent) is **flagged** only; admin manually adjusts pay.', { awardRef: 'MA000100 cl. 10.5 / 11.6', status: 'flagged' }),
   r(197, 'out-of-scope', 'Manual week-mode calculator', 'Manual week-mode calculator in `SchadsCalculator.jsx` uses separate 7.6h daily / 38h weekly ordinary logic (not shift-import path).', { status: 'not-implemented' }),
   r(198, 'out-of-scope', 'Super/tax out of scope', 'Superannuation, tax, and net pay are outside `calcGross` (handled separately in cost analysis).', { status: 'not-implemented' }),
+  r(199, 'sleepover', 'Pre-sleepover break flag', 'Gap **> 0 and < 8h** before a sleepover → `preSleepoverInsufficientBreak` review flag on the preceding shift (I-07b).', { status: 'flagged' }),
 ];
 
 export function getRuleById(id) {

@@ -219,7 +219,10 @@ export async function listRosterStaff(req, res, next) {
         const workedHoursThisFortnight = r2(
           list.reduce((sum, w) => sum + hoursOfShiftOverlappingFortnight(w, win), 0)
         );
-        return { ...s, workedHoursThisFortnight };
+        const cap = s.contractedFortnightlyHours ?? 0;
+        const hoursRemaining = r2(cap - workedHoursThisFortnight);
+        const capExceeded = cap > 0 && workedHoursThisFortnight >= cap - 1e-6;
+        return { ...s, workedHoursThisFortnight, hoursRemaining, capExceeded };
       });
       return res.json({ staff });
     }
@@ -258,7 +261,10 @@ export async function listRosterStaff(req, res, next) {
       const workedHoursThisFortnight = r2(
         list.reduce((sum, w) => sum + hoursOfShiftOverlappingFortnight(w, fortnight), 0)
       );
-      return { ...s, workedHoursThisFortnight };
+      const cap = s.contractedFortnightlyHours ?? 0;
+      const hoursRemaining = r2(cap - workedHoursThisFortnight);
+      const capExceeded = cap > 0 && workedHoursThisFortnight >= cap - 1e-6;
+      return { ...s, workedHoursThisFortnight, hoursRemaining, capExceeded };
     });
 
     res.json({ staff });
@@ -634,7 +640,7 @@ export async function postFindCover(req, res, next) {
       approvedStaffIds: (participant.approvedStaffIds || []).map((x) => String(x)),
     };
 
-    const { eligibleTeam, ineligibleTeam, openPoolEligible } = findCover(
+    const { eligibleTeam, capExceededTeam, ineligibleTeam, openPoolEligible, openPoolCapExceeded } = findCover(
       vacant,
       pForEngine,
       allStaff,
@@ -668,8 +674,10 @@ export async function postFindCover(req, res, next) {
       payload: {
         rosterParticipantId: participantId,
         eligibleTeamCount: eligibleTeam.length,
+        capExceededTeamCount: capExceededTeam.length,
         ineligibleTeamCount: ineligibleTeam.length,
         openPoolEligibleCount: openPoolEligible.length,
+        openPoolCapExceededCount: openPoolCapExceeded.length,
       },
     });
 
@@ -683,8 +691,10 @@ export async function postFindCover(req, res, next) {
       usedUploadedPayReference: usedTimesheetWindow,
       usedTimesheetWindow,
       eligibleTeam,
+      capExceededTeam,
       ineligibleTeam,
       openPoolEligible,
+      openPoolCapExceeded,
       vacantShiftId,
     });
   } catch (e) {
@@ -766,6 +776,9 @@ export async function getStaffProfile(req, res, next) {
     const workedHours = r2(
       workedShifts.reduce((sum, w) => sum + hoursOfShiftOverlappingFortnight(w, capWindow), 0)
     );
+    const cap = staff.contractedFortnightlyHours ?? 0;
+    const hoursRemaining = r2(cap - workedHours);
+    const capExceeded = cap > 0 && workedHours >= cap - 1e-6;
 
     res.json({
       staff,
@@ -777,7 +790,8 @@ export async function getStaffProfile(req, res, next) {
         end: new Date(capWindow.endUtc).toISOString(),
       },
       workedHoursThisFortnight: workedHours,
-      hoursRemaining: Math.max(0, Math.round((staff.contractedFortnightlyHours - workedHours) * 100) / 100),
+      hoursRemaining,
+      capExceeded,
       recentWorkedShifts: workedShifts,
     });
   } catch (e) {
@@ -1126,7 +1140,7 @@ export async function uploadVacantShifts(req, res, next) {
         errors: parseResult.errors,
         rowsProcessed: parseResult.rowsProcessed,
         created: 0,
-        updated: 0,
+        kept: 0,
         skipped: 0,
       });
     }
@@ -1134,7 +1148,7 @@ export async function uploadVacantShifts(req, res, next) {
     const partLookup = buildRosterNameLookup(await RosterParticipant.find().lean(), 'name');
     const errors = [...parseResult.errors];
     let created = 0;
-    let updated = 0;
+    let kept = 0;
     let skipped = 0;
 
     const seenShiftIds = parseResult.rows.map((r) => r.shiftcareShiftId);
@@ -1153,7 +1167,13 @@ export async function uploadVacantShifts(req, res, next) {
         shiftcareShiftId: row.shiftcareShiftId,
       }).lean();
 
-      const scheduleFields = {
+      if (existing) {
+        // Preserve history: do not update schedule, status, notes, or updateLogs.
+        kept += 1;
+        continue;
+      }
+
+      await RosterVacantShift.create({
         rosterParticipantId: pt._id,
         startDatetime: row.startDatetime,
         endDatetime: row.endDatetime,
@@ -1161,39 +1181,20 @@ export async function uploadVacantShifts(req, res, next) {
         reason: row.reason,
         priority: row.priority,
         shiftcareShiftId: row.shiftcareShiftId,
-      };
-
-      if (existing) {
-        await RosterVacantShift.findByIdAndUpdate(existing._id, {
-          $set: scheduleFields,
-        });
-        updated += 1;
-      } else {
-        await RosterVacantShift.create({
-          ...scheduleFields,
-          notes: row.notes,
-          status: row.status,
-          createdBy: req.user?.userId || null,
-        });
-        created += 1;
-      }
+        notes: row.notes,
+        status: row.status,
+        createdBy: req.user?.userId || null,
+      });
+      created += 1;
     }
 
-    // Stale-shift cleanup: any previously-imported shift (has a ShiftCare Shift ID)
-    // that is absent from this upload is marked 'cancelled'.
-    // NOTE: currently cancels regardless of status (filled/in_progress included).
-    //   To exempt already-actioned shifts, add `status: 'open'` to the filter.
-    //   See .cursor/rules/vacant-shift-import.mdc for the rationale.
-    let cancelled = 0;
+    // Hard-delete imported shifts absent from this file (manual rows without shiftcareShiftId untouched).
+    let deleted = 0;
     if (seenShiftIds.length > 0) {
-      const staleResult = await RosterVacantShift.updateMany(
-        {
-          shiftcareShiftId: { $nin: seenShiftIds, $ne: null },
-          status: { $ne: 'cancelled' },
-        },
-        { $set: { status: 'cancelled' } }
-      );
-      cancelled = staleResult.modifiedCount ?? staleResult.nModified ?? 0;
+      const deleteResult = await RosterVacantShift.deleteMany({
+        shiftcareShiftId: { $nin: seenShiftIds, $ne: null },
+      });
+      deleted = deleteResult.deletedCount ?? 0;
     }
 
     await RosterCoverageAudit.create({
@@ -1202,9 +1203,9 @@ export async function uploadVacantShifts(req, res, next) {
       payload: {
         rows: parseResult.rowsProcessed,
         created,
-        updated,
+        kept,
         skipped,
-        cancelled,
+        deleted,
         errors: errors.length,
       },
     });
@@ -1217,9 +1218,9 @@ export async function uploadVacantShifts(req, res, next) {
       success: true,
       rowsProcessed: parseResult.rowsProcessed,
       created,
-      updated,
+      kept,
       skipped,
-      cancelled,
+      deleted,
       errors,
     });
   } catch (e) {

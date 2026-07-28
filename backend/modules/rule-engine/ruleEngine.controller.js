@@ -4,6 +4,7 @@ import { runEngineTests } from './testRunner.service.js';
 import { RULES_CATALOG, RULE_CATEGORIES } from './rulesCatalog.js';
 import { getScenarioForRule } from './ruleScenarios.js';
 import { getConstantsEffectiveAt } from '../award-rates/awardRateResolver.js';
+import { getClientSopGuide } from './clientSopGuide.js';
 import { PayHours } from '../pay-hours/payHours.model.js';
 import { Shift } from '../shifts/shift.model.js';
 import { StaffSchadsRate } from '../staff-rates/staffSchadsRate.model.js';
@@ -58,6 +59,14 @@ export const getTestRun = async (req, res, next) => {
  * Rules catalog joined with the latest test run: each rule carries
  * lastStatus 'pass' | 'fail' | 'untested' plus its covering test names.
  */
+export const listSopGuide = async (_req, res, next) => {
+  try {
+    res.json(getClientSopGuide());
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const listRules = async (_req, res, next) => {
   try {
     const latestRun = await RuleTestRun.findOne({}).sort({ ranAt: -1 }).lean();

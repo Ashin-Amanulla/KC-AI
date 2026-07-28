@@ -2,8 +2,11 @@ import axios from 'axios';
 import { config } from '../../config/index.js';
 import { getShiftCareCredentials } from '../../middlewares/auth.middleware.js';
 import { getOrSet } from '../../utils/cache.js';
+import { fetchAllShiftCarePages } from './shiftcarePager.js';
+import { buildShiftCareKpis } from './shiftcareKpis.service.js';
 
 const SHIFTCARE_LIST_CACHE_TTL = 300;
+const SHIFTCARE_KPI_CACHE_TTL = 300;
 
 /**
  * Create axios instance with basic auth for ShiftCare API
@@ -245,4 +248,344 @@ export const getTimesheets = async (req, res) => {
   };
 
   await proxyRequest(req, res, '/v3/timesheets', params);
+};
+
+export const getKpis = async (req, res) => {
+  try {
+    const credentials = getShiftCareCredentials(req);
+    if (!credentials) {
+      return res.status(401).json({ error: 'ShiftCare API credentials not configured' });
+    }
+
+    const { from, to, time_zone = 'Australia/Brisbane' } = req.query;
+    if (!from || !to) {
+      return res.status(400).json({ error: 'Both "from" and "to" date parameters are required' });
+    }
+
+    const cacheKey = `shiftcare:kpis:${credentials.accountId}:${from}:${to}:${time_zone}`;
+    const data = await getOrSet(cacheKey, SHIFTCARE_KPI_CACHE_TTL, async () => {
+      const [timesheets, shifts] = await Promise.all([
+        fetchAllShiftCarePages(
+          credentials,
+          '/v3/timesheets',
+          {
+            from,
+            to,
+            include_staff: true,
+            include_payable_external_ids: true,
+            time_zone,
+          },
+          'timesheets'
+        ),
+        fetchAllShiftCarePages(
+          credentials,
+          '/v3/shifts',
+          {
+            from_date: from.slice(0, 10),
+            to_date: to.slice(0, 10),
+            include_staff: true,
+            include_clients: true,
+            time_zone,
+          },
+          'shifts'
+        ),
+      ]);
+      return buildShiftCareKpis(timesheets, shifts);
+    });
+
+    res.json(data);
+  } catch (error) {
+    sendShiftcareError(res, error);
+  }
+};
+
+export const getProgressNotes = async (req, res) => {
+  const {
+    shift_id,
+    staff_id,
+    client_id,
+    category,
+    created_from,
+    created_to,
+    shift_date_from,
+    shift_date_to,
+    include_metadata,
+    sort_by,
+    sort_type,
+    time_zone,
+    page,
+    per_page,
+  } = req.query;
+
+  const params = {
+    ...(shift_id && { shift_id }),
+    ...(staff_id && { staff_id }),
+    ...(client_id && { client_id }),
+    ...(created_from && { created_from }),
+    ...(created_to && { created_to }),
+    ...(shift_date_from && { shift_date_from }),
+    ...(shift_date_to && { shift_date_to }),
+    ...(include_metadata !== undefined && { include_metadata: String(include_metadata) }),
+    ...(sort_by && { sort_by }),
+    ...(sort_type && { sort_type }),
+    ...(time_zone && { time_zone }),
+    ...(page && { page }),
+    ...(per_page && { per_page }),
+  };
+
+  if (category) {
+    params.category = Array.isArray(category) ? category : [category];
+  }
+
+  await proxyRequest(req, res, '/v3/progress_notes', params);
+};
+
+export const getClientFunds = async (req, res) => {
+  const { clientId } = req.params;
+  const { include_metadata, page, per_page } = req.query;
+  await proxyRequest(req, res, `/v3/clients/${clientId}/funds`, {
+    ...(include_metadata !== undefined && { include_metadata: String(include_metadata) }),
+    ...(page && { page }),
+    ...(per_page && { per_page }),
+  });
+};
+
+export const getClientFundBalance = async (req, res) => {
+  const { clientId, fundId } = req.params;
+  await proxyRequest(req, res, `/v3/clients/${clientId}/funds/${fundId}/current_balance`);
+};
+
+export const getInvoices = async (req, res) => {
+  const {
+    from_date,
+    to_date,
+    status,
+    client_id,
+    include_client,
+    include_external_references,
+    include_metadata,
+    page,
+    per_page,
+    time_zone,
+  } = req.query;
+
+  await proxyRequest(req, res, '/v3/invoices', {
+    ...(from_date && { from_date }),
+    ...(to_date && { to_date }),
+    ...(status && { status }),
+    ...(client_id && { client_id }),
+    ...(include_client !== undefined && { include_client: String(include_client) }),
+    ...(include_external_references !== undefined && {
+      include_external_references: String(include_external_references),
+    }),
+    ...(include_metadata !== undefined && { include_metadata: String(include_metadata) }),
+    ...(page && { page }),
+    ...(per_page && { per_page }),
+    ...(time_zone && { time_zone }),
+  });
+};
+
+export const getInvoice = async (req, res) => {
+  const { id } = req.params;
+  const { include_client, include_external_references, time_zone } = req.query;
+  await proxyRequest(req, res, `/v3/invoices/${id}`, {
+    ...(include_client !== undefined && { include_client: String(include_client) }),
+    ...(include_external_references !== undefined && {
+      include_external_references: String(include_external_references),
+    }),
+    ...(time_zone && { time_zone }),
+  });
+};
+
+export const getLeaves = async (req, res) => {
+  const { from_date, to_date, user_id, include_metadata, page, per_page, time_zone } = req.query;
+  await proxyRequest(req, res, '/v3/leaves', {
+    ...(from_date && { from_date }),
+    ...(to_date && { to_date }),
+    ...(user_id && { user_id }),
+    ...(include_metadata !== undefined && { include_metadata: String(include_metadata) }),
+    ...(page && { page }),
+    ...(per_page && { per_page }),
+    ...(time_zone && { time_zone }),
+  });
+};
+
+export const getStaffQualifications = async (req, res) => {
+  const { staffId } = req.params;
+  await proxyRequest(req, res, `/v3/staffs/${staffId}/qualifications`);
+};
+
+export const getStaffFiles = async (req, res) => {
+  const { user_id, include_metadata, page, per_page } = req.query;
+  await proxyRequest(req, res, '/v3/staff_files', {
+    ...(user_id && { user_id }),
+    ...(include_metadata !== undefined && { include_metadata: String(include_metadata) }),
+    ...(page && { page }),
+    ...(per_page && { per_page }),
+  });
+};
+
+export const getQualifications = async (req, res) => {
+  await proxyRequest(req, res, '/v3/qualifications');
+};
+
+export const getQualificationCategories = async (req, res) => {
+  const { include_metadata, page, per_page } = req.query;
+  await proxyRequest(req, res, '/v3/qualification_categories', {
+    ...(include_metadata !== undefined && { include_metadata: String(include_metadata) }),
+    ...(page && { page }),
+    ...(per_page && { per_page }),
+  });
+};
+
+export const getWebhookSubscriptions = async (req, res) => {
+  const { include_metadata, page, per_page } = req.query;
+  await proxyRequest(req, res, '/v3/webhooks/subscriptions', {
+    ...(include_metadata !== undefined && { include_metadata: String(include_metadata) }),
+    ...(page && { page }),
+    ...(per_page && { per_page }),
+  });
+};
+
+export const getWebhookEventTypes = async (req, res) => {
+  await proxyRequest(req, res, '/v3/webhooks/event_types');
+};
+
+/** Aggregate funds + balances for all clients (cached). */
+export const getFundsDashboard = async (req, res) => {
+  try {
+    const credentials = getShiftCareCredentials(req);
+    if (!credentials) {
+      return res.status(401).json({ error: 'ShiftCare API credentials not configured' });
+    }
+
+    const cacheKey = `shiftcare:funds-dashboard:${credentials.accountId}`;
+    const data = await getOrSet(cacheKey, SHIFTCARE_LIST_CACHE_TTL, async () => {
+      const clients = await fetchAllShiftCarePages(
+        credentials,
+        '/v3/clients',
+        { sort_by: 'name', sort_type: 'asc' },
+        'clients'
+      );
+
+      const rows = [];
+      for (const client of clients.slice(0, 60)) {
+        try {
+          const funds = await fetchFromShiftCare(credentials, `/v3/clients/${client.id}/funds`, {
+            include_metadata: true,
+          });
+          const fundList = funds.funds || [];
+          for (const fund of fundList) {
+            let balance = null;
+            try {
+              balance = await fetchFromShiftCare(
+                credentials,
+                `/v3/clients/${client.id}/funds/${fund.id}/current_balance`
+              );
+            } catch {
+              /* skip balance errors per fund */
+            }
+            rows.push({
+              clientId: client.id,
+              clientName: client.display_name || client.first_name,
+              fundId: fund.id,
+              fundName: fund.name,
+              amount: fund.amount,
+              hours: fund.hours,
+              expiresAt: fund.expires_at,
+              balanceAmount: balance?.balance_amount ?? null,
+              balanceHours: balance?.balance_hours ?? null,
+            });
+          }
+        } catch {
+          /* skip clients without fund access */
+        }
+      }
+
+      return {
+        clients: rows,
+        generatedAt: new Date().toISOString(),
+      };
+    });
+
+    res.json(data);
+  } catch (error) {
+    sendShiftcareError(res, error);
+  }
+};
+
+/** Compliance snapshot: expiring qualifications + upcoming leave. */
+export const getComplianceDashboard = async (req, res) => {
+  try {
+    const credentials = getShiftCareCredentials(req);
+    if (!credentials) {
+      return res.status(401).json({ error: 'ShiftCare API credentials not configured' });
+    }
+
+    const { from_date, to_date } = req.query;
+    const cacheKey = `shiftcare:compliance:${credentials.accountId}:${from_date || 'all'}:${to_date || 'all'}`;
+    const data = await getOrSet(cacheKey, SHIFTCARE_LIST_CACHE_TTL, async () => {
+      const staff = await fetchAllShiftCarePages(
+        credentials,
+        '/v3/staff',
+        { sort_by: 'name', sort_type: 'asc' },
+        'staff'
+      );
+
+      const expiringQualifications = [];
+      const now = Date.now();
+      const in30Days = now + 30 * 86400000;
+
+      for (const member of staff.slice(0, 80)) {
+        try {
+          const quals = await fetchFromShiftCare(
+            credentials,
+            `/v3/staffs/${member.id}/qualifications`
+          );
+          for (const q of quals || []) {
+            if (!q.expires_at) continue;
+            const exp = new Date(q.expires_at).getTime();
+            if (exp <= in30Days) {
+              expiringQualifications.push({
+                staffId: member.id,
+                staffName: member.name || member.first_name,
+                qualificationId: q.qualification_id,
+                expiresAt: q.expires_at,
+                expired: exp < now,
+              });
+            }
+          }
+        } catch {
+          /* skip */
+        }
+      }
+
+      let leaves = [];
+      try {
+        leaves = await fetchAllShiftCarePages(
+          credentials,
+          '/v3/leaves',
+          {
+            ...(from_date && { from_date }),
+            ...(to_date && { to_date }),
+          },
+          'leaves'
+        );
+      } catch {
+        /* leave endpoint may fail for some accounts */
+      }
+
+      return {
+        expiringQualifications: expiringQualifications.sort(
+          (a, b) => new Date(a.expiresAt) - new Date(b.expiresAt)
+        ),
+        leaves: leaves.slice(0, 200),
+        generatedAt: new Date().toISOString(),
+      };
+    });
+
+    res.json(data);
+  } catch (error) {
+    sendShiftcareError(res, error);
+  }
 };

@@ -6,6 +6,19 @@ const RUNS_KEY = 'rule-engine-test-runs';
 const AWARD_RATES_KEY = 'award-rate-sets';
 const COVERAGE_KEY = 'rule-engine-coverage';
 
+const SOP_KEY = 'rule-engine-sop';
+
+export const useSopGuide = () => {
+  return useQuery({
+    queryKey: [SOP_KEY],
+    queryFn: async () => {
+      const response = await api.get('/api/rule-engine/sop');
+      return response.data;
+    },
+    staleTime: 60000,
+  });
+};
+
 /** Rules catalog joined with the latest test run (per-rule pass/fail/untested). */
 export const useRuleCatalog = () => {
   return useQuery({

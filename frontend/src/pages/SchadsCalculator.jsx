@@ -90,6 +90,7 @@ function schadsFlatRatesRow(displayName, baseHourly) {
     sleepover: 90,
     kmRate: VEHICLE_RATE,
     allowance: 0,
+    capRate: 0,
   };
 }
 
@@ -584,6 +585,11 @@ const PayHoursShiftsBreakdown = ({ payHoursId, expanded, isManualOnly, mrow, onS
                     {shift.minimum4hEngagementReview && (
                       <span className="inline-block px-1 py-0.5 rounded text-2xs bg-warning/15 text-warning" title="Sleepover-flanked personal care — review 4h minimum active care (sleepover excluded)">
                         Min 4h review
+                      </span>
+                    )}
+                    {shift.preSleepoverInsufficientBreak && (
+                      <span className="inline-block px-1 py-0.5 rounded text-2xs bg-warning/15 text-warning" title="Break before sleepover under 8h — review compliance">
+                        Pre-SO break
                       </span>
                     )}
                     {(shift.shortTurnaroundHours || 0) > 0 && (
@@ -1748,7 +1754,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     setRatesAddBase('');
   }, [ratesAddName, ratesAddBase, defaultRate, normName, onStaffRatesMapChange, ratesFileName]);
 
-  const summaryColSpan = 28 + (payrollData ? 3 : 0);
+  const summaryColSpan = 30 + (payrollData ? 3 : 0);
 
   const handleExportEmployeeHours = useCallback(() => {
     if (!displayRows.length) {
@@ -2054,7 +2060,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                     <TableHeader>
                       {/* Group header row */}
                       <TableRow className="bg-muted/60 border-b-0 text-2xs uppercase tracking-wider">
-                        <TableHead colSpan={3} className="sticky left-0 bg-muted/60 z-10 border-r border-border/50" />
+                        <TableHead colSpan={5} className="sticky left-0 z-20 border-r border-border/50 bg-muted shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_8px_-4px_rgba(0,0,0,0.35)]" />
                         <TableHead colSpan={3} className="text-center text-warning border-r border-border/50 py-1">Weekday Hrs</TableHead>
                         <TableHead colSpan={2} className="text-center text-warning border-r border-border/50 py-1">WD Overtime</TableHead>
                         <TableHead colSpan={3} className="text-center text-chart-2 border-r border-border/50 py-1">Saturday</TableHead>
@@ -2077,8 +2083,10 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                       </TableRow>
                       {/* Column header row */}
                       <TableRow className="bg-muted/30 text-2xs">
-                        <TableHead className="min-w-[160px] sticky left-0 bg-muted/30 z-10 border-r border-border/50">Staff</TableHead>
+                        <TableHead className="min-w-[160px] sticky left-0 z-20 border-r border-border/50 bg-muted shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_8px_-4px_rgba(0,0,0,0.35)]">Staff</TableHead>
+                        <TableHead className="min-w-[120px]">Alias</TableHead>
                         <TableHead className="min-w-[90px]">Rate ($)</TableHead>
+                        <TableHead className="min-w-[80px] text-right">Cap Rate</TableHead>
                         <TableHead className="min-w-[100px] border-r border-border/50">Type</TableHead>
                         <TableHead className="text-right text-warning whitespace-nowrap" title="Ordinary weekday hours up to 8pm local (1×). Not clock AM.">Day<br/><span className="text-2xs font-normal opacity-70">≤8pm</span></TableHead>
                         <TableHead className="text-right text-warning whitespace-nowrap" title="After 8pm local (1.125×). Not clock afternoon.">Eve<br/><span className="text-2xs font-normal opacity-70">1.125×</span></TableHead>
@@ -2164,7 +2172,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                         return (
                           <React.Fragment key={row.staffName}>
                           <TableRow className={`hover:bg-muted/30 text-xs ${isCasual ? 'bg-primary/10' : ''}`}>
-                            <TableCell className={`font-medium sticky left-0 z-10 text-sm border-r border-border/50 ${isCasual ? 'bg-primary/15' : 'bg-background'}`}>
+                            <TableCell className={`font-medium sticky left-0 z-20 text-sm border-r border-border/50 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_8px_-4px_rgba(0,0,0,0.35)] ${isCasual ? 'bg-accent' : 'bg-card'}`}>
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <ExpandChevronButton
                                   expanded={!!expandedBreakdown[row.staffName]}
@@ -2191,6 +2199,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                   <EyeOff className="h-3.5 w-3.5" />
                                 </button>
                               </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[140px] truncate" title={staffRates?.aliases?.join(', ') || undefined}>
+                              {staffRates?.aliases?.length ? staffRates.aliases.join(', ') : '—'}
                             </TableCell>
                             <TableCell
                               className="cursor-context-menu"
@@ -2222,6 +2233,9 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                                   />
                                 </div>
                               )}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-xs">
+                              {staffRates?.capRate > 0 ? `$${Number(staffRates.capRate).toFixed(2)}` : '—'}
                             </TableCell>
                             <TableCell className="border-r border-border/50">
                               <select
@@ -2346,8 +2360,8 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
 
                       {/* Totals */}
                       <TableRow className="border-t-2 border-border bg-muted/20 font-bold text-xs">
-                        <TableCell className="sticky left-0 bg-muted/20 z-10 border-r border-border/50">Totals</TableCell>
-                        <TableCell /><TableCell className="border-r border-border/50" />
+                        <TableCell className="sticky left-0 z-20 border-r border-border/50 bg-muted font-bold shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_8px_-4px_rgba(0,0,0,0.35)]">Totals</TableCell>
+                        <TableCell /><TableCell /><TableCell /><TableCell className="border-r border-border/50" />
                         <TableCell className="text-right text-warning">{fmtH(r2(totals.morningHours))}</TableCell>
                         <TableCell className="text-right text-warning">{fmtH(r2(totals.afternoonHours))}</TableCell>
                         <TableCell className="text-right text-chart-3 border-r border-border/50">{fmtH(r2(totals.nightHours))}</TableCell>
@@ -3080,7 +3094,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50 text-2xs">
-                        <TableHead className="sticky left-0 bg-muted/50 z-10 min-w-[140px] border-r">Staff</TableHead>
+                        <TableHead className="sticky left-0 z-20 min-w-[140px] border-r bg-muted shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_8px_-4px_rgba(0,0,0,0.35)]">Staff</TableHead>
                         <TableHead className="text-center whitespace-nowrap min-w-[88px] border-r" title="Apply one $/h to all hourly columns">
                           Flat base
                         </TableHead>
@@ -3103,7 +3117,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
                             onContextMenu={(e) => handleRatesCtx(e, key, row)}
                             title="Right-click to edit all rates for this staff"
                           >
-                            <TableCell className="sticky left-0 bg-background z-10 font-medium border-r">{label}</TableCell>
+                            <TableCell className="sticky left-0 z-20 bg-card font-medium border-r shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)] dark:shadow-[4px_0_8px_-4px_rgba(0,0,0,0.35)]">{label}</TableCell>
                             <TableCell className="border-r">
                               <Input
                                 type="number"

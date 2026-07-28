@@ -8,7 +8,7 @@ export const useTimesheets = (params = {}) => {
     return useQuery({
         queryKey: [TIMESHEETS_QUERY_KEY, params],
         queryFn: async () => {
-            const response = await api.get('/api/timesheets', { params });
+            const response = await api.get('/api/shiftcare/timesheets', { params });
             return response.data;
         },
         refetchInterval: REFETCH_INTERVAL,

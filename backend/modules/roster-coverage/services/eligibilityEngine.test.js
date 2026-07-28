@@ -98,7 +98,7 @@ describe('eligibilityEngine', () => {
     assert.ok(reasons.some((r) => r.includes('Minimum required: 10 hours')));
   });
 
-  it('findCover sorts eligible by hours remaining', () => {
+  it('findCover sorts eligible by headroom after shift', () => {
     const p = { name: 'P', approvedStaffIds: ['a', 'b'] };
     const sa = { _id: 'a', contractedFortnightlyHours: 40, phone: '' };
     const sb = { _id: 'b', contractedFortnightlyHours: 40, phone: '' };
@@ -124,6 +124,41 @@ describe('eligibilityEngine', () => {
     const { eligibleTeam } = findCover(vacant, p, [sa, sb], shiftsByStaffId, fn);
     assert.strictEqual(eligibleTeam.length, 2);
     assert.strictEqual(String(eligibleTeam[0].staff._id), 'b');
+  });
+
+  it('findCover: cap exceeded team member is listed separately with over-cap hours', () => {
+    const p = { name: 'P', approvedStaffIds: ['a'] };
+    const sa = { _id: 'a', contractedFortnightlyHours: 10, phone: '' };
+    const vacant = {
+      startDatetime: d('2025-06-10T08:00:00Z'),
+      endDatetime: d('2025-06-10T16:00:00Z'),
+      sleepover: false,
+    };
+    const fn = { startUtc: d('2025-06-01').getTime(), endUtc: d('2025-06-20').getTime() };
+    const shiftsByStaffId = new Map([
+      [
+        'a',
+        [
+          {
+            startDatetime: d('2025-06-05T08:00:00Z'),
+            endDatetime: d('2025-06-05T18:00:00Z'),
+            shiftStatus: 'completed',
+          },
+        ],
+      ],
+    ]);
+    const { eligibleTeam, capExceededTeam, ineligibleTeam } = findCover(
+      vacant,
+      p,
+      [sa],
+      shiftsByStaffId,
+      fn
+    );
+    assert.strictEqual(eligibleTeam.length, 0);
+    assert.strictEqual(ineligibleTeam.length, 0);
+    assert.strictEqual(capExceededTeam.length, 1);
+    assert.strictEqual(capExceededTeam[0].capWouldExceed, true);
+    assert.ok(capExceededTeam[0].hoursOverCapIfAssigned > 0);
   });
 
   it('findCover: open pool lists non-team staff who pass logistics only', () => {
@@ -182,8 +217,9 @@ describe('eligibilityEngine', () => {
         shiftStatus: 'completed',
       },
     ];
-    const { workedHours, remaining } = evaluateStaffLogistics(vacant, staff, worked, fn);
+    const { workedHours, remaining, headroomAfterShift } = evaluateStaffLogistics(vacant, staff, worked, fn);
     assert.strictEqual(workedHours, 4);
     assert.strictEqual(remaining, 72);
+    assert.strictEqual(headroomAfterShift, 64);
   });
 });

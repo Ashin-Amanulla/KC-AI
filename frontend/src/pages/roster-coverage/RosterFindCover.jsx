@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown, X, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useFindCover,
@@ -25,6 +25,20 @@ import {
   TableHeader,
   TableRow,
 } from '../../ui/table';
+import { Badge } from '../../ui/badge';
+
+function HeadroomCell({ headroomAfterShift, capWouldExceed, hoursOverCapIfAssigned }) {
+  if (headroomAfterShift == null) return '—';
+  if (capWouldExceed) {
+    return (
+      <div className="flex flex-col items-end gap-0.5">
+        <span className="font-medium tabular-nums text-warning">−{hoursOverCapIfAssigned?.toFixed?.(1)} h</span>
+        <span className="text-2xs text-warning">Cap exceeded</span>
+      </div>
+    );
+  }
+  return <span className="tabular-nums">{headroomAfterShift.toFixed(1)}</span>;
+}
 
 function toIsoLocal(dateStr, timeStr) {
   if (!dateStr || !timeStr) return null;
@@ -37,7 +51,7 @@ function participantSearchHaystack(p) {
   return [p.name, p.locationLabel, locName].filter(Boolean).join(' ').toLowerCase();
 }
 
-function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut }) {
+function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut, capWarning = false }) {
   return (
     <Table>
       <TableHeader>
@@ -46,7 +60,7 @@ function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut }) {
           <TableHead>Phone</TableHead>
           <TableHead className="text-right">Worked</TableHead>
           <TableHead className="text-right">Cap</TableHead>
-          <TableHead className="text-right">Cap headroom (fn)</TableHead>
+          <TableHead className="text-right">Headroom if assigned</TableHead>
           <TableHead className="w-[140px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -62,8 +76,21 @@ function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut }) {
           const s = row.staff;
           const tel = (s?.phone || '').replace(/\s/g, '');
           return (
-            <TableRow key={s._id}>
-              <TableCell className="font-medium">{s.fullName}</TableCell>
+            <TableRow
+              key={s._id}
+              className={capWarning ? 'bg-warning/5 hover:bg-warning/10' : undefined}
+            >
+              <TableCell className="font-medium">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span>{s.fullName}</span>
+                  {capWarning && (
+                    <Badge variant="warning" title="Fortnightly cap would be exceeded — extra pay may apply">
+                      <AlertTriangle className="size-3" aria-hidden />
+                      Over cap
+                    </Badge>
+                  )}
+                </div>
+              </TableCell>
               <TableCell>{s.phone || '—'}</TableCell>
               <TableCell className="text-right text-muted-foreground">
                 {row.workedHoursThisFortnight != null ? row.workedHoursThisFortnight.toFixed(1) : '—'}
@@ -71,7 +98,13 @@ function EligibleStaffTable({ rows, vacantId, emptyLabel, contactMut }) {
               <TableCell className="text-right text-muted-foreground">
                 {s?.contractedFortnightlyHours != null ? s.contractedFortnightlyHours : '—'}
               </TableCell>
-              <TableCell className="text-right">{row.hoursRemaining?.toFixed?.(1)}</TableCell>
+              <TableCell className="text-right">
+                <HeadroomCell
+                  headroomAfterShift={row.headroomAfterShift}
+                  capWouldExceed={row.capWouldExceed}
+                  hoursOverCapIfAssigned={row.hoursOverCapIfAssigned}
+                />
+              </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
                   {tel && (
@@ -204,9 +237,11 @@ export function RosterFindCover() {
       });
       setResult(data);
       const et = data.eligibleTeam?.length ?? 0;
+      const cet = data.capExceededTeam?.length ?? 0;
       const it = data.ineligibleTeam?.length ?? 0;
       const op = data.openPoolEligible?.length ?? 0;
-      toast.success(`Eligible team: ${et} · Ineligible team: ${it} · Open pool: ${op}`);
+      const opc = data.openPoolCapExceeded?.length ?? 0;
+      toast.success(`Eligible: ${et} · Over cap: ${cet} · Ineligible: ${it} · Open pool: ${op + opc}`);
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -490,7 +525,8 @@ export function RosterFindCover() {
                     ) : null}
                     <p>
                       Worked sums every non-cancelled shift overlapping the range above. Cap is contracted hours per
-                      fortnight. Cap headroom is cap minus worked.
+                      fortnight. Headroom if assigned is cap minus worked minus this vacant shift — negative means cap
+                      would be exceeded (extra pay may apply).
                     </p>
                   </>
                 }
@@ -511,6 +547,27 @@ export function RosterFindCover() {
               />
             </div>
           </section>
+
+          {(result.capExceededTeam?.length ?? 0) > 0 && (
+            <section className="overflow-hidden rounded-lg border border-warning/30 bg-card">
+              <div className="flex flex-wrap items-center gap-1.5 border-b border-warning/20 bg-warning/5 px-3 py-1.5">
+                <h3 className="section-label text-warning">Over cap — extra pay possible</h3>
+                <InfoHint
+                  label="About over-cap staff"
+                  content="These team members pass overlap and rest rules but would exceed their fortnightly hour cap if assigned. They can still be contacted — extra payment may apply."
+                />
+              </div>
+              <div className="overflow-x-auto">
+                <EligibleStaffTable
+                  rows={result.capExceededTeam}
+                  vacantId={vacantId}
+                  emptyLabel=""
+                  contactMut={contactMut}
+                  capWarning
+                />
+              </div>
+            </section>
+          )}
 
           <section className="rounded-lg border bg-card p-3 space-y-2">
             <h3 className="section-label">Ineligible team</h3>
@@ -546,6 +603,27 @@ export function RosterFindCover() {
               />
             </div>
           </section>
+
+          {(result.openPoolCapExceeded?.length ?? 0) > 0 && (
+            <section className="overflow-hidden rounded-lg border border-warning/30 bg-card">
+              <div className="flex flex-wrap items-center gap-1.5 border-b border-warning/20 bg-warning/5 px-3 py-1.5">
+                <h3 className="section-label text-warning">Open pool — over cap</h3>
+                <InfoHint
+                  label="About open pool over-cap staff"
+                  content="Not on the approved team and would exceed their fortnightly cap, but pass overlap and rest rules. Extra payment may apply."
+                />
+              </div>
+              <div className="overflow-x-auto">
+                <EligibleStaffTable
+                  rows={result.openPoolCapExceeded}
+                  vacantId={vacantId}
+                  emptyLabel=""
+                  contactMut={contactMut}
+                  capWarning
+                />
+              </div>
+            </section>
+          )}
         </>
       )}
     </div>

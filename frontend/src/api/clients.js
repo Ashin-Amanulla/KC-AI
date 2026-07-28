@@ -9,7 +9,7 @@ async function fetchAllClientPages() {
   const all = [];
   let page = 1;
   for (;;) {
-    const { data } = await api.get('/api/clients', {
+    const { data } = await api.get('/api/shiftcare/clients', {
       params: {
         include_metadata: true,
         per_page: FETCH_ALL_PER_PAGE,
@@ -40,7 +40,7 @@ export const useClients = (params = {}) => {
   return useQuery({
     queryKey: [CLIENTS_QUERY_KEY, params],
     queryFn: async () => {
-      const response = await api.get('/api/clients', { params });
+      const response = await api.get('/api/shiftcare/clients', { params });
       return response.data;
     },
     refetchInterval: REFETCH_INTERVAL,

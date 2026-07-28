@@ -46,6 +46,7 @@ const RATE_NUM_KEYS = new Set([
   'sleepoverExtra',
   'kmRate',
   'allowance',
+  'capRate',
 ]);
 
 function normalizeRatesBody(raw) {

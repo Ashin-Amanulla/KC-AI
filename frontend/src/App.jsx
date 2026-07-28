@@ -20,9 +20,9 @@ import { RulesReference } from './pages/rule-engine/RulesReference';
 import { TestMonitor } from './pages/rule-engine/TestMonitor';
 import { AwardRatesPage } from './pages/rule-engine/AwardRatesPage';
 import { RateCardCoverage } from './pages/rule-engine/RateCardCoverage';
+import { SopGuide } from './pages/rule-engine/SopGuide';
 import { DataQuality } from './pages/rule-engine/DataQuality';
 import { RosterCoverageLayout } from './pages/roster-coverage/RosterCoverageLayout';
-import { RosterDashboard } from './pages/roster-coverage/RosterDashboard';
 import { RosterFindCover } from './pages/roster-coverage/RosterFindCover';
 import { RosterParticipants } from './pages/roster-coverage/RosterParticipants';
 import { RosterTeam } from './pages/roster-coverage/RosterTeam';
@@ -38,6 +38,11 @@ import { CrmMarketingActivities } from './pages/crm/CrmMarketingActivities';
 import { CrmImportExport } from './pages/crm/CrmImportExport';
 import { CirPage } from './pages/cir/CirPage';
 import { HrRequirementsPage } from './pages/hr-requirements/HrRequirementsPage';
+import { ProgressNotesPage } from './pages/ProgressNotes';
+import { ClientFundsPage } from './pages/ClientFunds';
+import { ShiftCareInvoicesPage } from './pages/ShiftCareInvoices';
+import { CompliancePage } from './pages/Compliance';
+import { WebhooksPage } from './pages/admin/Webhooks';
 import { canAccessPath, getDefaultLanding } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 import { useUiPreferencesStore, resolveTheme } from './store/uiPreferences';
@@ -206,6 +211,7 @@ function App() {
             }
           >
             <Route index element={<RulesReference />} />
+            <Route path="sop" element={<SopGuide />} />
             <Route path="tests" element={<TestMonitor />} />
             <Route path="rates" element={<AwardRatesPage />} />
             <Route path="coverage" element={<RateCardCoverage />} />
@@ -227,7 +233,7 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<RosterDashboard />} />
+            <Route index element={<Navigate to="shift-log" replace />} />
             <Route path="shift-log" element={<RosterShiftLog />} />
             <Route path="find-cover" element={<RosterFindCover />} />
             <Route path="participants" element={<RosterParticipants />} />
@@ -256,6 +262,46 @@ function App() {
             element={
               <ProtectedRoute>
                 <CirPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/progress-notes"
+            element={
+              <ProtectedRoute>
+                <ProgressNotesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client-funds"
+            element={
+              <ProtectedRoute>
+                <ClientFundsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shiftcare-invoices"
+            element={
+              <ProtectedRoute>
+                <ShiftCareInvoicesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/compliance"
+            element={
+              <ProtectedRoute>
+                <CompliancePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/webhooks"
+            element={
+              <ProtectedRoute>
+                <WebhooksPage />
               </ProtectedRoute>
             }
           />

@@ -19,7 +19,7 @@ Legend: ⚠️ needs verification against the award/pay guide · 🏳️ engine 
 - **R004** — Daily ordinary cap before daily OT: **10 hours** active (`MAX_REGULAR_HOURS` / `MAX_REGULAR_HOURS_WEEKDAY`). _(MA000100 cl. 25.1)_
 - **R005** — Daily OT tier 1 cap: first **2 hours** at 1.5× (`OT_TIER_1_MAX = 2`). _(MA000100 cl. 28.1)_
 - **R006** — Fortnightly ordinary-hours cap before OT>76: **76 hours** (`TOTAL_HOURS_CAP = 76`). _(MA000100 cl. 25.1)_
-- **R007** — Broken-shift short span threshold: **12 hours** (`BROKEN_SHIFT_SHORT_SPAN`). _(MA000100 cl. 25.6)_ ⚠️ *needs verification*
+- **R007** — Broken-shift span clock threshold: **> 12 hours** from span start (`BROKEN_SHIFT_SHORT_SPAN`). Hours worked after the mark at **2×**; overlap with daily OT upgrades to 2×. _(MA000100 cl. 25.6)_
 - **R008** — Sleepover non-billable deduction: **8 hours** (`SLEEPOVER_DEDUCTION = 8`). _(MA000100 cl. 25.7)_
 - **R009** — Standard minimum break between shifts (short-turnaround): **10 hours** (`MIN_BREAK_BETWEEN_SHIFTS_MS`). _(MA000100 cl. 25.4)_
 - **R010** — Minimum break after sleepover-linked shift: **8 hours** (`MIN_BREAK_AFTER_SLEEPOVER_MS`).
@@ -92,6 +92,7 @@ Legend: ⚠️ needs verification against the award/pay guide · 🏳️ engine 
 - **R057** — Sleepover with no excess on weekday adds **night** placeholder for chain influence.
 - **R058** — Continuous chains **snap at sleepover boundary** — pre/post sleepover loadings decoupled for OT/cap logic.
 - **R059** — After sleepover-linked shift, short-turnaround threshold uses **8h** break requirement (not 10h).
+- **R199** — Gap **> 0 and < 8h** before a sleepover → `preSleepoverInsufficientBreak` review flag on the preceding shift (I-07b). 🏳️ *flag only*
 
 ---
 
@@ -103,7 +104,7 @@ Legend: ⚠️ needs verification against the award/pay guide · 🏳️ engine 
 - **R063** — Sunday nursing → `nursingSundayHours` + `sundayHours` ledger.
 - **R064** — Public holiday nursing → `nursingHolidayHours` + `holidayHours` ledger.
 - **R065** — Nursing evening/night on weekday tracked separately: `nursingAfternoonHours`, `nursingNightHours`.
-- **R066** — Broken-shift retroactive loading moves weekday nursing from `nursingCareHours` to evening/night nursing fields when applicable.
+- **R066** — Broken-shift spans use **per-period** time bands — nursing weekday segments keep their own band (retro loading removed).
 - **R067** — Short-turnaround reclassification removes weekday nursing from `nursingCareHours` ledger.
 
 ---
@@ -137,13 +138,13 @@ Legend: ⚠️ needs verification against the award/pay guide · 🏳️ engine 
 - **R082** — **2+ unpaid breaks** in span → decrement one `brokenShiftCount`, `brokenShift2BreakCount` += 1 ($27.56). _(MA000100 cl. 20.11)_
 - **R083** — Minimum allowance tier is 1 break when broken.
 - **R084** — Short-turnaround reclassified shift **excludes** broken-shift OT stacking on same hours.
-- **R085** — Span **< 12h** total: OT at **1.5×** for active hours beyond daily 10h cap. ⚠️ *needs verification*
-- **R086** — Span **≥ 12h**: **entire last shift** reclassified to **2×** (tier 2 OT); overrides prior classification. ⚠️ *needs verification*
-- **R087** — Span ≥ 12h breach applies to full last shift regardless of where the 12h mark falls. ⚠️ *needs verification*
-- **R088** — Broken-shift OT meal: +1 allowance if OT extra **> 1h**; +1 more if **> 4h** (per OT event).
-- **R089** — Retroactive evening/night loading: if broken span ends after 20:00 same day → all weekday segments in span → **evening**.
-- **R090** — Retroactive loading: if broken span ends on next calendar day → all weekday segments in span → **night**.
-- **R091** — Retroactive loading applies to nursing weekday segments (moves to `nursingAfternoonHours` / `nursingNightHours`).
+- **R085** — Combined span active **> 10h**: standard daily OT tiering — first **2h at 1.5×**, remainder **2×** (`processBrokenShiftOvertime`).
+- **R086** — Span clock **> 12h**: worked hours after span-start+12h reclassified to **2×** (tier 2 OT).
+- **R087** — Span clock exactly **12h** → no span-DT penalty; daily OT only if active > 10h.
+- **R088** — Broken-shift span OT: +1 meal if total span OT **> 1h**; +1 more if **> 4h** (delta-applied per span memo).
+- **R089** — Each broken-shift **work period** keeps its own time band from `getTimeCategory` — spans are **not** retro-loaded to the final band.
+- **R090** — Cross-midnight broken periods split at midnight; each portion keeps its band (no span-wide retro night loading).
+- **R091** — Nursing broken-shift periods follow the same per-period banding — no retro move to `nursingAfternoonHours` / `nursingNightHours`.
 
 ---
 
@@ -214,7 +215,7 @@ Legend: ⚠️ needs verification against the award/pay guide · 🏳️ engine 
 - **R129** — Sleepover-adjacent PC: per-segment 2h minimum does not apply (flag cleared). 🏳️ *flag only*
 - **R130** — PC **< 4h** adjacent to sleepover → `minimum4hEngagementReview` flag. 🏳️ *flag only*
 - **R131** — Flanked PC–sleepover–PC: **4h minimum** assessed across combined active PC hours. 🏳️ *flag only*
-- **R132** — Flags are for exception reporting; hours are **not** auto-topped-up to minimum. NOTE: the award requires *payment* of the minimum engagement — a pay top-up (auditable `minimumEngagementTopUpHours`) is pending verification/decision. _(MA000100 cl. 10.5 / 11.6)_ ⚠️ *needs verification*
+- **R132** — Minimum engagement flags are for admin review; hours are **not** auto-topped-up — adjust manually in payroll. _(MA000100 cl. 10.5 / 11.6)_ 🏳️ *flag only*
 
 ---
 
@@ -246,7 +247,7 @@ Legend: ⚠️ needs verification against the award/pay guide · 🏳️ engine 
 
 ## Wage calculation — multiplier fallback (calcGross)
 
-- **R149** — **Casual** effective rate: `rate × (mult / 1.25 + 0.2)` (`casualEff`) — assumes the stored rate already includes the 25% casual loading. Verify the loading interaction with penalties and overtime against MA000100. _(MA000100 cl. 10.4)_ ⚠️ *needs verification*
+- **R149** — **Casual** effective rate: `rate × (mult / 1.25 + 0.2)` (`casualEff`) — reproduces client M-01..M-08 test cases. _(MA000100 cl. 10.4)_
 - **R150** — **Permanent** penalty loadings on base rate directly.
 - **R151** — Weekday daytime: **1.0×**.
 - **R152** — Weekday evening: **1.125×**. _(MA000100 cl. 29)_
@@ -313,7 +314,7 @@ Legend: ⚠️ needs verification against the award/pay guide · 🏳️ engine 
 ## Not implemented / out of scope in calculator
 
 - **R195** — `computeSleepovernAttachedNight` currently returns **all false** — sleepover-attached night override via that export is disabled. 🚫 *not implemented*
-- **R196** — Minimum engagement hours are **flagged** only; no automatic pay top-up to 2h or 4h. _(MA000100 cl. 10.5 / 11.6)_ 🚫 *not implemented*
+- **R196** — Minimum engagement (2h / 4h sleepover-adjacent) is **flagged** only; admin manually adjusts pay. _(MA000100 cl. 10.5 / 11.6)_ 🏳️ *flag only*
 - **R197** — Manual week-mode calculator in `SchadsCalculator.jsx` uses separate 7.6h daily / 38h weekly ordinary logic (not shift-import path). 🚫 *not implemented*
 - **R198** — Superannuation, tax, and net pay are outside `calcGross` (handled separately in cost analysis). 🚫 *not implemented*
 

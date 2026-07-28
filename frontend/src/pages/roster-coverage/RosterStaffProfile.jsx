@@ -1,7 +1,9 @@
 import { useParams, Link } from 'react-router-dom';
+import { AlertTriangle } from 'lucide-react';
 import { useRosterStaffProfile } from '../../api/rosterCoverage';
 import { LoadingScreen } from '../../ui/LoadingSpinner';
 import { CardTitleHint } from '../../components/InfoHint';
+import { Badge } from '../../ui/badge';
 import {
   Table,
   TableBody,
@@ -32,6 +34,7 @@ export function RosterStaffProfile() {
     usedTimesheetWindow,
     workedHoursThisFortnight,
     hoursRemaining,
+    capExceeded,
     recentWorkedShifts,
   } = data;
 
@@ -48,7 +51,15 @@ export function RosterStaffProfile() {
   return (
     <div className="page-stack-dense">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold tracking-tight">{staff.fullName}</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-base font-semibold tracking-tight">{staff.fullName}</h2>
+          {capExceeded && (
+            <Badge variant="warning" title="Worked hours have reached or exceeded the fortnightly cap">
+              <AlertTriangle className="size-3" aria-hidden />
+              Cap exceeded
+            </Badge>
+          )}
+        </div>
         <Link to="/roster-coverage/team" className="text-2sm text-primary hover:underline">
           ← Team
         </Link>
@@ -77,11 +88,15 @@ export function RosterStaffProfile() {
           </div>
           <div>
             <span className="text-2xs uppercase tracking-wide text-muted-foreground">Worked</span>
-            <div>{workedHoursThisFortnight?.toFixed?.(1)} h</div>
+            <div className={capExceeded ? 'font-medium text-warning' : undefined}>
+              {workedHoursThisFortnight?.toFixed?.(1)} h
+            </div>
           </div>
           <div>
             <span className="text-2xs uppercase tracking-wide text-muted-foreground">Cap headroom</span>
-            <div>{hoursRemaining?.toFixed?.(1)} h</div>
+            <div className={hoursRemaining != null && hoursRemaining < 0 ? 'font-medium text-warning' : undefined}>
+              {hoursRemaining?.toFixed?.(1)} h
+            </div>
           </div>
         </div>
       </section>

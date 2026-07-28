@@ -19,6 +19,11 @@ import {
   ClipboardList,
   ListChecks,
   BookOpen,
+  FileText,
+  Wallet,
+  ShieldAlert,
+  Receipt,
+  Webhook,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { useUiPreferencesStore } from '../store/uiPreferences';
@@ -42,6 +47,11 @@ const iconMap = {
   ClipboardList,
   ListChecks,
   BookOpen,
+  FileText,
+  Wallet,
+  ShieldAlert,
+  Receipt,
+  Webhook,
 };
 
 function isItemActive(item, pathname, hasFullRoster) {

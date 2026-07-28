@@ -9,7 +9,11 @@ export function staffRatesArrayToMap(rows) {
   const m = new Map();
   for (const r of rows || []) {
     if (!r?.rates) continue;
-    const ratesObj = { ...r.rates, name: r.rates.name || r.staffName };
+    const ratesObj = {
+      ...r.rates,
+      name: r.rates.name || r.staffName,
+      aliases: Array.isArray(r.aliases) ? r.aliases : [],
+    };
     const canonical = normStaffNameForMatch(r.staffName) || r.normName;
     if (!canonical) continue;
 

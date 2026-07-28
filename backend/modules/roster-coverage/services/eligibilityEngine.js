@@ -75,11 +75,9 @@ export function evaluateStaffLogistics(vacant, staff, workedShiftsForStaff, fort
   );
   const cap = staff.contractedFortnightlyHours ?? 0;
   const remaining = r2(cap - workedHours);
-  if (remaining < vacantDuration - 1e-6) {
-    reasons.push(
-      `Only ${remaining.toFixed(1)} hours remaining this fortnight — shift requires ${vacantDuration.toFixed(1)} hours`
-    );
-  }
+  const headroomAfterShift = r2(remaining - vacantDuration);
+  const capWouldExceed = headroomAfterShift < -1e-6;
+  const hoursOverCapIfAssigned = capWouldExceed ? r2(Math.abs(headroomAfterShift)) : 0;
 
   const blocking = nonCancelled.filter((w) => overlaps(vStart, vEnd, toMs(w.startDatetime), toMs(w.endDatetime)));
   if (blocking.length) {
@@ -120,7 +118,15 @@ export function evaluateStaffLogistics(vacant, staff, workedShiftsForStaff, fort
     }
   }
 
-  return { staff, reasons, workedHours, remaining: r2(cap - workedHours) };
+  return {
+    staff,
+    reasons,
+    workedHours,
+    remaining: r2(cap - workedHours),
+    headroomAfterShift,
+    capWouldExceed,
+    hoursOverCapIfAssigned,
+  };
 }
 
 /**
@@ -146,6 +152,9 @@ export function evaluateStaffForVacant(vacant, staff, workedShiftsForStaff, fort
     reasons,
     workedHours: logistics.workedHours,
     remaining: logistics.remaining,
+    headroomAfterShift: logistics.headroomAfterShift,
+    capWouldExceed: logistics.capWouldExceed,
+    hoursOverCapIfAssigned: logistics.hoursOverCapIfAssigned,
     logisticsReasons: logistics.reasons,
   };
 }
@@ -157,44 +166,58 @@ export function evaluateStaffForVacant(vacant, staff, workedShiftsForStaff, fort
  * @param {Map<string, object[]>} shiftsByStaffId
  * @param {{ startUtc: number, endUtc: number }} fortnight
  */
+function buildCoverRow(evalResult) {
+  const { staff, reasons, workedHours, remaining, headroomAfterShift, capWouldExceed, hoursOverCapIfAssigned } =
+    evalResult;
+  return {
+    staff,
+    phone: staff.phone,
+    workedHoursThisFortnight: workedHours,
+    hoursRemaining: remaining,
+    headroomAfterShift,
+    capWouldExceed,
+    hoursOverCapIfAssigned,
+    reasons: [...reasons],
+  };
+}
+
 export function findCover(vacant, participant, allStaff, shiftsByStaffId, fortnight) {
   const eligibleTeam = [];
+  const capExceededTeam = [];
   const ineligibleTeam = [];
   const openPoolEligible = [];
+  const openPoolCapExceeded = [];
   const approvedSet = new Set((participant.approvedStaffIds ?? []).map((x) => String(x)));
 
   for (const staff of allStaff) {
     const sid = String(staff._id ?? staff.id);
     const list = shiftsByStaffId.get(sid) ?? [];
-    const { reasons, workedHours, remaining, logisticsReasons } = evaluateStaffForVacant(
-      vacant,
-      staff,
-      list,
-      fortnight,
-      participant
-    );
-    const row = {
-      staff,
-      phone: staff.phone,
-      workedHoursThisFortnight: workedHours,
-      hoursRemaining: Math.max(0, remaining),
-      reasons: [...reasons],
-    };
+    const evalResult = evaluateStaffForVacant(vacant, staff, list, fortnight, participant);
+    const row = buildCoverRow(evalResult);
+    const { reasons, logisticsReasons, capWouldExceed } = evalResult;
 
     const onTeam = approvedSet.has(sid);
     if (onTeam) {
-      if (reasons.length === 0) eligibleTeam.push(row);
-      else ineligibleTeam.push(row);
+      if (reasons.length === 0) {
+        if (capWouldExceed) capExceededTeam.push(row);
+        else eligibleTeam.push(row);
+      } else {
+        ineligibleTeam.push(row);
+      }
     } else if (logisticsReasons.length === 0) {
-      openPoolEligible.push({
-        ...row,
-        reasons: [],
-      });
+      const openRow = { ...row, reasons: [] };
+      if (capWouldExceed) openPoolCapExceeded.push(openRow);
+      else openPoolEligible.push(openRow);
     }
   }
 
-  eligibleTeam.sort((a, b) => b.hoursRemaining - a.hoursRemaining);
-  openPoolEligible.sort((a, b) => b.hoursRemaining - a.hoursRemaining);
+  const sortWithinCap = (a, b) => b.headroomAfterShift - a.headroomAfterShift;
+  const sortOverCap = (a, b) => a.hoursOverCapIfAssigned - b.hoursOverCapIfAssigned;
 
-  return { eligibleTeam, ineligibleTeam, openPoolEligible };
+  eligibleTeam.sort(sortWithinCap);
+  openPoolEligible.sort(sortWithinCap);
+  capExceededTeam.sort(sortOverCap);
+  openPoolCapExceeded.sort(sortOverCap);
+
+  return { eligibleTeam, capExceededTeam, ineligibleTeam, openPoolEligible, openPoolCapExceeded };
 }

@@ -6,6 +6,7 @@ import { useAwardRatesStore } from '../../store/awardRates';
 
 const LINKS = [
   { to: '/rule-engine', end: true, label: 'Rules' },
+  { to: '/rule-engine/sop', label: 'SOP' },
   { to: '/rule-engine/tests', label: 'Tests' },
   { to: '/rule-engine/rates', label: 'Rates' },
   { to: '/rule-engine/coverage', label: 'Coverage' },

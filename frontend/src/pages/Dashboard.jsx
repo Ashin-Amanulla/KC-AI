@@ -1,28 +1,31 @@
-import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useShifts } from '../api/shifts';
+import { useMemo } from 'react';
 import { useStaff } from '../api/staff';
 import { useClients } from '../api/clients';
 import { useDashboardSummary } from '../api/dashboard';
+import { useShiftCareKpis } from '../api/shiftcare';
 import { useAuthStore } from '../store/auth';
 import { PERMISSIONS, hasAnyPermission } from '../config/permissions';
+import { usePeriodState } from '../hooks/usePeriodState';
+import { PeriodSelector } from '../components/PeriodSelector';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../ui/table';
-import { LoadingScreen } from '../ui/LoadingSpinner';
 import { QueryErrorState } from '../components/QueryErrorState';
 import { StatCard } from '../ui/stat-card';
 import { PageHeader } from '../components/PageHeader';
 import { InfoHint } from '../components/InfoHint';
 import { Badge } from '../ui/badge';
-import { CalendarClock, Users2, HeartHandshake, Banknote } from 'lucide-react';
+import { Button } from '../ui/button';
+import {
+  Users2,
+  HeartHandshake,
+  Banknote,
+  Clock,
+  CheckCircle2,
+  CircleDashed,
+  ExternalLink,
+  CalendarClock,
+} from 'lucide-react';
+import { SHIFTCARE_SCHEDULER_URL } from '../utils/fortnight';
 
 const JOB_STATUS_META = {
   completed: { label: 'Completed', variant: 'success' },
@@ -156,15 +159,48 @@ function ExceptionQueue({ exceptions, canViewRuleEngine }) {
   );
 }
 
+function PayRunReadinessCard({ kpis }) {
+  const ts = kpis?.timesheets?.summary;
+  if (!ts) return null;
+  const pct = ts.approvalRate ?? 0;
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Pay-run readiness</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-muted-foreground">Timesheet approval</span>
+          <span className="font-semibold tabular-nums text-ink">{pct}%</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-secondary">
+          <div
+            className="h-full rounded-full bg-primary transition-all"
+            style={{ width: `${Math.min(100, pct)}%` }}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {ts.approvedCount} approved · {ts.pendingCount} pending · {ts.staffCount} staff with entries
+        </p>
+        <Button asChild variant="secondary" size="sm" className="h-8">
+          <Link to="/timesheets">Review timesheet exceptions →</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export const Dashboard = () => {
-  const [fromDate, setFromDate] = useState(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - 7); // Default to 7 days ago
-    return date.toISOString().split('T')[0];
-  });
-  const [toDate, setToDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
-  });
+  const {
+    mode,
+    setMode,
+    customFrom,
+    setCustomFrom,
+    customTo,
+    setCustomTo,
+    period,
+    range,
+  } = usePeriodState('fortnight');
 
   const user = useAuthStore((s) => s.user);
   const canViewRuleEngine = hasAnyPermission(user?.permissions ?? [], [
@@ -172,63 +208,57 @@ export const Dashboard = () => {
     PERMISSIONS.PAY_HOURS_TESTS_VIEW,
   ]);
 
-  const shiftsParams = useMemo(
+  const kpiParams = useMemo(
     () => ({
-      from_date: fromDate,
-      to_date: toDate,
-      include_clients: true,
-      include_metadata: true,
-      per_page: 20,
-      page: 1,
+      from: range.from,
+      to: range.to,
+      time_zone: 'Australia/Brisbane',
     }),
-    [fromDate, toDate]
+    [range.from, range.to]
   );
 
-  const { data: shiftsData, isLoading: shiftsLoading, isError: shiftsError, error: shiftsQueryError, refetch: refetchShifts } = useShifts(shiftsParams);
-  const { data: staffData, isLoading: staffLoading, isError: staffError, error: staffQueryError, refetch: refetchStaff } = useStaff({ per_page: 1, include_metadata: true });
-  const { data: clientsData, isLoading: clientsLoading, isError: clientsError, error: clientsQueryError, refetch: refetchClients } = useClients({ per_page: 1, include_metadata: true });
-  const { data: summary, isLoading: summaryLoading, isError: summaryError, error: summaryQueryError, refetch: refetchSummary } = useDashboardSummary();
+  const { data: kpis, isLoading: kpisLoading, isError: kpisError, error: kpisQueryError, refetch: refetchKpis } =
+    useShiftCareKpis(kpiParams);
+  const { data: staffData, isLoading: staffLoading, isError: staffError, error: staffQueryError, refetch: refetchStaff } =
+    useStaff({ per_page: 1, include_metadata: true });
+  const { data: clientsData, isLoading: clientsLoading, isError: clientsError, error: clientsQueryError, refetch: refetchClients } =
+    useClients({ per_page: 1, include_metadata: true });
+  const { data: summary, isLoading: summaryLoading, isError: summaryError, error: summaryQueryError, refetch: refetchSummary } =
+    useDashboardSummary();
 
-  const shifts = shiftsData?.shifts || [];
-  const shiftsMetadata = shiftsData?._metadata;
-  const totalShifts = shiftsMetadata?.total_count || shifts.length;
+  const tsSummary = kpis?.timesheets?.summary;
+  const shiftSummary = kpis?.shifts?.summary;
   const totalStaff = staffData?._metadata?.total_count || staffData?.staff?.length || 0;
   const totalClients = clientsData?._metadata?.total_count || clientsData?.clients?.length || 0;
-
-  const formatDateTime = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString();
-  };
 
   const exceptions = summary?.exceptions;
   const totalExceptions = exceptions
     ? exceptions.minimumEngagement + exceptions.shortTurnaround + exceptions.brokenShift + exceptions.missingRateCard
     : 0;
 
-  const hasQueryError = summaryError || shiftsError || staffError || clientsError;
-  const primaryQueryError = summaryQueryError || shiftsQueryError || staffQueryError || clientsQueryError;
+  const hasQueryError = summaryError || kpisError || staffError || clientsError;
+  const primaryQueryError = summaryQueryError || kpisQueryError || staffQueryError || clientsQueryError;
 
   return (
     <div className="space-y-4">
       <PageHeader
         title="Dashboard"
-        hint="Operations snapshot — pay-run health, headcount, and exceptions in the selected date range."
+        hint="Fortnight operations snapshot — pay-run health, ShiftCare timesheets, and exceptions."
       >
-        <label className="text-xs font-medium text-muted-foreground">From</label>
-        <Input
-          type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          className="h-8 w-36"
+        <PeriodSelector
+          mode={mode}
+          onModeChange={setMode}
+          customFrom={customFrom}
+          customTo={customTo}
+          onCustomFromChange={setCustomFrom}
+          onCustomToChange={setCustomTo}
+          periodLabel={period.label}
         />
-        <label className="text-xs font-medium text-muted-foreground">To</label>
-        <Input
-          type="date"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          className="h-8 w-36"
-        />
+        <Button asChild variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground">
+          <a href={SHIFTCARE_SCHEDULER_URL} target="_blank" rel="noopener noreferrer">
+            Scheduler <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </Button>
       </PageHeader>
 
       {hasQueryError && (
@@ -237,34 +267,71 @@ export const Dashboard = () => {
           title="Some dashboard data could not be loaded"
           onRetry={() => {
             if (summaryError) refetchSummary();
-            if (shiftsError) refetchShifts();
+            if (kpisError) refetchKpis();
             if (staffError) refetchStaff();
             if (clientsError) refetchClients();
           }}
         />
       )}
 
-      {/* Summary Cards */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={CalendarClock} tone="primary" label="Total Shifts" value={shiftsLoading ? '…' : totalShifts} sub="In selected date range" />
+        <StatCard
+          icon={Clock}
+          tone="primary"
+          label="Total hours"
+          value={kpisLoading ? '…' : `${tsSummary?.totalHours ?? 0}h`}
+          sub={`${tsSummary?.totalRecords ?? 0} timesheet records`}
+        />
+        <StatCard
+          icon={CheckCircle2}
+          tone="success"
+          label="Approved hours"
+          value={kpisLoading ? '…' : `${tsSummary?.approvedHours ?? 0}h`}
+          sub={`${tsSummary?.approvalRate ?? 0}% approval rate`}
+        />
+        <StatCard
+          icon={CircleDashed}
+          tone="warning"
+          label="Pending approval"
+          value={kpisLoading ? '…' : tsSummary?.pendingCount ?? 0}
+          sub="Unapproved timesheets"
+        />
+        <StatCard
+          icon={CalendarClock}
+          label="Scheduled shifts"
+          value={kpisLoading ? '…' : shiftSummary?.totalShifts ?? 0}
+          sub={`${shiftSummary?.unapproved ?? 0} unapproved · ${shiftSummary?.unassigned ?? 0} unassigned`}
+        />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Users2} label="Total Staff" value={staffLoading ? '…' : totalStaff} sub="Active staff members" />
         <StatCard icon={HeartHandshake} label="Total Clients" value={clientsLoading ? '…' : totalClients} sub="Active clients" />
         <StatCard
           icon={Banknote}
           tone={totalExceptions > 0 ? 'warning' : 'success'}
-          label="Gross pay (current)"
+          label="Gross pay (computed)"
           value={summaryLoading ? '…' : `$${(summary?.totalGross ?? 0).toLocaleString()}`}
-          sub="Latest computed pay hours"
+          sub="Latest SCHADS pay-hours run"
+        />
+        <StatCard
+          icon={Banknote}
+          label="Timesheet amount"
+          value={kpisLoading ? '…' : `$${(tsSummary?.totalAmount ?? 0).toLocaleString()}`}
+          sub="ShiftCare payable total"
         />
       </div>
 
-      {summary && (
-        <div className="grid gap-3 lg:grid-cols-3">
-          <ExceptionQueue exceptions={exceptions} canViewRuleEngine={canViewRuleEngine} />
-          <PayRunStatusCard payRun={summary.payRun} />
-          <RuleEngineHealthCard awardRates={summary.awardRates} canViewRuleEngine={canViewRuleEngine} />
-        </div>
-      )}
+      <div className="grid gap-3 lg:grid-cols-4">
+        <PayRunReadinessCard kpis={kpis} />
+        {summary && (
+          <>
+            <ExceptionQueue exceptions={exceptions} canViewRuleEngine={canViewRuleEngine} />
+            <PayRunStatusCard payRun={summary.payRun} />
+            <RuleEngineHealthCard awardRates={summary.awardRates} canViewRuleEngine={canViewRuleEngine} />
+          </>
+        )}
+      </div>
 
       {!summaryLoading && totalExceptions > 0 && (
         <p className="text-xs text-muted-foreground">
@@ -272,70 +339,6 @@ export const Dashboard = () => {
           pay hours — review them before finalising payroll.
         </p>
       )}
-
-      {/* Shifts Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Shifts</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 pb-4">
-          {shiftsLoading ? (
-            <div className="px-4 py-8">
-              <LoadingScreen message="Loading shifts..." />
-            </div>
-          ) : shiftsError ? (
-            <div className="px-4 py-4">
-              <QueryErrorState
-                error={shiftsQueryError}
-                title="Failed to load shifts"
-                onRetry={refetchShifts}
-                className="border-0 shadow-none"
-              />
-            </div>
-          ) : shifts.length === 0 ? (
-            <div className="px-4 py-8 text-center text-muted-foreground">
-              No shifts found in the selected date range
-            </div>
-          ) : (
-            <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Start Time</TableHead>
-                    <TableHead>End Time</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Clients</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {shifts.map((shift, idx) => (
-                    <TableRow key={shift.id ?? shift.shiftcare_id ?? `shift-${idx}`}>
-                      <TableCell className="font-medium">{shift.id}</TableCell>
-                      <TableCell>{formatDateTime(shift.start_at)}</TableCell>
-                      <TableCell>{formatDateTime(shift.end_at)}</TableCell>
-                      <TableCell>
-                        <Badge variant={shift.is_approved ? 'success' : 'warning'}>
-                          {shift.is_approved ? 'Approved' : 'Pending'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {shift.clients?.length > 0
-                          ? shift.clients.map((c) => c.display_name || c.first_name).join(', ')
-                          : 'N/A'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-            </Table>
-          )}
-          {shiftsMetadata && (
-            <div className="mt-4 text-sm text-muted-foreground">
-              Showing page {shiftsMetadata.current_page} of {shiftsMetadata.total_pages} (
-              {shiftsMetadata.total_count} total)
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 };

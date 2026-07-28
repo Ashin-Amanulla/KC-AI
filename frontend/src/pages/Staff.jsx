@@ -28,7 +28,8 @@ import { Badge } from '../ui/badge';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Pencil, FileSpreadsheet, Users, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
+import { Pencil, FileSpreadsheet, Users, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { StatCard } from '../ui/stat-card';
 
 function defaultRatesRow(displayName) {
@@ -56,6 +57,7 @@ function defaultRatesRow(displayName) {
     sleepoverExtra: 0,
     kmRate: VEHICLE_RATE,
     allowance: 0,
+    capRate: 0,
   };
 }
 
@@ -106,6 +108,12 @@ function sortStaff(rows, sortBy, sortType, ratesByStaffId, locationId) {
       case 'name':
         cmp = memberDisplayName(a).localeCompare(memberDisplayName(b));
         break;
+      case 'alias': {
+        const aliasA = (ratesByStaffId.get(String(a.id))?.aliases || []).join(', ');
+        const aliasB = (ratesByStaffId.get(String(b.id))?.aliases || []).join(', ');
+        cmp = aliasA.localeCompare(aliasB);
+        break;
+      }
       case 'email':
         cmp = (a.email || '').localeCompare(b.email || '');
         break;
@@ -128,6 +136,66 @@ function sortStaff(rows, sortBy, sortType, ratesByStaffId, locationId) {
     if (cmp !== 0) return cmp * dir;
     return memberDisplayName(a).localeCompare(memberDisplayName(b)) * dir;
   });
+}
+
+const SCHADS_RATE_FIELDS = STAFF_RATES_TABLE_FIELDS.filter(([field]) => field !== 'capRate');
+
+function getStaffRoleBadge(role) {
+  const raw = (role || '').trim();
+  const key = raw.toLowerCase();
+  if (!key) return { variant: 'default', label: 'N/A' };
+
+  if (key.includes('admin')) return { variant: 'destructive', label: raw };
+  if (key.includes('manager')) return { variant: 'warning', label: raw };
+  if (key.includes('coordinator')) return { variant: 'primary', label: raw };
+  if (key.includes('nurse') || key.includes('nursing')) return { variant: 'success', label: raw };
+  if (
+    key.includes('staff') ||
+    key.includes('support') ||
+    key.includes('carer') ||
+    key.includes('worker')
+  ) {
+    return { variant: 'outline', label: raw };
+  }
+
+  return { variant: 'default', label: raw };
+}
+
+function hasCapRateSaved(dbRow) {
+  return Number(dbRow?.rates?.capRate) > 0;
+}
+
+function hasSchadsRatesSaved(dbRow) {
+  if (!dbRow?.rates) return false;
+  const r = dbRow.rates;
+  return SCHADS_RATE_FIELDS.some(([field]) => Number(r[field]) > 0);
+}
+
+function RateStatusCell({ saved, value, onEdit, loading, canEdit }) {
+  return (
+    <div className="flex items-center justify-end gap-1.5 min-w-[72px]">
+      {loading ? (
+        <span className="text-2xs text-muted-foreground">…</span>
+      ) : saved ? (
+        <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-label="Saved" />
+      ) : (
+        <XCircle className="h-4 w-4 text-destructive shrink-0" aria-label="Not saved" />
+      )}
+      {value ? <span className="tabular-nums text-xs text-body">{value}</span> : null}
+      {canEdit && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-ink"
+          onClick={onEdit}
+          title="Edit"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
+  );
 }
 
 function paginateList(rows, page, perPage) {
@@ -230,20 +298,23 @@ export const Staff = () => {
   }, [allStaff.length, locationId, staffRatesData?.staffRates?.length]);
 
   const [editing, setEditing] = useState(null);
+  const [editTab, setEditTab] = useState('schads');
   const [draft, setDraft] = useState(null);
   const [aliasesDraft, setAliasesDraft] = useState('');
 
-  const openEdit = (member) => {
+  const openEdit = (member, tab = 'schads') => {
     const displayName = member.name || `${member.first_name || ''} ${member.family_name || ''}`.trim();
     const dbRow = ratesByStaffId.get(String(member.id));
     const existing = dbRow?.rates;
     setDraft(ratesToDraft({ ...defaultRatesRow(displayName), ...existing, name: displayName }));
     setAliasesDraft((dbRow?.aliases || []).join(', '));
+    setEditTab(tab);
     setEditing({ member, displayName });
   };
 
   const closeEdit = () => {
     setEditing(null);
+    setEditTab('schads');
     setDraft(null);
     setAliasesDraft('');
   };
@@ -263,7 +334,7 @@ export const Staff = () => {
           sleepoverExtra: draft.sleepoverExtra ?? 0,
         },
       });
-      toast.success('SCHADS rates saved');
+      toast.success('Rates saved');
       closeEdit();
     } catch (e) {
       toast.error(getErrorMessage(e) || 'Save failed');
@@ -404,7 +475,7 @@ export const Staff = () => {
               >
                 Location
               </FieldLabel>
-              <Select value={locationId || undefined} onValueChange={(value) => setLocationId(value)}>
+              <Select value={locationId} onValueChange={setLocationId}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select location…" />
                 </SelectTrigger>
@@ -514,6 +585,21 @@ export const Staff = () => {
                         onSort={handleSort}
                       />
                       <SortableTableHead
+                        label="Alias"
+                        sortKey="alias"
+                        activeSortKey={sortBy}
+                        sortType={sortType}
+                        onSort={handleSort}
+                        className="min-w-[120px]"
+                        suffix={
+                          <InfoHint
+                            side="bottom"
+                            label="About alias column"
+                            content="Official or alternate names used in payroll/Xero exports. Set in the SCHADS Rate editor — helps match ShiftCare roster names to payroll sheets."
+                          />
+                        }
+                      />
+                      <SortableTableHead
                         label="Email"
                         sortKey="email"
                         activeSortKey={sortBy}
@@ -535,65 +621,94 @@ export const Staff = () => {
                         onSort={handleSort}
                       />
                       <SortableTableHead
+                        label="Cap Rate"
                         sortKey="rates"
                         activeSortKey={sortBy}
                         sortType={sortType}
                         onSort={handleSort}
-                        className="w-[200px]"
-                      >
-                        <span className="inline-flex items-center gap-1 normal-case">
-                          SCHADS rates
+                        className="w-[88px] text-right"
+                        suffix={
+                          <InfoHint
+                            side="left"
+                            label="About cap rate column"
+                            content="Reference cap rate per staff at the selected location. Display only — not used in pay calculation."
+                          />
+                        }
+                      />
+                      <SortableTableHead
+                        label="SCHADS"
+                        sortKey="rates"
+                        activeSortKey={sortBy}
+                        sortType={sortType}
+                        onSort={handleSort}
+                        className="w-[88px] text-right"
+                        suffix={
                           <InfoHint
                             side="left"
                             label="About SCHADS rates column"
-                            content="Per-location hourly rates used by the pay calculator and cost analysis. Green Saved means rates exist for this staff member at the selected location."
+                            content="Per-location hourly rates used by the pay calculator and cost analysis. A green tick means SCHADS rates are saved for this staff member at the selected location."
                           />
-                        </span>
-                      </SortableTableHead>
+                        }
+                      />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {displayedStaff.map((member) => {
-                      const hasRate = locationId && ratesByStaffId.has(String(member.id));
+                      const dbRow = ratesByStaffId.get(String(member.id));
+                      const capSaved = hasCapRateSaved(dbRow);
+                      const schadsSaved = hasSchadsRatesSaved(dbRow);
+                      const cap = dbRow?.rates?.capRate;
+                      const capDisplay = cap > 0 ? `$${Number(cap).toFixed(2)}` : null;
                       return (
                         <TableRow key={member.id}>
                           <TableCell className="font-medium">{member.id}</TableCell>
                           <TableCell>{member.name || `${member.first_name} ${member.family_name}`}</TableCell>
+                          <TableCell className="max-w-[180px]">
+                            {!locationId ? (
+                              <span className="text-2xs text-muted-foreground">—</span>
+                            ) : (() => {
+                              const aliases = dbRow?.aliases;
+                              const text = Array.isArray(aliases) && aliases.length ? aliases.join(', ') : null;
+                              return text ? (
+                                <span className="text-xs text-muted-foreground truncate block" title={text}>
+                                  {text}
+                                </span>
+                              ) : (
+                                <span className="text-2xs text-muted-foreground">—</span>
+                              );
+                            })()}
+                          </TableCell>
                           <TableCell>{member.email || 'N/A'}</TableCell>
-                          <TableCell>{member.role || 'N/A'}</TableCell>
-                          <TableCell>{member.mobile_number || member.phone_number || 'N/A'}</TableCell>
                           <TableCell>
+                            {(() => {
+                              const { variant, label } = getStaffRoleBadge(member.role);
+                              return <Badge variant={variant}>{label}</Badge>;
+                            })()}
+                          </TableCell>
+                          <TableCell>{member.mobile_number || member.phone_number || 'N/A'}</TableCell>
+                          <TableCell className="text-right">
                             {!locationId ? (
                               <span className="text-2xs text-muted-foreground">—</span>
                             ) : (
-                              <div className="flex items-center gap-2">
-                                {hasRate ? (
-                                  <Badge variant="success" className="uppercase">
-                                    Saved
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="destructive" className="uppercase">
-                                    Unsaved
-                                  </Badge>
-                                )}
-                                {ratesLoading && (
-                                  <span className="text-xs text-muted-foreground">…</span>
-                                )}
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  className={cn(
-                                    'h-8 gap-1',
-                                    !hasRate &&
-                                      'border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive'
-                                  )}
-                                  onClick={() => openEdit(member)}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                  {hasRate ? 'Edit' : 'Set'}
-                                </Button>
-                              </div>
+                              <RateStatusCell
+                                saved={capSaved}
+                                value={capDisplay}
+                                loading={ratesLoading}
+                                canEdit={canEditRates}
+                                onEdit={() => openEdit(member, 'cap')}
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {!locationId ? (
+                              <span className="text-2xs text-muted-foreground">—</span>
+                            ) : (
+                              <RateStatusCell
+                                saved={schadsSaved}
+                                loading={ratesLoading}
+                                canEdit={canEditRates}
+                                onEdit={() => openEdit(member, 'schads')}
+                              />
                             )}
                           </TableCell>
                         </TableRow>
@@ -637,57 +752,94 @@ export const Staff = () => {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <div className="flex items-center gap-2 pr-8">
-                <DialogTitle>SCHADS rates — {editing.displayName}</DialogTitle>
+                <DialogTitle>Rates — {editing.displayName}</DialogTitle>
                 <InfoHint
                   label="About location-scoped rates"
-                  content="These rates apply at the selected location. The award calculator and cost analysis use them unless overridden by an uploaded rates file."
+                  content="Cap rate and SCHADS rates apply at the selected location. The award calculator and cost analysis use SCHADS rates unless overridden by an uploaded rates file."
                 />
               </div>
             </DialogHeader>
-            <div className="space-y-4">
-              {canEditRates && (
-                <div className="space-y-1.5">
+            <Tabs value={editTab} onValueChange={setEditTab}>
+              <TabsList>
+                <TabsTrigger value="cap">Cap Rate</TabsTrigger>
+                <TabsTrigger value="schads">SCHADS Rate</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="cap">
+                <div className="space-y-1.5 max-w-xs">
                   <FieldLabel
-                    hint="Alternate spellings or nicknames used in Excel imports, comma-separated (e.g. J. Smith, John S)."
-                    hintLabel="About aliases"
+                    hint="Reference cap rate for this staff member. Display only — not used in pay calculation."
+                    hintLabel="About cap rate"
                   >
-                    Aliases
+                    Cap Rate ($)
                   </FieldLabel>
                   <Input
-                    type="text"
-                    className="h-8 text-xs"
-                    value={aliasesDraft}
-                    onChange={(e) => setAliasesDraft(e.target.value)}
-                    placeholder="e.g. J. Smith, John S"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    readOnly={!canEditRates}
+                    className="h-8 text-xs tabular-nums"
+                    value={draft.capRate > 0 ? draft.capRate : ''}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        capRate: r2(parseFloat(e.target.value) || 0),
+                      }))
+                    }
+                    placeholder="0.00"
                   />
                 </div>
-              )}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {STAFF_RATES_TABLE_FIELDS.map(([field, label]) => (
-                  <div key={field} className="space-y-1">
-                    <Label className="block text-2xs font-normal uppercase text-muted-foreground">{label}</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      readOnly={!canEditRates}
-                      className="h-8 text-xs"
-                      value={
-                        field === 'allowance'
-                          ? draft.allowance ? draft.allowance : ''
-                          : draft[field] ?? ''
-                      }
-                      onChange={(e) =>
-                        setDraft((d) => ({
-                          ...d,
-                          [field]: r2(parseFloat(e.target.value) || 0),
-                        }))
-                      }
-                    />
+              </TabsContent>
+
+              <TabsContent value="schads">
+                <div className="space-y-4">
+                  {canEditRates && (
+                    <div className="space-y-1.5">
+                      <FieldLabel
+                        hint="Alternate spellings or nicknames used in Excel imports, comma-separated (e.g. J. Smith, John S)."
+                        hintLabel="About aliases"
+                      >
+                        Aliases
+                      </FieldLabel>
+                      <Input
+                        type="text"
+                        className="h-8 text-xs"
+                        value={aliasesDraft}
+                        onChange={(e) => setAliasesDraft(e.target.value)}
+                        placeholder="e.g. J. Smith, John S"
+                      />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {SCHADS_RATE_FIELDS.map(([field, label]) => (
+                      <div key={field} className="space-y-1">
+                        <Label className="block text-2xs font-normal uppercase text-muted-foreground">{label}</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          readOnly={!canEditRates}
+                          className="h-8 text-xs"
+                          value={
+                            field === 'allowance'
+                              ? draft.allowance ? draft.allowance : ''
+                              : draft[field] ?? ''
+                          }
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              [field]: r2(parseFloat(e.target.value) || 0),
+                            }))
+                          }
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2 pt-2">
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex flex-wrap gap-2 pt-4">
                 {canEditRates ? (
                   <>
                     <Button
@@ -721,7 +873,6 @@ export const Staff = () => {
                   Cancel
                 </Button>
               </div>
-            </div>
           </DialogContent>
         </Dialog>
       )}
