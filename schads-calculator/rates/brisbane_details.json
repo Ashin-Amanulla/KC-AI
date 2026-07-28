@@ -1,0 +1,1217 @@
+[
+  {
+    "name": "Abdullateef Kuranga",
+    "revised_rate": 42.0,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-08-08 00:00:00",
+    "daytime_rate": 41.0,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Abhilash Krishnalayam",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-02-27 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Adhith Issac",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-01-20 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Adon Mary Gimmi",
+    "revised_rate": 36.08,
+    "level": "Level 3.2",
+    "current_level": "Level 2.1",
+    "start_date": "2024-08-16 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Alan Abraham",
+    "revised_rate": 39.1,
+    "level": "Level 1.1",
+    "current_level": "Level 3.2",
+    "start_date": "2025-07-26 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Alexandra Lucas",
+    "revised_rate": 36.33,
+    "level": "Level 1.1",
+    "current_level": "Level 2.2",
+    "start_date": "2025-12-24 00:00:00",
+    "daytime_rate": 34.68,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Allyssa Mae Guzman",
+    "revised_rate": 37.95,
+    "level": "Level 1.1",
+    "current_level": "Level 3.2",
+    "start_date": "2025-08-20 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Amala Benoy",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-03-21 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Anakha mariya Sabu",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-02-27 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Aneesh Aloshious",
+    "revised_rate": 40.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-09-20 00:00:00",
+    "daytime_rate": 39.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Angel Peckal Shibu",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-05-07 00:00:00",
+    "daytime_rate": 35.15,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Ann Maria James",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-04-24 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "ANN MARY AUGUSTIN",
+    "revised_rate": 34.1,
+    "level": "Level 3.2",
+    "current_level": "Level 1.1",
+    "start_date": "2025-02-07 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Ann Mathew",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2026-03-19 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Ann Varghese",
+    "revised_rate": 34.1,
+    "level": "Level 3.2",
+    "current_level": "Level 1.1",
+    "start_date": "2026-03-24 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Anna Eldhose",
+    "revised_rate": 36.08,
+    "level": "Level 1.1",
+    "current_level": "Level 2.1",
+    "start_date": "2025-03-13 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Annmary Davis",
+    "revised_rate": 38.1,
+    "level": "Level 1.1",
+    "current_level": "Level 3.2",
+    "start_date": "2025-05-23 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Aprajita Gupta",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 1.1",
+    "start_date": "2026-04-22 00:00:00",
+    "daytime_rate": 34.68,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Arjun Ram",
+    "revised_rate": 43.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-01-27 00:00:00",
+    "daytime_rate": 42.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Arya Vijay",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-04-17 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Ashley Benoy",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2026-05-13 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Aswin Vidyadharan",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2022-12-26 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Austin Santhosh",
+    "revised_rate": 36.08,
+    "level": "Level 2.1",
+    "current_level": "Level 2.1",
+    "start_date": "2025-03-25 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 34.44
+  },
+  {
+    "name": "Avani Santhosh",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-06-03 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Benedict Iwunze",
+    "revised_rate": 49.23,
+    "level": "Level 4.2",
+    "current_level": "Level 4.2",
+    "start_date": "2023-12-12 00:00:00",
+    "daytime_rate": 48.29,
+    "schads_rate": 39.11
+  },
+  {
+    "name": "Beryl Chepngetich",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-04-24 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Camille Dessilas",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-02-13 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Carol Brigil Francis",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2026-01-31 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Charen Jumabong Eduaba",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2025-08-08 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Charmain Fernandez",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-12-30 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Chloe Thompson",
+    "revised_rate": 39.34,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-09-03 00:00:00",
+    "daytime_rate": 38.337500000000006,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Chrissy Cuthbert",
+    "revised_rate": 40.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-11-25 00:00:00",
+    "daytime_rate": 39.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Christal Visarra",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-03-25 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Christine Nicholson",
+    "revised_rate": 41.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-03-14 00:00:00",
+    "daytime_rate": 40.099999999999994,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Clotilda Cherotich Kemei",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-08-08 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Cris Char Heducos",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-03-17 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Dominic Korir",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-02-18 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Dona Biju",
+    "revised_rate": 34.1,
+    "level": "Level 3.2",
+    "current_level": "Level 1.1",
+    "start_date": "2025-02-27 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Dona Thannickamattathil Eldhose",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-01-13 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Egline Jerop",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-08-02 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Elias Jacob Pukadiyil",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-01-09 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Emmanuel Chumba",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-10-12 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Emmanuel Emeka Chike",
+    "revised_rate": 41.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-09-21 00:00:00",
+    "daytime_rate": 40.099999999999994,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Farai Kandenga",
+    "revised_rate": 42.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-11-27 00:00:00",
+    "daytime_rate": 41.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Femina Hubert",
+    "revised_rate": 40.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-09-20 00:00:00",
+    "daytime_rate": 39.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Fozia Ibrahim",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-01-27 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Georgekutty Gigo",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2026-03-20 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Goutham Jinesh Chitteth",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-03-07 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Hayley Mons Mackellar",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-08-09 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Helan John",
+    "revised_rate": 34.1,
+    "level": "Level 3.2",
+    "current_level": "Level 1.1",
+    "start_date": "2026-03-14 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Holly Adams",
+    "revised_rate": 39.34,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-10-04 00:00:00",
+    "daytime_rate": 38.337500000000006,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Honorine Uwineza",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-09-21 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "IYPPACHAN TOM",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-02-14 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Jacinta Gichuhi",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-12-30 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Jaimon James",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-10-03 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Jarvis Kiprop Koech",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-02-01 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Jasper Barry Wenck",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-12-21 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Jess Tom",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-03-25 00:00:00",
+    "daytime_rate": 35.15,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Jesse Rimland",
+    "revised_rate": 40.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-02-19 00:00:00",
+    "daytime_rate": 39.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Jibin Karekkatt Thomas",
+    "revised_rate": 39.34,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-09-17 00:00:00",
+    "daytime_rate": 38.337500000000006,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Jimel E Dennis",
+    "revised_rate": 40.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-07-23 00:00:00",
+    "daytime_rate": 39.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Joan Eguia",
+    "revised_rate": 36.08,
+    "level": "Level 2.1",
+    "current_level": "Level 2.1",
+    "start_date": "2024-05-03 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 34.44
+  },
+  {
+    "name": "Jobitt Joseph",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-09-09 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Jomol James",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-04-24 00:00:00",
+    "daytime_rate": 36.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Jose Ani",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-06-14 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Jyothis Elizebath",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2024-01-11 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Jyoti Kaur",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2025-08-06 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Karishma Arjunan",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2025-07-17 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Katie Fangfang Hong",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-05-27 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Katrina Hibberd",
+    "revised_rate": 44.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-02-11 00:00:00",
+    "daytime_rate": 43.099999999999994,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Khent John Medrozo Teo",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-08-06 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Kiran Sabu",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-01-13 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Krishna jith",
+    "revised_rate": 37.95,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2026-05-08 00:00:00",
+    "daytime_rate": 34.68,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Kristal Lea Buxton",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-08-14 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Kriti Jha",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-09-06 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Lachlan Johnston",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-10-26 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Lecirose Evanz Bano",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-11-19 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Lesley Chepchumba",
+    "revised_rate": 36.08,
+    "level": "Level 2.1",
+    "current_level": "Level 2.1",
+    "start_date": "2024-02-19 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 34.44
+  },
+  {
+    "name": "Linda Kagoiza",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-04-26 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Lucie Kahindo",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-09-26 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Mackenzie Hewitt",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-01-23 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Mahesh Pillai",
+    "revised_rate": 41.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-12-11 00:00:00",
+    "daytime_rate": 40.099999999999994,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Manasiben Thakkar",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-12-09 00:00:00",
+    "daytime_rate": 36.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Mandy Hewitt",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-07-02 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Marc Relizan",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-10-05 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Marion Jepleting",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-03-14 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Mariya Tony",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2025-11-19 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Mathew Uchenna Onwunali",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-02-13 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Merin Shaju",
+    "revised_rate": 34.1,
+    "level": "",
+    "current_level": "Level 1.1",
+    "start_date": "2026-03-06 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Michael Angelo Eribaren",
+    "revised_rate": 37.95,
+    "level": "",
+    "current_level": "Level 3.2",
+    "start_date": "2025-05-10 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Michelle Rabach",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-03-07 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Mohammed Lakhal",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-05-10 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Nanise Mafi",
+    "revised_rate": 42.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-11-21 00:00:00",
+    "daytime_rate": 41.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Naomi Prescott",
+    "revised_rate": 42.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-12-24 00:00:00",
+    "daytime_rate": 41.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Natalia Sesay",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-07-24 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Nora John",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-03-14 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Oladimeji Tedimola",
+    "revised_rate": 49.23,
+    "level": "Level 4.2",
+    "current_level": "Level 4.2",
+    "start_date": "2023-02-24 00:00:00",
+    "daytime_rate": 48.29,
+    "schads_rate": 39.11
+  },
+  {
+    "name": "Olufemi Olatunde",
+    "revised_rate": 43.26,
+    "level": "Level 4.2",
+    "current_level": "Level 4.2",
+    "start_date": "2023-12-12 00:00:00",
+    "daytime_rate": 42.2625,
+    "schads_rate": 39.11
+  },
+  {
+    "name": "Patrick Muzima",
+    "revised_rate": 41.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-02-07 00:00:00",
+    "daytime_rate": 40.099999999999994,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Phinehas Kiprotich Bichiy",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-02-18 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Phoebe Lola Simmons",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-02-28 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Pietta Bett",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-05-10 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Pisi Faaauro",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-07-22 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Rhiannon Camiller",
+    "revised_rate": 46.0,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-09-18 00:00:00",
+    "daytime_rate": 45.0,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Riya Dave",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2024-07-20 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Riya Elizabath George",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2026-03-03 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Rizalyn Acero",
+    "revised_rate": 36.81,
+    "level": "Level 3.1",
+    "current_level": "Level 3.1",
+    "start_date": "2023-10-10 00:00:00",
+    "daytime_rate": 35.15,
+    "schads_rate": 35.15
+  },
+  {
+    "name": "Robin Mathew",
+    "revised_rate": 37.95,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2026-03-03 00:00:00",
+    "daytime_rate": 34.68,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Ron Biju",
+    "revised_rate": 36.08,
+    "level": "Level 2.1",
+    "current_level": "Level 2.1",
+    "start_date": "2023-08-14 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 34.44
+  },
+  {
+    "name": "Roniya Mary Reji",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2026-03-10 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Roshini Vinod",
+    "revised_rate": 36.08,
+    "level": "Level 2.1",
+    "current_level": "Level 2.1",
+    "start_date": "2024-05-02 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 34.44
+  },
+  {
+    "name": "Sangay Tshomo",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2025-02-18 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Sarath Sreedhara Menon",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-06-01 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Sebin Sebastian",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-12-01 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Shantale Apolina",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-04-08 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Sheick Kamara",
+    "revised_rate": 43.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-09-15 00:00:00",
+    "daytime_rate": 42.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Sherin Mathew",
+    "revised_rate": 36.08,
+    "level": "Level 2.1",
+    "current_level": "Level 2.1",
+    "start_date": "2023-10-08 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 34.44
+  },
+  {
+    "name": "Shreya Shony",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-02-21 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Silvester Jose",
+    "revised_rate": 37.23,
+    "level": "Level 2.1",
+    "current_level": "Level 2.1",
+    "start_date": "2025-02-13 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 34.44
+  },
+  {
+    "name": "Snehal Susan Eldhose",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-03-26 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Sona Sara Paul",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2025-03-25 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Sonney Davis",
+    "revised_rate": 42.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-05-10 00:00:00",
+    "daytime_rate": 41.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Stephya Anithakumari Sathyadas",
+    "revised_rate": 38.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-08-22 00:00:00",
+    "daytime_rate": 37.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Swapnajith Sajith Sasikala",
+    "revised_rate": 34.1,
+    "level": "Level 1.1",
+    "current_level": "Level 1.1",
+    "start_date": "2026-02-19 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 32.56
+  },
+  {
+    "name": "Syed Saifuddin Minallah",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2023-08-08 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Sylvia Jesang",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-02-28 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Teena Shijo",
+    "revised_rate": 36.08,
+    "level": "Level 3.2",
+    "current_level": "Level 2.1",
+    "start_date": "2025-03-14 00:00:00",
+    "daytime_rate": 34.44,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Timothy Goodwin",
+    "revised_rate": 39.1,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-06-24 00:00:00",
+    "daytime_rate": 38.1,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Tiya Franklin",
+    "revised_rate": 34.1,
+    "level": "Level 3.2",
+    "current_level": "Level 1.1",
+    "start_date": "2025-08-01 00:00:00",
+    "daytime_rate": 32.559999999999995,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Tomseena Tomy",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2025-01-04 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Valarie Rabach",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-03-18 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Victor Patrick",
+    "revised_rate": 43.26,
+    "level": "Level 3.2",
+    "current_level": "Level 4.2",
+    "start_date": "2023-12-12 00:00:00",
+    "daytime_rate": 42.2625,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Willimina Giple",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-04-01 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Zahara Yussuf Abdirahman",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-05-27 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  },
+  {
+    "name": "Zainab Jalloh",
+    "revised_rate": 37.95,
+    "level": "Level 3.2",
+    "current_level": "Level 3.2",
+    "start_date": "2026-02-26 00:00:00",
+    "daytime_rate": 36.225,
+    "schads_rate": 36.23
+  }
+]
