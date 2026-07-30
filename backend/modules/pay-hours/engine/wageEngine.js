@@ -1,34 +1,37 @@
 /**
- * SCHADS award wage calculations — shared by SchadsCalculator and Cost Analysis.
+ * SCHADS award wage calculations (hours × rate card → dollars).
+ *
+ * Backend port of frontend/src/lib/schadsWageCalc.js — bug-for-bug for now;
+ * wageParity.test.js enforces functional equality between the two until the
+ * frontend copy is retired. Award-indexed amounts are injected via
+ * applyAwardConstants() from the effective-dated award-rates module.
  */
 
-import { resolveOt76PayTiers } from './ot76GlobalTier.js';
+import { resolveOt76PayTiers } from '../utils/ot76GlobalTier.js';
+import {
+  DAILY_ORD,
+  WEEKLY_ORD,
+  BROKEN_ALLOWANCE_1,
+  BROKEN_ALLOWANCE_2,
+  MEAL_ALLOWANCE,
+  VEHICLE_RATE,
+  OT_1,
+  OT_2,
+  applyAwardConstants
+} from './constants.js';
 
-// Award constants are `let` + live ES-module bindings: applyAwardConstants()
-// (called by the award-rates store at app boot) updates them from the
-// backend's effective-dated SCHADS rate set. The literals below are the
-// FY2025-26 fallback used until hydration / when the API is unreachable.
-export let DAILY_ORD = 7.6;
-export let WEEKLY_ORD = 38.0;
-export let BROKEN_ALLOWANCE_1 = 20.82;
-export let BROKEN_ALLOWANCE_2 = 27.56;
-export let MEAL_ALLOWANCE = 16.62;
-export let VEHICLE_RATE = 0.99;
-export let OT_1 = 1.5;
-export let OT_2 = 2.0;
-
-/** Overwrite module constants from a backend award-rate `constants` object. */
-export function applyAwardConstants(c) {
-  if (!c) return;
-  if (c.dailyOrdHours > 0) DAILY_ORD = c.dailyOrdHours;
-  if (c.weeklyOrdHours > 0) WEEKLY_ORD = c.weeklyOrdHours;
-  if (c.brokenShiftAllowance1 > 0) BROKEN_ALLOWANCE_1 = c.brokenShiftAllowance1;
-  if (c.brokenShiftAllowance2 > 0) BROKEN_ALLOWANCE_2 = c.brokenShiftAllowance2;
-  if (c.mealAllowance > 0) MEAL_ALLOWANCE = c.mealAllowance;
-  if (c.vehicleKmRate > 0) VEHICLE_RATE = c.vehicleKmRate;
-  if (c.otTier1Mult > 0) OT_1 = c.otTier1Mult;
-  if (c.otTier2Mult > 0) OT_2 = c.otTier2Mult;
-}
+// Re-export constants and applyAwardConstants so external code can access them
+export {
+  DAILY_ORD,
+  WEEKLY_ORD,
+  BROKEN_ALLOWANCE_1,
+  BROKEN_ALLOWANCE_2,
+  MEAL_ALLOWANCE,
+  VEHICLE_RATE,
+  OT_1,
+  OT_2,
+  applyAwardConstants
+};
 
 export function r2(n) {
   return Math.round(n * 100) / 100;
@@ -65,8 +68,13 @@ function normalizeRateCard(rawRates) {
   // All penalty rates must be derived as: day × (penalty_mult + 0.25) / 1.25
   // i.e.  base × (penalty_mult + casualLoading)
   // This is the correct SCHADS casual penalty formula.
+  //
+  // If a stored rate is already correct (within $0.01) we leave it alone.
+  // If it is zero/missing OR was derived incorrectly (e.g. day × penalty_mult
+  // instead of day × (penalty_mult+0.25)/1.25), we rederive it.
 
   function casualPenalty(mult) {
+    // day × (mult + 0.25) / 1.25
     return r2(day * (mult + 0.25) / 1.25);
   }
 
@@ -89,7 +97,7 @@ function normalizeRateCard(rawRates) {
     }
   }
 
-  // Nursing penalty keys
+  // Nursing penalty keys — derive from nursingDaytime if present, else from daytime
   const nursingDay = Number(rates.nursingDaytime || 0) || day;
   if (!rates.nursingAfternoon || rates.nursingAfternoon <= 0)
     rates.nursingAfternoon = r2(nursingDay * (1.125 + 0.25) / 1.25);

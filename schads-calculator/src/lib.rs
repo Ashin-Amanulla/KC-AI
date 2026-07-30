@@ -232,10 +232,15 @@ fn apply_evening_penalties(s: &mut State) {
             seg.start.weekday(),
             Weekday::Mon | Weekday::Tue | Weekday::Wed | Weekday::Thu | Weekday::Fri
         ) {
+            let casual_bump = if s.input.employment == EmploymentType::Casual {
+                CASUAL_LOADING
+            } else {
+                dec!(0)
+            };
             if end_hour > 20 && end_hour <= 24 {
-                seg.multiplier = dec!(1.125);
+                seg.multiplier = dec!(1.125) + casual_bump;
             } else if end_hour < 6 || start_hour < 6 {
-                seg.multiplier = dec!(1.15);
+                seg.multiplier = dec!(1.15) + casual_bump;
             }
         }
     }

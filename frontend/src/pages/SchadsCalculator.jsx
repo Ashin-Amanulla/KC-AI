@@ -1425,7 +1425,10 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     let headerIdx = -1;
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i].map(c => c?.toString().toLowerCase().trim());
-      if (r.some(h => h === 'employee name') && r.some(h => h.includes('daytime'))) { headerIdx = i; break; }
+      if (
+        r.some(h => h === 'employee name') &&
+        (r.some(h => h.includes('daytime')) || r.some(h => h.includes('revised rate') || h === 'rate'))
+      ) { headerIdx = i; break; }
     }
     if (headerIdx === -1) { alert('Could not find Employee Name / Daytime Shift columns.'); return; }
     const h = rows[headerIdx].map(c => c?.toString().toLowerCase().trim());
@@ -1433,9 +1436,16 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
     const sleepoverExtraCol = h.findIndex(
       (x) => x.includes('sleepover') && (x.includes('extra') || x.includes('bonus') || x.includes('additional'))
     );
+    // 'revised rate' or plain 'rate' are treated as the daytime column
+    const daytimeCol = (() => {
+      let col = ci('daytime');
+      if (col >= 0) return col;
+      col = h.findIndex(x => x === 'revised rate' || x === 'rate');
+      return col;
+    })();
     const idx = {
       emp:        h.findIndex(x => x === 'employee name'),
-      daytime:    ci('daytime'),
+      daytime:    daytimeCol,
       afternoon:  ci('afternoon'),
       night:      ci('night'),
       otUpto2:    h.findIndex(x => x === 'ot upto 2 hours'),
@@ -1478,6 +1488,17 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
           allowance:  idx.allowance >= 0 ? g('allowance') : 0,
         };
         if (sleepoverExtraCol >= 0) row.sleepoverExtra = gx(sleepoverExtraCol);
+        // If only daytime was provided (all penalty cols zero/missing), derive from SCHADS formula
+        const penaltyKeys = ['afternoon','night','otUpto2','otAfter2','saturday','satOtAfter2','sunday','ph'];
+        const noPenalties = row.daytime > 0 && penaltyKeys.every(k => !row[k]);
+        if (noPenalties) {
+          const derived = schadsFlatRatesRow(name, row.daytime);
+          Object.assign(row, derived);
+          if (!row.mealAllow) row.mealAllow = derived.mealAllow;
+          if (!row.brokenShift) row.brokenShift = derived.brokenShift;
+          if (!row.sleepover) row.sleepover = derived.sleepover;
+          if (!row.kmRate) row.kmRate = derived.kmRate;
+        }
         registerNameKeys(map, name, row);
     }
     setStaffRatesMap((prev) => {
@@ -1548,7 +1569,7 @@ export function SchadsCalculator({ locationId: locationIdProp, onStaffRatesMapCh
             kind = 'payroll';
             break;
           }
-          if (r.some((h) => h === 'employee name') && r.some((h) => h.includes('daytime'))) {
+          if (r.some((h) => h === 'employee name') && (r.some((h) => h.includes('daytime')) || r.some((h) => h.includes('revised rate') || h === 'rate'))) {
             kind = 'rates';
             break;
           }

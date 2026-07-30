@@ -1,9 +1,13 @@
 import axios from 'axios';
 
+// In production, use relative path so nginx proxies to correct backend port
+// Development uses explicit localhost:3001
 const API_BASE_URL =
   (import.meta.env.VITE_API_URL !== undefined && import.meta.env.VITE_API_URL !== '')
     ? import.meta.env.VITE_API_URL
-    : 'http://localhost:3001';
+    : import.meta.env.PROD
+      ? ''
+      : 'http://localhost:3001';
 
 export { API_BASE_URL };
 

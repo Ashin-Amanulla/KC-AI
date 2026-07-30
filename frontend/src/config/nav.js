@@ -12,6 +12,7 @@ export const NAV_GROUPS = [
     label: 'Overview',
     items: [
       { path: '/', label: 'Dashboard', icon: 'LayoutDashboard', permission: PERMISSIONS.DASHBOARD_VIEW },
+      { path: '/engine-admin', label: 'Engine Admin', icon: 'Settings', permission: PERMISSIONS.DASHBOARD_VIEW },
     ],
   },
   {

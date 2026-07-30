@@ -43,6 +43,7 @@ import { ClientFundsPage } from './pages/ClientFunds';
 import { ShiftCareInvoicesPage } from './pages/ShiftCareInvoices';
 import { CompliancePage } from './pages/Compliance';
 import { WebhooksPage } from './pages/admin/Webhooks';
+import EngineAdmin from './pages/EngineAdmin';
 import { canAccessPath, getDefaultLanding } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 import { useUiPreferencesStore, resolveTheme } from './store/uiPreferences';
@@ -217,6 +218,14 @@ function App() {
             <Route path="coverage" element={<RateCardCoverage />} />
             <Route path="data-quality" element={<DataQuality />} />
           </Route>
+          <Route
+            path="/engine-admin"
+            element={
+              <ProtectedRoute>
+                <EngineAdmin />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/workforce"
             element={

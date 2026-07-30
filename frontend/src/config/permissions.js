@@ -61,6 +61,7 @@ export const canAccessPath = (permissions, path) => {
     return hasPermission(permissions, PERMISSIONS.FORECAST_ANALYSIS_VIEW);
   }
   if (path === '/') return hasPermission(permissions, PERMISSIONS.DASHBOARD_VIEW);
+  if (path === '/engine-admin') return hasPermission(permissions, PERMISSIONS.DASHBOARD_VIEW);
   if (path === '/staff') return hasPermission(permissions, PERMISSIONS.STAFF_VIEW);
   if (path === '/clients') return hasPermission(permissions, PERMISSIONS.CLIENTS_VIEW);
   if (path === '/timesheets') return hasPermission(permissions, PERMISSIONS.TIMESHEETS_VIEW);
