@@ -1,266 +1,365 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { getEngineStatus, suggestEngineUpdate, applyEngineUpdate } from '../api/engine';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Bot,
+  CheckCircle2,
+  Loader2,
+  Send,
+  Sparkles,
+  User,
+  Wrench,
+  XCircle,
+} from 'lucide-react';
+import { ChatMarkdown } from '../components/ChatMarkdown';
+import { PageHeader } from '../components/PageHeader';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
+import {
+  applyEngineProposal,
+  getEngineStatus,
+  getErrorMessage,
+  sendEngineChat,
+} from '../api/engine';
+
+const WELCOME_MESSAGE = {
+  id: 'welcome',
+  role: 'assistant',
+  content:
+    "Hi, I'm your Pay Rules Assistant. I can explain how wages, overtime, penalties, and allowances are calculated — and help you request changes in plain language.\n\nWhat would you like to know?",
+};
+
+const SUGGESTED_PROMPTS = [
+  'How is overtime calculated?',
+  'Explain Saturday and Sunday penalty rates',
+  'What happens on public holidays?',
+  'I need to change a pay rule',
+];
+
+function toApiMessages(messages) {
+  return messages
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .filter((m) => m.id !== 'welcome')
+    .map((m) => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content,
+    }));
+}
+
+function ProposalCard({ proposal, onApply, onDismiss, applying, applied, applyError }) {
+  if (!proposal || applied) return null;
+
+  return (
+    <Card className="mt-3 border-primary/20 bg-primary/5">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start gap-2">
+          <Sparkles className="size-4 text-primary mt-0.5 shrink-0" />
+          <div className="space-y-1 min-w-0">
+            <p className="font-medium text-sm">Proposed change</p>
+            <p className="text-sm">{proposal.summary}</p>
+            {proposal.impact && (
+              <p className="text-2sm text-muted-foreground">{proposal.impact}</p>
+            )}
+          </div>
+        </div>
+
+        {applyError && (
+          <p className="text-sm text-destructive flex items-center gap-1.5">
+            <XCircle className="size-3.5 shrink-0" />
+            {applyError}
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={onApply} disabled={applying}>
+            {applying ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                Applying...
+              </>
+            ) : (
+              'Apply this change'
+            )}
+          </Button>
+          <Button size="sm" variant="outline" onClick={onDismiss} disabled={applying}>
+            Not now
+          </Button>
+        </div>
+        <p className="text-2xs text-muted-foreground">
+          I&apos;ll run safety checks before saving any change.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AgentSteps({ steps }) {
+  if (!steps?.length) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {steps.map((step, index) => (
+        <Badge key={`${step.tool}-${index}`} variant="outline" className="gap-1">
+          <Wrench className="size-3" />
+          {step.label}
+        </Badge>
+      ))}
+    </div>
+  );
+}
 
 export default function EngineAdmin() {
   const [status, setStatus] = useState(null);
+  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [prompt, setPrompt] = useState('');
-  const [applying, setApplying] = useState(false);
-  const [applyResult, setApplyResult] = useState(null);
+  const [applyingId, setApplyingId] = useState(null);
   const chatEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    fetchStatus();
+    getEngineStatus()
+      .then(setStatus)
+      .catch(() => setStatus(null));
   }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, loading]);
 
-  const fetchStatus = async () => {
-    try {
-      const data = await getEngineStatus();
-      setStatus(data);
-    } catch (error) {
-      console.error('Failed to fetch engine status:', error);
-    }
-  };
+  const sendMessage = async (text) => {
+    const trimmed = text.trim();
+    if (!trimmed || loading) return;
 
-  const handleSendPrompt = async () => {
-    if (!prompt.trim()) return;
+    const userMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: trimmed,
+    };
 
-    const userMessage = { role: 'user', content: prompt };
-    setMessages(prev => [...prev, userMessage]);
-    setPrompt('');
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
+    setInput('');
     setLoading(true);
 
     try {
-      const suggestion = await suggestEngineUpdate(prompt);
-      const aiMessage = {
-        role: 'ai',
-        content: suggestion.suggestion,
-        diff: suggestion.diff,
-        currentVersion: suggestion.currentVersion,
-        codePreview: suggestion.currentCode,
-        recommendations: suggestion.recommendations,
-      };
-      setMessages(prev => [...prev, aiMessage]);
-    } catch (error) {
-      setMessages(prev => [
+      const result = await sendEngineChat(toApiMessages(nextMessages));
+      setMessages((prev) => [
         ...prev,
-        { role: 'ai', content: `Error: ${error.message}`, error: true },
+        {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: result.reply,
+          steps: result.steps || [],
+          proposal: result.proposal || null,
+        },
+      ]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-error-${Date.now()}`,
+          role: 'assistant',
+          content: getErrorMessage(error),
+          error: true,
+        },
       ]);
     } finally {
       setLoading(false);
+      inputRef.current?.focus();
     }
   };
 
-  const handleApply = async (diff, index) => {
-    if (!diff) {
-      alert('No diff to apply. Please request a suggestion first.');
-      return;
-    }
+  const handleApply = async (message) => {
+    if (!message.proposal?.code || applyingId) return;
 
-    setApplying(true);
-    setApplyResult(null);
+    setApplyingId(message.id);
+    setMessages((prev) =>
+      prev.map((m) => (m.id === message.id ? { ...m, applyError: null } : m))
+    );
 
     try {
-      const result = await applyEngineUpdate(diff, { source: 'admin-ui' });
-      setApplyResult({ success: true, data: result });
-      // Refresh status after apply
-      await fetchStatus();
-      // Update the message with a success indicator
-      const updatedMessages = [...messages];
-      updatedMessages[index] = {
-        ...updatedMessages[index],
-        applied: true,
-        applyResult: result,
-      };
-      setMessages(updatedMessages);
+      const result = await applyEngineProposal(message.proposal.code, {
+        source: 'pay-rules-assistant',
+        proposalId: message.proposal.id,
+      });
+
+      const refreshed = await getEngineStatus();
+      setStatus(refreshed);
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === message.id
+            ? {
+                ...m,
+                proposal: null,
+                applied: true,
+                applyResult: result,
+              }
+            : m
+        )
+      );
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-applied-${Date.now()}`,
+          role: 'assistant',
+          content: `Done — the pay rules have been updated.\n\nNew version: ${result.version}\nSafety checks: ${result.testResults?.passedTests ?? 'all'} passed.`,
+        },
+      ]);
     } catch (error) {
-      setApplyResult({ success: false, error: error.message });
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === message.id
+            ? { ...m, applyError: getErrorMessage(error) }
+            : m
+        )
+      );
     } finally {
-      setApplying(false);
+      setApplyingId(null);
     }
   };
 
+  const dismissProposal = (messageId) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, proposal: null } : m))
+    );
+  };
+
+  const statusLabel = status?.ready
+    ? 'Pay rules are up to date'
+    : 'Pay rules are loading';
+
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">⚙️ Engine Admin</h1>
+    <div className="mx-auto flex h-[calc(100vh-7rem)] max-w-4xl flex-col gap-4">
+      <PageHeader
+        title="Pay Rules Assistant"
+        description="Ask questions or request pay rule changes in everyday language."
+      >
+        <Badge variant={status?.ready ? 'success' : 'warning'}>
+          {status?.currentVersion ? `Version ${status.currentVersion}` : statusLabel}
+        </Badge>
+      </PageHeader>
 
-      {/* Status Bar */}
-      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-6 flex flex-wrap items-center gap-4">
-        {status ? (
-          <>
-            <span className="font-mono text-sm bg-gray-200 dark:bg-gray-700 px-3 py-1 rounded">
-              v{status.currentVersion || 'unknown'}
-            </span>
-            <span className={`text-sm ${status.ready ? 'text-green-600' : 'text-yellow-600'}`}>
-              {status.ready ? '✅ Ready' : '⏳ Loading'}
-            </span>
-            <span className="text-sm text-gray-500">
-              {status.versions?.length || 0} versions cached
-            </span>
-            <button
-              onClick={fetchStatus}
-              className="ml-auto text-sm text-blue-600 hover:underline"
-            >
-              Refresh
-            </button>
-          </>
-        ) : (
-          <span>Loading status...</span>
-        )}
-      </div>
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.map((message) => {
+              const isUser = message.role === 'user';
 
-      {/* Chat Area */}
-      <div className="border rounded-lg overflow-hidden bg-white dark:bg-gray-900">
-        <div className="h-96 overflow-y-auto p-4 space-y-4">
-          {messages.length === 0 ? (
-            <div className="text-center text-gray-400 mt-20">
-              <p className="text-lg">🤖 Ask me to suggest an engine improvement</p>
-              <p className="text-sm">
-                Example: "optimize normalizeRateCard" or "fix bug in calcGrossFromRates"
-              </p>
-            </div>
-          ) : (
-            messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
+              return (
                 <div
-                  className={`max-w-3xl rounded-lg p-3 ${
-                    msg.role === 'user'
-                      ? 'bg-blue-500 text-white'
-                      : msg.error
-                      ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
-                      : 'bg-gray-100 dark:bg-gray-800'
-                  }`}
+                  key={message.id}
+                  className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
                 >
-                  {msg.role === 'user' ? (
-                    <p>{msg.content}</p>
-                  ) : (
-                    <div>
-                      <div className="whitespace-pre-wrap text-sm">{msg.content}</div>
-                      {msg.diff && (
-                        <div className="mt-2">
-                          <details>
-                            <summary className="text-sm font-medium text-blue-600 dark:text-blue-400 cursor-pointer">
-                              View diff / suggestion
-                            </summary>
-                            <pre className="mt-2 p-2 bg-gray-200 dark:bg-gray-700 rounded text-xs overflow-auto max-h-60">
-                              {msg.diff}
-                            </pre>
-                          </details>
-                          {!msg.applied && (
-                            <button
-                              onClick={() => handleApply(msg.diff, idx)}
-                              disabled={applying}
-                              className="mt-2 px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm"
-                            >
-                              {applying ? 'Applying...' : '✅ Apply'}
-                            </button>
-                          )}
-                          {msg.applied && (
-                            <span className="mt-2 inline-block text-green-600 text-sm">
-                              ✅ Applied successfully
-                            </span>
-                          )}
-                          {msg.recommendations && (
-                            <div className="mt-2 text-xs text-gray-500">
-                              <strong>Recommendations:</strong>
-                              <ul className="list-disc list-inside">
-                                {msg.recommendations.map((rec, i) => (
-                                  <li key={i}>{rec}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
+                  {!isUser && (
+                    <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Bot className="size-4" />
+                    </div>
+                  )}
+
+                  <div className={`max-w-[85%] space-y-1 ${isUser ? 'items-end' : 'items-start'}`}>
+                    <div
+                      className={`rounded-2xl px-4 py-3 ${
+                        isUser
+                          ? 'bg-primary text-primary-foreground'
+                          : message.error
+                            ? 'bg-destructive/10 text-destructive'
+                            : 'bg-muted'
+                      }`}
+                    >
+                      {isUser || message.error ? (
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      ) : (
+                        <ChatMarkdown content={message.content} />
                       )}
-                      {msg.codePreview && (
-                        <details className="mt-2">
-                          <summary className="text-sm font-medium text-gray-500 cursor-pointer">
-                            Current code (preview)
-                          </summary>
-                          <pre className="mt-2 p-2 bg-gray-200 dark:bg-gray-700 rounded text-xs overflow-auto max-h-40">
-                            {msg.codePreview}
-                          </pre>
-                        </details>
-                      )}
+                    </div>
+
+                    {!isUser && <AgentSteps steps={message.steps} />}
+
+                    {!isUser && message.applied && (
+                      <p className="text-2sm text-success flex items-center gap-1.5 px-1">
+                        <CheckCircle2 className="size-3.5" />
+                        Change applied successfully
+                      </p>
+                    )}
+
+                    {!isUser && (
+                      <ProposalCard
+                        proposal={message.proposal}
+                        applying={applyingId === message.id}
+                        applied={message.applied}
+                        applyError={message.applyError}
+                        onApply={() => handleApply(message)}
+                        onDismiss={() => dismissProposal(message.id)}
+                      />
+                    )}
+                  </div>
+
+                  {isUser && (
+                    <div className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                      <User className="size-4 text-muted-foreground" />
                     </div>
                   )}
                 </div>
+              );
+            })}
+
+            {loading && (
+              <div className="flex gap-3">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Bot className="size-4" />
+                </div>
+                <div className="rounded-2xl bg-muted px-4 py-3 text-sm text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Thinking...
+                </div>
               </div>
-            ))
-          )}
-          {loading && (
-            <div className="flex justify-start">
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-                <span className="animate-pulse">•••</span>
-              </div>
+            )}
+
+            <div ref={chatEndRef} />
+          </div>
+
+          {messages.length === 1 && (
+            <div className="border-t px-4 py-3 flex flex-wrap gap-2">
+              {SUGGESTED_PROMPTS.map((prompt) => (
+                <Button
+                  key={prompt}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={loading}
+                  onClick={() => sendMessage(prompt)}
+                >
+                  {prompt}
+                </Button>
+              ))}
             </div>
           )}
-          <div ref={chatEndRef} />
-        </div>
 
-        {/* Input Area */}
-        <div className="border-t p-4 bg-gray-50 dark:bg-gray-800 flex gap-2">
-          <input
-            type="text"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSendPrompt()}
-            placeholder="Ask for a suggestion (e.g., 'optimize normalizeRateCard')..."
-            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={loading}
-          />
-          <button
-            onClick={handleSendPrompt}
-            disabled={loading || !prompt.trim()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          <form
+            className="border-t p-4 flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendMessage(input);
+            }}
           >
-            Send
-          </button>
-        </div>
-      </div>
-
-      {/* Apply Result Notification */}
-      {applyResult && (
-        <div
-          className={`mt-4 p-3 rounded-lg ${
-            applyResult.success
-              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
-              : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
-          }`}
-        >
-          {applyResult.success ? (
-            <div>
-              <p className="font-medium">✅ Engine updated successfully!</p>
-              <p className="text-sm">
-                New version: {applyResult.data?.version} | Applied at:{' '}
-                {new Date(applyResult.data?.appliedAt).toLocaleString()}
-              </p>
-              {applyResult.data?.testResults && (
-                <p className="text-sm">
-                  Tests: {applyResult.data.testResults.passedTests || 0} passed,{' '}
-                  {applyResult.data.testResults.failedTests || 0} failed
-                </p>
-              )}
-            </div>
-          ) : (
-            <p className="font-medium">❌ Apply failed: {applyResult.error}</p>
-          )}
-          <button
-            onClick={() => setApplyResult(null)}
-            className="mt-2 text-sm underline"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about pay rules or describe a change you'd like..."
+              className="flex-1 rounded-lg border border-input bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              disabled={loading}
+            />
+            <Button type="submit" disabled={loading || !input.trim()}>
+              {loading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              <span className="sr-only">Send</span>
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

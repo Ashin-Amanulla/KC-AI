@@ -13,13 +13,39 @@ class UpdateManager {
   }
 
   async validateSyntax(code) {
+    const tmpPath = path.join(this.engineDir, `.syntax-check-${Date.now()}.js`);
+
     try {
-      // Use Node's VM to validate syntax
-      const { Script } = await import('vm');
-      new Script(code);
-      return { valid: true };
-    } catch (error) {
-      return { valid: false, error: error.message };
+      fs.writeFileSync(tmpPath, code, 'utf8');
+
+      return await new Promise((resolve) => {
+        const child = spawn('node', ['--check', tmpPath]);
+        let stderr = '';
+
+        child.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        child.on('close', (exitCode) => {
+          if (exitCode === 0) {
+            resolve({ valid: true });
+            return;
+          }
+
+          resolve({
+            valid: false,
+            error: stderr.replace(/\u001b\[[0-9;]*m/g, '').trim() || 'Syntax check failed',
+          });
+        });
+
+        child.on('error', (error) => {
+          resolve({ valid: false, error: error.message });
+        });
+      });
+    } finally {
+      if (fs.existsSync(tmpPath)) {
+        fs.unlinkSync(tmpPath);
+      }
     }
   }
 

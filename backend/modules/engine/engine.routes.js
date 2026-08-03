@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
@@ -7,6 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import engineLoader from './engineLoader.js';
 import updateManager from './updateManager.js';
+import { runEngineAgentChat } from './engineAgent.js';
 
 const router = express.Router();
 
@@ -109,91 +109,83 @@ router.post('/update', async (req, res) => {
   }
 });
 
-// Engine suggestion endpoint (simulated AI) - returns suggested updates
-router.post('/suggest', async (req, res) => {
-  console.log('🤖 Received engine suggestion request');
-  const { prompt, specificFix, context } = req.body;
+// Conversational agent for non-technical users
+router.post('/chat', async (req, res) => {
+  const { messages } = req.body;
 
-  if (!prompt && !specificFix) {
+  if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({
       success: false,
-      error: 'Missing required fields',
-      message: 'Request must contain "prompt" or "specificFix"',
-      timestamp: new Date().toISOString()
+      error: 'Missing messages',
+      message: 'Request must include a non-empty messages array',
+      timestamp: new Date().toISOString(),
     });
   }
 
   try {
-    const status = updateManager.getEngineStatus();
-    const currentVersion = status.currentVersion;
+    const result = await runEngineAgentChat(messages);
+    res.status(200).json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('❌ Engine chat error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Chat failed',
+      message: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
 
-    // Read current engine source
-    const enginePath = path.join(__dirname, '..', 'pay-hours', 'engine', 'wageEngine.js');
-    let currentCode = fs.readFileSync(enginePath, 'utf8');
+// Apply a proposal from the conversational agent
+router.post('/apply-proposal', async (req, res) => {
+  const { code, metadata = {} } = req.body;
 
-    const userPrompt = prompt || specificFix;
-    const systemPrompt = `You are an expert JavaScript developer. You are given the full source code of a wage calculation engine. The user will request an improvement or fix. Respond with ONLY a unified diff (like git diff) that modifies the code to satisfy the request. Do not include explanations, only the diff.`;
+  if (!code) {
+    return res.status(400).json({
+      success: false,
+      error: 'Missing code',
+      message: 'Request must include the proposed rule code',
+      timestamp: new Date().toISOString(),
+    });
+  }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY not set in environment');
-    }
-
-    // Call OpenAI
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `User request: ${userPrompt}\n\nCode:\n${currentCode}` }
-        ],
-        max_tokens: 1500,
-        temperature: 0.2
-      })
+  try {
+    const result = await updateManager.applyCodeUpdate(code, {
+      ...metadata,
+      source: metadata.source || 'pay-rules-assistant',
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Apply failed',
+        message: result.error,
+        details: { stage: result.stage, testResults: result.testResults },
+        timestamp: new Date().toISOString(),
+      });
     }
-
-    const data = await response.json();
-    const suggestionText = data.choices?.[0]?.message?.content || 'No suggestion generated.';
-
-    // Assume the entire response is the diff
-    const diff = suggestionText;
-
-    // Build a short human-readable summary
-    const suggestion = `AI suggestion: ${diff.split('\n').slice(0, 3).join(' ')}...`;
 
     res.status(200).json({
       success: true,
+      message: 'Pay rules updated successfully',
       data: {
-        suggestion,
-        diff,
-        currentVersion,
-        currentCode: currentCode.substring(0, 1000) + (currentCode.length > 1000 ? '...' : ''),
-        recommendations: [
-          'Review the diff carefully before applying',
-          'Run the full test suite after applying',
-          'Monitor performance after engine switch'
-        ]
+        version: result.version,
+        appliedAt: result.metadata.appliedAt,
+        testResults: result.testResults,
       },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-
   } catch (error) {
-    console.error('❌ Engine suggestion error:', error);
+    console.error('❌ Apply proposal error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to generate suggestion',
+      error: 'Internal server error',
       message: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 });

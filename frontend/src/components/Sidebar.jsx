@@ -24,6 +24,7 @@ import {
   ShieldAlert,
   Receipt,
   Webhook,
+  Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { useUiPreferencesStore } from '../store/uiPreferences';
@@ -52,6 +53,7 @@ const iconMap = {
   ShieldAlert,
   Receipt,
   Webhook,
+  Sparkles,
 };
 
 function isItemActive(item, pathname, hasFullRoster) {
