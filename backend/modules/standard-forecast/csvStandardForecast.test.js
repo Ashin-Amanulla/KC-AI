@@ -13,6 +13,8 @@ test('normalizeColumnName applies aliases', () => {
   assert.strictEqual(normalizeColumnName('Start  Time'), 'start date time');
   assert.strictEqual(normalizeColumnName('Cost'), 'total cost');
   assert.strictEqual(normalizeColumnName('Name'), 'client name');
+  assert.strictEqual(normalizeColumnName('Rate Group'), 'rate groups');
+  assert.strictEqual(normalizeColumnName('Reference Number'), 'reference no');
 });
 
 test('validateHeaders accepts Standard Billing Report column names', () => {
@@ -27,6 +29,24 @@ test('validateHeaders accepts Standard Billing Report column names', () => {
     'Reference No',
     'Shift Type',
     'Client Type',
+    'Ratio',
+  ];
+  const norm = buildNormalizedColumns(headers);
+  const errs = validateHeaders(new Set(norm.keys()));
+  assert.deepStrictEqual(errs, []);
+});
+
+test('validateHeaders accepts singular rate group and reference number headers', () => {
+  const headers = [
+    'Day',
+    'Client Name',
+    'Start Time',
+    'End Time',
+    'Duration',
+    'Cost',
+    'Rate Group',
+    'Reference Number',
+    'Shift Type',
     'Ratio',
   ];
   const norm = buildNormalizedColumns(headers);

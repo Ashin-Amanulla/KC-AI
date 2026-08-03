@@ -367,6 +367,8 @@ const STANDARD_CSV_HEADER = [
   'End Time',
   'Duration',
   'Cost',
+  'Rate Group',
+  'Reference Number',
   'Shift Type',
   'Ratio',
 ];
@@ -379,6 +381,8 @@ function standardRowToExportArray(r) {
     r.endTime,
     r.duration,
     r.totalCost,
+    r.rateGroups || '',
+    r.referenceNo || '',
     r.shiftType || '',
     normalizeRatio(r.ratio || ''),
   ];
@@ -698,6 +702,7 @@ export function computeStandardVarianceDiff(std, fcs) {
     diff.push('shift_id');
   }
   if (String(std.rateGroups || '') !== String(fcs.rateGroups || '')) diff.push('rate_groups');
+  if (String(std.referenceNo || '') !== String(fcs.referenceNo || '')) diff.push('reference_no');
   if (String(std.shiftType || '') !== String(fcs.shiftType || '')) diff.push('shift_type');
   if (normalizeRatio(std.ratio) !== normalizeRatio(fcs.ratio)) diff.push('ratio');
   return diff;
@@ -727,6 +732,7 @@ function serializeStandardTemplateRow(stdRow, dayCount) {
     duration: roundMoney(stdRow.duration || 0),
     totalCost,
     rateGroups: stdRow.rateGroups || '',
+    referenceNo: stdRow.referenceNo || '',
     shiftType: stdRow.shiftType || '',
     ratio: stdRow.ratio || '',
     diffFields: [],

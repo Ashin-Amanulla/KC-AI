@@ -433,9 +433,16 @@ export function StandardTemplatesSection({ locationId, client, directory, dirLoa
                                 className={cn(
                                   col.align === 'right' ? 'text-right whitespace-nowrap' : 'whitespace-nowrap',
                                   col.key === 'clientName' && 'max-w-[200px] truncate',
-                                  col.key === 'rateGroups' && 'max-w-[240px] truncate'
+                                  col.key === 'rateGroups' && 'max-w-[240px] truncate',
+                                  col.key === 'referenceNo' && 'max-w-[160px] truncate'
                                 )}
-                                title={col.key === 'rateGroups' ? r.rateGroups || undefined : undefined}
+                                title={
+                                  col.key === 'rateGroups'
+                                    ? r.rateGroups || undefined
+                                    : col.key === 'referenceNo'
+                                      ? r.referenceNo || undefined
+                                      : undefined
+                                }
                               >
                                 {varianceCellValue(r, col.key)}
                               </TableCell>

@@ -18,6 +18,7 @@ export const VARIANCE_COLUMNS = [
   { key: 'totalCost', label: 'Total cost', align: 'right' },
   { key: 'shiftcareId', label: 'Shift id', align: 'left' },
   { key: 'rateGroups', label: 'Rate groups', align: 'left' },
+  { key: 'referenceNo', label: 'Reference no', align: 'left' },
   { key: 'shiftType', label: 'Shift type', align: 'left' },
   { key: 'ratio', label: 'Ratio', align: 'left' },
 ];
@@ -31,6 +32,7 @@ export const VARIANCE_DIFF_KEYS = {
   totalCost: 'total_cost',
   shiftcareId: 'shift_id',
   rateGroups: 'rate_groups',
+  referenceNo: 'reference_no',
   shiftType: 'shift_type',
   ratio: 'ratio',
 };
@@ -44,6 +46,7 @@ export const VARIANCE_DIFF_LABELS = {
   total_cost: 'Total cost',
   shift_id: 'Shift id',
   rate_groups: 'Rate groups',
+  reference_no: 'Reference no',
   shift_type: 'Shift type',
   ratio: 'Ratio',
 };
@@ -107,6 +110,8 @@ export function varianceCellValue(r, key, options = {}) {
       return r.shiftcareId || r.templateKey || '—';
     case 'rateGroups':
       return r.rateGroups || '—';
+    case 'referenceNo':
+      return r.referenceNo || '—';
     case 'shiftType':
       return r.shiftType || '—';
     case 'ratio':
@@ -133,6 +138,8 @@ export function VarianceDataCells({
             col.align === 'right' ? 'text-right whitespace-nowrap' : 'whitespace-nowrap',
             col.key === 'shiftcareId' && 'font-mono text-xs',
             col.key === 'clientName' && 'max-w-[200px] truncate',
+            col.key === 'rateGroups' && 'max-w-[240px] truncate',
+            col.key === 'referenceNo' && 'max-w-[160px] truncate',
             diffCell(row, col.key)
           )}
         >
