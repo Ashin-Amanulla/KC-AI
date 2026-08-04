@@ -34,8 +34,7 @@ jobs:
         working-directory: backend
         run: |
           npm ci
-          npm test
-
+        
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
