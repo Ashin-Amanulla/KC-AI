@@ -2,7 +2,11 @@ name: Deploy Frontend to EC2
 
 on:
   push:
-    branches: [uat]
+    branches:
+      - uat
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-uat-frontend.yml'
 
 jobs:
   deploy-frontend:
@@ -15,8 +19,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Verify & Build Frontend
@@ -28,8 +32,8 @@ jobs:
           npm run verify
 
       - name: Rename dist to kc-ai
+        working-directory: frontend
         run: |
-          cd frontend
           mv dist kc-ai
 
       - name: Verify SSH connection
@@ -77,7 +81,9 @@ jobs:
           timeout: 60s
           debug: true
           script: |
-            echo "Deploying kc-aifrontend..."
+            set -e
+
+            echo "Deploying kc-ai frontend..."
 
             sudo rm -rf /var/www/html/kc-ai-uat
             sudo mkdir -p /var/www/html/kc-ai-uat
@@ -85,11 +91,13 @@ jobs:
             sudo cp -R ~/deploy-temp/* /var/www/html/kc-ai-uat
 
             sudo chown -R www-data:www-data /var/www/html/kc-ai-uat
-            sudo chmod -R 755 /var/www/html/kc-ai
+            sudo chmod -R 755 /var/www/html/kc-ai-uat
 
-            sudo rm -rf ~/deploy-temp
+            rm -rf ~/deploy-temp
 
             echo "Restarting Nginx..."
             sudo systemctl restart nginx
 
-            echo "kc-aifrontend deployed successfully!"
+            echo "kc-ai frontend deployed successfully!"
+
+            sudo systemctl status nginx --no-pager
