@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - uat
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-uat.yml'
 
 env:
   AWS_REGION: ap-southeast-2
@@ -101,8 +104,6 @@ jobs:
               --env-file $ENV_FILE \
               -e REDIS_URL=redis://kc-ai_redis:6379 \
               $IMAGE
-
-            
 
             echo "Deployment successful."
 
