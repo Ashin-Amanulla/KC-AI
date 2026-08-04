@@ -6,7 +6,7 @@ on:
       - uat
     paths:
       - 'backend/**'
-      - '.github/workflows/backend-uat.yml'
+      - '.github/workflows/deploy-uat-backend-uat.yml'
 
 env:
   AWS_REGION: ap-southeast-2
