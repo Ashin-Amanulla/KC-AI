@@ -30,11 +30,11 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
-      - name: Install Dependencies & Run Tests
+      - name: Install Dependencies
         working-directory: backend
         run: |
           npm ci
-        
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -75,10 +75,17 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+
+          # Pass variables to the remote SSH session
+          envs: REGISTRY,AWS_REGION,ECR_REPOSITORY,CONTAINER_NAME,NETWORK_NAME,ENV_FILE
+
           script: |
             set -e
 
             IMAGE=$REGISTRY/$ECR_REPOSITORY:latest
+
+            echo "AWS_REGION=$AWS_REGION"
+            echo "REGISTRY=$REGISTRY"
 
             echo "Logging into ECR..."
             aws ecr get-login-password --region $AWS_REGION | \
