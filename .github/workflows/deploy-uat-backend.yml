@@ -13,7 +13,7 @@ env:
   ECR_REPOSITORY: kc-ai
   CONTAINER_NAME: kc-ai-uat-backend
   NETWORK_NAME: kc-ai-network
-  ENV_FILE: /opt/kc-ai/.env.uat
+  ENV_FILE: /opt/kc-ai-uat/.env.uat
 
 jobs:
   deploy-backend:
