@@ -10,7 +10,7 @@ on:
 
 env:
   AWS_REGION: ap-southeast-2
-  ECR_REPOSITORY: kc-ai-uat-backend
+  ECR_REPOSITORY: kc-ai
   CONTAINER_NAME: kc-ai-uat-backend
   NETWORK_NAME: kc-ai-network
   ENV_FILE: /opt/kc-ai/.env.uat
