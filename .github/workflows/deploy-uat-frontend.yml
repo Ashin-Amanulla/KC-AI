@@ -1,0 +1,103 @@
+name: Deploy Frontend to EC2
+
+on:
+  push:
+    branches:
+      - uat
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-uat-frontend.yml'
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Verify & Build Frontend
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL_TEST }}
+        run: |
+          npm ci
+          npm run verify
+
+      - name: Rename dist to kc-ai
+        working-directory: frontend
+        run: |
+          mv dist kc-ai
+
+      - name: Verify SSH connection
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 60s
+          debug: true
+          script: |
+            echo "SSH connection successful"
+            whoami
+            pwd
+
+      - name: Prepare Temp Directory
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 60s
+          debug: true
+          script: |
+            rm -rf ~/deploy-temp
+            mkdir -p ~/deploy-temp
+            chmod 775 ~/deploy-temp
+
+      - name: Deploy to EC2 using rsync
+        uses: burnett01/rsync-deployments@5.2.1
+        with:
+          switches: -avzr --delete
+          path: ./frontend/kc-ai/
+          remote_path: ~/deploy-temp/
+          remote_host: ${{ secrets.EC2_HOST }}
+          remote_user: ${{ secrets.EC2_USER }}
+          remote_key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 60s
+          debug: true
+          script: |
+            set -e
+
+            echo "Deploying kc-ai frontend..."
+
+            sudo rm -rf /var/www/html/kc-ai-uat
+            sudo mkdir -p /var/www/html/kc-ai-uat
+
+            sudo cp -R ~/deploy-temp/* /var/www/html/kc-ai-uat
+
+            sudo chown -R www-data:www-data /var/www/html/kc-ai-uat
+            sudo chmod -R 755 /var/www/html/kc-ai-uat
+
+            rm -rf ~/deploy-temp
+
+            echo "Restarting Nginx..."
+            sudo systemctl restart nginx
+
+            echo "kc-ai frontend deployed successfully!"
+
+            sudo systemctl status nginx --no-pager
