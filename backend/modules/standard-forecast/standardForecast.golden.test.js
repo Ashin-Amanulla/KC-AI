@@ -146,6 +146,7 @@ const baseStd = {
   duration: 4,
   totalCost: 400,
   rateGroups: 'RG1',
+  referenceNo: '01_811_0138_1_1',
   shiftType: 'Personal Care',
   ratio: '1:1',
   templateKey: 'c1|monday|06:00',
@@ -174,6 +175,11 @@ test('golden: computeStandardVarianceDiff detects total_cost only', () => {
 test('golden: computeStandardVarianceDiff detects rate_groups only', () => {
   const fcs = { ...baseStd, rateGroups: 'RG2' };
   assert.deepStrictEqual(computeStandardVarianceDiff(baseStd, fcs), ['rate_groups']);
+});
+
+test('golden: computeStandardVarianceDiff detects reference_no only', () => {
+  const fcs = { ...baseStd, referenceNo: '01_812_0138_1_1' };
+  assert.deepStrictEqual(computeStandardVarianceDiff(baseStd, fcs), ['reference_no']);
 });
 
 test('golden: computeStandardVarianceDiff detects shift_type only', () => {
