@@ -1,0 +1,146 @@
+{
+  "generatedAt": "2026-08-05T07:45:54.103Z",
+  "mainRoot": "/home/cntrlx/Code/Xyvin/KCXyvin/kcai-main",
+  "uatRoot": "/home/cntrlx/Code/Xyvin/KCXyvin/kcai",
+  "fixtureCount": 8,
+  "mainUatIdentical": 6,
+  "mainUatDifferent": 2,
+  "results": [
+    {
+      "name": "anzac-cross-midnight",
+      "description": "Friday-night shift crossing midnight into ANZAC Day (Sat 25 Apr 2026, public hol",
+      "mainUatMatch": true,
+      "fieldDiffs": [],
+      "mainVsBlessed": {
+        "label": "main-vs-blessed",
+        "match": true,
+        "diffs": []
+      },
+      "uatVsBlessed": {
+        "label": "uat-vs-blessed",
+        "match": true,
+        "diffs": []
+      }
+    },
+    {
+      "name": "broken-shift-boundary",
+      "description": "Exactly-10h rest after an overnight PC shift is adequate (not broken); a 9.5h ga",
+      "mainUatMatch": true,
+      "fieldDiffs": [],
+      "mainVsBlessed": {
+        "label": "main-vs-blessed",
+        "match": true,
+        "diffs": []
+      },
+      "uatVsBlessed": {
+        "label": "uat-vs-blessed",
+        "match": true,
+        "diffs": []
+      }
+    },
+    {
+      "name": "double-count-broken-evening",
+      "description": "Morning PC 8-12 plus broken evening PC 21-23 on the same weekday: buckets must s",
+      "mainUatMatch": false,
+      "fieldDiffs": [
+        {
+          "field": "morningHours",
+          "main": 0,
+          "uat": 4,
+          "delta": 4
+        },
+        {
+          "field": "afternoonHours",
+          "main": 4,
+          "uat": 0,
+          "delta": -4
+        }
+      ],
+      "mainVsBlessed": {
+        "label": "main-vs-blessed",
+        "match": false,
+        "diffs": [
+          {
+            "field": "morningHours",
+            "expected": 4,
+            "actual": 0,
+            "branch": "main-vs-blessed"
+          },
+          {
+            "field": "afternoonHours",
+            "expected": 0,
+            "actual": 4,
+            "branch": "main-vs-blessed",
+            "extra": true
+          }
+        ]
+      },
+      "uatVsBlessed": {
+        "label": "uat-vs-blessed",
+        "match": true,
+        "diffs": []
+      }
+    },
+    {
+      "name": "sleepover-ot76-fortnight",
+      "description": "Full synthetic fortnight: ordinary weekday PC, an 8h sleepover (allowance only),",
+      "mainUatMatch": true,
+      "fieldDiffs": [],
+      "mainVsBlessed": {
+        "label": "main-vs-blessed",
+        "match": true,
+        "diffs": []
+      },
+      "uatVsBlessed": {
+        "label": "uat-vs-blessed",
+        "match": true,
+        "diffs": []
+      }
+    },
+    {
+      "name": "kc-studio/krishnaBrokenShiftMay25",
+      "description": "krishnaBrokenShiftMay25.json",
+      "mainUatMatch": true,
+      "fieldDiffs": [],
+      "mainVsBlessed": null,
+      "uatVsBlessed": null
+    },
+    {
+      "name": "kc-studio/rahulBrokenShiftMay22",
+      "description": "rahulBrokenShiftMay22.json",
+      "mainUatMatch": false,
+      "fieldDiffs": [
+        {
+          "field": "afternoonHours",
+          "main": 8,
+          "uat": 0,
+          "delta": -8
+        },
+        {
+          "field": "nightHours",
+          "main": 0,
+          "uat": 8,
+          "delta": 8
+        }
+      ],
+      "mainVsBlessed": null,
+      "uatVsBlessed": null
+    },
+    {
+      "name": "kc-studio/sonaSleepoverChainMay19",
+      "description": "sonaSleepoverChainMay19.json",
+      "mainUatMatch": true,
+      "fieldDiffs": [],
+      "mainVsBlessed": null,
+      "uatVsBlessed": null
+    },
+    {
+      "name": "kc-studio/sonaSleepoverChainMay22",
+      "description": "sonaSleepoverChainMay22.json",
+      "mainUatMatch": true,
+      "fieldDiffs": [],
+      "mainVsBlessed": null,
+      "uatVsBlessed": null
+    }
+  ]
+}
