@@ -43,6 +43,8 @@ import { ClientFundsPage } from './pages/ClientFunds';
 import { ShiftCareInvoicesPage } from './pages/ShiftCareInvoices';
 import { CompliancePage } from './pages/Compliance';
 import { WebhooksPage } from './pages/admin/Webhooks';
+import { SilEstimatesList } from './pages/sil-estimates/SilEstimatesList';
+import { SilEstimateEditor } from './pages/sil-estimates/SilEstimateEditor';
 import { canAccessPath, getDefaultLanding } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 import { useUiPreferencesStore, resolveTheme } from './store/uiPreferences';
@@ -302,6 +304,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <WebhooksPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sil-estimates"
+            element={
+              <ProtectedRoute>
+                <SilEstimatesList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sil-estimates/:id"
+            element={
+              <ProtectedRoute>
+                <SilEstimateEditor />
               </ProtectedRoute>
             }
           />

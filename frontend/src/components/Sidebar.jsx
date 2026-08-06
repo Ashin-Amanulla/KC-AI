@@ -24,6 +24,7 @@ import {
   ShieldAlert,
   Receipt,
   Webhook,
+  Calculator,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { useUiPreferencesStore } from '../store/uiPreferences';
@@ -52,6 +53,7 @@ const iconMap = {
   ShieldAlert,
   Receipt,
   Webhook,
+  Calculator,
 };
 
 function isItemActive(item, pathname, hasFullRoster) {

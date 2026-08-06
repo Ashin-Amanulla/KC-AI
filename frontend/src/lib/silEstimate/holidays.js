@@ -1,0 +1,152 @@
+let phUid = 1;
+export const nextPhId = () => phUid++;
+
+const NATIONAL_2026 = [
+  { date: "2026-01-01", name: "New Year's Day" },
+  { date: "2026-01-26", name: "Australia Day" },
+  { date: "2026-04-03", name: "Good Friday" },
+  { date: "2026-04-06", name: "Easter Monday" },
+  { date: "2026-04-25", name: "Anzac Day" },
+  { date: "2026-12-25", name: "Christmas Day" },
+  { date: "2026-12-26", name: "Boxing Day" },
+];
+const NATIONAL_2027 = [
+  { date: "2027-01-01", name: "New Year's Day" },
+  { date: "2027-01-26", name: "Australia Day" },
+  { date: "2027-03-26", name: "Good Friday" },
+  { date: "2027-03-29", name: "Easter Monday" },
+  { date: "2027-04-25", name: "Anzac Day" },
+  { date: "2027-12-25", name: "Christmas Day" },
+  { date: "2027-12-26", name: "Boxing Day" },
+];
+
+export const HOLIDAYS_BY_STATE = {
+  NSW: [
+    ...NATIONAL_2026, { date: "2026-04-04", name: "Easter Saturday" }, { date: "2026-04-05", name: "Easter Sunday" },
+    { date: "2026-04-27", name: "Anzac Day (additional)" }, { date: "2026-06-08", name: "King's Birthday" },
+    { date: "2026-08-03", name: "Bank Holiday" }, { date: "2026-10-05", name: "Labour Day" }, { date: "2026-12-28", name: "Boxing Day (additional)" },
+    ...NATIONAL_2027, { date: "2027-03-27", name: "Easter Saturday" }, { date: "2027-03-28", name: "Easter Sunday" },
+    { date: "2027-04-26", name: "Anzac Day (additional)" }, { date: "2027-06-14", name: "King's Birthday" },
+    { date: "2027-08-02", name: "Bank Holiday" }, { date: "2027-10-04", name: "Labour Day" },
+    { date: "2027-12-27", name: "Christmas Day (additional)" }, { date: "2027-12-28", name: "Boxing Day (additional)" },
+  ],
+  ACT: [
+    ...NATIONAL_2026, { date: "2026-03-09", name: "Canberra Day" }, { date: "2026-04-04", name: "Easter Saturday" },
+    { date: "2026-04-05", name: "Easter Sunday" }, { date: "2026-04-27", name: "Anzac Day (additional)" },
+    { date: "2026-06-01", name: "Reconciliation Day" }, { date: "2026-06-08", name: "King's Birthday" },
+    { date: "2026-10-05", name: "Labour Day" }, { date: "2026-12-28", name: "Boxing Day (additional)" },
+    ...NATIONAL_2027, { date: "2027-03-08", name: "Canberra Day" }, { date: "2027-03-27", name: "Easter Saturday" },
+    { date: "2027-03-28", name: "Easter Sunday" }, { date: "2027-04-26", name: "Anzac Day (additional)" },
+    { date: "2027-05-31", name: "Reconciliation Day" }, { date: "2027-06-14", name: "King's Birthday" },
+    { date: "2027-10-04", name: "Labour Day" }, { date: "2027-12-27", name: "Christmas Day (additional)" }, { date: "2027-12-28", name: "Boxing Day (additional)" },
+  ],
+  VIC: [
+    ...NATIONAL_2026,
+    { date: "2026-03-09", name: "Labour Day" },
+    { date: "2026-04-04", name: "Saturday before Easter Sunday" },
+    { date: "2026-04-05", name: "Easter Sunday" },
+    { date: "2026-06-08", name: "King's Birthday" },
+    { date: "2026-09-25", name: "Friday before the AFL Grand Final" },
+    { date: "2026-11-03", name: "Melbourne Cup Day" },
+    { date: "2026-12-28", name: "Boxing Day (additional)" },
+    ...NATIONAL_2027,
+    { date: "2027-03-08", name: "Labour Day" },
+    { date: "2027-03-27", name: "Saturday before Easter Sunday" },
+    { date: "2027-03-28", name: "Easter Sunday" },
+    { date: "2027-06-14", name: "King's Birthday" },
+    { date: "2027-11-02", name: "Melbourne Cup Day" },
+    { date: "2027-12-27", name: "Christmas Day (additional)" },
+    { date: "2027-12-28", name: "Boxing Day (additional)" },
+  ],
+  QLD: [
+    // 2026
+    { date: "2026-01-01", name: "New Year's Day" },
+    { date: "2026-01-26", name: "Australia Day" },
+    { date: "2026-04-03", name: "Good Friday" },
+    { date: "2026-04-04", name: "Day after Good Friday" },
+    { date: "2026-04-05", name: "Easter Sunday" },
+    { date: "2026-04-06", name: "Easter Monday" },
+    { date: "2026-04-25", name: "Anzac Day" },
+    { date: "2026-05-04", name: "Labour Day" },
+    { date: "2026-08-12", name: "Royal Queensland Show (Brisbane area only)" },
+    { date: "2026-10-05", name: "King's Birthday" },
+    { date: "2026-12-25", name: "Christmas Day" },
+    { date: "2026-12-26", name: "Boxing Day" },
+    { date: "2026-12-28", name: "Boxing Day (additional)" },
+    // 2027
+    { date: "2027-01-01", name: "New Year's Day" },
+    { date: "2027-01-26", name: "Australia Day" },
+    { date: "2027-03-26", name: "Good Friday" },
+    { date: "2027-03-27", name: "Day after Good Friday" },
+    { date: "2027-03-28", name: "Easter Sunday" },
+    { date: "2027-03-29", name: "Easter Monday" },
+    { date: "2027-04-26", name: "Anzac Day (observed)" },
+    { date: "2027-05-03", name: "Labour Day" },
+    { date: "2027-08-11", name: "Royal Queensland Show (Brisbane area only)" },
+    { date: "2027-10-04", name: "King's Birthday" },
+    { date: "2027-12-25", name: "Christmas Day" },
+    { date: "2027-12-27", name: "Christmas Day (additional)" },
+    { date: "2027-12-26", name: "Boxing Day" },
+    { date: "2027-12-28", name: "Boxing Day (additional)" },
+    // 2028
+    { date: "2028-01-01", name: "New Year's Day" },
+    { date: "2028-01-03", name: "New Year's Day (additional)" },
+    { date: "2028-01-26", name: "Australia Day" },
+    { date: "2028-04-14", name: "Good Friday" },
+    { date: "2028-04-15", name: "Day after Good Friday" },
+    { date: "2028-04-16", name: "Easter Sunday" },
+    { date: "2028-04-17", name: "Easter Monday" },
+    { date: "2028-04-25", name: "Anzac Day" },
+    { date: "2028-05-01", name: "Labour Day" },
+    { date: "2028-08-16", name: "Royal Queensland Show (Brisbane area only)" },
+    { date: "2028-10-02", name: "King's Birthday" },
+    { date: "2028-12-25", name: "Christmas Day" },
+    { date: "2028-12-26", name: "Boxing Day" },
+    // 2029
+    { date: "2029-01-01", name: "New Year's Day" },
+    { date: "2029-01-26", name: "Australia Day" },
+    { date: "2029-03-30", name: "Good Friday" },
+    { date: "2029-03-31", name: "Day after Good Friday" },
+    { date: "2029-04-01", name: "Easter Sunday" },
+    { date: "2029-04-02", name: "Easter Monday" },
+    { date: "2029-04-25", name: "Anzac Day" },
+    { date: "2029-05-07", name: "Labour Day" },
+    { date: "2029-08-15", name: "Royal Queensland Show (Brisbane area only)" },
+    { date: "2029-10-01", name: "King's Birthday" },
+    { date: "2029-12-25", name: "Christmas Day" },
+    { date: "2029-12-26", name: "Boxing Day" },
+  ],
+  WA: [
+    ...NATIONAL_2026, { date: "2026-03-02", name: "Labour Day" }, { date: "2026-04-27", name: "Anzac Day (additional)" },
+    { date: "2026-06-01", name: "Western Australia Day" }, { date: "2026-09-28", name: "King's Birthday" },
+    { date: "2026-12-28", name: "Boxing Day (additional)" },
+    ...NATIONAL_2027, { date: "2027-03-01", name: "Labour Day" }, { date: "2027-04-26", name: "Anzac Day (additional)" },
+    { date: "2027-06-07", name: "Western Australia Day" }, { date: "2027-09-27", name: "King's Birthday" },
+    { date: "2027-12-27", name: "Christmas Day (additional)" }, { date: "2027-12-28", name: "Boxing Day (additional)" },
+  ],
+  SA: [
+    ...NATIONAL_2026, { date: "2026-03-09", name: "Adelaide Cup Day" }, { date: "2026-06-08", name: "King's Birthday" },
+    { date: "2026-10-05", name: "Labour Day" },
+    ...NATIONAL_2027, { date: "2027-03-08", name: "Adelaide Cup Day" }, { date: "2027-06-14", name: "King's Birthday" },
+    { date: "2027-10-04", name: "Labour Day" },
+  ],
+  TAS: [
+    ...NATIONAL_2026, { date: "2026-03-09", name: "Eight Hours Day" }, { date: "2026-06-08", name: "King's Birthday" },
+    { date: "2026-11-02", name: "Recreation Day" },
+    ...NATIONAL_2027, { date: "2027-03-08", name: "Eight Hours Day" }, { date: "2027-06-14", name: "King's Birthday" },
+    { date: "2027-11-01", name: "Recreation Day" },
+  ],
+  NT: [
+    ...NATIONAL_2026, { date: "2026-05-04", name: "May Day" }, { date: "2026-06-08", name: "King's Birthday" },
+    { date: "2026-08-03", name: "Picnic Day" },
+    ...NATIONAL_2027, { date: "2027-04-26", name: "Anzac Day (additional)" }, { date: "2027-05-03", name: "May Day" },
+    { date: "2027-06-14", name: "King's Birthday" }, { date: "2027-08-02", name: "Picnic Day" },
+  ],
+};
+
+
+
+export function loadHolidaysForState(state) {
+  const list = HOLIDAYS_BY_STATE[state] || HOLIDAYS_BY_STATE.QLD || [];
+  return list.map((h) => ({ id: nextPhId(), ...h }));
+}

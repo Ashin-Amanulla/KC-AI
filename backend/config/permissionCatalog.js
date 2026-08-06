@@ -23,6 +23,8 @@ export const PERMISSIONS = {
   CRM_VIEW_ALL: 'crm:view_all',
   CIR_VIEW: 'cir:view',
   CIR_MANAGE: 'cir:manage',
+  ESTIMATES_VIEW: 'estimates:view',
+  ESTIMATES_MANAGE: 'estimates:manage',
 };
 
 export const ALL_PERMISSION_KEYS = Object.values(PERMISSIONS);
@@ -174,6 +176,22 @@ export const PERMISSION_CATALOG = [
     path: '/continuous-improvement',
   },
   {
+    key: PERMISSIONS.ESTIMATES_VIEW,
+    label: 'SIL estimates',
+    description: 'View NDIS SIL cost estimates and roster templates.',
+    category: 'Payroll & finance',
+    accessLevel: 'view',
+    path: '/sil-estimates',
+  },
+  {
+    key: PERMISSIONS.ESTIMATES_MANAGE,
+    label: 'Manage SIL estimates',
+    description: 'Create, edit, and delete SIL cost estimate workspaces.',
+    category: 'Payroll & finance',
+    accessLevel: 'edit',
+    path: '/sil-estimates',
+  },
+  {
     key: PERMISSIONS.USERS_MANAGE,
     label: 'Manage users',
     description: 'Create, edit, and deactivate user accounts.',
@@ -214,6 +232,7 @@ export const PATH_PERMISSION_MAP = [
   { prefix: '/crm', permission: PERMISSIONS.CRM_VIEW },
   { prefix: '/hr-requirements', permission: PERMISSIONS.CRM_VIEW },
   { prefix: '/continuous-improvement', permission: PERMISSIONS.CIR_VIEW },
+  { prefix: '/sil-estimates', permission: PERMISSIONS.ESTIMATES_VIEW },
   { prefix: '/', permission: PERMISSIONS.DASHBOARD_VIEW },
 ];
 
@@ -231,6 +250,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     PERMISSIONS.ROSTER_VIEW,
     PERMISSIONS.CIR_VIEW,
     PERMISSIONS.CIR_MANAGE,
+    PERMISSIONS.ESTIMATES_VIEW,
+    PERMISSIONS.ESTIMATES_MANAGE,
   ],
   viewer: [
     PERMISSIONS.DASHBOARD_VIEW,

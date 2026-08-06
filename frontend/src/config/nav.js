@@ -65,6 +65,7 @@ export const NAV_GROUPS = [
       { path: '/staff', label: 'Staff', icon: 'Users', permission: PERMISSIONS.STAFF_VIEW },
       { path: '/clients', label: 'Clients', icon: 'UserCheck', permission: PERMISSIONS.CLIENTS_VIEW },
       { path: '/workforce', label: 'Workforce', icon: 'Layers', permission: PERMISSIONS.WORKFORCE_VIEW },
+      { path: '/sil-estimates', label: 'SIL Estimates', icon: 'Calculator', permission: PERMISSIONS.ESTIMATES_VIEW },
     ],
   },
   {

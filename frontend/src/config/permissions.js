@@ -19,6 +19,8 @@ export const PERMISSIONS = {
   CRM_VIEW_ALL: 'crm:view_all',
   CIR_VIEW: 'cir:view',
   CIR_MANAGE: 'cir:manage',
+  ESTIMATES_VIEW: 'estimates:view',
+  ESTIMATES_MANAGE: 'estimates:manage',
 };
 
 export const hasPermission = (permissions, key) => {
@@ -85,6 +87,9 @@ export const canAccessPath = (permissions, path) => {
   if (path.startsWith('/crm')) return hasPermission(permissions, PERMISSIONS.CRM_VIEW);
   if (path.startsWith('/hr-requirements')) return hasPermission(permissions, PERMISSIONS.CRM_VIEW);
   if (path.startsWith('/continuous-improvement')) return hasPermission(permissions, PERMISSIONS.CIR_VIEW);
+  if (path === '/sil-estimates' || path.startsWith('/sil-estimates/')) {
+    return hasPermission(permissions, PERMISSIONS.ESTIMATES_VIEW);
+  }
 
   return false;
 };

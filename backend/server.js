@@ -27,6 +27,7 @@ import dashboardRoutes from './modules/dashboard/dashboard.route.js';
 import rosterCoverageRoutes from './modules/roster-coverage/rosterCoverage.route.js';
 import crmRoutes from './modules/crm/crm.route.js';
 import cirRoutes from './modules/cir/cir.route.js';
+import silEstimatesRoutes from './modules/sil-estimates/silEstimate.route.js';
 import { formatErrorResponse, ForbiddenError } from './helpers/errors.js';
 import { Holiday } from './modules/holidays/holiday.model.js';
 import { attachSpreadsheetCollaborationWs } from './modules/crm/crmCollaborationWs.js';
@@ -98,6 +99,7 @@ app.use('/api/shiftcare', shiftcareRoutes);
 app.use('/api', rosterCoverageRoutes);
 app.use('/api', crmRoutes);
 app.use('/api', cirRoutes);
+app.use('/api', silEstimatesRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
