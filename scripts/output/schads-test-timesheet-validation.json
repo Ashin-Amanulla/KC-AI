@@ -1,0 +1,96 @@
+{
+  "csvPath": "/home/cntrlx/Downloads/SCHADS_Test_Timesheet.csv",
+  "shiftCount": 120,
+  "results": [
+    {
+      "id": "900003",
+      "label": "A-03",
+      "ok": false,
+      "detail": "morning=undefined afternoon=undefined"
+    },
+    {
+      "id": "900004",
+      "label": "A-04",
+      "ok": false,
+      "detail": "afternoon=undefined"
+    },
+    {
+      "id": "900008",
+      "label": "A-08",
+      "ok": false,
+      "detail": "night=undefined"
+    },
+    {
+      "id": "900009",
+      "label": "B-01",
+      "ok": false,
+      "detail": "afternoon=undefined"
+    },
+    {
+      "id": "900016",
+      "label": "C-02",
+      "ok": false,
+      "detail": "morning=undefined ot1=undefined"
+    },
+    {
+      "id": "900017",
+      "label": "C-03",
+      "ok": false
+    },
+    {
+      "id": "900030",
+      "label": "C-08",
+      "ok": false,
+      "detail": "ot76=1 ot1=undefined"
+    },
+    {
+      "id": "900033",
+      "label": "D-03",
+      "ok": false
+    },
+    {
+      "id": "900037",
+      "label": "E-01",
+      "ok": false,
+      "detail": "holiday=undefined"
+    },
+    {
+      "id": "900053",
+      "label": "G-01b",
+      "ok": true,
+      "detail": "broken=true allowance=4"
+    },
+    {
+      "id": "900055",
+      "label": "G-02b",
+      "ok": false,
+      "detail": "ot2=undefined"
+    },
+    {
+      "id": "900075",
+      "label": "I-01b",
+      "ok": false,
+      "detail": "sleepovers=0"
+    },
+    {
+      "id": "900090",
+      "label": "J-02b",
+      "ok": false,
+      "detail": "turnaround=undefined"
+    },
+    {
+      "id": "900117",
+      "label": "P-03",
+      "ok": true,
+      "detail": "meals=5"
+    },
+    {
+      "id": "900119",
+      "label": "P-06",
+      "ok": true,
+      "detail": "meals=5"
+    }
+  ],
+  "pass": 3,
+  "fail": 12
+}
