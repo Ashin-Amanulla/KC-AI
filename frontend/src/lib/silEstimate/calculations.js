@@ -9,6 +9,15 @@ import {
 } from './constants.js';
 import { toISODate } from './formatters.js';
 
+function ratioLabelOf(b) {
+  if (b.ratio === 'custom') {
+    const w = Number(b.customW) || 0;
+    const p = Number(b.customP) || 0;
+    return p > 0 ? `${w}:${p}` : b.ratio;
+  }
+  return b.ratio;
+}
+
 export function computeHoursFromTime(start, end) {
   if (!start || !end) return 0;
   const [sh, sm] = start.split(':').map(Number);
@@ -41,6 +50,7 @@ export function dayCost(blocks, rateDayType, rates) {
       rate,
       isFlat,
       cost: c,
+      ratioLabel: ratioLabelOf(b),
     };
   });
   return { cost, hoursSum, details };
@@ -85,6 +95,14 @@ export function computeSilEstimate({
   let dateError = null;
   let phWithinPeriod = 0;
 
+  // Sleepover tracking by day type
+  const sleepoverByType = {
+    Weekday: { hours: 0, cost: 0, nights: 0, mults: new Set() },
+    Saturday: { hours: 0, cost: 0, nights: 0, mults: new Set() },
+    Sunday: { hours: 0, cost: 0, nights: 0, mults: new Set() },
+    'Public Holiday': { hours: 0, cost: 0, nights: 0, mults: new Set() },
+  };
+
   if (!start || !end || isNaN(start) || isNaN(end)) {
     dateError = 'Enter a valid plan start and end date.';
   } else if (end < start) {
@@ -119,27 +137,63 @@ export function computeSilEstimate({
           periodTotal += cost;
           counts[rateType] += 1;
           costByType[rateType] += cost;
+
           details.forEach((d) => {
+            const isSleepover = d.period === 'Sleepover';
             const breakdownPeriod =
-              rateType === 'Weekday' ? d.period : d.period === 'Sleepover' ? 'Sleepover' : 'Day';
-            const key = `${rateType}|${breakdownPeriod}|${d.intensity}`;
+              rateType === 'Weekday' ? d.period : isSleepover ? 'Sleepover' : 'Day';
+            // Sleepover is priced the same regardless of day type or intensity, so it's
+            // tracked as one combined line item unless the ratio actually differs between
+            // day types (in which case cost genuinely differs, and it's split below).
+            // Active (non-sleepover) hours are grouped by ratio too, since two blocks in
+            // the same day type/period/intensity but different ratios cost differently.
+            const key = isSleepover
+              ? 'Sleepover|All|All'
+              : `${rateType}|${breakdownPeriod}|${d.intensity}|${d.ratioLabel}`;
+
             if (!categoryBreakdown[key]) {
               categoryBreakdown[key] = {
-                rateType,
+                rateType: isSleepover ? 'All' : rateType,
                 period: breakdownPeriod,
-                intensity: d.intensity,
+                intensity: isSleepover ? 'All' : d.intensity,
+                ratioLabel: isSleepover ? null : d.ratioLabel,
+                rate: d.rate,
+                mult: d.mult,
                 hours: 0,
                 cost: 0,
+                nights: 0,
               };
             }
+
             categoryBreakdown[key].hours += d.hours;
             categoryBreakdown[key].cost += d.cost;
+
+            if (isSleepover) {
+              categoryBreakdown[key].nights += 1;
+              sleepoverByType[rateType].hours += d.hours;
+              sleepoverByType[rateType].cost += d.cost;
+              sleepoverByType[rateType].nights += 1;
+              sleepoverByType[rateType].mults.add(Math.round(d.mult * 10000) / 10000);
+            }
           });
         }
         cursor.setUTCDate(cursor.getUTCDate() + 1);
       }
     }
   }
+
+  let sleepoverNights = 0;
+  let sleepoverCost = 0;
+  Object.values(categoryBreakdown).forEach((row) => {
+    if (row.period === 'Sleepover') {
+      sleepoverNights += row.nights;
+      sleepoverCost += row.cost;
+    }
+  });
+
+  const allSleepoverMults = new Set();
+  Object.values(sleepoverByType).forEach((t) => t.mults.forEach((m) => allSleepoverMults.add(m)));
+  const sleepoverSplitNeeded = allSleepoverMults.size > 1;
 
   const variance = budget - periodTotal;
   const pctOfBudget = budget > 0 && !dateError ? periodTotal / budget : 0;
@@ -159,6 +213,10 @@ export function computeSilEstimate({
     overlapDays,
     variance,
     pctOfBudget,
+    sleepoverNights,
+    sleepoverCost,
+    sleepoverByType,
+    sleepoverSplitNeeded,
   };
 }
 
@@ -170,6 +228,8 @@ export function buildComputedSummary(workspace, activeParticipant) {
       weeklyTypical: 0,
       variance: 0,
       pctOfBudget: 0,
+      sleepoverNights: 0,
+      sleepoverCost: 0,
       participantCount: workspace.participants?.length || 0,
     };
   }
@@ -189,6 +249,8 @@ export function buildComputedSummary(workspace, activeParticipant) {
     weeklyTypical: calc.weeklyTypical,
     variance: calc.variance,
     pctOfBudget: calc.pctOfBudget,
+    sleepoverNights: calc.sleepoverNights,
+    sleepoverCost: calc.sleepoverCost,
     participantCount: workspace.participants?.length || 0,
     planStart: p.planStart,
     planEnd: p.planEnd,

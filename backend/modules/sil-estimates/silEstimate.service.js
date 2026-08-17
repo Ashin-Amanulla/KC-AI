@@ -11,6 +11,9 @@ const ALLOWED_FIELDS = [
   'templates',
   'participants',
   'activeParticipantName',
+  'budget',
+  'planStart',
+  'planEnd',
 ];
 
 function pickWorkspaceFields(data) {
@@ -51,7 +54,11 @@ export async function listSilEstimates() {
 }
 
 export async function getSilEstimateById(id) {
-  return SilEstimate.findById(id).lean();
+  const doc = await SilEstimate.findById(id).lean();
+  if (!doc) return null;
+  // Recompute summary from stored workspace data (always fresh)
+  doc.computedSummary = buildComputedSummary(doc);
+  return doc;
 }
 
 export async function createSilEstimate(data, userId) {
@@ -87,3 +94,4 @@ export async function duplicateSilEstimate(id, userId) {
   const doc = await SilEstimate.create(copy);
   return doc.toObject();
 }
+

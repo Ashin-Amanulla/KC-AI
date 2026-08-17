@@ -11,7 +11,7 @@ export function BudgetSummaryBar({ calc, budget, planStart, onBudgetChange, canM
 
   return (
     <Card className="sticky top-4 z-10 shadow-md">
-      <CardContent className="grid grid-cols-1 items-center gap-6 p-5 lg:grid-cols-4">
+      <CardContent className="grid grid-cols-1 items-center gap-6 p-5 lg:grid-cols-5">
         <div>
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Total allocated SIL budget
@@ -45,6 +45,19 @@ export function BudgetSummaryBar({ calc, budget, planStart, onBudgetChange, canM
           <div className="text-lg font-bold">{fmtMoney(calc.weeklyTypical)}</div>
           <div className="text-2xs text-muted-foreground">at Weekday/Sat/Sun rates, no PH</div>
         </div>
+
+        {calc.sleepoverNights > 0 && (
+          <div className="text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Sleepover cost
+            </div>
+            <div className="text-lg font-bold">{fmtMoney(calc.sleepoverCost)}</div>
+            <div className="text-2xs text-muted-foreground">
+              {calc.sleepoverNights} night{calc.sleepoverNights === 1 ? '' : 's'}
+              {calc.periodTotal > 0 ? ` · ${Math.round((calc.sleepoverCost / calc.periodTotal) * 100)}% of total` : ''}
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="mb-1 flex justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
