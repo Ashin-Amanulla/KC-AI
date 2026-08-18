@@ -12,7 +12,6 @@ import {
   INTENSITIES,
   DAY_META,
   PH_COLOR,
-  periodsForRateCard,
 } from '../../../lib/silEstimate/constants';
 import { fmtMoney } from '../../../lib/silEstimate/formatters';
 
@@ -21,17 +20,6 @@ function dayTypeColor(dt) {
   if (dt === 'Saturday') return DAY_META.Sat.color;
   if (dt === 'Sunday') return DAY_META.Sun.color;
   return DAY_META.Mon.color;
-}
-
-function sleepoverSplitNeeded(calc) {
-  if (!calc) return false;
-  const allMults = new Set();
-  Object.values(calc.categoryBreakdown).forEach((row) => {
-    if (row.period === 'Sleepover' && row.ratioLabel) {
-      allMults.add(row.ratioLabel);
-    }
-  });
-  return allMults.size > 1;
 }
 
 export function CategoryBreakdownTable({ calc }) {
@@ -51,12 +39,11 @@ export function CategoryBreakdownTable({ calc }) {
       return (a.ratioLabel || '').localeCompare(b.ratioLabel || '');
     });
 
-  // Sleepover rows: derive from categoryBreakdown sleepover entries grouped by day type
+  // Sleepover rows: use sleepoverByType for per-day-type breakdown
+  const sleepoverSplit = calc.sleepoverSplitNeeded;
   const sleepoverRows = sleepoverSplit
     ? RATE_DAY_TYPES.map((dt) => {
-        const row = Object.values(calc.categoryBreakdown).find(
-          (r) => r.period === 'Sleepover' && r.rateType === dt
-        );
+        const row = calc.sleepoverByType?.[dt];
         if (!row || row.nights === 0) return null;
         return { dt, row };
       }).filter(Boolean)
@@ -116,12 +103,9 @@ export function CategoryBreakdownTable({ calc }) {
                 <TableCell className="font-semibold text-muted-foreground">{dt}</TableCell>
                 <TableCell className="text-muted-foreground">Sleepover</TableCell>
                 <TableCell className="text-muted-foreground">—</TableCell>
-                <TableCell className="font-medium text-muted-foreground">{row.ratioLabel || '—'}</TableCell>
+                <TableCell className="font-medium text-muted-foreground">—</TableCell>
                 <TableCell className="text-right text-muted-foreground">
-                  ${(row.rate * row.mult).toFixed(2)}
-                  <span className="block leading-tight text-[10px] text-muted-foreground/60">
-                    (${row.rate.toFixed(2)} base)
-                  </span>
+                  flat/night
                 </TableCell>
                 <TableCell className="text-right font-medium text-muted-foreground">
                   {row.nights} night{row.nights === 1 ? '' : 's'}
