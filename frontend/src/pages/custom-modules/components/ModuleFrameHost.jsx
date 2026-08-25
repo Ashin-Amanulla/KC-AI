@@ -29,6 +29,14 @@ export function ModuleFrameHost({ slug, version, source }) {
 
       switch (data.type) {
         case 'kc:frame-ready':
+          // Frame may (re)announce before/after we have source; reply with
+          // source whenever we have it so no handshake is ever missed.
+          if (source && event.source === iframeRef.current?.contentWindow) {
+            iframeRef.current.contentWindow.postMessage(
+              { type: 'kc:load', source },
+              window.location.origin
+            );
+          }
           setFrameReady(true);
           break;
         case 'kc:ready':

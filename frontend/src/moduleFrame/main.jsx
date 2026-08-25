@@ -52,4 +52,19 @@ function showError(message) {
   rootEl.appendChild(box);
 }
 
-post({ type: 'kc:frame-ready' });
+// Announce readiness with retries: the host's message listener may attach
+// after this script first runs (SPA mount timing), so keep announcing until
+// the host acknowledges by sending kc:load (or we give up).
+let announced = false;
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'kc:load') announced = true;
+});
+
+let attempts = 0;
+const announce = () => {
+  if (announced || attempts >= 30) return;
+  attempts += 1;
+  post({ type: 'kc:frame-ready', attempt: attempts });
+  setTimeout(announce, 400);
+};
+announce();
