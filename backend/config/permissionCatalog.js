@@ -25,6 +25,8 @@ export const PERMISSIONS = {
   CIR_MANAGE: 'cir:manage',
   ESTIMATES_VIEW: 'estimates:view',
   ESTIMATES_MANAGE: 'estimates:manage',
+  CUSTOM_MODULES_VIEW: 'custom_modules:view',
+  CUSTOM_MODULES_MANAGE: 'custom_modules:manage',
 };
 
 export const ALL_PERMISSION_KEYS = Object.values(PERMISSIONS);
@@ -190,6 +192,22 @@ export const PERMISSION_CATALOG = [
     category: 'Payroll & finance',
     accessLevel: 'edit',
     path: '/sil-estimates',
+  },
+  {
+    key: PERMISSIONS.CUSTOM_MODULES_VIEW,
+    label: 'Custom modules',
+    description: 'Open custom tools and modules added to the sidebar.',
+    category: 'Administration',
+    accessLevel: 'view',
+    path: '/modules',
+  },
+  {
+    key: PERMISSIONS.CUSTOM_MODULES_MANAGE,
+    label: 'Manage custom modules',
+    description: 'Upload, publish, and remove custom JSX tool modules.',
+    category: 'Administration',
+    accessLevel: 'admin',
+    path: '/admin/custom-modules',
   },
   {
     key: PERMISSIONS.USERS_MANAGE,

@@ -214,7 +214,7 @@ Legend: ⚠️ needs verification against the award/pay guide · 🏳️ engine 
 - **R128** — Linked PC chain summing **≥ 2h** clears minimum-engagement exception on all PC shifts in chain. 🏳️ *flag only*
 - **R129** — Sleepover-adjacent PC: per-segment 2h minimum does not apply (flag cleared). 🏳️ *flag only*
 - **R130** — PC **< 4h** adjacent to sleepover → `minimum4hEngagementReview` flag. 🏳️ *flag only*
-- **R131** — Flanked PC–sleepover–PC: **4h minimum** assessed across combined active PC hours. 🏳️ *flag only*
+- **R131** — Flanked PC–sleepover–PC: **4h minimum** assessed per side. If **either** side reaches 4h, the other side has no minimum and is not flagged; only sides under 4h are flagged when neither side reaches 4h. 🏳️ *flag only*
 - **R132** — Minimum engagement flags are for admin review; hours are **not** auto-topped-up — adjust manually in payroll. _(MA000100 cl. 10.5 / 11.6)_ 🏳️ *flag only*
 
 ---

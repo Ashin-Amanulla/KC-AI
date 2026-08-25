@@ -25,9 +25,12 @@ import {
   Receipt,
   Webhook,
   Calculator,
+  Puzzle,
+  Boxes,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { useUiPreferencesStore } from '../store/uiPreferences';
+import { useCustomModules } from '../api/customModules';
 import { getNavGroupsForPermissions } from '../config/nav';
 import { PERMISSIONS } from '../config/permissions';
 import { cn } from '../lib/utils';
@@ -54,6 +57,8 @@ const iconMap = {
   Receipt,
   Webhook,
   Calculator,
+  Puzzle,
+  Boxes,
 };
 
 function isItemActive(item, pathname, hasFullRoster) {
@@ -85,11 +90,32 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }) {
   const navGroups = getNavGroupsForPermissions(permissions);
   const hasFullRoster = permissions.includes(PERMISSIONS.ROSTER_VIEW);
 
+  // Published custom modules → dynamic "Modules" group (view permission gates the query).
+  const canSeeModules = permissions.includes(PERMISSIONS.CUSTOM_MODULES_VIEW);
+  const { data: customModules = [] } = useCustomModules();
+  const publishedCustomModules = canSeeModules
+    ? customModules.filter((m) => m.status === 'published')
+    : [];
+  const navGroupsWithModules = publishedCustomModules.length
+    ? [
+        ...navGroups,
+        {
+          id: 'custom-modules',
+          label: 'Modules',
+          items: publishedCustomModules.map((m) => ({
+            path: `/m/${m.slug}`,
+            label: m.name,
+            icon: iconMap[m.icon] ? m.icon : 'Puzzle',
+          })),
+        },
+      ]
+    : navGroups;
+
   useEffect(() => {
-    if (sidebarOpenGroups.length === 0 && navGroups.length > 0) {
-      setOpenGroups(navGroups.map((group) => group.id));
+    if (sidebarOpenGroups.length === 0 && navGroupsWithModules.length > 0) {
+      setOpenGroups(navGroupsWithModules.map((group) => group.id));
     }
-  }, [navGroups, sidebarOpenGroups.length, setOpenGroups]);
+  }, [navGroupsWithModules, sidebarOpenGroups.length, setOpenGroups]);
 
   useEffect(() => {
     const activeGroup = navGroups.find((group) =>
@@ -125,7 +151,7 @@ export function Sidebar({ mobileOpen = false, onMobileOpenChange }) {
         )}
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
-        {navGroups.map((group) => {
+        {navGroupsWithModules.map((group) => {
           const isSingleItem = group.items.length === 1 && group.id === 'overview';
           const open = collapsed || isSingleItem || sidebarOpenGroups.includes(group.id);
           return (

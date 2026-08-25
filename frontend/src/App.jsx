@@ -45,6 +45,8 @@ import { CompliancePage } from './pages/Compliance';
 import { WebhooksPage } from './pages/admin/Webhooks';
 import { SilEstimatesList } from './pages/sil-estimates/SilEstimatesList';
 import { SilEstimateEditor } from './pages/sil-estimates/SilEstimateEditor';
+import { CustomModuleViewer } from './pages/custom-modules/CustomModuleViewer';
+import { CustomModulesAdmin } from './pages/custom-modules/CustomModulesAdmin';
 import { canAccessPath, getDefaultLanding } from './config/nav';
 import { LoadingScreen } from './ui/LoadingSpinner';
 import { useUiPreferencesStore, resolveTheme } from './store/uiPreferences';
@@ -320,6 +322,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <SilEstimateEditor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/custom-modules"
+            element={
+              <ProtectedRoute>
+                <CustomModulesAdmin />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/m/:slug"
+            element={
+              <ProtectedRoute>
+                <CustomModuleViewer />
               </ProtectedRoute>
             }
           />

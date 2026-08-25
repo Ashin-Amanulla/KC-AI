@@ -21,6 +21,8 @@ export const PERMISSIONS = {
   CIR_MANAGE: 'cir:manage',
   ESTIMATES_VIEW: 'estimates:view',
   ESTIMATES_MANAGE: 'estimates:manage',
+  CUSTOM_MODULES_VIEW: 'custom_modules:view',
+  CUSTOM_MODULES_MANAGE: 'custom_modules:manage',
 };
 
 export const hasPermission = (permissions, key) => {
@@ -89,6 +91,10 @@ export const canAccessPath = (permissions, path) => {
   if (path.startsWith('/continuous-improvement')) return hasPermission(permissions, PERMISSIONS.CIR_VIEW);
   if (path === '/sil-estimates' || path.startsWith('/sil-estimates/')) {
     return hasPermission(permissions, PERMISSIONS.ESTIMATES_VIEW);
+  }
+  if (path.startsWith('/m/')) return hasPermission(permissions, PERMISSIONS.CUSTOM_MODULES_VIEW);
+  if (path === '/admin/custom-modules') {
+    return hasPermission(permissions, PERMISSIONS.CUSTOM_MODULES_MANAGE);
   }
 
   return false;
