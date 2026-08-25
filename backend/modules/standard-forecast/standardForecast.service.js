@@ -26,6 +26,7 @@ import {
   sortTemplateKeys,
 } from '../../utils/weekdaySort.js';
 import { normalizeRatio } from '../../utils/normalizeRatio.js';
+import { rateGroupsEqual } from '../../utils/normalizeRateGroups.js';
 import {
   applyShiftDateRange,
   resolveForecastRangeFromFilter,
@@ -701,10 +702,10 @@ export function computeStandardVarianceDiff(std, fcs) {
   if (String(std.shiftcareId || std.templateKey || '') !== String(fcs.shiftcareId || fcs.templateKey || '')) {
     diff.push('shift_id');
   }
-  if (String(std.rateGroups || '') !== String(fcs.rateGroups || '')) diff.push('rate_groups');
   if (String(std.referenceNo || '') !== String(fcs.referenceNo || '')) diff.push('reference_no');
   if (String(std.shiftType || '') !== String(fcs.shiftType || '')) diff.push('shift_type');
   if (normalizeRatio(std.ratio) !== normalizeRatio(fcs.ratio)) diff.push('ratio');
+  if (!rateGroupsEqual(std.rateGroups, fcs.rateGroups)) diff.push('rate_groups');
   return diff;
 }
 

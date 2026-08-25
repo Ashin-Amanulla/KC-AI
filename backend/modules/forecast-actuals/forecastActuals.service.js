@@ -28,6 +28,7 @@ import { ForecastRecord } from './forecastRecord.model.js';
 import { ActualsRecord } from './actualsRecord.model.js';
 import { buildSummaryPdf } from './summaryPdf.js';
 import { normalizeRatio } from '../../utils/normalizeRatio.js';
+import { rateGroupsEqual } from '../../utils/normalizeRateGroups.js';
 import { buildVarianceExportRowList } from './varianceExportRows.js';
 import { applyShiftDateRange } from './shiftDateRange.js';
 import { compareShiftDateRows } from '../../utils/weekdaySort.js';
@@ -921,9 +922,9 @@ function computeDiffFields(fRec, aRec) {
   if (t(fRec.endDatetime) !== t(aRec.endDatetime)) diff.push('end_datetime');
   if (!moneyEqual(fRec.duration, aRec.duration)) diff.push('duration');
   if (!moneyEqual(fRec.totalCost, aRec.totalCost)) diff.push('total_cost');
-  if (String(fRec.rateGroups || '') !== String(aRec.rateGroups || '')) diff.push('rate_groups');
   if (String(fRec.shiftType || '') !== String(aRec.shiftType || '')) diff.push('shift_type');
   if (normalizeRatio(fRec.ratio) !== normalizeRatio(aRec.ratio)) diff.push('ratio');
+  if (!rateGroupsEqual(fRec.rateGroups, aRec.rateGroups)) diff.push('rate_groups');
   return diff;
 }
 
