@@ -133,6 +133,12 @@ export const NAV_GROUPS = [
         icon: 'Webhook',
         permission: PERMISSIONS.USERS_MANAGE,
       },
+      {
+        path: '/admin/custom-modules',
+        label: 'Custom modules',
+        icon: 'Puzzle',
+        permission: PERMISSIONS.CUSTOM_MODULES_MANAGE,
+      },
     ],
   },
 ];
