@@ -70,6 +70,27 @@ export function ModuleFrameHost({ slug, version, source }) {
 
   const frameUrl = `${import.meta.env.BASE_URL}module-frame.html?v=${version}`;
 
+  // Inject the host app's stylesheets into the iframe so uploaded modules
+  // (typically Tailwind-styled, e.g. Claude-generated) render correctly.
+  // The iframe is allow-same-origin, so we can write into it once loaded.
+  const syncStyles = () => {
+    try {
+      const iframeDoc = iframeRef.current?.contentDocument;
+      if (!iframeDoc) return;
+      const iframeHead = iframeDoc.head;
+      // Avoid duplicating on re-fires
+      if (iframeHead.querySelector('[data-host-styles]')) return;
+      document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
+        iframeHead.appendChild(node.cloneNode(true));
+      });
+      const marker = iframeDoc.createElement('meta');
+      marker.setAttribute('data-host-styles', '1');
+      iframeHead.appendChild(marker);
+    } catch {
+      /* cross-origin guard — should not happen with allow-same-origin */
+    }
+  };
+
   return (
     <div className="relative">
       {status === 'loading' && (
@@ -97,7 +118,7 @@ export function ModuleFrameHost({ slug, version, source }) {
         title={slug}
         src={frameUrl}
         onLoad={() => {
-          /* readiness handled via kc:frame-ready message */
+          syncStyles();
         }}
         style={{ height: `${height}px` }}
         className="w-full rounded-xl border bg-white transition-[height] duration-200"
