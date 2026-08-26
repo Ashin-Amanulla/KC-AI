@@ -68,7 +68,7 @@ export function ModuleFrameHost({ slug, version, source }) {
     );
   }, [frameReady, source]);
 
-  const frameUrl = `${import.meta.env.BASE_URL}module-frame.html`;
+  const frameUrl = `${import.meta.env.BASE_URL}module-frame.html?v=${version}`;
 
   return (
     <div className="relative">
