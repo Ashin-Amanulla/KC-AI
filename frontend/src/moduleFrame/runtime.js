@@ -66,7 +66,6 @@ export function compileModuleSource(sourceCode) {
     transforms: ['jsx', 'typescript', 'imports'],
     filePath: 'module.jsx',
     production: true,
-    onPreprocess: () => {},
   });
 
   // Collect import specifiers by regex over the original source for messaging,
