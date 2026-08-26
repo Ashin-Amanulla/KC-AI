@@ -101,7 +101,7 @@ export function ModuleFrameHost({ slug, version, source }) {
         }}
         style={{ height: `${height}px` }}
         className="w-full rounded-xl border bg-white transition-[height] duration-200"
-        sandbox="allow-scripts allow-forms allow-modals allow-downloads allow-popups same-origin"
+        sandbox="allow-scripts allow-forms allow-modals allow-downloads allow-popups allow-same-origin"
       />
     </div>
   );
